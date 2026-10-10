@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGradMask" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b" />
+      <stop offset="50%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+
+    <linearGradient id="emeraldNeonMask" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34d399" />
+      <stop offset="50%" stop-color="#10b981" />
+      <stop offset="100%" stop-color="#059669" />
+    </linearGradient>
+
+    <linearGradient id="boltGradMask" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#10b981" />
+      <stop offset="50%" stop-color="#34d399" />
+      <stop offset="100%" stop-color="#a7f3d0" />
+    </linearGradient>
+  </defs>
+
+  <!-- Full Bleed Background for Maskable Icon Safe Zone -->
+  <rect width="512" height="512" fill="url(#bgGradMask)" />
+
+  <!-- Monogram centered inside safe zone (within 410px inner box) -->
+  <g transform="translate(256, 256) scale(0.85)">
+    <!-- Ambient Green Glow -->
+    <circle cx="0" cy="0" r="140" fill="#10b981" opacity="0.15" filter="blur(30px)" />
+
+    <!-- Letter 'E' Ribbon -->
+    <path d="M -18 -85 
+             C -95 -85, -135 -48, -135 0 
+             C -135 48, -95 85, -18 85 
+             M -18 0 L -120 0" 
+          fill="none" 
+          stroke="url(#emeraldNeonMask)" 
+          stroke-width="26" 
+          stroke-linecap="round" 
+          stroke-linejoin="round" />
+
+    <!-- Letter 'P' Ribbon -->
+    <path d="M 18 -85 
+             C 95 -85, 135 -45, 135 0 
+             C 135 45, 95 85, 18 85 
+             L 18 115" 
+          fill="none" 
+          stroke="url(#emeraldNeonMask)" 
+          stroke-width="26" 
+          stroke-linecap="round" 
+          stroke-linejoin="round" />
+
+    <!-- Center Upward Lightning Bolt / Growth Arrow -->
+    <g>
+      <polygon points="
+        0,-135  
+        38,-65  
+        10,-65  
+        32,15   
+        -18,-30 
+        -4,-30  
+        -30,-100
+      " fill="url(#boltGradMask)" />
+      
+      <polygon points="0,-145 -42,-80 42,-80" fill="url(#boltGradMask)" />
+    </g>
+  </g>
+</svg>

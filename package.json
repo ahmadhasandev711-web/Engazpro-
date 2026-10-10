@@ -1,0 +1,14 @@
+{
+  "name": "pos-mandob",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "web"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev --workspace=web",
+    "dev:backend": "cd backend && php artisan serve --host=0.0.0.0 --port=8000",
+    "build:shared": "npm run build --workspace=@pos-mandob/shared"
+  }
+}

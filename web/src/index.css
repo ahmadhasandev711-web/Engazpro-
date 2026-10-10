@@ -1,0 +1,106 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --canvas: #E8EDF7;
+  --plate: #F3F6FD;
+  --plate-2: #EAF0FA;
+  --sunk: #DCE4F3;
+  --ink: #232D3C;
+  --ink-2: #67758B;
+  --jade: #7CCFB0;
+  --jade-ink: #2A7A62;
+  --coral: #E8735C;
+  --sky: #B7D4F5;
+  --line: rgba(35, 45, 60, .09);
+  --clay: 0 22px 38px -20px rgba(35, 45, 60, .36), 0 8px 16px -10px rgba(35, 45, 60, .18), inset 2px 3px 4px 0 rgba(255, 255, 255, .95), inset -3px -5px 9px 0 rgba(35, 45, 60, .09);
+  --clay-sm: 0 12px 22px -13px rgba(35, 45, 60, .34), inset 2px 2px 3px 0 rgba(255, 255, 255, .92), inset -2px -3px 6px 0 rgba(35, 45, 60, .10);
+  --well: inset 4px 5px 11px -3px rgba(35, 45, 60, .22), inset -2px -3px 6px 0 rgba(255, 255, 255, .9);
+  --gloss: linear-gradient(180deg, #FEFEFF 0%, #F5F8FD 46%, #E9EFFA 46.01%, #DEE7F6 100%);
+  --gloss-plate: linear-gradient(180deg, #FDFEFF 0%, #F7F9FE 46%, #F1F5FC 46.01%, #EAF0F9 100%);
+  --gloss-down: linear-gradient(180deg, #E1E9F6 0%, #EAF0FA 54%, #F5F8FD 54.01%, #FCFDFF 100%);
+  --gloss-jade: linear-gradient(180deg, #B2E7D2 0%, #90D9BD 46%, #6BC5A5 46.01%, #52B492 100%);
+  --gloss-jade-down: linear-gradient(180deg, #4FB08F 0%, #63C0A0 54%, #89D6B9 54.01%, #AAE3CD 100%);
+  --lip: inset 0 1px 0 0 rgba(255, 255, 255, 1), inset 0 -1px 0 0 rgba(35, 45, 60, .12);
+  --lip-jade: inset 0 1px 0 0 rgba(255, 255, 255, .8), inset 0 -1px 0 0 rgba(16, 72, 56, .4);
+  --lift: 0 10px 18px -11px rgba(35, 45, 60, .6), 0 2px 4px -2px rgba(35, 45, 60, .16);
+  --lift-hi: 0 20px 30px -15px rgba(35, 45, 60, .6), 0 5px 9px -4px rgba(35, 45, 60, .2);
+  --lift-jade: 0 12px 20px -11px rgba(42, 122, 98, .9), 0 2px 4px -2px rgba(42, 122, 98, .3);
+  --lift-jade-hi: 0 22px 32px -15px rgba(42, 122, 98, .95), 0 5px 9px -4px rgba(42, 122, 98, .38);
+  --sink: 0 1px 2px -1px rgba(35, 45, 60, .3), inset 0 2px 5px 0 rgba(35, 45, 60, .2);
+}
+
+@layer base {
+  html, body {
+    @apply bg-slate-50 text-slate-900;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+}
+
+@layer utilities {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .celadon-clay {
+    background: linear-gradient(160deg, #FAFCFF, var(--plate) 46%, var(--plate-2));
+    box-shadow: var(--clay);
+  }
+  .celadon-clay-sm {
+    background: linear-gradient(160deg, #FAFCFF, var(--plate) 46%, var(--plate-2));
+    box-shadow: var(--clay-sm);
+  }
+  .celadon-well {
+    background: var(--sunk);
+    box-shadow: var(--well);
+  }
+}
+
+.print-only {
+  display: none;
+}
+
+@media print {
+  /* Hide everything on page */
+  body * {
+    visibility: hidden;
+  }
+
+  /* Only show the printable area */
+  .printable-area,
+  .printable-area * {
+    visibility: visible;
+  }
+
+  .printable-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 10px !important;
+    background: white !important;
+    box-shadow: none !important;
+    border: none !important;
+    z-index: 9999999 !important;
+  }
+
+  .print-only {
+    display: block !important;
+    visibility: visible !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  @page {
+    margin: 5mm;
+    size: auto;
+  }
+}

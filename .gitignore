@@ -1,0 +1,108 @@
+# ==============================================================================
+# EngazPRO - Production Git Ignore Configuration
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1. Environment & Sensitive Credentials (ZERO SECRETS ALLOWED)
+# ------------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.key
+*.cert
+*.pem
+auth.json
+
+# ------------------------------------------------------------------------------
+# 2. Database Dumps & SQL Backups
+# ------------------------------------------------------------------------------
+*.sql
+*.sqlite
+*.sqlite3
+*.db
+engazpro_clean_database.sql
+engazpro_database.sql
+
+# ------------------------------------------------------------------------------
+# 3. Deployment Archives & Backups
+# ------------------------------------------------------------------------------
+*.zip
+*.tar
+*.gz
+*.tar.gz
+*.rar
+*.7z
+backend_engazpro.zip
+backend_update_patch.zip
+frontend_engazpro.zip
+
+# ------------------------------------------------------------------------------
+# 4. Internal Documentation & Agent Rules (Private Project Files)
+# ------------------------------------------------------------------------------
+AGENTS.md
+GEMINI.md
+ARCHITECTURE_RULES.md
+MasterPrompt_Updated.md
+CLAUDE.md
+*.md
+!README.md
+!README_*.md
+!LICENSE.md
+
+# ------------------------------------------------------------------------------
+# 5. Dependencies (Node & PHP Composer)
+# ------------------------------------------------------------------------------
+node_modules/
+backend/vendor/
+vendor/
+packages/**/node_modules/
+web/node_modules/
+
+# ------------------------------------------------------------------------------
+# 6. Build Outputs & Generated Distributables
+# ------------------------------------------------------------------------------
+web/dist/
+web/build/
+public/build/
+public/hot
+public/storage
+
+# ------------------------------------------------------------------------------
+# 7. Framework Storage, Caches & Temporary Files
+# ------------------------------------------------------------------------------
+backend/storage/app/*
+!backend/storage/app/.gitignore
+backend/storage/framework/cache/*
+!backend/storage/framework/cache/.gitignore
+backend/storage/framework/sessions/*
+!backend/storage/framework/sessions/.gitignore
+backend/storage/framework/views/*
+!backend/storage/framework/views/.gitignore
+backend/storage/logs/*
+!backend/storage/logs/.gitignore
+backend/storage/pail/*
+backend/.phpunit.cache
+backend/.phpunit.result.cache
+
+# ------------------------------------------------------------------------------
+# 8. Temporary Workspaces & Local Experiment Scripts
+# ------------------------------------------------------------------------------
+.expo/
+scratch/
+tmp/
+temp/
+
+# ------------------------------------------------------------------------------
+# 9. Operating System & IDE Files
+# ------------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+.fleet/
+.nova/
+.zed/
+Homestead.json
+Homestead.yaml
