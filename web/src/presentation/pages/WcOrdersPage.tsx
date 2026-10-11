@@ -26,6 +26,9 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { useAuthStore } from '../../data/store/useAuthStore';
 import { formatCurrency } from '@pos-mandob/shared';
 import { DateRangeFilter, calculatePresetDates } from '../components/common/DateRangeFilter';
+import { MobileFilterChips } from '../components/mobile/MobileFilterChips';
+import { WcOrderMobileCard } from '../components/mobile/WcOrderMobileCard';
+import { nativeBackButton } from '../../platform/nativeBackButton';
 
 const cleanItemName = (name?: string): string => {
   if (!name) return '';
@@ -91,6 +94,58 @@ export const WcOrdersPage: React.FC = () => {
   const [printOrder, setPrintOrder] = useState<any | null>(null);
 
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Register active modal with Android hardware back button
+  React.useEffect(() => {
+    const isAnyModalOpen =
+      Boolean(viewingOrder) ||
+      Boolean(confirmModalOrder) ||
+      Boolean(courierModalOrder) ||
+      Boolean(dispatchModalOrder) ||
+      Boolean(deliverModalOrder) ||
+      Boolean(printOrder);
+
+    if (!isAnyModalOpen) return;
+
+    const unregister = nativeBackButton.register(() => {
+      if (printOrder) {
+        setPrintOrder(null);
+        return true;
+      }
+      if (deliverModalOrder) {
+        setDeliverModalOrder(null);
+        return true;
+      }
+      if (courierModalOrder) {
+        setCourierModalOrder(null);
+        return true;
+      }
+      if (dispatchModalOrder) {
+        setDispatchModalOrder(null);
+        return true;
+      }
+      if (confirmModalOrder) {
+        setConfirmModalOrder(null);
+        return true;
+      }
+      if (viewingOrder) {
+        setViewingOrder(null);
+        return true;
+      }
+      return false;
+    });
+
+    return () => {
+      unregister();
+    };
+  }, [
+    viewingOrder,
+    confirmModalOrder,
+    courierModalOrder,
+    dispatchModalOrder,
+    deliverModalOrder,
+    printOrder,
+  ]);
 
   const user = useAuthStore((state) => state.user);
   const storeIdentity = user?.store_identity;
@@ -514,29 +569,19 @@ export const WcOrdersPage: React.FC = () => {
       )}
 
       {/* Status Filter Tabs (Horizontal scroll on mobile) */}
-      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth py-1 w-full min-w-0">
-        {[
-          { key: 'ALL', label: 'كافة الطلبات' },
-          { key: 'PENDING_CONFIRMATION', label: 'بانتظار التأكيد' },
-          { key: 'CONFIRMED', label: 'مؤكدة وقيد التجهيز' },
-          { key: 'DISPATCHED', label: 'مع المناديب' },
-          { key: 'SHIPPED_VIA_COURIER', label: 'مع شركات الشحن' },
-          { key: 'DELIVERED', label: 'تم تسليمها' },
-          { key: 'RETURNED', label: 'مرتجع' },
-        ].map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setStatusFilter(tab.key)}
-            className={`flex-shrink-0 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all active:scale-95 ${
-              statusFilter === tab.key
-                ? 'bg-slate-900 text-white shadow-sm'
-                : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <MobileFilterChips
+        options={[
+          { id: 'ALL', label: 'كافة الطلبات' },
+          { id: 'PENDING_CONFIRMATION', label: 'بانتظار التأكيد' },
+          { id: 'CONFIRMED', label: 'مؤكدة وقيد التجهيز' },
+          { id: 'DISPATCHED', label: 'مع المناديب' },
+          { id: 'SHIPPED_VIA_COURIER', label: 'مع شركات الشحن' },
+          { id: 'DELIVERED', label: 'تم تسليمها' },
+          { id: 'RETURNED', label: 'مرتجع' },
+        ]}
+        selectedId={statusFilter}
+        onSelect={(id) => setStatusFilter(id)}
+      />
 
       {/* Date Range Filter Bar */}
       <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm w-full min-w-0 max-w-full overflow-hidden">
@@ -561,8 +606,45 @@ export const WcOrdersPage: React.FC = () => {
           <p className="text-xs text-slate-400">أي طلب يتم على متجرك في ووكومرس سيظهر هنا فورياً لتجهيزه وشحنه.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {orders.map((order: any) => (
+        <>
+          {/* Mobile Orders View: Dedicated Ergonomic Thumb-First Cards */}
+          <div className="space-y-3.5 lg:hidden">
+            {orders.map((order: any) => (
+              <WcOrderMobileCard
+                key={order.id}
+                order={order}
+                onViewDetails={(o) => setViewingOrder(o)}
+                onPrint={(o) => setPrintOrder(o)}
+                onConfirm={(o) => {
+                  setConfirmModalOrder(o);
+                  setSelectedBranchId(o.branch_id || (branches[0]?.id ?? ''));
+                  setConfirmError(null);
+                  setForceConfirm(false);
+                }}
+                onAssignCourier={(o) => openCourierModal(o)}
+                onAssignMandob={(o) => {
+                  setDispatchModalOrder(o);
+                  setSelectedMandobId(o.mandob_id || (mandobs[0]?.id ?? ''));
+                }}
+                onDeliver={(o) => {
+                  setDeliverModalOrder(o);
+                  setCollectedAmount(Number(o.total || 0));
+                  setPaymentMethod(
+                    o.payment_status === 'PAID_ONLINE' || (o.wc_payment_method && o.wc_payment_method !== 'cod')
+                      ? 'CARD'
+                      : 'CASH'
+                  );
+                }}
+                canConfirm={isOwnerOrAdmin || isManager}
+                canDispatch={isOwnerOrAdmin || isManager}
+                canDeliver={isOwnerOrAdmin || isManager || isMandob}
+              />
+            ))}
+          </div>
+
+          {/* Desktop Orders View: Full Grid */}
+          <div className="hidden lg:grid lg:grid-cols-2 xl:grid-cols-3 gap-5">
+            {orders.map((order: any) => (
             <div
               key={order.id}
               className="bg-white rounded-3xl border border-slate-200/80 p-5 shadow-xs flex flex-col justify-between space-y-4 hover:border-slate-300 transition-all"
@@ -914,7 +996,8 @@ export const WcOrdersPage: React.FC = () => {
               </div>
             </div>
           ))}
-        </div>
+          </div>
+        </>
       )}
 
       {/* Modal 0: Order Details Modal (نافذة تفاصيل الأوردر الشاملة مع صور المنتجات والسمات) */}
