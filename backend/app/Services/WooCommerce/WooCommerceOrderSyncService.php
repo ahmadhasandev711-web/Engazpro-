@@ -130,17 +130,15 @@ class WooCommerceOrderSyncService
             $integration = WooCommerceIntegration::withoutGlobalScopes()->where('user_id', $accountId)->first();
 
             // 2. Customer synchronization
-            $party = null;
-            if (!empty($wcOrderData['billing'])) {
-                $party = $this->customerSyncService->syncCustomerFromWooCommerce($user, [
-                    'id' => $wcOrderData['customer_id'] ?? null,
-                    'billing' => $wcOrderData['billing'],
-                    'first_name' => $wcOrderData['billing']['first_name'] ?? '',
-                    'last_name' => $wcOrderData['billing']['last_name'] ?? '',
-                    'phone' => $extractedPhone ?: ($wcOrderData['billing']['phone'] ?? ''),
-                    'email' => $wcOrderData['billing']['email'] ?? null,
-                ]);
-            }
+            $party = $this->customerSyncService->syncCustomerFromWooCommerce($user, [
+                'id' => $wcOrderData['customer_id'] ?? null,
+                'billing' => $billing,
+                'shipping' => $shipping,
+                'first_name' => $billing['first_name'] ?? ($shipping['first_name'] ?? ''),
+                'last_name' => $billing['last_name'] ?? ($shipping['last_name'] ?? ''),
+                'phone' => $extractedPhone ?: ($billing['phone'] ?? ($shipping['phone'] ?? '')),
+                'email' => $billing['email'] ?? null,
+            ]);
 
             // Fallback phone and address from party
             $finalPhone = $extractedPhone ?: ($party?->phone ?? null);
@@ -378,6 +376,16 @@ class WooCommerceOrderSyncService
                 $courierPartyId = $party->id;
             }
         }
+
+        if (!$courierPartyId) {
+            throw new PosDomainException("يجب اختيار شركة شحن مسجلة بالدفاتر لإسناد الشحنة وتوثيق المديونية المحاسبية.", "COURIER_REQUIRED");
+        }
+
+        $courierParty = Party::where('user_id', $accountId)
+            ->where('type', PartyType::COURIER->value)
+            ->findOrFail($courierPartyId);
+
+        $courierName = $courierParty->name;
 
         return DB::transaction(function () use ($order, $branchId, $courierPartyId, $courierName, $trackingNumber) {
             $order->update([

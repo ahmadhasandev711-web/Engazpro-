@@ -206,18 +206,23 @@ class WcOrderController extends Controller
         $accountId = $user->getAccountId();
 
         $validated = $request->validate([
-            'courier_name' => ['required', 'string', 'max:255'],
             'courier_party_id' => [
-                'nullable',
+                'required',
                 'integer',
-                \Illuminate\Validation\Rule::exists('parties', 'id')->where('user_id', $accountId),
+                \Illuminate\Validation\Rule::exists('parties', 'id')->where(function ($q) use ($accountId) {
+                    $q->where('user_id', $accountId)->where('type', 'COURIER');
+                }),
             ],
+            'courier_name' => ['nullable', 'string', 'max:255'],
             'tracking_number' => ['nullable', 'string', 'max:255'],
             'branch_id' => [
                 'nullable',
                 'integer',
                 \Illuminate\Validation\Rule::exists('branches', 'id')->where('user_id', $accountId),
             ],
+        ], [
+            'courier_party_id.required' => 'يرجى اختيار شركة شحن مسجلة بالدفاتر لإسناد الشحنة وتوثيق المديونية.',
+            'courier_party_id.exists' => 'شركة الشحن المحددة غير صالحة أو غير مسجلة بالدفاتر.',
         ]);
 
         $order = WcOrder::where('user_id', $accountId)->findOrFail($id);

@@ -24,21 +24,36 @@ class WooCommerceCustomerSyncService
         $email = !empty($wcCustomer['email']) ? strtolower(trim($wcCustomer['email'])) : null;
         
         $billing = $wcCustomer['billing'] ?? [];
-        $rawPhone = $billing['phone'] ?? ($wcCustomer['phone'] ?? '');
+        $shipping = $wcCustomer['shipping'] ?? [];
+
+        $rawPhone = $billing['phone'] ?? ($shipping['phone'] ?? ($wcCustomer['phone'] ?? ''));
         $phone = $this->normalizePhone($rawPhone);
 
-        $firstName = trim($billing['first_name'] ?? ($wcCustomer['first_name'] ?? ''));
-        $lastName = trim($billing['last_name'] ?? ($wcCustomer['last_name'] ?? ''));
+        $firstName = trim($billing['first_name'] ?? ($shipping['first_name'] ?? ($wcCustomer['first_name'] ?? '')));
+        $lastName = trim($billing['last_name'] ?? ($shipping['last_name'] ?? ($wcCustomer['last_name'] ?? '')));
         $name = trim("{$firstName} {$lastName}");
         if (empty($name)) {
             $name = $wcCustomer['username'] ?? ($email ?: ($phone ?: 'عميل أونلاين'));
         }
 
+        // إذا كان الطلب مجهول الهوية بالكامل أو اسمه الافتراضي "عميل أونلاين" بدون هاتف أو إيميل، نوحده في عميل واحد
+        if (($name === 'عميل أونلاين' || empty($name)) && empty($phone) && empty($email) && empty($wcCustomerId)) {
+            return Party::firstOrCreate([
+                'user_id' => $accountId,
+                'type' => 'CUSTOMER',
+                'name' => 'عميل أونلاين',
+            ], [
+                'phone' => null,
+                'address' => 'متجر ووكومرس الإلكتروني',
+                'notes' => 'حساب موحد لكافة طلبات الزوار المجهولين من المتجر الإلكتروني',
+            ]);
+        }
+
         $addressParts = array_filter([
-            $billing['address_1'] ?? null,
-            $billing['address_2'] ?? null,
-            $billing['city'] ?? null,
-            $billing['state'] ?? null,
+            $billing['address_1'] ?? ($shipping['address_1'] ?? null),
+            $billing['address_2'] ?? ($shipping['address_2'] ?? null),
+            $billing['city'] ?? ($shipping['city'] ?? null),
+            $billing['state'] ?? ($shipping['state'] ?? null),
         ]);
         $address = !empty($addressParts) ? implode(', ', $addressParts) : null;
 
@@ -69,6 +84,14 @@ class WooCommerceCustomerSyncService
                 ->first();
         }
 
+        // 4. Search by exact customer name if unique
+        if (!$party && !empty($name) && $name !== 'عميل أونلاين') {
+            $party = Party::where('user_id', $accountId)
+                ->where('type', 'CUSTOMER')
+                ->where('name', $name)
+                ->first();
+        }
+
         if ($party) {
             // Update existing party without overwriting phone if party already has it
             $updateData = [];
@@ -90,7 +113,7 @@ class WooCommerceCustomerSyncService
             return $party;
         }
 
-        // 4. Create new customer party
+        // 5. Create new customer party
         return Party::create([
             'user_id' => $accountId,
             'type' => 'CUSTOMER',

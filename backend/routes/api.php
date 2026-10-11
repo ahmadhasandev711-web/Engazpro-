@@ -163,6 +163,8 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('import-products', [\App\Http\Controllers\Api\WooCommerceSettingsController::class, 'importProducts']);
             Route::post('sync-customers', [\App\Http\Controllers\Api\WooCommerceSettingsController::class, 'syncCustomers']);
             Route::post('register-webhooks', [\App\Http\Controllers\Api\WooCommerceSettingsController::class, 'autoRegisterWebhooks']);
+            Route::post('products/{id}/push-stock', [\App\Http\Controllers\Api\WooCommerceSettingsController::class, 'pushProductStock']);
+            Route::post('push-all-stocks', [\App\Http\Controllers\Api\WooCommerceSettingsController::class, 'pushAllStocks']);
         });
 
         // WooCommerce Orders & Dispatch (طلبات المتجر والشحن والتسليم الميداني)

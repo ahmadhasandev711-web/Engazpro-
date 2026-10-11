@@ -54,6 +54,7 @@ class ProductResource extends JsonResource
             'quantity' => $effectiveQuantity,
             'min_quantity' => $this->min_quantity !== null ? (float) $this->min_quantity : null,
             'is_low_stock' => $this->isLowStock(),
+            'wc_product_id' => $this->wc_product_id,
             'notes' => $this->notes,
             'variants' => $this->relationLoaded('variants') || $this->has_variants ? $this->variants->map(function ($v) use ($canViewProfit, $branchId) {
                 $varQty = (float) $v->quantity;
@@ -77,6 +78,7 @@ class ProductResource extends JsonResource
                     'quantity' => $varQty,
                     'min_quantity' => $v->min_quantity !== null ? (float) $v->min_quantity : null,
                     'is_low_stock' => $v->isLowStock(),
+                    'wc_variation_id' => $v->wc_variation_id,
                 ];
             }) : [],
             'batches' => $this->relationLoaded('batches') || $this->has_expiry ? $this->batches->map(fn($b) => [

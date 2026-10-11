@@ -22,6 +22,7 @@ import {
   PlusCircle,
   Tag,
   Boxes,
+  RefreshCw,
 } from 'lucide-react';
 import { apiClient } from '../../data/api/client';
 import { Product, ProductSchema, ProductInput, formatCurrency, formatNumber } from '@pos-mandob/shared';
@@ -53,6 +54,21 @@ export const ProductsPage: React.FC = () => {
   const [selectedBatchProduct, setSelectedBatchProduct] = useState<Product | null>(null);
   const [selectedPrintProduct, setSelectedPrintProduct] = useState<Product | null>(null);
   const [isOpeningStockOpen, setIsOpeningStockOpen] = useState(false);
+  const [syncingProductId, setSyncingProductId] = useState<number | null>(null);
+
+  const handlePushStock = async (product: Product) => {
+    setSyncingProductId(product.id);
+    try {
+      const res = await apiClient.post(`/woocommerce/products/${product.id}/push-stock`);
+      setSuccessMessage(res.data?.message || 'تم تحديث رصيد الصنف في ووكومرس فورياً 🟢');
+      setTimeout(() => setSuccessMessage(null), 4000);
+    } catch (err: any) {
+      setErrorMessage(err.response?.data?.message || 'فشلت مزامنة الرصيد مع ووكومرس');
+      setTimeout(() => setErrorMessage(null), 6000);
+    } finally {
+      setSyncingProductId(null);
+    }
+  };
 
   // Variant & Batch Modal States
   const [productType, setProductType] = useState<'STANDARD' | 'VARIABLE' | 'EXPIRY'>('STANDARD');
@@ -642,6 +658,18 @@ export const ProductsPage: React.FC = () => {
                         {(canEditProduct || canDeleteProduct) && (
                           <td className="py-3.5 px-4 text-center">
                             <div className="flex items-center justify-center gap-1.5">
+                              {/* Direct WooCommerce Stock Push */}
+                              {Boolean((p as any).wc_product_id) && (
+                                <button
+                                  onClick={() => handlePushStock(p)}
+                                  disabled={syncingProductId === p.id}
+                                  className="p-1.5 text-purple-600 hover:text-purple-800 rounded-lg hover:bg-purple-50 transition-colors cursor-pointer disabled:opacity-50"
+                                  title="مزامنة الرصيد مع ووكومرس فورياً 🔄"
+                                >
+                                  <RefreshCw className={`w-4 h-4 ${syncingProductId === p.id ? 'animate-spin' : ''}`} />
+                                </button>
+                              )}
+
                               {/* Barcode Print Action */}
                               <button
                                 onClick={() => setSelectedPrintProduct(p)}
@@ -777,6 +805,17 @@ export const ProductsPage: React.FC = () => {
                     {/* Actions Row */}
                     {(canEditProduct || canDeleteProduct) && (
                       <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                        {Boolean((p as any).wc_product_id) && (
+                          <button
+                            onClick={() => handlePushStock(p)}
+                            disabled={syncingProductId === p.id}
+                            className="min-h-[36px] px-2.5 py-1 text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-xl flex items-center gap-1 active:bg-purple-200 disabled:opacity-50"
+                            title="مزامنة الرصيد مع ووكومرس فورياً"
+                          >
+                            <RefreshCw className={`w-3.5 h-3.5 ${syncingProductId === p.id ? 'animate-spin' : ''}`} />
+                            ووكومرس
+                          </button>
+                        )}
                         <button
                           onClick={() => setSelectedPrintProduct(p)}
                           className="min-h-[36px] px-3 py-1 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-xl flex items-center gap-1 active:bg-indigo-200"

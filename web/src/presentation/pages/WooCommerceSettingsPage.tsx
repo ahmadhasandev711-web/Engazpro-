@@ -172,6 +172,20 @@ export const WooCommerceSettingsPage: React.FC = () => {
     },
   });
 
+  // Push All Stocks Mutation (Direct API Bulk Sync)
+  const pushAllStocksMutation = useMutation({
+    mutationFn: async () => {
+      return apiClient.post('/woocommerce/push-all-stocks');
+    },
+    onSuccess: (res) => {
+      setFeedback({ type: 'success', message: res.data?.message || 'تم تحديث أرصدة كافة المنتجات في متجرك بنجاح 🟢' });
+      setTimeout(() => setFeedback(null), 5000);
+    },
+    onError: (err: any) => {
+      setFeedback({ type: 'error', message: err.response?.data?.message || 'فشلت مزامنة أرصدة المنتجات مع ووكومرس' });
+    },
+  });
+
   // Auto Register Webhooks Mutation
   const registerWebhooksMutation = useMutation({
     mutationFn: async () => {
@@ -494,6 +508,22 @@ export const WooCommerceSettingsPage: React.FC = () => {
                   <div>
                     <span className="text-xs font-black text-emerald-950 block">استيراد عملاء المتجر إلى إنجاز برو</span>
                     <span className="text-[10px] text-slate-500 block">سحب عملاء ووكومرس لبناء قاعدة بيانات تسويقية</span>
+                  </div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => pushAllStocksMutation.mutate()}
+                disabled={pushAllStocksMutation.isPending || !isConnected}
+                className="w-full p-3.5 bg-purple-50 border border-purple-200/80 rounded-2xl text-right hover:bg-purple-100/70 transition-all group disabled:opacity-50 cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-purple-600 text-white flex items-center justify-center">
+                    <RefreshCw className={`w-4 h-4 ${pushAllStocksMutation.isPending ? 'animate-spin' : ''}`} />
+                  </div>
+                  <div>
+                    <span className="text-xs font-black text-purple-950 block">مزامنة أرصدة كافة المنتجات مع المتجر (Bulk Push)</span>
+                    <span className="text-[10px] text-slate-500 block">إرسال وتحديث كميات كافة الأصناف المرتبطة مباشرة في ووردبريس فوراً</span>
                   </div>
                 </div>
               </button>

@@ -8,6 +8,10 @@ use App\Services\WooCommerce\WooCommerceApiClient;
 use App\Services\WooCommerce\WooCommerceProductImportService;
 use App\Services\WooCommerce\WooCommerceCustomerSyncService;
 use App\Models\Party;
+use App\Models\Product;
+use App\Models\Branch;
+use App\Models\BranchStock;
+use App\Models\ProductVariant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -245,6 +249,190 @@ class WooCommerceSettingsController extends Controller
         return response()->json([
             'success' => true,
             'message' => "تم استيراد ومزامنة {$syncedFromWoo} عميل من متجر ووكومرس بنجاح.",
+        ]);
+    }
+
+    /**
+     * Push current stock quantity for a single product directly to WooCommerce (Synchronous / Direct Sync)
+     */
+    public function pushProductStock(Request $request, int $id): JsonResponse
+    {
+        if ($err = $this->checkOwnerOrAdmin($request)) {
+            return $err;
+        }
+
+        $user = $request->user();
+        $accountId = $user->getAccountId();
+
+        $integration = WooCommerceIntegration::where('user_id', $accountId)->first();
+        if (!$integration || !$integration->is_active || !$integration->consumer_key || !$integration->consumer_secret) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ربط متجر ووكومرس غير نشط أو غير مهيأ بعد بالمفاتيح.',
+            ], 422);
+        }
+
+        $product = Product::where('user_id', $accountId)->with('variants')->findOrFail($id);
+        if (!$product->wc_product_id) {
+            return response()->json([
+                'success' => false,
+                'message' => "الصنف '{$product->name}' غير مرتبط بمنتج في متجر ووكومرس (ليس لديه معرف ووكومرس).",
+            ], 422);
+        }
+
+        if (!empty($integration->online_branch_id)) {
+            $targetBranchIds = Branch::where('user_id', $accountId)
+                ->where('id', $integration->online_branch_id)
+                ->where('is_active', true)
+                ->pluck('id');
+        } else {
+            $targetBranchIds = Branch::where('user_id', $accountId)
+                ->whereIn('type', ['STORE', 'WAREHOUSE'])
+                ->where('is_active', true)
+                ->pluck('id');
+        }
+
+        if ($targetBranchIds->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'لا توجد فروع أو مخازن نشطة محددة للمتجر الإلكتروني لسحب الرصيد منها.',
+            ], 422);
+        }
+
+        $syncedVariants = 0;
+        if ($product->variants->isNotEmpty()) {
+            foreach ($product->variants as $variant) {
+                if ($variant->wc_variation_id) {
+                    $varStock = BranchStock::whereIn('branch_id', $targetBranchIds)
+                        ->where('product_id', $product->id)
+                        ->where('product_variant_id', $variant->id)
+                        ->sum('quantity');
+
+                    $this->apiClient->updateVariationStock(
+                        $integration,
+                        $product->wc_product_id,
+                        $variant->wc_variation_id,
+                        max(0, (float) $varStock)
+                    );
+                    $syncedVariants++;
+                }
+            }
+        }
+
+        $totalStock = BranchStock::whereIn('branch_id', $targetBranchIds)
+            ->where('product_id', $product->id)
+            ->sum('quantity');
+
+        // Update product stock on WooCommerce
+        $this->apiClient->updateProductStock(
+            $integration,
+            $product->wc_product_id,
+            max(0, (float) $totalStock)
+        );
+
+        $msg = $syncedVariants > 0
+            ? "تم تحديث رصيد الصنف ({$product->name}) ومتبقياته ({$syncedVariants} متغير) في ووكومرس فورياً بإجمالي {$totalStock} قطعة بنجاح 🟢"
+            : "تم تحديث رصيد الصنف ({$product->name}) في ووكومرس فورياً إلى {$totalStock} قطعة بنجاح 🟢";
+
+        return response()->json([
+            'success' => true,
+            'message' => $msg,
+            'data' => [
+                'product_id' => $product->id,
+                'wc_product_id' => $product->wc_product_id,
+                'stock' => (float) $totalStock,
+            ],
+        ]);
+    }
+
+    /**
+     * Push all linked products stock quantities directly to WooCommerce (Bulk Direct Sync)
+     */
+    public function pushAllStocks(Request $request): JsonResponse
+    {
+        if ($err = $this->checkOwnerOrAdmin($request)) {
+            return $err;
+        }
+
+        $user = $request->user();
+        $accountId = $user->getAccountId();
+
+        $integration = WooCommerceIntegration::where('user_id', $accountId)->first();
+        if (!$integration || !$integration->is_active || !$integration->consumer_key || !$integration->consumer_secret) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ربط متجر ووكومرس غير نشط أو غير مهيأ بعد بالمفاتيح.',
+            ], 422);
+        }
+
+        if (!empty($integration->online_branch_id)) {
+            $targetBranchIds = Branch::where('user_id', $accountId)
+                ->where('id', $integration->online_branch_id)
+                ->where('is_active', true)
+                ->pluck('id');
+        } else {
+            $targetBranchIds = Branch::where('user_id', $accountId)
+                ->whereIn('type', ['STORE', 'WAREHOUSE'])
+                ->where('is_active', true)
+                ->pluck('id');
+        }
+
+        $products = Product::where('user_id', $accountId)
+            ->whereNotNull('wc_product_id')
+            ->with('variants')
+            ->get();
+
+        if ($products->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'لا توجد أصناف مرتبطة بمتجر ووكومرس حالياً لمزامنة أرصدتها.',
+            ], 422);
+        }
+
+        $syncedCount = 0;
+        foreach ($products as $product) {
+            try {
+                if ($product->variants->isNotEmpty()) {
+                    foreach ($product->variants as $variant) {
+                        if ($variant->wc_variation_id) {
+                            $varStock = BranchStock::whereIn('branch_id', $targetBranchIds)
+                                ->where('product_id', $product->id)
+                                ->where('product_variant_id', $variant->id)
+                                ->sum('quantity');
+
+                            $this->apiClient->updateVariationStock(
+                                $integration,
+                                $product->wc_product_id,
+                                $variant->wc_variation_id,
+                                max(0, (float) $varStock)
+                            );
+                        }
+                    }
+                }
+
+                $totalStock = BranchStock::whereIn('branch_id', $targetBranchIds)
+                    ->where('product_id', $product->id)
+                    ->sum('quantity');
+
+                $this->apiClient->updateProductStock(
+                    $integration,
+                    $product->wc_product_id,
+                    max(0, (float) $totalStock)
+                );
+
+                $syncedCount++;
+            } catch (\Throwable $e) {
+                // Continue on individual failure
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "تمت مزامنة وتحديث أرصدة {$syncedCount} صنف مع متجر ووكومرس بنجاح 🟢",
+            'data' => [
+                'synced_count' => $syncedCount,
+                'total_linked_products' => $products->count(),
+            ],
         ]);
     }
 }
