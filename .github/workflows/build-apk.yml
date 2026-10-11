@@ -26,8 +26,8 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Setup Gradle Build Environment
+        uses: gradle/actions/setup-gradle@v3
 
       - name: Install Dependencies
         run: npm install
@@ -44,7 +44,7 @@ jobs:
         working-directory: web/android
 
       - name: Build Android APK via Gradle
-        run: ./gradlew assembleDebug
+        run: ./gradlew assembleDebug --no-daemon
         working-directory: web/android
 
       - name: Upload Android APK
