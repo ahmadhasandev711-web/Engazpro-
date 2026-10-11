@@ -47,7 +47,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ user, token, isAuthenticated: true, isLoading: false, error: null });
       return true;
     } catch (err: any) {
-      const message = err.response?.data?.message || 'فشل تسجيل الدخول. يرجى التحقق من البيانات';
+      let message = err.response?.data?.message;
+      if (!message) {
+        if (err.message === 'Network Error' || !err.response) {
+          message = 'تعذر الاتصال بالخادم. يرجى التأكد من اتصال الإنترنت أو المحاولة لاحقاً';
+        } else {
+          message = 'فشل تسجيل الدخول. يرجى التحقق من البيانات';
+        }
+      }
       set({ error: message, isLoading: false });
       return false;
     }
@@ -63,7 +70,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ user, token, isAuthenticated: true, isLoading: false, error: null });
       return true;
     } catch (err: any) {
-      const message = err.response?.data?.message || 'فشل إنشاء الحساب. يرجى المحاولة مرة أخرى';
+      let message = err.response?.data?.message;
+      if (!message) {
+        if (err.message === 'Network Error' || !err.response) {
+          message = 'تعذر الاتصال بالخادم. يرجى التأكد من اتصال الإنترنت أو المحاولة لاحقاً';
+        } else {
+          message = 'فشل إنشاء الحساب. يرجى المحاولة مرة أخرى';
+        }
+      }
       set({ error: message, isLoading: false });
       return false;
     }
