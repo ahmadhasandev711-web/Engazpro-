@@ -63,6 +63,7 @@ web/node_modules/
 # ------------------------------------------------------------------------------
 web/dist/
 web/build/
+build-artifacts/
 public/build/
 public/hot
 public/storage
