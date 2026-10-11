@@ -15,11 +15,17 @@ declare global {
   }
 }
 
+import { Capacitor } from '@capacitor/core';
+import { BarcodeScanner } from '@capacitor-mlkit/barcode-scanning';
+import { Haptics, NotificationType } from '@capacitor/haptics';
+
 export interface IScannerService {
   isSupported(): boolean;
+  isNative(): boolean;
   startCamera(videoElement: HTMLVideoElement): Promise<MediaStream>;
   stopCamera(stream: MediaStream | null): void;
   detectBarcode(source: HTMLVideoElement): Promise<string | null>;
+  scanNative(): Promise<string | null>;
 }
 
 class NativeBarcodeScannerService implements IScannerService {
@@ -35,6 +41,58 @@ class NativeBarcodeScannerService implements IScannerService {
         this.detector = null;
       }
     }
+  }
+
+  isNative(): boolean {
+    return Capacitor.isNativePlatform();
+  }
+
+  async scanNative(): Promise<string | null> {
+    if (!Capacitor.isNativePlatform()) return null;
+
+    try {
+      // 1. Ensure Google Barcode Scanner module is available on Android
+      if (Capacitor.getPlatform() === 'android') {
+        try {
+          const mod = await BarcodeScanner.isGoogleBarcodeScannerModuleAvailable();
+          if (!mod.available) {
+            await BarcodeScanner.installGoogleBarcodeScannerModule();
+          }
+        } catch {
+          // Continue to standard scan if check fails
+        }
+      }
+
+      // 2. Check and request camera permissions
+      const perm = await BarcodeScanner.checkPermissions();
+      if (perm.camera !== 'granted') {
+        const req = await BarcodeScanner.requestPermissions();
+        if (req.camera !== 'granted') {
+          throw new Error('يرجى منح صلاحية الكاميرا لمسح الباركود');
+        }
+      }
+
+      // 3. Launch Native Camera Viewfinder
+      const result = await BarcodeScanner.scan();
+      if (result.barcodes && result.barcodes.length > 0) {
+        const code = result.barcodes[0].rawValue?.trim();
+        if (code) {
+          try {
+            await Haptics.notification({ type: NotificationType.Success });
+          } catch {}
+          return code;
+        }
+      }
+    } catch (err: any) {
+      // Handle user cancellation gracefully
+      const msg = err?.message?.toLowerCase() || '';
+      if (msg.includes('canceled') || msg.includes('cancelled') || msg.includes('dismissed')) {
+        return null;
+      }
+      throw err;
+    }
+
+    return null;
   }
 
   isSupported(): boolean {

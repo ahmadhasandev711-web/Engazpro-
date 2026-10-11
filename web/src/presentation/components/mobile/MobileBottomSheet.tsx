@@ -1,29 +1,48 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
+import { nativeBackButton } from '../../../platform/nativeBackButton';
+import { useHaptic } from '../../hooks/useHaptic';
 
 interface MobileBottomSheetProps {
   isOpen: boolean;
   onClose: () => void;
-  title: string;
-  icon?: React.ReactNode;
+  title?: string;
+  subtitle?: string;
   children: React.ReactNode;
-  maxHeight?: string;
+  maxHeight?: string; // e.g. 'max-h-[85vh]'
 }
 
 /**
- * Presentation Layer - MobileBottomSheet Component
- * Conforms to SoC (GR-3) & GR-5 (Hardware-accelerated animations)
- * Provides native-like bottom sheet overlay for mobile viewports.
+ * Presentation Layer - MobileBottomSheet
+ * Conforms to SoC (GR-3) & Hardware Back Button Integration
+ * Smooth slide-up sheet designed for thumb ergonomics, dismissible via gesture, backdrop, or Android back button.
  */
 export const MobileBottomSheet: React.FC<MobileBottomSheetProps> = ({
   isOpen,
   onClose,
   title,
-  icon,
+  subtitle,
   children,
-  maxHeight = 'max-h-[92vh]',
+  maxHeight = 'max-h-[85vh]',
 }) => {
-  // Lock body scroll when sheet is open
+  const { selection } = useHaptic();
+  const sheetRef = useRef<HTMLDivElement>(null);
+
+  // Register with Native Back Button stack when open
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const unregister = nativeBackButton.register(() => {
+      onClose();
+      return true; // handled
+    });
+
+    return () => {
+      unregister();
+    };
+  }, [isOpen, onClose]);
+
+  // Lock body scroll when bottom sheet is open
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -38,37 +57,53 @@ export const MobileBottomSheet: React.FC<MobileBottomSheetProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 lg:hidden flex flex-col justify-end bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-200">
-      {/* Backdrop overlay */}
-      <div className="fixed inset-0" onClick={onClose} aria-hidden="true" />
-
-      {/* Slide-up Container */}
+    <div
+      className="fixed inset-0 z-50 flex flex-col justify-end bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200"
+      dir="rtl"
+      onClick={onClose}
+    >
       <div
-        className={`relative z-10 bg-white rounded-t-[2rem] shadow-2xl ${maxHeight} flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-250 border-t border-slate-200/80 pb-safe`}
+        ref={sheetRef}
+        onClick={(e) => e.stopPropagation()}
+        className={`w-full bg-white dark:bg-slate-900 rounded-t-[2.2rem] shadow-2xl border-t border-slate-200/80 dark:border-slate-800 flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-300 ${maxHeight} pb-[calc(1rem+env(safe-area-inset-bottom,0px))]`}
       >
-        {/* Pull Handle Bar */}
-        <div className="w-full pt-3 pb-1 flex justify-center cursor-grab active:cursor-grabbing" onClick={onClose}>
-          <div className="w-12 h-1.5 rounded-full bg-slate-300" />
+        {/* Top Handle / Grab Bar */}
+        <div className="w-full pt-3 pb-1 flex justify-center cursor-grab active:cursor-grabbing">
+          <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full" />
         </div>
 
-        {/* Sheet Header */}
-        <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-          <div className="flex items-center gap-2">
-            {icon}
-            <h3 className="font-black text-sm text-slate-900">{title}</h3>
+        {/* Header */}
+        {(title || subtitle) && (
+          <div className="px-5 py-3 flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80">
+            <div>
+              {title && (
+                <h3 className="text-base font-black text-slate-900 dark:text-white">
+                  {title}
+                </h3>
+              )}
+              {subtitle && (
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  {subtitle}
+                </p>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                selection();
+                onClose();
+              }}
+              className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-200/60 transition-colors cursor-pointer"
-            aria-label="إغلاق"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+        )}
 
-        {/* Sheet Content */}
-        <div className="flex-1 overflow-y-auto p-4">{children}</div>
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto px-5 py-4 overscroll-contain">
+          {children}
+        </div>
       </div>
     </div>
   );

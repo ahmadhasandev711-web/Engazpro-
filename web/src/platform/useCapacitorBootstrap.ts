@@ -4,6 +4,7 @@ import { Capacitor } from '@capacitor/core';
 import { App as CapApp } from '@capacitor/app';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { SplashScreen } from '@capacitor/splash-screen';
+import { nativeBackButton } from './nativeBackButton';
 
 /**
  * Platform Layer - Capacitor Bootstrap Hook
@@ -41,6 +42,11 @@ export const useCapacitorBootstrap = () => {
 
     // 3. Handle Android Hardware Back Button
     const backButtonHandler = CapApp.addListener('backButton', ({ canGoBack }) => {
+      // Prioritize active modals and bottom sheets
+      if (nativeBackButton.handleBack()) {
+        return;
+      }
+
       const pathname = location.pathname;
 
       // Top-level root paths where back button exits or minimizes the app

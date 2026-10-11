@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Camera, X, AlertCircle, ScanLine, ArrowLeft } from 'lucide-react';
 import { useCameraScanner } from '../../hooks/useCameraScanner';
+import { barcodeScannerService } from '../../../infrastructure/hardware/barcodeScanner';
 
 interface MobileCameraScannerModalProps {
   isOpen: boolean;
@@ -11,7 +12,7 @@ interface MobileCameraScannerModalProps {
 /**
  * Presentation Layer - MobileCameraScannerModal
  * Conforms to GR-5 (Immediate camera hardware release on close) & SoC (GR-3)
- * Provides camera viewfinder overlay for scanning barcodes on mobile devices.
+ * Provides native Google MLKit scanner on mobile devices and HTML5 viewfinder fallback on web.
  */
 export const MobileCameraScannerModal: React.FC<MobileCameraScannerModalProps> = ({
   isOpen,
@@ -19,15 +20,48 @@ export const MobileCameraScannerModal: React.FC<MobileCameraScannerModalProps> =
   onScan,
 }) => {
   const [manualCode, setManualCode] = useState<string>('');
-  const { videoRef, isStreaming, error, isSupported } = useCameraScanner({
+  const [nativeError, setNativeError] = useState<string | null>(null);
+  const isNative = barcodeScannerService.isNative();
+
+  const { videoRef, isStreaming, error: webError, isSupported } = useCameraScanner({
     onScan: (code) => {
       onScan(code);
       onClose();
     },
-    isOpen,
+    isOpen: isOpen && !isNative,
   });
 
+  // Native Mobile MLKit Scanner Execution
+  useEffect(() => {
+    if (!isOpen || !isNative) return;
+
+    let isSubscribed = true;
+    (async () => {
+      try {
+        setNativeError(null);
+        const code = await barcodeScannerService.scanNative();
+        if (!isSubscribed) return;
+        if (code) {
+          onScan(code);
+          onClose();
+        } else {
+          // Scanned cancelled by user
+          onClose();
+        }
+      } catch (err: any) {
+        if (!isSubscribed) return;
+        setNativeError(err?.message || 'تعذر تشغيل كاميرا الباركود. يرجى مراجعة الصلاحيات أو إدخال الكود يدوياً.');
+      }
+    })();
+
+    return () => {
+      isSubscribed = false;
+    };
+  }, [isOpen, isNative, onScan, onClose]);
+
   if (!isOpen) return null;
+
+  const error = isNative ? nativeError : webError;
 
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
