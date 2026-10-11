@@ -8,6 +8,7 @@ import { AdminRoute } from './presentation/components/AdminRoute';
 import { ConfirmProvider } from './presentation/context/ConfirmContext';
 import { UserRole } from '@pos-mandob/shared';
 import { useAuthStore } from './data/store/useAuthStore';
+import { useCapacitorBootstrap } from './platform/useCapacitorBootstrap';
 
 // Code-Splitting & Lazy Loading for blazing-fast POS initialization
 const LandingPage = lazy(() => import('./presentation/pages/LandingPage').then((m) => ({ default: m.LandingPage })));
@@ -79,11 +80,17 @@ const RootRouteHandler: React.FC = () => {
   return <LandingPage />;
 };
 
+const AppLifecycleManager: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  useCapacitorBootstrap();
+  return <>{children}</>;
+};
+
 export const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <ConfirmProvider>
+        <AppLifecycleManager>
+          <ConfirmProvider>
           <Suspense fallback={<PageLoadingFallback />}>
             <Routes>
               {/* Public Landing & Auth Routes */}
@@ -155,6 +162,7 @@ export const App: React.FC = () => {
             </Routes>
           </Suspense>
         </ConfirmProvider>
+        </AppLifecycleManager>
       </BrowserRouter>
     </QueryClientProvider>
   );
