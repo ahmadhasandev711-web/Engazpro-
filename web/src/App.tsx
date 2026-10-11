@@ -9,6 +9,7 @@ import { ConfirmProvider } from './presentation/context/ConfirmContext';
 import { UserRole } from '@pos-mandob/shared';
 import { useAuthStore } from './data/store/useAuthStore';
 import { useCapacitorBootstrap } from './platform/useCapacitorBootstrap';
+import { Capacitor } from '@capacitor/core';
 
 // Code-Splitting & Lazy Loading for blazing-fast POS initialization
 const LandingPage = lazy(() => import('./presentation/pages/LandingPage').then((m) => ({ default: m.LandingPage })));
@@ -76,6 +77,10 @@ const RootRouteHandler: React.FC = () => {
   const { isAuthenticated } = useAuthStore();
   if (isAuthenticated) {
     return <Navigate to="/dashboard" replace />;
+  }
+  // On native mobile devices, go straight to login register screen
+  if (Capacitor.isNativePlatform()) {
+    return <Navigate to="/login" replace />;
   }
   return <LandingPage />;
 };

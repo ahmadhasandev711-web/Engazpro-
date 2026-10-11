@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { apiClient } from '../api/client';
 import { User, LoginInput, RegisterInput } from '@pos-mandob/shared';
+import { secureStorage } from '../../platform/secureStorage';
 
 interface AuthState {
   user: User | null;
@@ -13,31 +14,36 @@ interface AuthState {
   logout: () => Promise<void>;
   fetchMe: () => Promise<void>;
   activateSubscriptionCode: (code: string) => Promise<{ success: boolean; message: string }>;
+  initializeAuth: () => Promise<void>;
 }
 
-const getStoredUser = (): User | null => {
-  try {
-    const raw = localStorage.getItem('auth_user');
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-};
-
 export const useAuthStore = create<AuthState>((set, get) => ({
-  user: getStoredUser(),
-  token: localStorage.getItem('auth_token'),
-  isAuthenticated: !!localStorage.getItem('auth_token'),
+  user: null,
+  token: secureStorage.getToken(),
+  isAuthenticated: !!secureStorage.getToken(),
   isLoading: false,
   error: null,
+
+  initializeAuth: async () => {
+    await secureStorage.init();
+    const token = secureStorage.getToken();
+    const user = await secureStorage.getUser<User>();
+    if (token) {
+      set({ token, user, isAuthenticated: true });
+      // Refresh profile in background
+      get().fetchMe().catch(() => {});
+    } else {
+      set({ token: null, user: null, isAuthenticated: false });
+    }
+  },
 
   login: async (input: LoginInput) => {
     set({ isLoading: true, error: null });
     try {
       const response = await apiClient.post('/auth/login', input);
       const { user, token } = response.data.data;
-      localStorage.setItem('auth_token', token);
-      localStorage.setItem('auth_user', JSON.stringify(user));
+      await secureStorage.setToken(token);
+      await secureStorage.setUser(user);
       set({ user, token, isAuthenticated: true, isLoading: false, error: null });
       return true;
     } catch (err: any) {
@@ -52,8 +58,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const response = await apiClient.post('/auth/register', input);
       const { user, token } = response.data.data;
-      localStorage.setItem('auth_token', token);
-      localStorage.setItem('auth_user', JSON.stringify(user));
+      await secureStorage.setToken(token);
+      await secureStorage.setUser(user);
       set({ user, token, isAuthenticated: true, isLoading: false, error: null });
       return true;
     } catch (err: any) {
@@ -71,8 +77,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch {
       // Ignore errors on logout
     } finally {
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('auth_user');
+      await secureStorage.clearAuth();
       set({ user: null, token: null, isAuthenticated: false, error: null });
     }
   },
@@ -82,14 +87,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const response = await apiClient.get('/auth/me');
       const user = response.data.data;
-      localStorage.setItem('auth_user', JSON.stringify(user));
+      await secureStorage.setUser(user);
       set({ user, isAuthenticated: true });
     } catch (err: any) {
       // Only clear token if server explicitly returned 401 Unauthorized.
-      // Never log out on network blips, request cancellations, or mobile pull-to-refresh!
       if (err.response?.status === 401) {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('auth_user');
+        await secureStorage.clearAuth();
         set({ user: null, token: null, isAuthenticated: false });
       }
     }
@@ -115,3 +118,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 }));
+
+// Auto-run initialization on startup
+useAuthStore.getState().initializeAuth().catch(() => {});

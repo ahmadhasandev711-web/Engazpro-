@@ -34,6 +34,8 @@ jobs:
 
       - name: Build Web Frontend
         run: npm run build --workspace=web
+        env:
+          VITE_API_URL: https://backendapi.engazpro.com/api
 
       - name: Sync Capacitor Android Assets
         run: npx cap sync android
