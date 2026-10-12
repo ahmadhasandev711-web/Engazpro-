@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Camera, X, AlertCircle, ScanLine, ArrowLeft } from 'lucide-react';
 import { useCameraScanner } from '../../hooks/useCameraScanner';
 import { barcodeScannerService } from '../../../infrastructure/hardware/barcodeScanner';
+import { nativeBackButton } from '../../../platform/nativeBackButton';
 
 interface MobileCameraScannerModalProps {
   isOpen: boolean;
@@ -22,6 +23,15 @@ export const MobileCameraScannerModal: React.FC<MobileCameraScannerModalProps> =
   const [manualCode, setManualCode] = useState<string>('');
   const [nativeError, setNativeError] = useState<string | null>(null);
   const isNative = barcodeScannerService.isNative();
+
+  // Hardware Back Button integration
+  useEffect(() => {
+    if (!isOpen) return;
+    return nativeBackButton.register(() => {
+      onClose();
+      return true;
+    });
+  }, [isOpen, onClose]);
 
   const { videoRef, isStreaming, error: webError, isSupported } = useCameraScanner({
     onScan: (code) => {

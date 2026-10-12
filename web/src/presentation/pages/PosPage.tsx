@@ -11,7 +11,7 @@ import {
   Sparkles,
   Building2,
   ShoppingBag,
-  X,
+  Camera,
 } from 'lucide-react';
 import { formatCurrency } from '@pos-mandob/shared';
 import { apiClient } from '../../data/api/client';
@@ -28,6 +28,8 @@ import { HeldCartsModal } from '../components/pos/HeldCartsModal';
 import { OpenShiftModal } from '../components/shifts/OpenShiftModal';
 import { ProductVariantModal } from '../components/products/ProductVariantModal';
 import { MobileCameraScannerModal } from '../components/mobile/MobileCameraScannerModal';
+import { MobileBottomSheet } from '../components/mobile/MobileBottomSheet';
+import { nativeBackButton } from '../../platform/nativeBackButton';
 import { useHaptic } from '../hooks/useHaptic';
 import { useConfirm } from '../context/ConfirmContext';
 
@@ -299,6 +301,61 @@ export const PosPage: React.FC = () => {
       setIsOpenShiftModalOpen(true);
     }
   }, [canOperateShift, activeShift]);
+
+  // Hardware Back Button integration for active modals
+  useEffect(() => {
+    if (isPaymentModalOpen) {
+      return nativeBackButton.register(() => {
+        setIsPaymentModalOpen(false);
+        return true;
+      });
+    }
+  }, [isPaymentModalOpen]);
+
+  useEffect(() => {
+    if (isReceiptModalOpen) {
+      return nativeBackButton.register(() => {
+        setIsReceiptModalOpen(false);
+        return true;
+      });
+    }
+  }, [isReceiptModalOpen]);
+
+  useEffect(() => {
+    if (isHeldCartsModalOpen) {
+      return nativeBackButton.register(() => {
+        setIsHeldCartsModalOpen(false);
+        return true;
+      });
+    }
+  }, [isHeldCartsModalOpen]);
+
+  useEffect(() => {
+    if (variantModalProduct) {
+      return nativeBackButton.register(() => {
+        setVariantModalProduct(null);
+        return true;
+      });
+    }
+  }, [variantModalProduct]);
+
+  useEffect(() => {
+    if (isOpenShiftModalOpen) {
+      return nativeBackButton.register(() => {
+        setIsOpenShiftModalOpen(false);
+        return true;
+      });
+    }
+  }, [isOpenShiftModalOpen]);
+
+  useEffect(() => {
+    if (isMobileScannerOpen) {
+      return nativeBackButton.register(() => {
+        setIsMobileScannerOpen(false);
+        return true;
+      });
+    }
+  }, [isMobileScannerOpen]);
 
   // Comprehensive Cashier Keyboard Shortcuts (F2: Search, F4: Hold, F8: Held Carts, F9: Checkout, Escape: Close/Clear)
   useEffect(() => {
@@ -601,60 +658,58 @@ export const PosPage: React.FC = () => {
         </div>
       )}
 
-      {/* Mobile Cart Bottom Sheet Modal */}
-      {isMobileCartOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden flex flex-col justify-end bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div
-            className="fixed inset-0"
-            onClick={() => setIsMobileCartOpen(false)}
-          />
-          <div className="relative z-10 bg-white rounded-t-3xl shadow-2xl max-h-[92vh] flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-250 border-t border-slate-200">
-            {/* Drawer Top Header */}
-            <div className="p-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-              <div className="flex items-center gap-2">
-                <ShoppingBag className="w-4 h-4 text-emerald-600" />
-                <h3 className="font-black text-sm text-slate-900">
-                  سلة الفاتورة ({cartItems.reduce((acc, item) => acc + item.quantity, 0)} قطعة)
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsMobileCartOpen(false)}
-                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-200/60 transition-colors cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      {/* Mobile Floating Barcode Scanner FAB */}
+      <button
+        type="button"
+        onClick={() => {
+          hapticSelection();
+          setIsMobileScannerOpen(true);
+        }}
+        className={`lg:hidden fixed z-30 start-4 w-12 h-12 rounded-2xl bg-slate-900/90 text-white shadow-xl shadow-slate-900/25 border border-slate-700/50 backdrop-blur-md flex items-center justify-center active:scale-95 transition-all cursor-pointer ${
+          cartItems.length > 0
+            ? 'bottom-[calc(8.8rem+env(safe-area-inset-bottom,0px))]'
+            : 'bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))]'
+        }`}
+        aria-label="مسح الباركود بالكاميرا"
+        title="مسح الباركود بالكاميرا"
+      >
+        <Camera className="w-5 h-5 text-emerald-400" />
+      </button>
 
-            {/* Cart Ticket inside Drawer */}
-            <div className="flex-1 overflow-y-auto p-2 sm:p-3">
-              <PosCartTicket
-                items={cartItems}
-                selectedCustomer={selectedCustomer}
-                onSelectCustomer={setSelectedCustomer}
-                onUpdateQuantity={updateQuantity}
-                onRemoveItem={removeItem}
-                onClearCart={handleClearCartWithConfirm}
-                discount={discount}
-                onUpdateDiscount={setDiscount}
-                shippingCost={shippingCost}
-                onUpdateShippingCost={setShippingCost}
-                courierPartyId={courierPartyId}
-                onUpdateCourierPartyId={setCourierPartyId}
-                onHoldCart={() => {
-                  handleHoldCurrentCart();
-                  setIsMobileCartOpen(false);
-                }}
-                onCheckout={() => {
-                  setIsMobileCartOpen(false);
-                  handleCheckout();
-                }}
-                onQuickAddCustomer={handleQuickAddCustomer}
-              />
-            </div>
-          </div>
+      {/* Mobile Cart Bottom Sheet Modal */}
+      <MobileBottomSheet
+        isOpen={isMobileCartOpen}
+        onClose={() => setIsMobileCartOpen(false)}
+        title={`سلة الفاتورة (${cartItems.reduce((acc, item) => acc + item.quantity, 0)} قطعة)`}
+        subtitle={`الإجمالي: ${formatCurrency(totalAmount)}`}
+        maxHeight="max-h-[94vh]"
+      >
+        <div className="p-2 sm:p-3">
+          <PosCartTicket
+            items={cartItems}
+            selectedCustomer={selectedCustomer}
+            onSelectCustomer={setSelectedCustomer}
+            onUpdateQuantity={updateQuantity}
+            onRemoveItem={removeItem}
+            onClearCart={handleClearCartWithConfirm}
+            discount={discount}
+            onUpdateDiscount={setDiscount}
+            shippingCost={shippingCost}
+            onUpdateShippingCost={setShippingCost}
+            courierPartyId={courierPartyId}
+            onUpdateCourierPartyId={setCourierPartyId}
+            onHoldCart={() => {
+              handleHoldCurrentCart();
+              setIsMobileCartOpen(false);
+            }}
+            onCheckout={() => {
+              setIsMobileCartOpen(false);
+              handleCheckout();
+            }}
+            onQuickAddCustomer={handleQuickAddCustomer}
+          />
         </div>
-      )}
+      </MobileBottomSheet>
 
       {/* Product Variant & Sub-Unit Modal */}
       <ProductVariantModal
