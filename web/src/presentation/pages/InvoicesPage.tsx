@@ -8,6 +8,8 @@ import { exportInvoicesToExcel } from '../utils/excelExport';
 import { usePermissions } from '../../hooks/usePermissions';
 import { DateRangeFilter } from '../components/common/DateRangeFilter';
 import { PosReceiptModal } from '../components/pos/PosReceiptModal';
+import { InvoiceMobileCard } from '../components/mobile/InvoiceMobileCard';
+import { nativeBackButton } from '../../platform/nativeBackButton';
 
 export const InvoicesPage: React.FC = () => {
   const location = useLocation();
@@ -115,6 +117,25 @@ export const InvoicesPage: React.FC = () => {
       setIsEditingSalesperson(false);
     }
   }, [invoiceDetails]);
+
+  // Hardware Back Button integration
+  useEffect(() => {
+    if (isReceiptModalOpen) {
+      return nativeBackButton.register(() => {
+        setIsReceiptModalOpen(false);
+        return true;
+      });
+    }
+  }, [isReceiptModalOpen]);
+
+  useEffect(() => {
+    if (selectedInvoiceId && !isReceiptModalOpen) {
+      return nativeBackButton.register(() => {
+        setSelectedInvoiceId(null);
+        return true;
+      });
+    }
+  }, [selectedInvoiceId, isReceiptModalOpen]);
 
   const updateSalespersonMutation = useMutation({
     mutationFn: async ({ invoiceId, salespersonId }: { invoiceId: number; salespersonId: number | null }) => {
@@ -401,101 +422,22 @@ export const InvoicesPage: React.FC = () => {
             </div>
 
             {/* Mobile Touch-Friendly Cards (md:hidden) */}
-            <div className="md:hidden overflow-y-auto flex-1 p-3 space-y-3">
+            <div className="md:hidden overflow-y-auto flex-1 p-3 space-y-3 bg-slate-50/60">
               {invoices.map((inv: any) => (
-                <div
+                <InvoiceMobileCard
                   key={inv.id}
-                  onClick={() => setSelectedInvoiceId(inv.id)}
-                  className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm active:scale-[0.99] transition-all cursor-pointer space-y-2.5 hover:border-primary-300"
-                >
-                  {/* Top row: Invoice #, Date, Status pill */}
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono font-black text-xs text-primary-700 bg-primary-50 border border-primary-200/60 px-2.5 py-1 rounded-lg">
-                        {inv.invoice_number}
-                      </span>
-                      {isReturn ? (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800">
-                          مرتجع
-                        </span>
-                      ) : inv.due_amount > 0 ? (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-50 text-rose-700 border border-rose-200">
-                          متبقي: {formatCurrency(inv.due_amount)}
-                        </span>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200">
-                          مسدد
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-[11px] text-slate-400 font-mono flex items-center gap-1 flex-shrink-0">
-                      <Calendar className="w-3 h-3 text-slate-400" />
-                      {inv.date}
-                    </span>
-                  </div>
-
-                  {/* Middle row: Party name & Creator */}
-                  <div className="flex items-center justify-between pt-1">
-                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                      <User className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                      <span className="font-bold text-slate-900 text-xs truncate">
-                        {inv.party_name || 'نقدي (بدون حساب)'}
-                      </span>
-                    </div>
-                    {(isOwnerOrAdmin || isManager) && (inv.salesperson_name || inv.created_by_name) && (
-                      <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-md flex-shrink-0">
-                        {inv.salesperson_name ? `سيلز: ${inv.salesperson_name}` : (inv.created_by_name || 'المنشئ')}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Financial Details row */}
-                  <div className="flex items-center justify-between p-2.5 bg-slate-50/90 rounded-xl border border-slate-100 text-xs">
-                    <div>
-                      <span className="text-slate-400 block text-[10px] font-medium">الإجمالي</span>
-                      <span className={`font-black text-sm ${isReturn ? 'text-amber-600' : 'text-emerald-600'}`}>
-                        {formatCurrency(inv.total)}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-slate-400 block text-[10px] font-medium">{isReturn ? 'المسترد' : 'المدفوع'}</span>
-                      <span className="font-bold text-slate-700 text-xs">
-                        {formatCurrency(inv.paid_amount)}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedInvoiceId(inv.id);
-                          setIsReceiptModalOpen(true);
-                        }}
-                        className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-                        title="طباعة إيصال كاشير حراري (80mm)"
-                      >
-                        <Printer className="w-4 h-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedInvoiceId(inv.id)}
-                        className="p-1.5 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
-                        title="عرض تفاصيل الفاتورة"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
-                      {canDeleteInvoice && (
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(inv.id, inv.invoice_number)}
-                          className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
-                          title="إلغاء المستند"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                  invoice={inv}
+                  isReturn={isReturn}
+                  isOwnerOrAdmin={isOwnerOrAdmin}
+                  isManager={isManager}
+                  canDeleteInvoice={canDeleteInvoice}
+                  onSelectInvoice={(id) => setSelectedInvoiceId(id)}
+                  onPrintReceipt={(id) => {
+                    setSelectedInvoiceId(id);
+                    setIsReceiptModalOpen(true);
+                  }}
+                  onDeleteInvoice={(id, num) => handleDelete(id, num)}
+                />
               ))}
             </div>
           </>

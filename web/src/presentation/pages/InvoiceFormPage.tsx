@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -21,6 +21,7 @@ import { InvoiceItemsTable } from '../components/invoice/InvoiceItemsTable';
 import { InvoiceSummaryPanel } from '../components/invoice/InvoiceSummaryPanel';
 import { ProductVariantModal, VariantSelectionPayload } from '../components/products/ProductVariantModal';
 import { usePermissions } from '../../hooks/usePermissions';
+import { nativeBackButton } from '../../platform/nativeBackButton';
 
 export const InvoiceFormPage: React.FC = () => {
   const location = useLocation();
@@ -57,6 +58,16 @@ export const InvoiceFormPage: React.FC = () => {
   const [isSearchingInvoice, setIsSearchingInvoice] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [variantModalProduct, setVariantModalProduct] = useState<Product | null>(null);
+
+  // Hardware Back Button integration
+  useEffect(() => {
+    if (variantModalProduct) {
+      return nativeBackButton.register(() => {
+        setVariantModalProduct(null);
+        return true;
+      });
+    }
+  }, [variantModalProduct]);
 
   // Form setup
   const {
