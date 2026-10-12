@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Wallet,
@@ -22,6 +22,8 @@ import {
 import { formatCurrency, TreasuryType, Money } from '@pos-mandob/shared';
 import { apiClient } from '../../data/api/client';
 import { usePermissions } from '../../hooks/usePermissions';
+import { MobileFilterChips, FilterChipOption } from '../components/mobile/MobileFilterChips';
+import { nativeBackButton } from '../../platform/nativeBackButton';
 
 export const TreasuriesPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -212,6 +214,49 @@ export const TreasuriesPage: React.FC = () => {
   const drawersAndCustodiesTotal = drawersAndCustodies.reduce((acc, t) => acc.add(t.current_balance ?? t.balance ?? 0), Money.zero()).getAmount();
 
   const totalLiquidBalance = safesTotal + banksAndWalletsTotal;
+
+  // Hardware Back Button integration
+  useEffect(() => {
+    if (selectedShiftToSettle) {
+      return nativeBackButton.register(() => {
+        setSelectedShiftToSettle(null);
+        return true;
+      });
+    }
+  }, [selectedShiftToSettle]);
+
+  useEffect(() => {
+    if (transferModalOpen) {
+      return nativeBackButton.register(() => {
+        setTransferModalOpen(false);
+        return true;
+      });
+    }
+  }, [transferModalOpen]);
+
+  useEffect(() => {
+    if (createModalOpen) {
+      return nativeBackButton.register(() => {
+        setCreateModalOpen(false);
+        return true;
+      });
+    }
+  }, [createModalOpen]);
+
+  const tabOptions: FilterChipOption<typeof activeTab>[] = useMemo(
+    () => [
+      {
+        id: 'PENDING',
+        label: 'ورديات بانتظار التوريد',
+        count: pendingShifts.length,
+        icon: Clock,
+        variant: pendingShifts.length > 0 ? 'warning' : 'default',
+      },
+      { id: 'TREASURIES', label: 'تفاصيل الخزن والحسابات', icon: Wallet },
+      { id: 'ALL_SHIFTS', label: 'سجل كافة الورديات والتقفيلات', icon: RefreshCw },
+    ],
+    [pendingShifts.length]
+  );
 
   return (
     <div className="space-y-3 sm:space-y-6 flex flex-col h-full" dir="rtl">
@@ -451,44 +496,12 @@ export const TreasuriesPage: React.FC = () => {
       </div>
 
       {/* Tabs Navigation (Horizontal Scroll Track) */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar scroll-smooth flex-nowrap text-xs border-b border-slate-200">
-        <button
-          onClick={() => setActiveTab('PENDING')}
-          className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
-            activeTab === 'PENDING'
-              ? 'bg-primary-600 text-white shadow-xs'
-              : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-          }`}
-        >
-          <span>ورديات بانتظار التوريد</span>
-          {pendingShifts.length > 0 && (
-            <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${activeTab === 'PENDING' ? 'bg-white text-primary-700' : 'bg-rose-500 text-white'}`}>
-              {pendingShifts.length}
-            </span>
-          )}
-        </button>
-
-        <button
-          onClick={() => setActiveTab('TREASURIES')}
-          className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-            activeTab === 'TREASURIES'
-              ? 'bg-primary-600 text-white shadow-xs'
-              : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-          }`}
-        >
-          <span>تفاصيل الخزن والحسابات</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('ALL_SHIFTS')}
-          className={`pb-3 px-4 text-xs font-bold transition-all relative ${
-            activeTab === 'ALL_SHIFTS'
-              ? 'text-primary-700 border-b-2 border-primary-600 font-black'
-              : 'text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <span>سجل كافة الورديات والتقفيلات</span>
-        </button>
+      <div className="w-full min-w-0">
+        <MobileFilterChips
+          options={tabOptions}
+          selectedId={activeTab}
+          onSelect={(tab) => setActiveTab(tab as any)}
+        />
       </div>
 
       {/* Tab 1: Pending Handover Settlements */}

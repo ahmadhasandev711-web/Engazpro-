@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Search, Trash2, Edit2, Wallet, AlertCircle, X, CheckCircle2, Download, Tags } from 'lucide-react';
 import { useForm } from 'react-hook-form';
@@ -8,6 +8,9 @@ import { apiClient } from '../../data/api/client';
 import { exportExpensesToExcel } from '../utils/excelExport';
 import { usePermissions } from '../../hooks/usePermissions';
 import { DateRangeFilter } from '../components/common/DateRangeFilter';
+import { MobileFilterChips, FilterChipOption } from '../components/mobile/MobileFilterChips';
+import { ExpenseMobileCard } from '../components/mobile/ExpenseMobileCard';
+import { nativeBackButton } from '../../platform/nativeBackButton';
 
 export const ExpensesPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -118,6 +121,33 @@ export const ExpensesPage: React.FC = () => {
 
   const expenses = expensesData?.data || [];
   const totalExpenses = expensesData?.summary?.total_amount || 0;
+
+  // Hardware Back Button integration
+  useEffect(() => {
+    if (isModalOpen) {
+      return nativeBackButton.register(() => {
+        setIsModalOpen(false);
+        return true;
+      });
+    }
+  }, [isModalOpen]);
+
+  useEffect(() => {
+    if (isCategoriesModalOpen) {
+      return nativeBackButton.register(() => {
+        setIsCategoriesModalOpen(false);
+        return true;
+      });
+    }
+  }, [isCategoriesModalOpen]);
+
+  const categoryFilterOptions: FilterChipOption<string>[] = useMemo(
+    () => [
+      { id: '', label: 'جميع التصنيفات' },
+      ...categories.map((cat) => ({ id: cat.name, label: cat.name })),
+    ],
+    [categories]
+  );
 
   // Mutations
   const saveMutation = useMutation({
@@ -297,26 +327,12 @@ export const ExpensesPage: React.FC = () => {
       <div className="flex flex-col gap-2.5 bg-white p-3 sm:p-4 rounded-2xl border border-slate-200 shadow-sm w-full min-w-0 max-w-full overflow-hidden">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           {/* Category Filters (Single-line horizontal scroll track on mobile) */}
-          <div className="w-full sm:w-auto min-w-0 overflow-x-auto no-scrollbar scroll-smooth flex items-center gap-1.5 py-0.5 flex-nowrap sm:flex-wrap">
-            <button
-              onClick={() => setSelectedCategory('')}
-              className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 ${
-                selectedCategory === '' ? 'bg-slate-900 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              جميع التصنيفات
-            </button>
-            {categories.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setSelectedCategory(cat.name)}
-                className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 ${
-                  selectedCategory === cat.name ? 'bg-primary-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                {cat.name}
-              </button>
-            ))}
+          <div className="w-full sm:w-auto min-w-0">
+            <MobileFilterChips
+              options={categoryFilterOptions}
+              selectedId={selectedCategory}
+              onSelect={(catId) => setSelectedCategory(catId)}
+            />
           </div>
 
           {/* Search */}
@@ -433,72 +449,15 @@ export const ExpensesPage: React.FC = () => {
             </div>
 
             {/* Mobile Cards View (Touch-Optimized) */}
-            <div className="md:hidden overflow-y-auto flex-1 p-3 space-y-3">
+            <div className="md:hidden overflow-y-auto flex-1 p-3 space-y-3 bg-slate-50/60">
               {expenses.map((exp: any) => (
-                <div
+                <ExpenseMobileCard
                   key={exp.id}
-                  className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-sm active:scale-[0.99] transition-transform space-y-3"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <h4 className="font-bold text-slate-900 text-sm">{exp.title}</h4>
-                      <p className="text-xs text-slate-400 mt-0.5">{exp.date}</p>
-                    </div>
-                    <span className="font-black text-rose-600 text-base flex-shrink-0">
-                      {formatCurrency(exp.amount)}
-                    </span>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-1.5 text-xs">
-                    <span className="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg font-medium">
-                      {exp.category || 'عام'}
-                    </span>
-                    <span className={`px-2.5 py-1 rounded-lg font-bold ${
-                      exp.payment_method === 'VODAFONE_CASH'
-                        ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                        : exp.payment_method === 'INSTAPAY'
-                        ? 'bg-purple-50 text-purple-700 border border-purple-200'
-                        : exp.payment_method === 'TRANSFER' || exp.payment_method === 'CARD'
-                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                        : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                    }`}>
-                      {exp.payment_method === 'VODAFONE_CASH'
-                        ? 'فودافون كاش'
-                        : exp.payment_method === 'INSTAPAY'
-                        ? 'إنستاباي'
-                        : exp.payment_method === 'TRANSFER'
-                        ? 'تحويل بنكي'
-                        : exp.payment_method === 'CARD'
-                        ? 'بطاقة بنكية'
-                        : 'نقدية (الدرج)'}
-                    </span>
-                  </div>
-
-                  {exp.notes && (
-                    <p className="text-xs text-slate-500 bg-slate-50 rounded-xl p-2.5 leading-relaxed">
-                      {exp.notes}
-                    </p>
-                  )}
-
-                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-                    <button
-                      onClick={() => handleEdit(exp)}
-                      className="min-h-[38px] px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl flex items-center gap-1.5 active:bg-slate-300"
-                    >
-                      <Edit2 className="w-3.5 h-3.5 text-slate-500" />
-                      تعديل
-                    </button>
-                    {canDeleteExpense && (
-                      <button
-                        onClick={() => handleDelete(exp.id, exp.title)}
-                        className="min-h-[38px] px-3 py-1.5 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-xl flex items-center gap-1.5 active:bg-rose-200"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        حذف
-                      </button>
-                    )}
-                  </div>
-                </div>
+                  expense={exp}
+                  canDeleteExpense={canDeleteExpense}
+                  onEditExpense={(expense) => handleEdit(expense)}
+                  onDeleteExpense={(id, title) => handleDelete(id, title)}
+                />
               ))}
             </div>
           </>
