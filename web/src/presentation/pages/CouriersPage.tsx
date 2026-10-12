@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -27,6 +27,8 @@ import { formatCurrency } from '@pos-mandob/shared';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useAuthStore } from '../../data/store/useAuthStore';
 import { exportManifestToExcel } from '../utils/excelExport';
+import { CourierMobileCard } from '../components/mobile/CourierMobileCard';
+import { nativeBackButton } from '../../platform/nativeBackButton';
 
 export const CouriersPage: React.FC = () => {
   const navigate = useNavigate();
@@ -67,6 +69,34 @@ export const CouriersPage: React.FC = () => {
   const [settleMethod, setSettleMethod] = useState<'CASH' | 'CARD' | 'INSTAPAY' | 'VODAFONE_CASH' | 'TRANSFER'>('CASH');
   const [settleNotes, setSettleNotes] = useState<string>('');
   const [settleError, setSettleError] = useState<string | null>(null);
+
+  // Hardware Back Button integration
+  useEffect(() => {
+    if (manifestCourier) {
+      return nativeBackButton.register(() => {
+        setManifestCourier(null);
+        return true;
+      });
+    }
+  }, [manifestCourier]);
+
+  useEffect(() => {
+    if (settleCourier) {
+      return nativeBackButton.register(() => {
+        setSettleCourier(null);
+        return true;
+      });
+    }
+  }, [settleCourier]);
+
+  useEffect(() => {
+    if (isPartyModalOpen) {
+      return nativeBackButton.register(() => {
+        setIsPartyModalOpen(false);
+        return true;
+      });
+    }
+  }, [isPartyModalOpen]);
 
   const showNotification = (type: 'success' | 'error', message: string) => {
     setFeedback({ type, message });
@@ -360,8 +390,9 @@ export const CouriersPage: React.FC = () => {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-right border-collapse">
+          <>
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-right border-collapse">
               <thead>
                 <tr className="bg-slate-50/75 border-b border-slate-200/80 text-[11px] font-black text-slate-600 uppercase tracking-wider">
                   <th className="py-3 px-4">شركة الشحن</th>
@@ -498,6 +529,27 @@ export const CouriersPage: React.FC = () => {
               </tbody>
             </table>
           </div>
+
+            {/* Mobile Cards View (md:hidden) */}
+            <div className="md:hidden space-y-3 p-3 bg-slate-50/60">
+              {couriers.map((c: any) => (
+                <CourierMobileCard
+                  key={c.id}
+                  courier={c}
+                  canDeleteParty={canDeleteParty}
+                  onOpenManifest={(cour) => setManifestCourier(cour)}
+                  onOpenSettle={(cour, type) => openSettleModal(cour, type)}
+                  onOpenLedger={(id) => navigate(`/ledger/${id}`)}
+                  onEditCourier={(cour) => openEditModal(cour)}
+                  onDeleteCourier={(id, name) => {
+                    if (confirm(`هل أنت متأكد من حذف شركة الشحن "${name}"؟`)) {
+                      deleteCourierMutation.mutate(id);
+                    }
+                  }}
+                />
+              ))}
+            </div>
+          </>
         )}
       </div>
 
