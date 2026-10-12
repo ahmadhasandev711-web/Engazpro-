@@ -87,49 +87,49 @@ export const WcOrderMobileCard: React.FC<WcOrderMobileCardProps> = ({
       case 'PENDING':
         return {
           label: 'بانتظار التأكيد',
-          bg: 'bg-amber-500/10 text-amber-700 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-700',
+          bg: 'bg-amber-50 text-amber-700 border-amber-200',
           border: 'amber' as const,
           icon: Clock,
         };
       case 'CONFIRMED':
         return {
           label: 'مؤكد وقيد التجهيز',
-          bg: 'bg-indigo-500/10 text-indigo-700 border-indigo-300 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-700',
+          bg: 'bg-indigo-50 text-indigo-700 border-indigo-200',
           border: 'indigo' as const,
           icon: Package,
         };
       case 'DISPATCHED':
         return {
           label: 'مع المندوب',
-          bg: 'bg-blue-500/10 text-blue-700 border-blue-300 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-700',
+          bg: 'bg-blue-50 text-blue-700 border-blue-200',
           border: 'indigo' as const,
           icon: Truck,
         };
       case 'SHIPPED_VIA_COURIER':
         return {
           label: 'مع شركة الشحن',
-          bg: 'bg-purple-500/10 text-purple-700 border-purple-300 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-700',
+          bg: 'bg-purple-50 text-purple-700 border-purple-200',
           border: 'purple' as const,
           icon: Truck,
         };
       case 'DELIVERED':
         return {
           label: 'تم التسليم بنجاح',
-          bg: 'bg-emerald-500/10 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-700',
+          bg: 'bg-emerald-50 text-emerald-700 border-emerald-200',
           border: 'emerald' as const,
           icon: CheckCircle2,
         };
       case 'RETURNED':
         return {
           label: 'مرتجع',
-          bg: 'bg-rose-500/10 text-rose-700 border-rose-300 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-700',
+          bg: 'bg-rose-50 text-rose-700 border-rose-200',
           border: 'rose' as const,
           icon: RotateCcw,
         };
       default:
         return {
           label: status,
-          bg: 'bg-slate-500/10 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
+          bg: 'bg-slate-50 text-slate-700 border-slate-200',
           border: 'slate' as const,
           icon: AlertCircle,
         };
@@ -155,19 +155,19 @@ export const WcOrderMobileCard: React.FC<WcOrderMobileCardProps> = ({
   return (
     <MobileCard statusColor={statusConfig.border} className="space-y-3.5">
       {/* 1. Header: Order ID, Date & Status Badge */}
-      <div className="flex items-start justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2.5">
+      <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-2.5">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <span className="font-mono text-sm font-black text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 rounded-lg border border-slate-200/60 dark:border-slate-700">
+            <span className="font-mono text-sm font-black text-slate-900 bg-slate-100 px-2.5 py-0.5 rounded-lg border border-slate-200/60">
               #{order.wc_order_id}
             </span>
-            <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 flex items-center gap-1 font-sans">
+            <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1 font-sans">
               <Calendar className="w-3 h-3" />
               {formatOrderDate(order)}
             </span>
           </div>
           {order.branch && (
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-bold">
+            <span className="text-[10px] text-slate-500 block font-bold">
               فرع التجهيز: {order.branch.name}
             </span>
           )}
@@ -184,13 +184,13 @@ export const WcOrderMobileCard: React.FC<WcOrderMobileCardProps> = ({
       </div>
 
       {/* 2. Customer Section with Action Buttons (Call / WhatsApp) */}
-      <div className="bg-slate-50 dark:bg-slate-800/60 p-3 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-2">
+      <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 space-y-2">
         <div className="flex items-center justify-between">
-          <h4 className="text-sm font-black text-slate-900 dark:text-white truncate">
+          <h4 className="text-sm font-black text-slate-900 truncate">
             {order.customer_name || 'عميل بدون اسم'}
           </h4>
           {locationName && (
-            <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-700 px-2 py-0.5 rounded-lg border border-slate-200/70 dark:border-slate-600 flex items-center gap-1">
+            <span className="text-[10px] font-bold text-slate-600 bg-white px-2 py-0.5 rounded-lg border border-slate-200/70 flex items-center gap-1">
               <MapPin className="w-3 h-3 text-slate-400" />
               {locationName}
             </span>
@@ -198,7 +198,7 @@ export const WcOrderMobileCard: React.FC<WcOrderMobileCardProps> = ({
         </div>
 
         {address && (
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-start gap-1 font-sans">
+          <p className="text-[11px] text-slate-500 flex items-start gap-1 font-sans">
             <MapPin className="w-3 h-3 text-slate-400 shrink-0 mt-0.5" />
             <span className="line-clamp-2 leading-relaxed">{address}</span>
           </p>
@@ -213,9 +213,9 @@ export const WcOrderMobileCard: React.FC<WcOrderMobileCardProps> = ({
                 e.stopPropagation();
                 selection();
               }}
-              className="flex-1 py-2 px-3 bg-white dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-100 font-bold text-xs rounded-xl border border-slate-200 dark:border-slate-600 flex items-center justify-center gap-1.5 active:scale-95 transition-all"
+              className="flex-1 py-2 px-3 bg-white hover:bg-slate-100 text-slate-800 font-bold text-xs rounded-xl border border-slate-200 flex items-center justify-center gap-1.5 active:scale-95 transition-all"
             >
-              <Phone className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              <Phone className="w-3.5 h-3.5 text-emerald-600" />
               <span className="font-mono text-[11px]">{phone}</span>
             </a>
 
@@ -243,14 +243,14 @@ export const WcOrderMobileCard: React.FC<WcOrderMobileCardProps> = ({
       {/* 3. Items Summary Preview */}
       <div className="space-y-2">
         <div className="flex items-center justify-between text-xs">
-          <span className="font-bold text-slate-500 dark:text-slate-400">
+          <span className="font-bold text-slate-500">
             الأصناف ({items.length}):
           </span>
           {items.length > 2 && (
             <button
               type="button"
               onClick={() => setIsItemsExpanded(!isItemsExpanded)}
-              className="text-primary-600 dark:text-primary-400 font-black flex items-center gap-0.5 text-[11px]"
+              className="text-primary-600 font-black flex items-center gap-0.5 text-[11px]"
             >
               <span>{isItemsExpanded ? 'طي القائمة' : `عرض الكل (+${items.length - 2})`}</span>
               {isItemsExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
@@ -262,24 +262,24 @@ export const WcOrderMobileCard: React.FC<WcOrderMobileCardProps> = ({
           {(isItemsExpanded ? items : items.slice(0, 2)).map((item: any, idx: number) => (
             <div
               key={idx}
-              className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800/80 text-xs"
+              className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-50/70 border border-slate-100 text-xs"
             >
               {item.image_url ? (
                 <img
                   src={item.image_url}
                   alt={cleanItemName(item.name)}
-                  className="w-9 h-9 rounded-lg object-cover border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shrink-0"
+                  className="w-9 h-9 rounded-lg object-cover border border-slate-200 bg-white shrink-0"
                   onError={(e) => {
                     (e.target as HTMLElement).style.display = 'none';
                   }}
                 />
               ) : (
-                <div className="w-9 h-9 rounded-lg bg-slate-200/80 dark:bg-slate-700 flex items-center justify-center shrink-0 text-slate-400">
+                <div className="w-9 h-9 rounded-lg bg-slate-200/80 flex items-center justify-center shrink-0 text-slate-400">
                   <Package className="w-4 h-4" />
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <span className="font-bold text-slate-900 dark:text-white truncate block text-[11px]">
+                <span className="font-bold text-slate-900 truncate block text-[11px]">
                   {cleanItemName(item.name)}
                 </span>
                 {item.attributes && Array.isArray(item.attributes) && item.attributes.length > 0 && (
@@ -287,7 +287,7 @@ export const WcOrderMobileCard: React.FC<WcOrderMobileCardProps> = ({
                     {item.attributes.map((attr: any, aIdx: number) => (
                       <span
                         key={aIdx}
-                        className="text-[9px] bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 px-1.5 py-0.2 rounded text-slate-600 dark:text-slate-300 font-bold"
+                        className="text-[9px] bg-white border border-slate-200 px-1.5 py-0.2 rounded text-slate-600 font-bold"
                       >
                         {attr.key}: {attr.value}
                       </span>
@@ -295,7 +295,7 @@ export const WcOrderMobileCard: React.FC<WcOrderMobileCardProps> = ({
                   </div>
                 )}
               </div>
-              <span className="font-mono text-xs font-black text-slate-800 dark:text-slate-200 shrink-0">
+              <span className="font-mono text-xs font-black text-slate-800 shrink-0">
                 × {item.quantity}
               </span>
             </div>
@@ -305,9 +305,9 @@ export const WcOrderMobileCard: React.FC<WcOrderMobileCardProps> = ({
 
       {/* 4. Courier & Tracking Strip (if dispatched) */}
       {(order.courier_name || order.mandob || order.tracking_number) && (
-        <div className="p-2.5 rounded-xl bg-purple-50/60 dark:bg-purple-950/30 border border-purple-100 dark:border-purple-900/50 text-xs flex items-center justify-between">
-          <div className="flex items-center gap-1.5 text-purple-900 dark:text-purple-300 font-bold">
-            <Truck className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+        <div className="p-2.5 rounded-xl bg-purple-50/60 border border-purple-100 text-xs flex items-center justify-between">
+          <div className="flex items-center gap-1.5 text-purple-900 font-bold">
+            <Truck className="w-3.5 h-3.5 text-purple-600" />
             <span>{order.courier_name || order.mandob?.name || 'شركة شحن'}</span>
           </div>
 
@@ -315,7 +315,7 @@ export const WcOrderMobileCard: React.FC<WcOrderMobileCardProps> = ({
             <button
               type="button"
               onClick={handleCopyTracking}
-              className="inline-flex items-center gap-1 font-mono text-[11px] bg-white dark:bg-slate-800 px-2 py-0.5 rounded-md border border-purple-200 dark:border-purple-700 text-purple-700 dark:text-purple-300"
+              className="inline-flex items-center gap-1 font-mono text-[11px] bg-white px-2 py-0.5 rounded-md border border-purple-200 text-purple-700"
               title="نسخ رقم البوليصة"
             >
               <span>{order.tracking_number}</span>
@@ -326,12 +326,12 @@ export const WcOrderMobileCard: React.FC<WcOrderMobileCardProps> = ({
       )}
 
       {/* 5. Financial Summary Row */}
-      <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+      <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
         <div>
           <span className="text-[10px] text-slate-400 block font-bold">
             {isPrepaid ? 'مدفوع مقدماً أونلاين' : 'المطلوب تحصيله (COD)'}
           </span>
-          <span className="font-mono text-base font-black text-slate-900 dark:text-white">
+          <span className="font-mono text-base font-black text-slate-900">
             {formatCurrency(order.total)}
           </span>
         </div>
@@ -344,7 +344,7 @@ export const WcOrderMobileCard: React.FC<WcOrderMobileCardProps> = ({
               selection();
               onPrint(order);
             }}
-            className="p-2 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white bg-slate-100 dark:bg-slate-800 rounded-xl active:scale-95 transition-all"
+            className="p-2 text-slate-500 hover:text-slate-800 bg-slate-100 rounded-xl active:scale-95 transition-all"
             title="طباعة الفاتورة / البوليصة"
           >
             <Printer className="w-4 h-4" />
@@ -357,7 +357,7 @@ export const WcOrderMobileCard: React.FC<WcOrderMobileCardProps> = ({
               selection();
               onViewDetails(order);
             }}
-            className="p-2 text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50 rounded-xl active:scale-95 transition-all"
+            className="p-2 text-indigo-600 bg-indigo-50 rounded-xl active:scale-95 transition-all"
             title="عرض التفاصيل الكاملة والصور"
           >
             <Eye className="w-4 h-4" />

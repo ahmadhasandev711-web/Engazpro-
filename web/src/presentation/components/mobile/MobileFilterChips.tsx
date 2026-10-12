@@ -54,7 +54,7 @@ export function MobileFilterChips<T extends string>({
               'flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all shrink-0 active:scale-95 cursor-pointer',
               isSelected
                 ? 'bg-slate-900 text-white shadow-md shadow-slate-900/20'
-                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700/80 hover:bg-slate-50'
+                : 'bg-white text-slate-600 border border-slate-200/80 hover:bg-slate-50'
             )}
           >
             {Icon && <Icon className="w-3.5 h-3.5" />}
@@ -65,7 +65,7 @@ export function MobileFilterChips<T extends string>({
                   'px-1.5 py-0.2 rounded-full text-[10px] font-black',
                   isSelected
                     ? 'bg-white/20 text-white'
-                    : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
+                    : 'bg-slate-100 text-slate-500'
                 )}
               >
                 {opt.count}

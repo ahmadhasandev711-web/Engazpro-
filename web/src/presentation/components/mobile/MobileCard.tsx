@@ -41,9 +41,9 @@ export const MobileCard: React.FC<MobileCardProps> = ({
     <div
       onClick={handleClick}
       className={clsx(
-        'bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200/80 dark:border-slate-800 shadow-xs transition-all relative overflow-hidden',
+        'bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs transition-all relative overflow-hidden',
         statusColor && statusBorderMap[statusColor],
-        onClick && 'active:scale-[0.99] cursor-pointer hover:border-slate-300 dark:hover:border-slate-700',
+        onClick && 'active:scale-[0.99] cursor-pointer hover:border-slate-300',
         className
       )}
       dir="rtl"
