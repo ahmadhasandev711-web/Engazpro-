@@ -16,6 +16,7 @@ import {
 import { formatCurrency } from '@pos-mandob/shared';
 import { DashboardData } from './OwnerDashboard';
 import { PWAInstallBanner } from '../pwa/PWAInstallBanner';
+import { RecentActivityMobileCard } from '../mobile/RecentActivityMobileCard';
 
 interface MandobDashboardProps {
   data: DashboardData | undefined;
@@ -70,14 +71,14 @@ export const MandobDashboard: React.FC<MandobDashboardProps> = ({
           </button>
           <button
             onClick={() => navigate('/sales/new')}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-xs font-bold shadow-sm transition-colors"
+            className="hidden sm:flex items-center gap-1.5 px-3.5 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-xs font-bold shadow-sm transition-colors"
           >
             <PlusCircle className="w-4 h-4" />
             <span>فاتورة جديدة</span>
           </button>
           <button
             onClick={() => navigate('/payments')}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-sm transition-colors"
+            className="hidden sm:flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-sm transition-colors"
           >
             <CreditCard className="w-4 h-4" />
             <span>تحصيل سند قبض</span>
@@ -85,69 +86,87 @@ export const MandobDashboard: React.FC<MandobDashboardProps> = ({
         </div>
       </div>
 
+      {/* Mobile Quick Action Buttons (sm:hidden) */}
+      <div className="sm:hidden grid grid-cols-2 gap-2">
+        <button
+          onClick={() => navigate('/sales/new')}
+          className="min-h-[44px] flex items-center justify-center gap-1.5 px-3 py-2 bg-primary-600 active:bg-primary-700 text-white rounded-xl text-xs font-bold shadow-xs active:scale-95 transition-all"
+        >
+          <PlusCircle className="w-4 h-4" />
+          <span>فاتورة جديدة</span>
+        </button>
+        <button
+          onClick={() => navigate('/payments')}
+          className="min-h-[44px] flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-600 active:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs active:scale-95 transition-all"
+        >
+          <CreditCard className="w-4 h-4" />
+          <span>تحصيل سند قبض</span>
+        </button>
+      </div>
+
       {/* Main KPI Cards Grid for Mandob */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
         {/* 1. العهدة النقدية الفعلية باليد (Most Important Metric for Mandob) */}
-        <div className="bg-white p-5 rounded-xl border-2 border-amber-400 shadow-sm relative overflow-hidden bg-gradient-to-br from-amber-50/50 to-white">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-black text-amber-900">العهدة النقدية باليد (الكاش)</span>
-            <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center">
-              <Wallet className="w-4 h-4" />
+        <div className="bg-white p-3.5 sm:p-5 rounded-2xl sm:rounded-xl border-2 border-amber-400 shadow-sm relative overflow-hidden bg-gradient-to-br from-amber-50/50 to-white">
+          <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+            <span className="text-[11px] sm:text-xs font-black text-amber-900 truncate">العهدة باليد (كاش)</span>
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
+              <Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="text-2xl font-black text-amber-800 tracking-tight">
+          <div className="text-lg sm:text-2xl font-black text-amber-800 tracking-tight font-mono">
             {isLoading ? '...' : formatCurrency(kpis?.today_cash_flow ?? 0)}
           </div>
-          <div className="text-[11px] font-medium text-amber-700 mt-1">
-            المبلغ الفعلي المطلوب تسليمه للخزينة
+          <div className="text-[10px] sm:text-[11px] font-medium text-amber-700 mt-1 truncate">
+            المطلوب تسليمه
           </div>
         </div>
 
         {/* 2. إجمالي مبيعاتي اليوم (Net Sales) */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-slate-500">إجمالي مبيعاتي اليوم</span>
-            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-              <ShoppingBag className="w-4 h-4" />
+        <div className="bg-white p-3.5 sm:p-5 rounded-2xl sm:rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
+          <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+            <span className="text-[11px] sm:text-xs font-bold text-slate-500 truncate">مبيعاتي اليوم</span>
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+              <ShoppingBag className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="text-2xl font-black text-slate-900 tracking-tight">
+          <div className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight font-mono">
             {isLoading ? '...' : formatCurrency(kpis?.today_sales ?? 0)}
           </div>
-          <div className="text-[11px] text-slate-400 mt-1">
-            مبيعات كاش وآجل (صافي بعد المرتجعات)
+          <div className="text-[10px] sm:text-[11px] text-slate-400 mt-1 truncate">
+            صافي مبيعات اليوم
           </div>
         </div>
 
         {/* 3. مبيعات آجلة مسجلة اليوم (Credit Sales) */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-slate-500">مبيعات آجلة مسجلة اليوم</span>
-            <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
-              <Clock className="w-4 h-4" />
+        <div className="bg-white p-3.5 sm:p-5 rounded-2xl sm:rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
+          <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+            <span className="text-[11px] sm:text-xs font-bold text-slate-500 truncate">مبيعات آجلة</span>
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+              <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="text-2xl font-black text-indigo-600 tracking-tight">
+          <div className="text-lg sm:text-2xl font-black text-indigo-600 tracking-tight font-mono">
             {isLoading ? '...' : formatCurrency(kpis?.today_credit_sales ?? 0)}
           </div>
-          <div className="text-[11px] text-slate-400 mt-1">
-            ديون مسجلة على حسابات العملاء اليوم
+          <div className="text-[10px] sm:text-[11px] text-slate-400 mt-1 truncate">
+            آجل على العملاء
           </div>
         </div>
 
         {/* 4. مصاريف خط السير المسجلة اليوم */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-slate-500">مصاريف خط السير اليوم</span>
-            <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
-              <Receipt className="w-4 h-4" />
+        <div className="bg-white p-3.5 sm:p-5 rounded-2xl sm:rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
+          <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+            <span className="text-[11px] sm:text-xs font-bold text-slate-500 truncate">مصاريف السير</span>
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+              <Receipt className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="text-2xl font-black text-rose-600 tracking-tight">
+          <div className="text-lg sm:text-2xl font-black text-rose-600 tracking-tight font-mono">
             {isLoading ? '...' : formatCurrency(kpis?.today_expenses ?? 0)}
           </div>
-          <div className="text-[11px] text-slate-400 mt-1">
-            بنزين، كارتات، صيانة مخصومة من العهدة
+          <div className="text-[10px] sm:text-[11px] text-slate-400 mt-1 truncate">
+            بنزين ونثريات مخصومة
           </div>
         </div>
       </div>
@@ -305,46 +324,56 @@ export const MandobDashboard: React.FC<MandobDashboardProps> = ({
             لا توجد حركات مسجلة لك اليوم حتى الآن
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-right text-xs">
-              <thead className="bg-slate-50 text-slate-500 border-b border-slate-200 font-bold">
-                <tr>
-                  <th className="p-3">نوع الحركة</th>
-                  <th className="p-3">المرجع / البيان</th>
-                  <th className="p-3">العميل / الحساب</th>
-                  <th className="p-3">الوقت</th>
-                  <th className="p-3 text-left">المبلغ</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {recentActivities.map((act, idx) => {
-                  let badgeStyle = 'bg-slate-100 text-slate-800';
-                  if (act.type === 'SALE') badgeStyle = 'bg-blue-100 text-blue-800';
-                  else if (act.type === 'SALE_RETURN') badgeStyle = 'bg-amber-100 text-amber-800';
-                  else if (act.type === 'RECEIPT') badgeStyle = 'bg-emerald-100 text-emerald-800';
-                  else if (act.type === 'EXPENSE') badgeStyle = 'bg-rose-100 text-rose-800';
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-right text-xs">
+                <thead className="bg-slate-50 text-slate-500 border-b border-slate-200 font-bold">
+                  <tr>
+                    <th className="p-3">نوع الحركة</th>
+                    <th className="p-3">المرجع / البيان</th>
+                    <th className="p-3">العميل / الحساب</th>
+                    <th className="p-3">الوقت</th>
+                    <th className="p-3 text-left">المبلغ</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {recentActivities.map((act, idx) => {
+                    let badgeStyle = 'bg-slate-100 text-slate-800';
+                    if (act.type === 'SALE') badgeStyle = 'bg-blue-100 text-blue-800';
+                    else if (act.type === 'SALE_RETURN') badgeStyle = 'bg-amber-100 text-amber-800';
+                    else if (act.type === 'RECEIPT') badgeStyle = 'bg-emerald-100 text-emerald-800';
+                    else if (act.type === 'EXPENSE') badgeStyle = 'bg-rose-100 text-rose-800';
 
-                  return (
-                    <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="p-3">
-                        <span className={`px-2.5 py-1 rounded-md text-[11px] font-bold ${badgeStyle}`}>
-                          {act.type_label}
-                        </span>
-                      </td>
-                      <td className="p-3 font-bold text-slate-900">{act.reference}</td>
-                      <td className="p-3 text-slate-600">{act.party_name}</td>
-                      <td className="p-3 text-slate-400 font-mono text-[11px]">
-                        {act.created_at || act.date}
-                      </td>
-                      <td className="p-3 text-left font-black text-slate-900">
-                        {formatCurrency(act.amount)}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                    return (
+                      <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="p-3">
+                          <span className={`px-2.5 py-1 rounded-md text-[11px] font-bold ${badgeStyle}`}>
+                            {act.type_label}
+                          </span>
+                        </td>
+                        <td className="p-3 font-bold text-slate-900">{act.reference}</td>
+                        <td className="p-3 text-slate-600">{act.party_name}</td>
+                        <td className="p-3 text-slate-400 font-mono text-[11px]">
+                          {act.created_at || act.date}
+                        </td>
+                        <td className="p-3 text-left font-black text-slate-900 font-mono">
+                          {formatCurrency(act.amount)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Touch Cards View */}
+            <div className="md:hidden p-3 space-y-2.5 bg-slate-50/60">
+              {recentActivities.map((act) => (
+                <RecentActivityMobileCard key={act.id} activity={act} />
+              ))}
+            </div>
+          </>
         )}
       </div>
     </div>

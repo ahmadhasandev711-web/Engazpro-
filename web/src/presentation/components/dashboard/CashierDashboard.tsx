@@ -15,6 +15,7 @@ import {
 import { formatCurrency } from '@pos-mandob/shared';
 import { DashboardData } from './OwnerDashboard';
 import { PWAInstallBanner } from '../pwa/PWAInstallBanner';
+import { RecentActivityMobileCard } from '../mobile/RecentActivityMobileCard';
 
 interface CashierDashboardProps {
   data: DashboardData | undefined;
@@ -69,14 +70,14 @@ export const CashierDashboard: React.FC<CashierDashboardProps> = ({
           </button>
           <button
             onClick={() => navigate('/pos')}
-            className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-md shadow-emerald-700/20 transition-all"
+            className="hidden sm:flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-md shadow-emerald-700/20 transition-all"
           >
             <Store className="w-4 h-4" />
             <span>⚡ فتح شاشة البيع السريعة (POS)</span>
           </button>
           <button
             onClick={() => navigate('/expenses')}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold shadow-sm transition-colors"
+            className="hidden sm:flex items-center gap-1.5 px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold shadow-sm transition-colors"
           >
             <Receipt className="w-4 h-4" />
             <span>تسجيل مصروف درج</span>
@@ -84,69 +85,87 @@ export const CashierDashboard: React.FC<CashierDashboardProps> = ({
         </div>
       </div>
 
+      {/* Mobile Quick Action Buttons (sm:hidden) */}
+      <div className="sm:hidden grid grid-cols-2 gap-2">
+        <button
+          onClick={() => navigate('/pos')}
+          className="min-h-[44px] flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-600 active:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-xs active:scale-95 transition-all"
+        >
+          <Store className="w-4 h-4" />
+          <span>⚡ شاشة POS</span>
+        </button>
+        <button
+          onClick={() => navigate('/expenses')}
+          className="min-h-[44px] flex items-center justify-center gap-1.5 px-3 py-2 bg-rose-600 active:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-xs active:scale-95 transition-all"
+        >
+          <Receipt className="w-4 h-4" />
+          <span>تسجيل مصروف</span>
+        </button>
+      </div>
+
       {/* Main KPI Cards Grid for Cashier */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
         {/* 1. نقدية الدرج الفعلية (Drawer Cash) */}
-        <div className="bg-white p-5 rounded-xl border-2 border-amber-400 shadow-sm relative overflow-hidden bg-gradient-to-br from-amber-50/50 to-white">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-black text-amber-900">نقدية الدرج (الكاش الفعلي)</span>
-            <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center">
-              <Wallet className="w-4 h-4" />
+        <div className="bg-white p-3.5 sm:p-5 rounded-2xl sm:rounded-xl border-2 border-amber-400 shadow-sm relative overflow-hidden bg-gradient-to-br from-amber-50/50 to-white">
+          <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+            <span className="text-[11px] sm:text-xs font-black text-amber-900 truncate">نقدية الدرج (كاش)</span>
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
+              <Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="text-2xl font-black text-amber-800 tracking-tight">
+          <div className="text-lg sm:text-2xl font-black text-amber-800 tracking-tight font-mono">
             {isLoading ? '...' : formatCurrency(kpis?.today_cash_flow ?? 0)}
           </div>
-          <div className="text-[11px] font-medium text-amber-700 mt-1">
-            المبلغ الفعلي الواجب توفره بالدرج الآن
+          <div className="text-[10px] sm:text-[11px] font-medium text-amber-700 mt-1 truncate">
+            الكاش الفعلي بالدرج
           </div>
         </div>
 
         {/* 2. إجمالي مبيعات الوردية (Net Sales) */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-slate-500">إجمالي مبيعات الوردية</span>
-            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-              <ShoppingBag className="w-4 h-4" />
+        <div className="bg-white p-3.5 sm:p-5 rounded-2xl sm:rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
+          <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+            <span className="text-[11px] sm:text-xs font-bold text-slate-500 truncate">مبيعات الوردية</span>
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+              <ShoppingBag className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="text-2xl font-black text-slate-900 tracking-tight">
+          <div className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight font-mono">
             {isLoading ? '...' : formatCurrency(kpis?.today_sales ?? 0)}
           </div>
-          <div className="text-[11px] text-slate-400 mt-1">
-            مبيعات الكاشير الصافية بالوردية
+          <div className="text-[10px] sm:text-[11px] text-slate-400 mt-1 truncate">
+            مبيعات الكاشير الصافية
           </div>
         </div>
 
         {/* 3. مدفوعات إلكترونية / شبكة */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-slate-500">مدفوعات إلكترونية (فيزا/محفظة)</span>
-            <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
-              <CreditCard className="w-4 h-4" />
+        <div className="bg-white p-3.5 sm:p-5 rounded-2xl sm:rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
+          <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+            <span className="text-[11px] sm:text-xs font-bold text-slate-500 truncate">إلكتروني (فيزا/محفظة)</span>
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+              <CreditCard className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="text-2xl font-black text-purple-600 tracking-tight">
+          <div className="text-lg sm:text-2xl font-black text-purple-600 tracking-tight font-mono">
             {isLoading ? '...' : formatCurrency(cashFlow?.inflow.electronic_sales ?? 0)}
           </div>
-          <div className="text-[11px] text-slate-400 mt-1">
-            سُددت إلكترونياً (خارج الدرج النقدي)
+          <div className="text-[10px] sm:text-[11px] text-slate-400 mt-1 truncate">
+            خارج الدرج النقدي
           </div>
         </div>
 
         {/* 4. مصروفات ونثريات الدرج */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-slate-500">مصروفات ونثريات الدرج</span>
-            <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
-              <Receipt className="w-4 h-4" />
+        <div className="bg-white p-3.5 sm:p-5 rounded-2xl sm:rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
+          <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+            <span className="text-[11px] sm:text-xs font-bold text-slate-500 truncate">مصروفات الدرج</span>
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+              <Receipt className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="text-2xl font-black text-rose-600 tracking-tight">
+          <div className="text-lg sm:text-2xl font-black text-rose-600 tracking-tight font-mono">
             {isLoading ? '...' : formatCurrency(kpis?.today_expenses ?? 0)}
           </div>
-          <div className="text-[11px] text-slate-400 mt-1">
-            مبالغ نقدية صُرفت من الدرج
+          <div className="text-[10px] sm:text-[11px] text-slate-400 mt-1 truncate">
+            صُرفت من الدرج
           </div>
         </div>
       </div>
@@ -304,46 +323,56 @@ export const CashierDashboard: React.FC<CashierDashboardProps> = ({
             لا توجد حركات مسجلة بالوردية حتى الآن
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-right text-xs">
-              <thead className="bg-slate-50 text-slate-500 border-b border-slate-200 font-bold">
-                <tr>
-                  <th className="p-3">نوع الحركة</th>
-                  <th className="p-3">المرجع / البيان</th>
-                  <th className="p-3">العميل / الحساب</th>
-                  <th className="p-3">الوقت</th>
-                  <th className="p-3 text-left">المبلغ</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {recentActivities.map((act, idx) => {
-                  let badgeStyle = 'bg-slate-100 text-slate-800';
-                  if (act.type === 'SALE') badgeStyle = 'bg-blue-100 text-blue-800';
-                  else if (act.type === 'SALE_RETURN') badgeStyle = 'bg-amber-100 text-amber-800';
-                  else if (act.type === 'RECEIPT') badgeStyle = 'bg-emerald-100 text-emerald-800';
-                  else if (act.type === 'EXPENSE') badgeStyle = 'bg-rose-100 text-rose-800';
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-right text-xs">
+                <thead className="bg-slate-50 text-slate-500 border-b border-slate-200 font-bold">
+                  <tr>
+                    <th className="p-3">نوع الحركة</th>
+                    <th className="p-3">المرجع / البيان</th>
+                    <th className="p-3">العميل / الحساب</th>
+                    <th className="p-3">الوقت</th>
+                    <th className="p-3 text-left">المبلغ</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {recentActivities.map((act, idx) => {
+                    let badgeStyle = 'bg-slate-100 text-slate-800';
+                    if (act.type === 'SALE') badgeStyle = 'bg-blue-100 text-blue-800';
+                    else if (act.type === 'SALE_RETURN') badgeStyle = 'bg-amber-100 text-amber-800';
+                    else if (act.type === 'RECEIPT') badgeStyle = 'bg-emerald-100 text-emerald-800';
+                    else if (act.type === 'EXPENSE') badgeStyle = 'bg-rose-100 text-rose-800';
 
-                  return (
-                    <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="p-3">
-                        <span className={`px-2.5 py-1 rounded-md text-[11px] font-bold ${badgeStyle}`}>
-                          {act.type_label}
-                        </span>
-                      </td>
-                      <td className="p-3 font-bold text-slate-900">{act.reference}</td>
-                      <td className="p-3 text-slate-600">{act.party_name}</td>
-                      <td className="p-3 text-slate-400 font-mono text-[11px]">
-                        {act.created_at || act.date}
-                      </td>
-                      <td className="p-3 text-left font-black text-slate-900">
-                        {formatCurrency(act.amount)}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                    return (
+                      <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="p-3">
+                          <span className={`px-2.5 py-1 rounded-md text-[11px] font-bold ${badgeStyle}`}>
+                            {act.type_label}
+                          </span>
+                        </td>
+                        <td className="p-3 font-bold text-slate-900">{act.reference}</td>
+                        <td className="p-3 text-slate-600">{act.party_name}</td>
+                        <td className="p-3 text-slate-400 font-mono text-[11px]">
+                          {act.created_at || act.date}
+                        </td>
+                        <td className="p-3 text-left font-black text-slate-900 font-mono">
+                          {formatCurrency(act.amount)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Touch Cards View */}
+            <div className="md:hidden p-3 space-y-2.5 bg-slate-50/60">
+              {recentActivities.map((act) => (
+                <RecentActivityMobileCard key={act.id} activity={act} />
+              ))}
+            </div>
+          </>
         )}
       </div>
     </div>
