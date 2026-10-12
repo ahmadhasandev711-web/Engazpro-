@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
@@ -32,6 +32,9 @@ import { AddBatchModal } from '../components/products/AddBatchModal';
 import { VariantMatrixGenerator } from '../components/products/VariantMatrixGenerator';
 import { BarcodePrintModal } from '../components/products/BarcodePrintModal';
 import { OpeningStockModal } from '../components/products/OpeningStockModal';
+import { MobileFilterChips, FilterChipOption } from '../components/mobile/MobileFilterChips';
+import { ProductMobileCard } from '../components/mobile/ProductMobileCard';
+import { nativeBackButton } from '../../platform/nativeBackButton';
 
 export const ProductsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -268,9 +271,57 @@ export const ProductsPage: React.FC = () => {
     }
   };
 
+  // Hardware Back Button integration for active modals
+  useEffect(() => {
+    if (isModalOpen) {
+      return nativeBackButton.register(() => {
+        setIsModalOpen(false);
+        return true;
+      });
+    }
+  }, [isModalOpen]);
+
+  useEffect(() => {
+    if (selectedBatchProduct) {
+      return nativeBackButton.register(() => {
+        setSelectedBatchProduct(null);
+        return true;
+      });
+    }
+  }, [selectedBatchProduct]);
+
+  useEffect(() => {
+    if (selectedPrintProduct) {
+      return nativeBackButton.register(() => {
+        setSelectedPrintProduct(null);
+        return true;
+      });
+    }
+  }, [selectedPrintProduct]);
+
+  useEffect(() => {
+    if (isOpeningStockOpen) {
+      return nativeBackButton.register(() => {
+        setIsOpeningStockOpen(false);
+        return true;
+      });
+    }
+  }, [isOpeningStockOpen]);
+
   const totalProducts = products.length;
   const totalStock = products.reduce((acc, p) => acc + (Number(p.quantity) || 0), 0);
   const lowStockCount = products.filter((p) => p.is_low_stock).length;
+
+  const filterOptions: FilterChipOption<typeof filterTab>[] = useMemo(
+    () => [
+      { id: 'ALL', label: 'الكل', count: totalProducts },
+      { id: 'VARIABLE', label: 'متغيرات', icon: Layers },
+      { id: 'EXPIRY', label: 'صلاحيات', icon: Calendar },
+      { id: 'NEAR_EXPIRY', label: 'قرب الانتهاء', icon: Clock },
+      { id: 'LOW_STOCK', label: 'نواقص', count: lowStockCount, icon: AlertTriangle, variant: 'warning' },
+    ],
+    [totalProducts, lowStockCount]
+  );
 
   return (
     <div className="space-y-3 sm:space-y-6" dir="rtl">
@@ -392,63 +443,12 @@ export const ProductsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Tabs Filter Bar (Horizontal Scroll Track) */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar scroll-smooth flex-nowrap">
-        <button
-          onClick={() => setFilterTab('ALL')}
-          className={`px-3.5 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all text-xs ${
-            filterTab === 'ALL'
-              ? 'bg-slate-900 text-white shadow-xs'
-              : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-          }`}
-        >
-          الكل ({totalProducts})
-        </button>
-        <button
-          onClick={() => setFilterTab('VARIABLE')}
-          className={`px-3.5 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all text-xs flex items-center gap-1.5 ${
-            filterTab === 'VARIABLE'
-              ? 'bg-indigo-600 text-white shadow-xs'
-              : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-          }`}
-        >
-          <Layers className="w-3.5 h-3.5" />
-          <span>متغيرات</span>
-        </button>
-        <button
-          onClick={() => setFilterTab('EXPIRY')}
-          className={`px-3.5 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all text-xs flex items-center gap-1.5 ${
-            filterTab === 'EXPIRY'
-              ? 'bg-emerald-600 text-white shadow-xs'
-              : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-          }`}
-        >
-          <Calendar className="w-3.5 h-3.5" />
-          <span>صلاحيات</span>
-        </button>
-        <button
-          onClick={() => setFilterTab('NEAR_EXPIRY')}
-          className={`px-3.5 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all text-xs flex items-center gap-1.5 ${
-            filterTab === 'NEAR_EXPIRY'
-              ? 'bg-amber-500 text-white shadow-xs'
-              : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-          }`}
-        >
-          <Clock className="w-3.5 h-3.5" />
-          <span>قرب الانتهاء</span>
-        </button>
-        <button
-          onClick={() => setFilterTab('LOW_STOCK')}
-          className={`px-3.5 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all text-xs flex items-center gap-1.5 ${
-            filterTab === 'LOW_STOCK'
-              ? 'bg-rose-600 text-white shadow-xs'
-              : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-          }`}
-        >
-          <AlertTriangle className="w-3.5 h-3.5" />
-          <span>نواقص ({lowStockCount})</span>
-        </button>
-      </div>
+      {/* Mobile Filter Chips Bar */}
+      <MobileFilterChips
+        options={filterOptions}
+        selectedId={filterTab}
+        onSelect={(tab) => setFilterTab(tab as any)}
+      />
 
       {/* Search Bar */}
       <div className="bg-white p-2.5 sm:p-4 rounded-xl border border-slate-200 shadow-xs flex items-center gap-3">
@@ -708,144 +708,22 @@ export const ProductsPage: React.FC = () => {
             </div>
 
             {/* Mobile Touch Cards View (md:hidden) */}
-            <div className="md:hidden divide-y divide-slate-100">
-              {products.map((p) => {
-                const hasExpiredBatch = p.batches?.some((b: any) => b.is_expired);
-                const hasNearExpiryBatch = p.batches?.some((b: any) => b.is_near_expiry && !b.is_expired);
-
-                return (
-                  <div key={p.id} className="p-4 space-y-3 bg-white">
-                    {/* Header: Name + Sale Price */}
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <h4 className="font-bold text-slate-900 text-sm">{p.name}</h4>
-                          {p.has_variants && (
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-bold border border-indigo-200">
-                              {p.variants?.length ? `${p.variants.length} مقاس/لون` : 'متغيرات'}
-                            </span>
-                          )}
-                          {p.has_expiry && (
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
-                              صلاحية
-                            </span>
-                          )}
-                        </div>
-                        {p.category_name && (
-                          <span className="text-xs text-slate-400 block mt-0.5">{p.category_name}</span>
-                        )}
-                      </div>
-                      <div className="text-left shrink-0">
-                        <span className="font-black text-emerald-600 text-base font-mono">
-                          {formatCurrency(p.sale_price)}
-                        </span>
-                        {p.sub_unit_price && (
-                          <span className="text-[10px] text-slate-400 block font-mono">
-                            {formatCurrency(p.sub_unit_price)} / {p.sub_unit}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Stock status and details pill */}
-                    <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-slate-50 rounded-xl border border-slate-100 text-xs">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-slate-500 font-medium">الرصيد:</span>
-                        <span
-                          className={`font-black px-2 py-0.5 rounded-lg text-xs ${
-                            p.is_low_stock
-                              ? 'bg-amber-100 text-amber-800'
-                              : 'bg-emerald-100 text-emerald-800'
-                          }`}
-                        >
-                          {formatNumber(p.quantity)} {p.unit || 'قطعة'}
-                        </span>
-                        {p.is_low_stock && (
-                          <span className="text-[10px] font-bold text-amber-600 flex items-center gap-0.5">
-                            <AlertTriangle className="w-3 h-3" /> نواقص
-                          </span>
-                        )}
-                      </div>
-
-                      {p.barcode && (
-                        <span className="font-mono text-[11px] font-bold text-slate-600 bg-white px-2 py-0.5 rounded border border-slate-200">
-                          {p.barcode}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Expiry alerts & variants snapshot */}
-                    {p.has_expiry && (
-                      <div className="text-xs flex items-center justify-between">
-                        {hasExpiredBatch ? (
-                          <span className="text-[11px] font-black px-2 py-0.5 bg-rose-100 text-rose-700 rounded-md">
-                            ⚠️ تشغيلة منتهية الصلاحية
-                          </span>
-                        ) : hasNearExpiryBatch ? (
-                          <span className="text-[11px] font-black px-2 py-0.5 bg-amber-100 text-amber-700 rounded-md">
-                            ⚠️ تشغيلة قريبة الانتهاء
-                          </span>
-                        ) : (
-                          <span className="text-[11px] font-bold text-emerald-700">
-                            ساري ({p.batches?.length || 0} تشغيلات)
-                          </span>
-                        )}
-                        {canEditProduct && (
-                          <button
-                            type="button"
-                            onClick={() => setSelectedBatchProduct(p)}
-                            className="text-[11px] font-bold text-emerald-600 hover:text-emerald-800 inline-flex items-center gap-0.5"
-                          >
-                            <PlusCircle className="w-3 h-3" /> + تشغيلة
-                          </button>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Actions Row */}
-                    {(canEditProduct || canDeleteProduct) && (
-                      <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-                        {Boolean((p as any).wc_product_id) && (
-                          <button
-                            onClick={() => handlePushStock(p)}
-                            disabled={syncingProductId === p.id}
-                            className="min-h-[36px] px-2.5 py-1 text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-xl flex items-center gap-1 active:bg-purple-200 disabled:opacity-50"
-                            title="مزامنة الرصيد مع ووكومرس فورياً"
-                          >
-                            <RefreshCw className={`w-3.5 h-3.5 ${syncingProductId === p.id ? 'animate-spin' : ''}`} />
-                            ووكومرس
-                          </button>
-                        )}
-                        <button
-                          onClick={() => setSelectedPrintProduct(p)}
-                          className="min-h-[36px] px-3 py-1 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-xl flex items-center gap-1 active:bg-indigo-200"
-                        >
-                          <Barcode className="w-3.5 h-3.5" />
-                          باركود
-                        </button>
-                        {canEditProduct && (
-                          <button
-                            onClick={() => openEditModal(p)}
-                            className="min-h-[36px] px-3 py-1 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl flex items-center gap-1 active:bg-slate-300"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                            تعديل
-                          </button>
-                        )}
-                        {canDeleteProduct && (
-                          <button
-                            onClick={() => handleDelete(p)}
-                            className="min-h-[36px] p-2 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-xl active:bg-rose-200"
-                            title="حذف الصنف"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+            <div className="md:hidden space-y-3 p-3 bg-slate-50/60">
+              {products.map((p) => (
+                <ProductMobileCard
+                  key={p.id}
+                  product={p}
+                  canViewPurchasePrice={canViewPurchasePrice}
+                  canEditProduct={canEditProduct}
+                  canDeleteProduct={canDeleteProduct}
+                  syncingProductId={syncingProductId}
+                  onPushStock={handlePushStock}
+                  onPrintBarcode={(prod) => setSelectedPrintProduct(prod)}
+                  onEditProduct={(prod) => openEditModal(prod)}
+                  onDeleteProduct={(prod) => handleDelete(prod)}
+                  onAddBatch={(prod) => setSelectedBatchProduct(prod)}
+                />
+              ))}
             </div>
           </>
         )}
