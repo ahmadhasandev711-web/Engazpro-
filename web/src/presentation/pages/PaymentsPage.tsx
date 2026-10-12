@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Search, Trash2, ArrowDownLeft, ArrowUpRight, AlertCircle, X, CheckCircle2, Receipt } from 'lucide-react';
 import { useForm } from 'react-hook-form';
@@ -7,6 +7,9 @@ import { PaymentSchema, PaymentInput, PaymentMethod, Party, formatCurrency } fro
 import { apiClient } from '../../data/api/client';
 import { usePermissions } from '../../hooks/usePermissions';
 import { DateRangeFilter } from '../components/common/DateRangeFilter';
+import { PaymentMobileCard } from '../components/mobile/PaymentMobileCard';
+import { MobileFilterChips, FilterChipOption } from '../components/mobile/MobileFilterChips';
+import { nativeBackButton } from '../../platform/nativeBackButton';
 
 export const PaymentsPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -18,6 +21,15 @@ export const PaymentsPage: React.FC = () => {
   const [toDate, setToDate] = useState<string>('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Hardware back button listener for modal
+  useEffect(() => {
+    if (!isModalOpen) return;
+    return nativeBackButton.register(() => {
+      setIsModalOpen(false);
+      return true;
+    });
+  }, [isModalOpen]);
 
   const { data: employeesData } = useQuery({
     queryKey: ['employees-filter'],
@@ -130,6 +142,22 @@ export const PaymentsPage: React.FC = () => {
     );
   });
 
+  const paymentFilterChips: FilterChipOption<'ALL' | 'RECEIPT' | 'PAYMENT'>[] = [
+    { id: 'ALL', label: 'جميع السندات', count: payments.length },
+    {
+      id: 'RECEIPT',
+      label: 'سندات قبض',
+      count: payments.filter((p: any) => p.type === 'RECEIPT').length,
+      icon: ArrowDownLeft,
+    },
+    {
+      id: 'PAYMENT',
+      label: 'سندات صرف',
+      count: payments.filter((p: any) => p.type === 'PAYMENT').length,
+      icon: ArrowUpRight,
+    },
+  ];
+
   return (
     <div className="space-y-6 flex flex-col h-full">
       {/* Desktop Header (hidden on mobile) */}
@@ -225,34 +253,49 @@ export const PaymentsPage: React.FC = () => {
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           {/* Tabs (Horizontal scroll on mobile) */}
           {isOwner ? (
-            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl w-full sm:w-auto overflow-x-auto no-scrollbar scroll-smooth">
-              <button
-                onClick={() => setActiveTab('ALL')}
-                className={`flex-shrink-0 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
-                  activeTab === 'ALL' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                جميع السندات
-              </button>
-              <button
-                onClick={() => setActiveTab('RECEIPT')}
-                className={`flex-shrink-0 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 whitespace-nowrap ${
-                  activeTab === 'RECEIPT' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <ArrowDownLeft className="w-3.5 h-3.5" />
-                سندات قبض
-              </button>
-              <button
-                onClick={() => setActiveTab('PAYMENT')}
-                className={`flex-shrink-0 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 whitespace-nowrap ${
-                  activeTab === 'PAYMENT' ? 'bg-rose-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <ArrowUpRight className="w-3.5 h-3.5" />
-                سندات صرف
-              </button>
-            </div>
+            <>
+              {/* Mobile Filter Chips */}
+              <div className="md:hidden w-full overflow-hidden">
+                <MobileFilterChips
+                  options={paymentFilterChips}
+                  selectedId={activeTab}
+                  onSelect={(id) => setActiveTab(id)}
+                />
+              </div>
+
+              {/* Desktop Tabs */}
+              <div className="hidden md:flex items-center gap-1 bg-slate-100 p-1 rounded-xl w-full sm:w-auto overflow-x-auto no-scrollbar scroll-smooth">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('ALL')}
+                  className={`flex-shrink-0 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                    activeTab === 'ALL' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  جميع السندات
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('RECEIPT')}
+                  className={`flex-shrink-0 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 whitespace-nowrap ${
+                    activeTab === 'RECEIPT' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <ArrowDownLeft className="w-3.5 h-3.5" />
+                  سندات قبض
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('PAYMENT')}
+                  className={`flex-shrink-0 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 whitespace-nowrap ${
+                    activeTab === 'PAYMENT' ? 'bg-rose-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <ArrowUpRight className="w-3.5 h-3.5" />
+                  سندات صرف
+                </button>
+              </div>
+            </>
           ) : (
             <div className="flex items-center gap-2 text-xs font-bold text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200">
               <ArrowDownLeft className="w-4 h-4 text-emerald-600" />
@@ -399,74 +442,15 @@ export const PaymentsPage: React.FC = () => {
 
             {/* Mobile Cards View (Touch-Optimized) */}
             <div className="md:hidden overflow-y-auto flex-1 p-3 space-y-3">
-              {filteredPayments.map((p: any) => {
-                const isReceipt = p.type === 'RECEIPT';
-                return (
-                  <div
-                    key={p.id}
-                    className={`bg-white rounded-2xl border p-4 shadow-sm active:scale-[0.99] transition-transform space-y-3 border-r-4 ${
-                      isReceipt ? 'border-r-emerald-500 border-slate-200/80' : 'border-r-rose-500 border-slate-200/80'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold ${
-                            isReceipt ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'
-                          }`}
-                        >
-                          {isReceipt ? <ArrowDownLeft className="w-3.5 h-3.5" /> : <ArrowUpRight className="w-3.5 h-3.5" />}
-                          {isReceipt ? 'سند قبض' : 'سند صرف'}
-                        </span>
-                        <span className="font-mono text-xs font-bold text-slate-400">#{p.id}</span>
-                      </div>
-                      <span className="text-xs text-slate-400">{p.date}</span>
-                    </div>
-
-                    <div className="flex items-baseline justify-between gap-2">
-                      <div>
-                        <h4 className="font-bold text-slate-900 text-sm">{p.party_name || 'بدون طرف'}</h4>
-                        {isOwner && p.created_by_name && (
-                          <p className="text-[11px] text-slate-500 mt-0.5 font-medium">
-                            المحصّل: {p.created_by_name} ({p.created_by_role === 'MANDOB' ? 'مندوب' : p.created_by_role === 'CASHIER' ? 'كاشير' : 'إدارة'})
-                          </p>
-                        )}
-                      </div>
-                      <div className="text-left">
-                        <span className={`text-base font-black ${isReceipt ? 'text-emerald-600' : 'text-rose-600'}`}>
-                          {formatCurrency(p.amount)}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 text-xs">
-                      <span className="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg font-bold">
-                        {p.method === 'CASH' ? 'كاش (نقدية)' :
-                         p.method === 'CARD' ? 'بطاقة / فيزا' :
-                         p.method === 'INSTAPAY' ? 'إنستاباي' :
-                         p.method === 'VODAFONE_CASH' ? 'فودافون كاش' :
-                         p.method === 'TRANSFER' ? 'تحويل بنكي' : p.method}
-                      </span>
-
-                      {canDeletePayment && (
-                        <button
-                          onClick={() => handleDelete(p.id)}
-                          className="min-h-[36px] px-3 py-1 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-xl flex items-center gap-1 active:bg-rose-200"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          إلغاء السند
-                        </button>
-                      )}
-                    </div>
-
-                    {p.notes && (
-                      <p className="text-xs text-slate-500 bg-slate-50 rounded-xl p-2.5 leading-relaxed">
-                        {p.notes}
-                      </p>
-                    )}
-                  </div>
-                );
-              })}
+              {filteredPayments.map((p: any) => (
+                <PaymentMobileCard
+                  key={p.id}
+                  payment={p}
+                  isOwner={isOwner}
+                  canDelete={canDeletePayment}
+                  onDelete={handleDelete}
+                />
+              ))}
             </div>
           </>
         )}

@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   FileText,
-  Calendar,
   Printer,
   ArrowRight,
   User,
@@ -18,6 +17,7 @@ import { formatCurrency, formatDate } from '@pos-mandob/shared';
 import { exportLedgerToExcel } from '../utils/excelExport';
 import { DateRangeFilter } from '../components/common/DateRangeFilter';
 import { useAuthStore } from '../../data/store/useAuthStore';
+import { LedgerEntryMobileCard } from '../components/mobile/LedgerEntryMobileCard';
 
 export const LedgerPage: React.FC = () => {
   const { partyId } = useParams<{ partyId: string }>();
@@ -338,34 +338,9 @@ export const LedgerPage: React.FC = () => {
             </div>
 
             {/* Mobile Transaction Cards View (md:hidden) */}
-            <div className="md:hidden divide-y divide-slate-100">
+            <div className="md:hidden p-3 space-y-2.5">
               {entries.map((entry) => (
-                <div key={entry.id} className="p-4 space-y-2 bg-white">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-slate-400 font-medium flex items-center gap-1">
-                      <Calendar className="w-3.5 h-3.5" />
-                      {formatDate(entry.date)}
-                    </span>
-                    <span className="font-mono text-xs font-black text-slate-700 bg-slate-100 px-2 py-0.5 rounded-lg">
-                      الرصيد: {formatCurrency(entry.balance_after)}
-                    </span>
-                  </div>
-
-                  <p className="font-bold text-sm text-slate-900">{entry.description}</p>
-
-                  <div className="flex items-center gap-3 pt-1 text-xs font-mono">
-                    {entry.debit > 0 && (
-                      <span className="text-rose-700 font-black bg-rose-50 border border-rose-100 px-2.5 py-1 rounded-xl">
-                        مدين (+): {formatCurrency(entry.debit)}
-                      </span>
-                    )}
-                    {entry.credit > 0 && (
-                      <span className="text-emerald-700 font-black bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-xl">
-                        دائن (-): {formatCurrency(entry.credit)}
-                      </span>
-                    )}
-                  </div>
-                </div>
+                <LedgerEntryMobileCard key={entry.id} entry={entry} />
               ))}
             </div>
           </>
