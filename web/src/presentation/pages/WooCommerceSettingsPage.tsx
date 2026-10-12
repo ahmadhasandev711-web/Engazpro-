@@ -14,9 +14,11 @@ import {
   Zap,
 } from 'lucide-react';
 import { apiClient } from '../../data/api/client';
+import { useHaptic } from '../hooks/useHaptic';
 
 export const WooCommerceSettingsPage: React.FC = () => {
   const queryClient = useQueryClient();
+  const { success } = useHaptic();
 
   const [storeUrl, setStoreUrl] = useState('');
   const [consumerKey, setConsumerKey] = useState('');
@@ -208,6 +210,7 @@ export const WooCommerceSettingsPage: React.FC = () => {
 
   const copyToClipboard = (text: string, type: 'webhook' | 'secret') => {
     navigator.clipboard.writeText(text);
+    success();
     if (type === 'webhook') {
       setCopiedWebhook(true);
       setTimeout(() => setCopiedWebhook(false), 2000);

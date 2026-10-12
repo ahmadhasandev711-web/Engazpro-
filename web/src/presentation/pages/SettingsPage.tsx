@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { ShieldCheck, Database, Calendar, CheckCircle2, AlertCircle, KeyRound, MessageCircle, Smartphone, Send, Store, Save, Lock, Eye, EyeOff } from 'lucide-react';
+import clsx from 'clsx';
 import { useAuthStore } from '../../data/store/useAuthStore';
 import { apiClient } from '../../data/api/client';
 import { usePermissions } from '../../hooks/usePermissions';
 import { formatDate } from '@pos-mandob/shared';
+import { MobileFilterChips, FilterChipOption } from '../components/mobile/MobileFilterChips';
 
 export const SettingsPage: React.FC = () => {
   const { user, activateSubscriptionCode, fetchMe } = useAuthStore();
@@ -139,11 +141,31 @@ export const SettingsPage: React.FC = () => {
     }
   };
 
+  type SettingsSection = 'ALL' | 'STORE' | 'SUBSCRIPTION' | 'SECURITY' | 'BACKUP';
+  const [activeSection, setActiveSection] = useState<SettingsSection>('ALL');
+
+  const settingsFilterChips: FilterChipOption<SettingsSection>[] = [
+    { id: 'ALL', label: 'الكل' },
+    { id: 'STORE', label: 'هوية المنشأة', icon: Store },
+    { id: 'SUBSCRIPTION', label: 'الاشتراك والكود', icon: ShieldCheck },
+    { id: 'SECURITY', label: 'الأمان وكلمة المرور', icon: Lock },
+    { id: 'BACKUP', label: 'النسخ الاحتياطي', icon: Database },
+  ];
+
   return (
     <div className="space-y-6 max-w-4xl">
       <div>
         <h2 className="text-xl font-bold text-slate-900">الإعدادات وتفعيل الاشتراك</h2>
         <p className="text-sm text-slate-500">بيانات الحساب، حالة الاشتراك السنوي، وتفعيل الباقات الآمنة</p>
+      </div>
+
+      {/* Mobile Filter Chips */}
+      <div className="md:hidden w-full overflow-hidden">
+        <MobileFilterChips
+          options={settingsFilterChips}
+          selectedId={activeSection}
+          onSelect={(id) => setActiveSection(id)}
+        />
       </div>
 
       {feedback && (
@@ -163,7 +185,7 @@ export const SettingsPage: React.FC = () => {
       )}
 
       {/* Store Identity & Currency Card */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-5">
+      <div className={clsx("bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-5", activeSection !== 'ALL' && activeSection !== 'STORE' && 'hidden md:block')}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
@@ -296,9 +318,11 @@ export const SettingsPage: React.FC = () => {
         </form>
       </div>
 
-      {/* Subscription Status Card */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-        <div className="flex items-center justify-between">
+      {/* Subscription Section Container */}
+      <div className={clsx("space-y-6", activeSection !== 'ALL' && activeSection !== 'SUBSCRIPTION' && 'hidden md:block')}>
+        {/* Subscription Status Card */}
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+          <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
               <ShieldCheck className="w-6 h-6" />
@@ -417,9 +441,10 @@ export const SettingsPage: React.FC = () => {
           </div>
         </div>
       </div>
+      </div>
 
       {/* Change Password Card */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-5">
+      <div className={clsx("bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-5", activeSection !== 'ALL' && activeSection !== 'SECURITY' && 'hidden md:block')}>
         <div className="flex items-center gap-3">
           <div className="w-11 h-11 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
             <Lock className="w-6 h-6" />
@@ -535,7 +560,7 @@ export const SettingsPage: React.FC = () => {
       </div>
 
       {/* Backup Card */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+      <div className={clsx("bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4", activeSection !== 'ALL' && activeSection !== 'BACKUP' && 'hidden md:block')}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">

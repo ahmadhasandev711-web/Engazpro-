@@ -22,6 +22,7 @@ import { SalesReportTab } from '../components/reports/SalesReportTab';
 import { CashFlowTab } from '../components/reports/CashFlowTab';
 import { StockReportTab } from '../components/reports/StockReportTab';
 import { DateRangeFilter, DatePreset, calculatePresetDates } from '../components/common/DateRangeFilter';
+import { MobileFilterChips, FilterChipOption } from '../components/mobile/MobileFilterChips';
 
 type ActiveTab = 'profit' | 'sales' | 'cash-flow' | 'stock';
 
@@ -76,6 +77,15 @@ export const ReportsPage: React.FC = () => {
       exportJsonToExcel(rows, `تقرير_المبيعات_${fromDate}_${toDate}`, 'المبيعات');
     }
   };
+
+  const reportFilterChips: FilterChipOption<ActiveTab>[] = [
+    ...(canViewProfitReport
+      ? [{ id: 'profit' as const, label: 'الأرباح والخسائر', icon: TrendingUp }]
+      : []),
+    { id: 'sales' as const, label: 'المبيعات', icon: Receipt },
+    { id: 'cash-flow' as const, label: 'الخزينة والنقدية', icon: Wallet },
+    { id: 'stock' as const, label: 'تقييم المخزون', icon: Package },
+  ];
 
   return (
     <>
@@ -145,8 +155,17 @@ export const ReportsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Tabs (Horizontal Scroll Track) */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar scroll-smooth flex-nowrap text-xs border-b border-slate-200">
+      {/* Mobile Filter Chips */}
+      <div className="md:hidden w-full overflow-hidden">
+        <MobileFilterChips
+          options={reportFilterChips}
+          selectedId={activeTab}
+          onSelect={(id) => setActiveTab(id)}
+        />
+      </div>
+
+      {/* Desktop Tabs (Horizontal Scroll Track - hidden md:flex) */}
+      <div className="hidden md:flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar scroll-smooth flex-nowrap text-xs border-b border-slate-200">
         {canViewProfitReport && (
           <button
             onClick={() => setActiveTab('profit')}
