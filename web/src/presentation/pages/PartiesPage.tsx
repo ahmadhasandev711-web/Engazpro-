@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
@@ -23,6 +23,9 @@ import { apiClient } from '../../data/api/client';
 import { Party, PartySchema, PartyInput, PartyType, formatCurrency } from '@pos-mandob/shared';
 import { exportPartiesToExcel } from '../utils/excelExport';
 import { usePermissions } from '../../hooks/usePermissions';
+import { MobileFilterChips, FilterChipOption } from '../components/mobile/MobileFilterChips';
+import { PartyMobileCard } from '../components/mobile/PartyMobileCard';
+import { nativeBackButton } from '../../platform/nativeBackButton';
 
 export const PartiesPage: React.FC = () => {
   const location = useLocation();
@@ -149,9 +152,45 @@ export const PartiesPage: React.FC = () => {
     }
   };
 
+  const [balanceFilter, setBalanceFilter] = useState<'ALL' | 'WITH_BALANCE' | 'ZERO_BALANCE'>('ALL');
+
+  // Hardware Back Button integration
+  useEffect(() => {
+    if (isModalOpen) {
+      return nativeBackButton.register(() => {
+        setIsModalOpen(false);
+        return true;
+      });
+    }
+  }, [isModalOpen]);
+
   const totalParties = parties.length;
   const totalBalance = parties.reduce((acc, p) => acc + (Number(p.balance) || 0), 0);
-  const partiesWithBalance = parties.filter((p) => Number(p.balance) > 0).length;
+  const partiesWithBalance = parties.filter((p) => Number(p.balance) !== 0).length;
+  const zeroBalanceCount = parties.filter((p) => Number(p.balance) === 0).length;
+
+  const balanceFilterOptions: FilterChipOption<string>[] = useMemo(
+    () => [
+      { id: 'ALL', label: 'الكل', count: parties.length },
+      {
+        id: 'WITH_BALANCE',
+        label: isSupplier ? 'لهم مستحقات' : 'عليهم مديونية',
+        count: partiesWithBalance,
+      },
+      { id: 'ZERO_BALANCE', label: 'بدون رصيد (خالص)', count: zeroBalanceCount },
+    ],
+    [parties.length, partiesWithBalance, zeroBalanceCount, isSupplier]
+  );
+
+  const displayedParties = useMemo(() => {
+    if (balanceFilter === 'WITH_BALANCE') {
+      return parties.filter((p) => Number(p.balance) !== 0);
+    }
+    if (balanceFilter === 'ZERO_BALANCE') {
+      return parties.filter((p) => Number(p.balance) === 0);
+    }
+    return parties;
+  }, [parties, balanceFilter]);
 
   return (
     <div className="space-y-3 sm:space-y-6" dir="rtl">
@@ -256,11 +295,18 @@ export const PartiesPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Quick Filter Chips (Mobile & Desktop) */}
+      <MobileFilterChips
+        options={balanceFilterOptions}
+        selectedId={balanceFilter}
+        onSelect={(id) => setBalanceFilter(id as any)}
+      />
+
       {/* Table */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         {isLoading ? (
           <div className="text-center py-12 text-sm text-slate-400 font-medium">جاري التحميل...</div>
-        ) : parties.length === 0 ? (
+        ) : displayedParties.length === 0 ? (
           <div className="text-center py-16">
             <Icon className="w-12 h-12 text-slate-300 mx-auto mb-3" />
             <h3 className="text-base font-bold text-slate-700">لا يوجد {pageTitle} مسجلين</h3>
@@ -284,7 +330,7 @@ export const PartiesPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {parties.map((p) => {
+                  {displayedParties.map((p) => {
                     const isPositive = p.balance > 0;
                     const isZero = p.balance === 0;
 
@@ -367,99 +413,18 @@ export const PartiesPage: React.FC = () => {
             </div>
 
             {/* Mobile Contact Cards View (md:hidden) */}
-            <div className="md:hidden divide-y divide-slate-100">
-              {parties.map((p) => {
-                const isPositive = p.balance > 0;
-                const isZero = p.balance === 0;
-
-                return (
-                  <div key={p.id} className="p-4 space-y-3 bg-white">
-                    {/* Header: Name + Balance Badge */}
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <h4 className="font-black text-slate-900 text-sm">{p.name}</h4>
-                        {p.address && (
-                          <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
-                            <MapPin className="w-3 h-3 text-slate-400" />
-                            {p.address}
-                          </p>
-                        )}
-                      </div>
-                      <span
-                        className={`font-black text-xs px-2.5 py-1 rounded-xl shrink-0 ${
-                          isZero
-                            ? 'bg-slate-100 text-slate-700'
-                            : isPositive
-                            ? isSupplier
-                              ? 'bg-rose-100 text-rose-800'
-                              : 'bg-emerald-100 text-emerald-800'
-                            : 'bg-blue-100 text-blue-800'
-                        }`}
-                      >
-                        {formatCurrency(p.balance)}
-                      </span>
-                    </div>
-
-                    {/* Quick Phone & WhatsApp Actions */}
-                    {p.phone && (
-                      <div className="flex items-center gap-2 pt-1">
-                        <a
-                          href={`tel:${p.phone}`}
-                          className="flex-1 min-h-[38px] px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 border border-emerald-200/70 active:scale-98 transition-all"
-                        >
-                          <Phone className="w-3.5 h-3.5 text-emerald-600" />
-                          <span dir="ltr">{p.phone}</span>
-                        </a>
-                        <a
-                          href={`https://wa.me/${p.phone.replace(/\D/g, '')}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="min-h-[38px] px-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl flex items-center justify-center active:scale-95 transition-all shadow-xs"
-                          title="واتساب"
-                        >
-                          <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                            <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z"/>
-                          </svg>
-                        </a>
-                      </div>
-                    )}
-
-                    {/* Footer Actions */}
-                    <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
-                      <span className="text-slate-400 font-medium flex items-center gap-1">
-                        <Receipt className="w-3.5 h-3.5" />
-                        {p.invoices_count || 0} فواتير
-                      </span>
-
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          onClick={() => navigate(`/ledger/${p.id}`)}
-                          className="min-h-[36px] px-2.5 py-1 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-xl flex items-center gap-1 active:bg-emerald-200"
-                        >
-                          <FileText className="w-3.5 h-3.5" />
-                          كشف الحساب
-                        </button>
-                        <button
-                          onClick={() => openEditModal(p)}
-                          className="min-h-[36px] px-2.5 py-1 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl flex items-center gap-1 active:bg-slate-300"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                          تعديل
-                        </button>
-                        {canDeleteParty && (
-                          <button
-                            onClick={() => handleDelete(p)}
-                            className="min-h-[36px] p-2 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-xl active:bg-rose-200"
-                            title="حذف"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="md:hidden space-y-3 p-3 bg-slate-50/60">
+              {displayedParties.map((p) => (
+                <PartyMobileCard
+                  key={p.id}
+                  party={p}
+                  isSupplier={isSupplier}
+                  canDelete={canDeleteParty}
+                  onLedger={(party) => navigate(`/ledger/${party.id}`)}
+                  onEdit={(party) => openEditModal(party)}
+                  onDelete={(party) => handleDelete(party)}
+                />
+              ))}
             </div>
           </>
         )}
