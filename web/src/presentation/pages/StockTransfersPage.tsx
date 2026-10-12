@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeftRight,
@@ -18,6 +18,9 @@ import {
 } from 'lucide-react';
 import { apiClient } from '../../data/api/client';
 import { usePermissions } from '../../hooks/usePermissions';
+import { MobileFilterChips, FilterChipOption } from '../components/mobile/MobileFilterChips';
+import { StockTransferMobileCard } from '../components/mobile/StockTransferMobileCard';
+import { nativeBackButton } from '../../platform/nativeBackButton';
 
 export const StockTransfersPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -233,6 +236,35 @@ export const StockTransfersPage: React.FC = () => {
   const receivedCount = transfers.filter((t: any) => t.status === 'RECEIVED').length;
   const cancelledCount = transfers.filter((t: any) => t.status === 'CANCELLED').length;
 
+  // Hardware Back Button integration
+  useEffect(() => {
+    if (createModalOpen) {
+      return nativeBackButton.register(() => {
+        setCreateModalOpen(false);
+        return true;
+      });
+    }
+  }, [createModalOpen]);
+
+  useEffect(() => {
+    if (selectedTransfer) {
+      return nativeBackButton.register(() => {
+        setSelectedTransfer(null);
+        return true;
+      });
+    }
+  }, [selectedTransfer]);
+
+  const statusFilterOptions: FilterChipOption<string>[] = useMemo(
+    () => [
+      { id: 'ALL', label: 'جميع التحويلات', count: transfersData?.total || 0 },
+      { id: 'IN_TRANSIT', label: 'في الطريق', count: inTransitCount },
+      { id: 'RECEIVED', label: 'مستلم', count: receivedCount },
+      { id: 'CANCELLED', label: 'ملغي', count: cancelledCount },
+    ],
+    [transfersData?.total, inTransitCount, receivedCount, cancelledCount]
+  );
+
   return (
     <div className="space-y-3 sm:space-y-6 max-w-7xl mx-auto" dir="rtl">
       {/* Desktop Header */}
@@ -365,27 +397,12 @@ export const StockTransfersPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Filter Tabs (Horizontal Scroll Track) */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar scroll-smooth flex-nowrap text-xs">
-        {[
-          { key: 'ALL', label: `جميع التحويلات (${transfersData?.total || 0})` },
-          { key: 'IN_TRANSIT', label: `في الطريق (${inTransitCount})` },
-          { key: 'RECEIVED', label: `مستلم (${receivedCount})` },
-          { key: 'CANCELLED', label: `ملغي (${cancelledCount})` },
-        ].map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setStatusFilter(tab.key)}
-            className={`px-3.5 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all text-xs ${
-              statusFilter === tab.key
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      {/* Filter Tabs using MobileFilterChips */}
+      <MobileFilterChips
+        options={statusFilterOptions}
+        selectedId={statusFilter}
+        onSelect={(id) => setStatusFilter(id)}
+      />
 
       {/* Transfers Table */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
@@ -493,67 +510,26 @@ export const StockTransfersPage: React.FC = () => {
             </div>
 
             {/* Mobile Touch Cards View (md:hidden) */}
-            <div className="md:hidden divide-y divide-slate-100">
+            <div className="md:hidden p-3 space-y-3 bg-slate-50/60">
               {transfers.map((trf: any) => (
-                <div key={trf.id} className="p-4 space-y-3 bg-white">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <span className="font-mono font-bold text-sm text-slate-800">
-                        #{trf.transfer_number}
-                      </span>
-                      <p className="text-[11px] text-slate-400 mt-0.5">
-                        {trf.transferred_at ? new Date(trf.transferred_at).toLocaleString('ar-EG') : '-'}
-                      </p>
-                    </div>
-                    {getStatusBadge(trf.status)}
-                  </div>
-
-                  {/* Route & Items */}
-                  <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 text-xs space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-500 font-medium">من فرع:</span>
-                      <span className="font-bold text-slate-800 flex items-center gap-1">
-                        <Building2 className="w-3.5 h-3.5 text-slate-400" />
-                        {trf.from_branch?.name || '-'}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between border-t border-slate-200/60 pt-1.5">
-                      <span className="text-slate-500 font-medium">إلى فرع:</span>
-                      <span className="font-bold text-blue-700 flex items-center gap-1">
-                        <Building2 className="w-3.5 h-3.5 text-blue-500" />
-                        {trf.to_branch?.name || '-'}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between border-t border-slate-200/60 pt-1.5">
-                      <span className="text-slate-500 font-medium">عدد الأصناف:</span>
-                      <span className="font-mono font-black text-slate-900">{trf.items?.length || 0} صنف</span>
-                    </div>
-                  </div>
-
-                  {/* Mobile Actions */}
-                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-                    {trf.status === 'IN_TRANSIT' && (
-                      <button
-                        onClick={() => {
-                          if (confirm(`هل تؤكد استلام كامل بضاعة الإذن رقم "${trf.transfer_number}"؟`)) {
-                            receiveMutation.mutate(trf.id);
-                          }
-                        }}
-                        className="min-h-[38px] px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 active:scale-95 shadow-sm"
-                      >
-                        <Check className="w-4 h-4" />
-                        تأكيد الاستلام
-                      </button>
-                    )}
-                    <button
-                      onClick={() => setSelectedTransfer(trf)}
-                      className="min-h-[38px] px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5 active:bg-slate-300"
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                      عرض
-                    </button>
-                  </div>
-                </div>
+                <StockTransferMobileCard
+                  key={trf.id}
+                  transfer={trf}
+                  canCancel={isOwner || isManager}
+                  isReceiving={receiveMutation.isPending && (receiveMutation.variables as any) === trf.id}
+                  onReceive={(id) => {
+                    if (confirm(`هل تؤكد استلام كامل بضاعة الإذن رقم "${trf.transfer_number}"؟`)) {
+                      receiveMutation.mutate(id);
+                    }
+                  }}
+                  onCancel={(id) => {
+                    const reason = prompt('يرجى كتابة سبب الإلغاء:');
+                    if (reason) {
+                      cancelMutation.mutate({ id, reason });
+                    }
+                  }}
+                  onView={(selected) => setSelectedTransfer(selected)}
+                />
               ))}
             </div>
           </>
