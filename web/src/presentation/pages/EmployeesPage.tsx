@@ -27,32 +27,9 @@ import { apiClient } from '../../data/api/client';
 import { formatCurrency } from '@pos-mandob/shared';
 import { usePermissions } from '../../hooks/usePermissions';
 import { PayrollModal } from '../components/employees/PayrollModal';
-
-interface EmployeeItem {
-  id: number;
-  name: string;
-  phone: string;
-  email?: string;
-  branch_id?: number | null;
-  branch?: {
-    id: number;
-    name: string;
-    code: string;
-    type?: string;
-  } | null;
-  role: 'ADMIN' | 'MANDOB' | 'CASHIER' | 'MANAGER' | 'SUPERVISOR' | 'SALES' | 'OWNER';
-  status: 'ACTIVE' | 'INACTIVE';
-  base_salary?: number;
-  commission_type?: 'NONE' | 'PERCENTAGE_OF_SALES' | 'FIXED_PER_INVOICE';
-  commission_rate?: number;
-  is_eligible_for_payroll?: boolean;
-  created_at: string;
-  today_stats: {
-    sales: number;
-    invoices_count: number;
-    collections: number;
-  };
-}
+import { EmployeeMobileCard, EmployeeItem } from '../components/mobile/EmployeeMobileCard';
+import { MobileFilterChips, FilterChipOption } from '../components/mobile/MobileFilterChips';
+import { nativeBackButton } from '../../platform/nativeBackButton';
 
 export const EmployeesPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -120,6 +97,36 @@ export const EmployeesPage: React.FC = () => {
 
     return matchesSearch && matchesRole;
   });
+
+  // Hardware back button handler for modals
+  React.useEffect(() => {
+    if (!isModalOpen && !isPayrollModalOpen) return;
+    return nativeBackButton.register(() => {
+      if (isPayrollModalOpen) {
+        setIsPayrollModalOpen(false);
+        setPayrollEmployee(null);
+        return true;
+      }
+      if (isModalOpen) {
+        setIsModalOpen(false);
+        setEditingEmployee(null);
+        return true;
+      }
+      return false;
+    });
+  }, [isModalOpen, isPayrollModalOpen]);
+
+  const roleFilterChips: FilterChipOption<'ALL' | 'CASHIER' | 'SALES' | 'MANDOB' | 'MANAGEMENT'>[] = [
+    { id: 'ALL', label: 'الكل', count: employees.length },
+    { id: 'CASHIER', label: 'كاشير', count: employees.filter((e) => e.role === 'CASHIER').length },
+    { id: 'SALES', label: 'سيلز / صالة', count: employees.filter((e) => e.role === 'SALES').length },
+    { id: 'MANDOB', label: 'مناديب', count: employees.filter((e) => e.role === 'MANDOB').length },
+    {
+      id: 'MANAGEMENT',
+      label: 'إدارة',
+      count: employees.filter((e) => e.role === 'MANAGER' || e.role === 'SUPERVISOR' || e.role === 'ADMIN').length,
+    },
+  ];
 
   // Summary Metrics
   const totalEmployees = employees.length;
@@ -501,8 +508,17 @@ export const EmployeesPage: React.FC = () => {
           <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-2.5" />
         </div>
 
-        {/* Role Segmented Filter (Horizontal Scroll Track) */}
-        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl w-full md:w-auto overflow-x-auto no-scrollbar scroll-smooth flex-nowrap">
+        {/* Mobile Filter Chips */}
+        <div className="md:hidden w-full overflow-hidden">
+          <MobileFilterChips
+            options={roleFilterChips}
+            selectedId={roleFilter}
+            onSelect={(id) => setRoleFilter(id)}
+          />
+        </div>
+
+        {/* Role Segmented Filter (Horizontal Scroll Track - hidden md:flex) */}
+        <div className="hidden md:flex items-center gap-1 bg-slate-100 p-1 rounded-xl w-full md:w-auto overflow-x-auto no-scrollbar scroll-smooth flex-nowrap">
           <button
             onClick={() => setRoleFilter('ALL')}
             className={clsx(
@@ -759,154 +775,24 @@ export const EmployeesPage: React.FC = () => {
             </div>
 
             {/* Mobile Touch Cards View (md:hidden) */}
-            <div className="md:hidden divide-y divide-slate-100">
-              {filteredEmployees.map((emp) => {
-                const roleBadge = getRoleBadge(emp.role);
-                const isActive = emp.status === 'ACTIVE';
-
-                return (
-                  <div key={emp.id} className="p-3.5 space-y-2.5 bg-white">
-                    {/* Top Row: Avatar + Name + Role Badge */}
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div
-                          className={clsx(
-                            'w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm shrink-0',
-                            emp.role === 'ADMIN'
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : emp.role === 'MANDOB'
-                              ? 'bg-indigo-50 text-indigo-700'
-                              : emp.role === 'CASHIER'
-                              ? 'bg-amber-50 text-amber-700'
-                              : emp.role === 'MANAGER'
-                              ? 'bg-purple-50 text-purple-700'
-                              : 'bg-blue-50 text-blue-700'
-                          )}
-                        >
-                          {emp.name.charAt(0)}
-                        </div>
-                        <div className="min-w-0">
-                          <h4 className="font-bold text-slate-900 text-sm truncate">{emp.name}</h4>
-                          <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-0.5">
-                            {emp.branch ? (
-                              <span className="flex items-center gap-1 font-medium text-slate-600 truncate">
-                                <Building2 className="w-3 h-3 text-primary-600 shrink-0" />
-                                {emp.branch.name}
-                              </span>
-                            ) : (
-                              <span>كل الفروع</span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      <span
-                        className={clsx(
-                          'inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border shrink-0',
-                          roleBadge.bg
-                        )}
-                      >
-                        <span className={clsx('w-1.5 h-1.5 rounded-full', roleBadge.dot)} />
-                        {roleBadge.label}
-                      </span>
-                    </div>
-
-                    {/* Quick Phone Action & Status */}
-                    <div className="flex items-center justify-between gap-2 pt-1">
-                      <a
-                        href={`tel:${emp.phone}`}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 font-mono text-xs font-bold border border-slate-200 active:scale-95 transition-all"
-                        dir="ltr"
-                      >
-                        <Phone className="w-3.5 h-3.5 text-slate-400" />
-                        {emp.phone}
-                      </a>
-
-                      {/* Status Toggle Button */}
-                      {isOwnerOrAdmin || (isManager && emp.role !== 'OWNER' && emp.role !== 'ADMIN' && emp.role !== 'MANAGER') ? (
-                        <button
-                          onClick={() =>
-                            toggleStatusMutation.mutate({
-                              id: emp.id,
-                              newStatus: isActive ? 'INACTIVE' : 'ACTIVE',
-                            })
-                          }
-                          className={clsx(
-                            'inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold transition-all active:scale-95',
-                            isActive
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                              : 'bg-rose-50 text-rose-700 border border-rose-200'
-                          )}
-                        >
-                          {isActive ? <UserCheck className="w-3.5 h-3.5 text-emerald-600" /> : <UserX className="w-3.5 h-3.5 text-rose-600" />}
-                          <span>{isActive ? 'نشط' : 'موقوف'}</span>
-                        </button>
-                      ) : (
-                        <span className={clsx('text-xs font-bold px-2 py-0.5 rounded-lg', isActive ? 'text-emerald-700 bg-emerald-50' : 'text-rose-700 bg-rose-50')}>
-                          {isActive ? 'نشط' : 'موقوف'}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Today's Performance Pill */}
-                    <div className="grid grid-cols-3 gap-1.5 p-2 bg-slate-50 rounded-xl border border-slate-100 text-center text-xs">
-                      <div>
-                        <span className="text-[10px] text-slate-400 block font-medium">مبيعات اليوم</span>
-                        <span className="font-mono font-bold text-slate-900 block mt-0.5">
-                          {formatCurrency(emp.today_stats?.sales || 0)}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-slate-400 block font-medium">تحصيلات اليوم</span>
-                        <span className="font-mono font-bold text-teal-700 block mt-0.5">
-                          {formatCurrency(emp.today_stats?.collections || 0)}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-slate-400 block font-medium">الفواتير</span>
-                        <span className="font-mono font-bold text-slate-700 block mt-0.5">
-                          {emp.today_stats?.invoices_count || 0}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Mobile Card Actions */}
-                    {(isOwnerOrAdmin || (isManager && emp.role !== 'OWNER' && emp.role !== 'ADMIN' && emp.role !== 'MANAGER')) && (
-                      <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-100">
-                        <div>
-                          {emp.is_eligible_for_payroll && (
-                            <button
-                              onClick={() => openPayrollModal(emp)}
-                              className="px-3 py-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-xl flex items-center gap-1.5 border border-emerald-200 active:scale-95 transition-all"
-                            >
-                              <Banknote className="w-3.5 h-3.5" />
-                              <span>الراتب والعمولة</span>
-                            </button>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            onClick={() => openEditModal(emp)}
-                            className="px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl flex items-center gap-1 active:bg-slate-300 transition-colors"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                            <span>تعديل</span>
-                          </button>
-                          {isOwnerOrAdmin && (
-                            <button
-                              onClick={() => handleDelete(emp)}
-                              className="p-1.5 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-xl transition-colors"
-                              title="حذف"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+            <div className="md:hidden p-3 space-y-3">
+              {filteredEmployees.map((emp) => (
+                <EmployeeMobileCard
+                  key={emp.id}
+                  employee={emp}
+                  canManage={
+                    isOwnerOrAdmin ||
+                    (isManager && emp.role !== 'OWNER' && emp.role !== 'ADMIN' && emp.role !== 'MANAGER')
+                  }
+                  isOwnerOrAdmin={isOwnerOrAdmin}
+                  onToggleStatus={(id, newStatus) =>
+                    toggleStatusMutation.mutate({ id, newStatus })
+                  }
+                  onOpenPayroll={openPayrollModal}
+                  onEdit={openEditModal}
+                  onDelete={handleDelete}
+                />
+              ))}
             </div>
           </>
         )}

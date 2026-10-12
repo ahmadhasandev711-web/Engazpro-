@@ -20,6 +20,8 @@ import {
 import { BranchType } from '@pos-mandob/shared';
 import { apiClient } from '../../data/api/client';
 import { usePermissions } from '../../hooks/usePermissions';
+import { BranchMobileCard } from '../components/mobile/BranchMobileCard';
+import { nativeBackButton } from '../../platform/nativeBackButton';
 
 export const BranchesPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -40,6 +42,29 @@ export const BranchesPage: React.FC = () => {
   });
 
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Hardware back button handler for modals
+  React.useEffect(() => {
+    if (!addModalOpen && !editingBranch && !inventoryBranch) return;
+    return nativeBackButton.register(() => {
+      if (inventoryBranch) {
+        setInventoryBranch(null);
+        setInventorySearch('');
+        return true;
+      }
+      if (editingBranch) {
+        setEditingBranch(null);
+        resetForm();
+        return true;
+      }
+      if (addModalOpen) {
+        setAddModalOpen(false);
+        resetForm();
+        return true;
+      }
+      return false;
+    });
+  }, [addModalOpen, editingBranch, inventoryBranch]);
 
   // 1. Fetch Branches
   const { data: rawBranches, isLoading } = useQuery({
@@ -318,106 +343,129 @@ export const BranchesPage: React.FC = () => {
       </div>
 
       {/* Branches List */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      <div>
         {isLoading ? (
-          <div className="col-span-full text-center py-12 text-slate-400">
+          <div className="text-center py-12 text-slate-400">
             <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-2 text-emerald-600" />
             جاري تحميل بيانات الفروع...
           </div>
         ) : branches.length === 0 ? (
-          <div className="col-span-full bg-white p-12 text-center rounded-2xl border border-dashed border-slate-200">
+          <div className="bg-white p-12 text-center rounded-2xl border border-dashed border-slate-200">
             <Building2 className="w-12 h-12 text-slate-300 mx-auto mb-3" />
             <p className="text-slate-600 font-semibold">لا توجد فروع مسجلة حتى الآن</p>
             <p className="text-slate-400 text-sm mt-1">ابدأ بإضافة أول فرع أو مخزن لمتجرك</p>
           </div>
         ) : (
-          branches.map((branch: any) => (
-            <div
-              key={branch.id}
-              className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all p-5 flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex items-start justify-between gap-3">
+          <>
+            {/* Mobile Cards List (md:hidden) */}
+            <div className="md:hidden space-y-3">
+              {branches.map((branch: any) => (
+                <BranchMobileCard
+                  key={branch.id}
+                  branch={branch}
+                  isOwnerOrManager={isOwner || isManager}
+                  onOpenInventory={(b) => setInventoryBranch(b)}
+                  onEdit={(b) => handleOpenEdit(b)}
+                  onDelete={(id, name) => {
+                    if (confirm(`هل أنت متأكد من حذف الفرع "${name}"؟`)) {
+                      deleteMutation.mutate(id);
+                    }
+                  }}
+                />
+              ))}
+            </div>
+
+            {/* Desktop Grid (hidden md:grid) */}
+            <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {branches.map((branch: any) => (
+                <div
+                  key={branch.id}
+                  className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all p-5 flex flex-col justify-between"
+                >
                   <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-slate-800 text-lg">{branch.name}</h3>
-                      {branch.is_main && (
-                        <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                          الفرع الرئيسي
-                        </span>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-bold text-slate-800 text-lg">{branch.name}</h3>
+                          {branch.is_main && (
+                            <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                              الفرع الرئيسي
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-xs font-mono font-medium text-slate-400">كود: {branch.code}</span>
+                      </div>
+                      {getTypeBadge(branch.type)}
+                    </div>
+
+                    <div className="mt-4 space-y-2 text-sm text-slate-600">
+                      {branch.address && (
+                        <div className="flex items-center gap-2">
+                          <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
+                          <span className="truncate">{branch.address}</span>
+                        </div>
+                      )}
+                      {branch.phone && (
+                        <div className="flex items-center gap-2">
+                          <Phone className="w-4 h-4 text-slate-400 shrink-0" />
+                          <span dir="ltr">{branch.phone}</span>
+                        </div>
                       )}
                     </div>
-                    <span className="text-xs font-mono font-medium text-slate-400">كود: {branch.code}</span>
-                  </div>
-                  {getTypeBadge(branch.type)}
-                </div>
 
-                <div className="mt-4 space-y-2 text-sm text-slate-600">
-                  {branch.address && (
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
-                      <span className="truncate">{branch.address}</span>
+                    {/* Sub-stats */}
+                    <div className="mt-4 pt-3 border-t border-slate-100 grid grid-cols-2 gap-2 text-xs">
+                      <div className="bg-slate-50 p-2 rounded-lg text-center">
+                        <span className="text-slate-400 block">فريق العمل</span>
+                        <span className="font-bold text-slate-700 mt-0.5">{branch.users_count || 0} موظف</span>
+                      </div>
+                      <div className="bg-slate-50 p-2 rounded-lg text-center">
+                        <span className="text-slate-400 block">الأصناف المسجلة</span>
+                        <span className="font-bold text-slate-700 mt-0.5">{branch.stocks_count || 0} صنف</span>
+                      </div>
                     </div>
-                  )}
-                  {branch.phone && (
-                    <div className="flex items-center gap-2">
-                      <Phone className="w-4 h-4 text-slate-400 shrink-0" />
-                      <span dir="ltr">{branch.phone}</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Sub-stats */}
-                <div className="mt-4 pt-3 border-t border-slate-100 grid grid-cols-2 gap-2 text-xs">
-                  <div className="bg-slate-50 p-2 rounded-lg text-center">
-                    <span className="text-slate-400 block">فريق العمل</span>
-                    <span className="font-bold text-slate-700 mt-0.5">{branch.users_count || 0} موظف</span>
                   </div>
-                  <div className="bg-slate-50 p-2 rounded-lg text-center">
-                    <span className="text-slate-400 block">الأصناف المسجلة</span>
-                    <span className="font-bold text-slate-700 mt-0.5">{branch.stocks_count || 0} صنف</span>
-                  </div>
-                </div>
-              </div>
 
-              {/* Actions */}
-              <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
-                <button
-                  onClick={() => setInventoryBranch(branch)}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-xs font-semibold transition-colors"
-                >
-                  <Package className="w-3.5 h-3.5" />
-                  جرد المخزون
-                </button>
-
-                {(isOwner || isManager) && (
-                  <div className="flex items-center gap-1">
+                  {/* Actions */}
+                  <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
                     <button
-                      onClick={() => handleOpenEdit(branch)}
-                      className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-                      title="تعديل الفرع"
+                      onClick={() => setInventoryBranch(branch)}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-xs font-semibold transition-colors"
                     >
-                      <Edit2 className="w-4 h-4" />
+                      <Package className="w-3.5 h-3.5" />
+                      جرد المخزون
                     </button>
 
-                    {!branch.is_main && (
-                      <button
-                        onClick={() => {
-                          if (confirm(`هل أنت متأكد من حذف الفرع "${branch.name}"؟`)) {
-                            deleteMutation.mutate(branch.id);
-                          }
-                        }}
-                        className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                        title="حذف الفرع"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                    {(isOwner || isManager) && (
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleOpenEdit(branch)}
+                          className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                          title="تعديل الفرع"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+
+                        {!branch.is_main && (
+                          <button
+                            onClick={() => {
+                              if (confirm(`هل أنت متأكد من حذف الفرع "${branch.name}"؟`)) {
+                                deleteMutation.mutate(branch.id);
+                              }
+                            }}
+                            className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                            title="حذف الفرع"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
-                )}
-              </div>
+                </div>
+              ))}
             </div>
-          ))
+          </>
         )}
       </div>
 
