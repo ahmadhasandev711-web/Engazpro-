@@ -24,6 +24,8 @@ export interface DashboardData {
     today_sales: number;
     today_gross_sales?: number;
     today_cash_sales?: number;
+    today_courier_pending_sales?: number;
+    today_electronic_sales?: number;
     today_credit_sales?: number;
     today_returns?: number;
     today_profit: number | null;
@@ -163,10 +165,32 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
           <div className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight font-mono">
             {isLoading ? '...' : formatCurrency(kpis?.today_sales ?? 0)}
           </div>
-          <div className="text-[10px] sm:text-[11px] text-slate-400 mt-1 flex items-center gap-1 truncate">
+          <div className="text-[10px] sm:text-[11px] text-slate-400 mt-1 flex items-center justify-between gap-1 truncate">
             <span>الشهر:</span>
             <span className="font-bold text-slate-600 font-mono">{formatCurrency(kpis?.month_sales ?? 0)}</span>
           </div>
+          {(Number(kpis?.today_courier_pending_sales) > 0 || Number(kpis?.today_electronic_sales) > 0) && (
+            <div className="mt-2 pt-2 border-t border-slate-100 space-y-0.5 text-[9px] sm:text-[10px]">
+              {Number(kpis?.today_cash_sales) > 0 && (
+                <div className="flex justify-between text-slate-500">
+                  <span>كاش بالخزينة:</span>
+                  <span className="font-mono font-bold text-emerald-700">{formatCurrency(kpis?.today_cash_sales ?? 0)}</span>
+                </div>
+              )}
+              {Number(kpis?.today_courier_pending_sales) > 0 && (
+                <div className="flex justify-between text-purple-700">
+                  <span>معلق شحن:</span>
+                  <span className="font-mono font-bold">{formatCurrency(kpis?.today_courier_pending_sales ?? 0)}</span>
+                </div>
+              )}
+              {Number(kpis?.today_electronic_sales) > 0 && (
+                <div className="flex justify-between text-blue-700">
+                  <span>إلكتروني:</span>
+                  <span className="font-mono font-bold">{formatCurrency(kpis?.today_electronic_sales ?? 0)}</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* 2. صافي أرباح اليوم - للمالك ومدير النظام فقط */}

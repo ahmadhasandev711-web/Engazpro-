@@ -77,6 +77,8 @@ class DashboardService
                 'today_sales' => $todaySales['net'],
                 'today_gross_sales' => $todaySales['gross'],
                 'today_cash_sales' => $todaySales['cash'],
+                'today_courier_pending_sales' => $todaySales['courier_pending'],
+                'today_electronic_sales' => $todaySales['electronic'],
                 'today_credit_sales' => $todaySales['credit'],
                 'today_returns' => $todaySales['returns'],
                 'today_profit' => $todayProfit,
@@ -104,6 +106,8 @@ class DashboardService
 
         $gross = Money::of((float) (clone $query)->where('type', 'SALE')->sum('total'));
         $cashSales = Money::of((float) (clone $query)->where('type', 'SALE')->where('payment_method', 'CASH')->sum('paid_amount'));
+        $courierPendingSales = Money::of((float) (clone $query)->where('type', 'SALE')->where('payment_method', 'COURIER_COD')->sum('paid_amount'));
+        $electronicSales = Money::of((float) (clone $query)->where('type', 'SALE')->whereIn('payment_method', ['CARD', 'INSTAPAY', 'VODAFONE_CASH', 'TRANSFER', 'BANK', 'WALLET'])->sum('paid_amount'));
         $creditSales = Money::of((float) (clone $query)->where('type', 'SALE')->sum('remaining_amount'));
         $returns = Money::of((float) (clone $query)->where('type', 'SALE_RETURN')->sum('total'));
         $net = $gross->subtract($returns);
@@ -111,6 +115,8 @@ class DashboardService
         return [
             'gross' => $gross->getAmount(),
             'cash' => $cashSales->getAmount(),
+            'courier_pending' => $courierPendingSales->getAmount(),
+            'electronic' => $electronicSales->getAmount(),
             'credit' => $creditSales->getAmount(),
             'returns' => $returns->getAmount(),
             'net' => $net->getAmount(),

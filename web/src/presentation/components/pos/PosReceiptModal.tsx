@@ -118,6 +118,24 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
                 <span className="text-slate-500">العميل:</span>
                 <span>{invoice.party?.name || invoice.party_name || 'عميل نقدي'}</span>
               </div>
+              {(invoice.party?.phone || invoice.customer_phone) && (
+                <div className="flex justify-between">
+                  <span className="text-slate-500">هاتف العميل:</span>
+                  <span className="font-mono">{invoice.party?.phone || invoice.customer_phone}</span>
+                </div>
+              )}
+              {(invoice.party?.address || invoice.customer_address) && (
+                <div className="flex justify-between">
+                  <span className="text-slate-500">العنوان:</span>
+                  <span className="text-left font-sans text-[10px]">{invoice.party?.address || invoice.customer_address}</span>
+                </div>
+              )}
+              {invoice.courier_name && (
+                <div className="flex justify-between">
+                  <span className="text-slate-500">شركة الشحن:</span>
+                  <span className="font-bold text-purple-800">{invoice.courier_name} {invoice.tracking_number ? `(#${invoice.tracking_number})` : ''}</span>
+                </div>
+              )}
             </div>
 
             {/* Items Table */}
@@ -184,11 +202,13 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
                         ? 'إنستاباي (InstaPay)'
                         : invoice.payment_method === 'VODAFONE_CASH'
                           ? 'فودافون كاش ومحافظ'
-                          : invoice.payment_method === 'SPLIT'
-                            ? 'دفع مجزأ'
-                            : invoice.payment_method === 'TRANSFER'
-                              ? 'تحويل بنكي'
-                              : 'آجل على الحساب'}
+                          : invoice.payment_method === 'COURIER_COD'
+                            ? 'تحصيل شركة الشحن (COD)'
+                            : invoice.payment_method === 'SPLIT'
+                              ? 'دفع مجزأ'
+                              : invoice.payment_method === 'TRANSFER'
+                                ? 'تحويل بنكي'
+                                : 'آجل على الحساب'}
                 </span>
               </div>
               <div className="flex justify-between">

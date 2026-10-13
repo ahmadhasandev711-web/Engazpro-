@@ -458,7 +458,7 @@ class InvoiceService
                                 sourceType: 'INVOICE',
                                 sourceId: $invoice->id,
                                 actor: $user,
-                                notes: "مشتريات نقدية فاتورة {$invoice->invoice_number}",
+                                notes: "سداد مشتريات نقداً فاتورة {$invoice->invoice_number}",
                                 shiftId: $activeShift?->id
                             );
                         } elseif ($type === 'PURCHASE_RETURN') {
@@ -468,7 +468,40 @@ class InvoiceService
                                 sourceType: 'INVOICE',
                                 sourceId: $invoice->id,
                                 actor: $user,
-                                notes: "مرتجع مشتريات نقدي مسترد فاتورة {$invoice->invoice_number}",
+                                notes: "استرداد مرتجع مشتريات نقدي فاتورة {$invoice->invoice_number}",
+                                shiftId: $activeShift?->id
+                            );
+                        }
+                    } elseif (in_array($paymentMethod, ['CARD', 'INSTAPAY', 'VODAFONE_CASH', 'TRANSFER', 'BANK', 'WALLET']) && $paidAmountMoney->isPositive()) {
+                        $targetTreasury = $this->treasuryService->getTreasuryForPaymentMethod($user, $paymentMethod);
+                        if ($type === 'SALE') {
+                            $this->treasuryService->recordDeposit(
+                                treasury: $targetTreasury,
+                                amount: $paidAmountMoney,
+                                sourceType: 'INVOICE',
+                                sourceId: $invoice->id,
+                                actor: $creatorUser,
+                                notes: "مبيعات إلكترونية ({$paymentMethod}) فاتورة {$invoice->invoice_number}",
+                                shiftId: $activeShift?->id
+                            );
+                        } elseif ($type === 'SALE_RETURN') {
+                            $this->treasuryService->recordWithdrawal(
+                                treasury: $targetTreasury,
+                                amount: $paidAmountMoney,
+                                sourceType: 'INVOICE',
+                                sourceId: $invoice->id,
+                                actor: $user,
+                                notes: "مرتجع مبيعات مسترد ({$paymentMethod}) فاتورة {$invoice->invoice_number}",
+                                shiftId: $activeShift?->id
+                            );
+                        } elseif ($type === 'PURCHASE') {
+                            $this->treasuryService->recordWithdrawal(
+                                treasury: $targetTreasury,
+                                amount: $paidAmountMoney,
+                                sourceType: 'INVOICE',
+                                sourceId: $invoice->id,
+                                actor: $user,
+                                notes: "سداد مشتريات ({$paymentMethod}) فاتورة {$invoice->invoice_number}",
                                 shiftId: $activeShift?->id
                             );
                         }

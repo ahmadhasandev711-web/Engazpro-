@@ -253,7 +253,7 @@ class WcOrderController extends Controller
 
         $validated = $request->validate([
             'collected_amount' => ['nullable', 'numeric', 'min:0'],
-            'payment_method' => ['nullable', 'in:CASH,CARD,INSTAPAY,VODAFONE_CASH,TRANSFER,CREDIT'],
+            'payment_method' => ['nullable', 'in:CASH,CARD,INSTAPAY,VODAFONE_CASH,TRANSFER,CREDIT,COURIER_COD'],
         ]);
 
         $invoice = $this->orderSyncService->deliverOrder($user, $order, $validated);

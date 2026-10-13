@@ -211,28 +211,27 @@ export const CouriersPage: React.FC = () => {
     },
   });
 
-  // 5. Quick Settlement Mutation (Payment Voucher / Receipt Voucher)
+  // 5. Quick Settlement Mutation (Net Settlement with Treasury/Bank)
   const settlementMutation = useMutation({
     mutationFn: async () => {
-      return apiClient.post('/payments', {
-        party_id: settleCourier.id,
+      return apiClient.post(`/couriers/${settleCourier.id}/settle`, {
         type: settleType,
         amount: Number(settleAmount),
         method: settleMethod,
-        notes: settleNotes.trim() || (settleType === 'RECEIPT' ? `توريد كاش COD - شركة ${settleCourier.name}` : `سداد أتعاب شحن - شركة ${settleCourier.name}`),
-        date: new Date().toISOString().split('T')[0],
+        notes: settleNotes.trim() || undefined,
       });
     },
-    onSuccess: () => {
+    onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['couriers'] });
       queryClient.invalidateQueries({ queryKey: ['payments'] });
       queryClient.invalidateQueries({ queryKey: ['treasuries'] });
       queryClient.invalidateQueries({ queryKey: ['parties'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       setSettleCourier(null);
-      showNotification('success', settleType === 'RECEIPT' ? 'تم تسجيل سند القبض وتوريد الكاش للخزينة بنجاح' : 'تم تسجيل سند الصرف وخصم المبلغ من الخزينة بنجاح');
+      showNotification('success', res.data?.message || 'تمت تصفية مستحقات شركة الشحن وتوريد المبلغ بنجاح');
     },
     onError: (err: any) => {
-      setSettleError(err.response?.data?.message || 'تعذر تسجيل السند');
+      setSettleError(err.response?.data?.message || 'تعذر تسجيل التصفية');
     },
   });
 
@@ -259,10 +258,12 @@ export const CouriersPage: React.FC = () => {
     setIsPartyModalOpen(true);
   };
 
-  const openSettleModal = (c: any, defaultType: 'RECEIPT' | 'PAYMENT' = 'RECEIPT') => {
+  const openSettleModal = (c: any, defaultType?: 'RECEIPT' | 'PAYMENT') => {
     setSettleCourier(c);
-    setSettleType(defaultType);
-    setSettleAmount(c.pending_cod_amount > 0 ? c.pending_cod_amount : Math.abs(Number(c.balance) || 0));
+    const balanceNum = Number(c.balance) || 0;
+    const computedType = defaultType || (balanceNum < 0 ? 'PAYMENT' : 'RECEIPT');
+    setSettleType(computedType);
+    setSettleAmount(balanceNum !== 0 ? Math.abs(balanceNum) : (c.pending_cod_amount || 0));
     setSettleMethod('CASH');
     setSettleNotes('');
     setSettleError(null);
@@ -489,14 +490,14 @@ export const CouriersPage: React.FC = () => {
                           <span className="hidden sm:inline">كشف الحساب</span>
                         </button>
 
-                        {/* Settle Cash Button */}
+                        {/* Settle Net Balance Button */}
                         <button
-                          onClick={() => openSettleModal(c, 'RECEIPT')}
-                          className="px-2 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-xs font-black transition flex items-center gap-1 cursor-pointer border border-emerald-200"
-                          title="توريد كاش COD للخزينة"
+                          onClick={() => openSettleModal(c)}
+                          className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-xs font-black transition flex items-center gap-1 cursor-pointer border border-emerald-200"
+                          title="تصفية واستلام صافي المستحقات"
                         >
-                          <ArrowDownLeft className="w-3.5 h-3.5 text-emerald-600" />
-                          <span>قبض كاش</span>
+                          <Wallet className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>تصفية واستلام</span>
                         </button>
 
                         {/* Edit Button */}
@@ -538,7 +539,7 @@ export const CouriersPage: React.FC = () => {
                   courier={c}
                   canDeleteParty={canDeleteParty}
                   onOpenManifest={(cour) => setManifestCourier(cour)}
-                  onOpenSettle={(cour, type) => openSettleModal(cour, type)}
+                  onOpenSettle={(cour) => openSettleModal(cour)}
                   onOpenLedger={(id) => navigate(`/ledger/${id}`)}
                   onEditCourier={(cour) => openEditModal(cour)}
                   onDeleteCourier={(id, name) => {
@@ -963,33 +964,53 @@ export const CouriersPage: React.FC = () => {
         </div>
       )}
 
-      {/* Modal 2: Quick Cash Settlement (تسوية كاش سريعة مع الخزينة) */}
+      {/* Modal 2: Quick Cash Settlement (تصفية مستحقات شركة الشحن مع الخزينة/البنك) */}
       {settleCourier && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
           <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl overflow-hidden border border-slate-200 space-y-4 p-5">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="font-black text-sm text-slate-900 flex items-center gap-2">
-                <Wallet className="w-5 h-5 text-purple-600" />
-                <span>تسوية نقدية: {settleCourier.name}</span>
+                <Wallet className="w-5 h-5 text-emerald-600" />
+                <span>تصفية مستحقات: {settleCourier.name}</span>
               </h3>
               <button onClick={() => setSettleCourier(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Type Toggle: Receipt (توريد كاش) vs Payment (سداد أتعاب) */}
+            {/* Current Balance Summary Box */}
+            <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500 font-bold">صافي رصيد الدفاتر:</span>
+                <span className={`font-mono font-black text-sm px-2 py-0.5 rounded-lg ${
+                  Number(settleCourier.balance) > 0
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : Number(settleCourier.balance) < 0
+                    ? 'bg-rose-100 text-rose-800'
+                    : 'bg-slate-200 text-slate-700'
+                }`}>
+                  {formatCurrency(settleCourier.balance)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-slate-500 border-t border-slate-200 pt-1.5">
+                <span>معلق لدى الشركة (COD):</span>
+                <span className="font-mono font-bold text-blue-700">{formatCurrency(settleCourier.pending_cod_amount || 0)}</span>
+              </div>
+            </div>
+
+            {/* Type Toggle: Receipt (توريد كاش) vs Payment (صرف أتعاب) */}
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => setSettleType('RECEIPT')}
                 className={`py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition ${
                   settleType === 'RECEIPT'
-                    ? 'bg-emerald-50 border-emerald-500 text-emerald-800 shadow-2xs'
+                    ? 'bg-emerald-50 border-emerald-500 text-emerald-800 shadow-2xs font-black'
                     : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                 }`}
               >
                 <ArrowDownLeft className="w-4 h-4 text-emerald-600" />
-                <span>قبض وتوريد كاش COD 🟢</span>
+                <span>قبض وتوريد للخزينة 🟢</span>
               </button>
 
               <button
@@ -997,19 +1018,19 @@ export const CouriersPage: React.FC = () => {
                 onClick={() => setSettleType('PAYMENT')}
                 className={`py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition ${
                   settleType === 'PAYMENT'
-                    ? 'bg-rose-50 border-rose-500 text-rose-800 shadow-2xs'
+                    ? 'bg-rose-50 border-rose-500 text-rose-800 shadow-2xs font-black'
                     : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                 }`}
               >
                 <ArrowUpRight className="w-4 h-4 text-rose-600" />
-                <span>صرف أتعاب شحن 🔴</span>
+                <span>صرف أتعاب للشركة 🔴</span>
               </button>
             </div>
 
             <p className="text-[11px] text-slate-500 leading-relaxed bg-slate-50 p-2.5 rounded-xl border border-slate-200">
               {settleType === 'RECEIPT'
-                ? 'استلام مبالغ التحصيلات من شركة الشحن وإيداعها في خزينة المتجر وإقفال مديونية الشركة.'
-                : 'صرف نقدية من الخزينة لشركة الشحن مقابل أجور الشحن والتوصيل.'}
+                ? 'استلام صافي التحصيلات من شركة الشحن (COD مخصوماً منها أجور التوصيل) وإيداعها مباشرة بالخزينة/الحساب المالي.'
+                : 'صرف نقدية لشركة الشحن من الخزينة/الحساب المالي لتغطية تكاليف الشحن والتوصيل.'}
             </p>
 
             <div className="space-y-3">
@@ -1025,7 +1046,7 @@ export const CouriersPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">طريقة الدفع والتوريد:</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">طريقة الإيداع / الصرف:</label>
                 <select
                   value={settleMethod}
                   onChange={(e: any) => setSettleMethod(e.target.value)}
@@ -1035,15 +1056,15 @@ export const CouriersPage: React.FC = () => {
                   <option value="INSTAPAY">تحويل إنستاباي (InstaPay)</option>
                   <option value="VODAFONE_CASH">محفظة فودافون كاش ومحافظ</option>
                   <option value="TRANSFER">تحويل بنكي</option>
-                  <option value="CARD">بطاقة بنكية</option>
+                  <option value="CARD">بطاقة بنكية / فيزا</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">ملاحظات أو رقم الحوالة / الإيصال (اختياري):</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">ملاحظات أو رقم التحويل (اختياري):</label>
                 <input
                   type="text"
-                  placeholder="مثال: تصفية أوردرات الأسبوع / تحويل إنستاباي رقم..."
+                  placeholder="مثال: تصفية طرود الأسبوع / تحويل إنستاباي..."
                   value={settleNotes}
                   onChange={(e) => setSettleNotes(e.target.value)}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"
@@ -1070,10 +1091,10 @@ export const CouriersPage: React.FC = () => {
                 type="button"
                 disabled={settlementMutation.isPending || settleAmount <= 0}
                 onClick={() => settlementMutation.mutate()}
-                className="px-4 py-2 bg-purple-600 text-white text-xs font-bold rounded-xl hover:bg-purple-700 transition cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                className="px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl hover:bg-emerald-700 transition cursor-pointer disabled:opacity-50 flex items-center gap-1.5 shadow-xs"
               >
                 {settlementMutation.isPending && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
-                <span>تأكيد وتسجيل السند</span>
+                <span>تأكيد التصفية والتوريد</span>
               </button>
             </div>
           </div>

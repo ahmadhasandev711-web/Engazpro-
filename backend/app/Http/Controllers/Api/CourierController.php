@@ -62,4 +62,27 @@ class CourierController extends Controller
             'data' => ['synced_count' => $synced],
         ]);
     }
+
+    /**
+     * تصفية صافي مستحقات شركة الشحن واستلام النقدية/التحويل
+     */
+    public function settleNet(Request $request, int $id): JsonResponse
+    {
+        $user = $request->user();
+        $validated = $request->validate([
+            'amount' => ['nullable', 'numeric', 'min:0.01'],
+            'type' => ['nullable', 'in:RECEIPT,PAYMENT'],
+            'method' => ['nullable', 'string', 'in:CASH,CARD,INSTAPAY,VODAFONE_CASH,TRANSFER'],
+            'notes' => ['nullable', 'string', 'max:500'],
+            'idempotency_key' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $result = $this->courierService->settleCourierNet($user, $id, $validated);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تمت تصفية مستحقات شركة الشحن وتوريد المبلغ بنجاح',
+            'data' => $result,
+        ]);
+    }
 }

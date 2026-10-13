@@ -16,7 +16,7 @@ interface CourierMobileCardProps {
   courier: any;
   canDeleteParty: boolean;
   onOpenManifest: (courier: any) => void;
-  onOpenSettle: (courier: any, type: 'RECEIPT' | 'PAYMENT') => void;
+  onOpenSettle: (courier: any, type?: 'RECEIPT' | 'PAYMENT') => void;
   onOpenLedger: (courierId: number) => void;
   onEditCourier: (courier: any) => void;
   onDeleteCourier: (courierId: number, courierName: string) => void;
@@ -160,18 +160,18 @@ export const CourierMobileCard: React.FC<CourierMobileCardProps> = ({
           <span>الشحنات</span>
         </button>
 
-        {/* Settle Cash Button */}
+        {/* Settle Net Balance Button */}
         <button
           type="button"
           onClick={() => {
             selection();
-            onOpenSettle(courier, 'RECEIPT');
+            onOpenSettle(courier);
           }}
           className="min-h-[42px] px-3 py-2 text-xs font-black text-emerald-700 bg-emerald-50 hover:bg-emerald-100 active:bg-emerald-200 rounded-xl flex items-center gap-1.5 border border-emerald-200 transition-all active:scale-95 cursor-pointer"
-          title="توريد كاش COD للخزينة"
+          title="تصفية واستلام صافي المستحقات"
         >
           <ArrowDownLeft className="w-3.5 h-3.5 text-emerald-600" />
-          <span>قبض كاش</span>
+          <span>تصفية واستلام</span>
         </button>
 
         {/* Ledger Button */}

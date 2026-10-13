@@ -491,4 +491,36 @@ class WooCommerceCourierAndPricingTest extends TestCase
         $feeCreditsCount = \App\Models\LedgerEntry::where('party_id', $courier->id)->where('credit', '>', 0)->count();
         $this->assertEquals(1, $feeCreditsCount);
     }
+
+    public function test_courier_net_settlement_deposits_to_treasury_and_clears_balance(): void
+    {
+        $courier = Party::create([
+            'user_id' => $this->user->id,
+            'type' => PartyType::COURIER->value,
+            'name' => 'شركة رابيدو للتوصيل',
+            'phone' => '01011112222',
+            'balance' => 450.00, // مديونية على الشركة بـ 450 ج.م بعد تسليم شحنات
+        ]);
+
+        $treasury = app(\App\Services\TreasuryService::class)->getMainTreasury($this->user->id);
+        $initialBalance = (float) $treasury->balance;
+
+        $response = $this->actingAs($this->user)->postJson("/api/couriers/{$courier->id}/settle", [
+            'amount' => 450.00,
+            'method' => 'CASH',
+            'notes' => 'تصفية كاش باليد من مندوب رابيدو',
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('success', true);
+
+        $this->assertEquals(450.00, (float) $response->json('data.settled_amount'));
+        $this->assertEquals(0.00, (float) $response->json('data.remaining_balance'));
+
+        $courier->refresh();
+        $this->assertEquals(0.00, (float) $courier->balance);
+
+        $treasury->refresh();
+        $this->assertEquals($initialBalance + 450.00, (float) $treasury->balance);
+    }
 }

@@ -77,6 +77,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/', [\App\Http\Controllers\Api\CourierController::class, 'index']);
             Route::post('sync', [\App\Http\Controllers\Api\CourierController::class, 'sync']);
             Route::get('{id}/manifest', [\App\Http\Controllers\Api\CourierController::class, 'manifest']);
+            Route::post('{id}/settle', [\App\Http\Controllers\Api\CourierController::class, 'settleNet']);
         });
 
         // Invoices (Sales, Purchases, Returns)

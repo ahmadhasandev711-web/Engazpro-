@@ -28,6 +28,7 @@ import { formatCurrency } from '@pos-mandob/shared';
 import { DateRangeFilter, calculatePresetDates } from '../components/common/DateRangeFilter';
 import { MobileFilterChips } from '../components/mobile/MobileFilterChips';
 import { WcOrderMobileCard } from '../components/mobile/WcOrderMobileCard';
+import { PosReceiptModal } from '../components/pos/PosReceiptModal';
 import { nativeBackButton } from '../../platform/nativeBackButton';
 import { useHaptic } from '../hooks/useHaptic';
 
@@ -93,6 +94,21 @@ export const WcOrdersPage: React.FC = () => {
   const [collectedAmount, setCollectedAmount] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'CARD' | 'INSTAPAY' | 'VODAFONE_CASH' | 'TRANSFER' | 'COURIER_COD'>('CASH');
 
+  const openDeliverModal = (order: any) => {
+    setDeliverModalOrder(order);
+    const isPaidOnline =
+      order.payment_status === 'PAID_ONLINE' ||
+      (order.wc_payment_method && order.wc_payment_method !== 'cod');
+    setCollectedAmount(isPaidOnline ? 0 : Number(order.total || 0));
+    if (isPaidOnline) {
+      setPaymentMethod('CARD');
+    } else if (order.courier_party_id) {
+      setPaymentMethod('COURIER_COD');
+    } else {
+      setPaymentMethod('CASH');
+    }
+  };
+
   const [printOrder, setPrintOrder] = useState<any | null>(null);
 
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -150,10 +166,6 @@ export const WcOrdersPage: React.FC = () => {
   ]);
 
   const user = useAuthStore((state) => state.user);
-  const storeIdentity = user?.store_identity;
-  const storeName = storeIdentity?.business_name || (user as any)?.store_name || user?.name || 'متجر إنجاز برو';
-  const storePhone = storeIdentity?.store_phone || user?.phone;
-  const storeAddress = storeIdentity?.store_address;
 
   // Fetch Branches safely
   const { data: branchesData } = useQuery({
@@ -371,6 +383,8 @@ export const WcOrdersPage: React.FC = () => {
     },
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['wc-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['couriers'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       setDeliverModalOrder(null);
       setFeedback({ type: 'success', message: res.data?.message || 'تم تسليم الطلب وإصدار الفاتورة' });
       setTimeout(() => setFeedback(null), 3500);
@@ -628,15 +642,7 @@ export const WcOrdersPage: React.FC = () => {
                   setDispatchModalOrder(o);
                   setSelectedMandobId(o.mandob_id || (mandobs[0]?.id ?? ''));
                 }}
-                onDeliver={(o) => {
-                  setDeliverModalOrder(o);
-                  setCollectedAmount(Number(o.total || 0));
-                  setPaymentMethod(
-                    o.payment_status === 'PAID_ONLINE' || (o.wc_payment_method && o.wc_payment_method !== 'cod')
-                      ? 'CARD'
-                      : 'CASH'
-                  );
-                }}
+                onDeliver={(o) => openDeliverModal(o)}
                 canConfirm={isOwnerOrAdmin || isManager}
                 canDispatch={isOwnerOrAdmin || isManager}
                 canDeliver={isOwnerOrAdmin || isManager || isMandob}
@@ -927,12 +933,7 @@ export const WcOrdersPage: React.FC = () => {
                 {order.status === 'DISPATCHED' && (
                   <div className="grid grid-cols-2 gap-2">
                     <button
-                      onClick={() => {
-                        const isOnline = order.payment_status === 'PAID_ONLINE' || (order.wc_payment_method && order.wc_payment_method !== 'cod');
-                        setDeliverModalOrder(order);
-                        setCollectedAmount(isOnline ? 0 : Number(order.total));
-                        setPaymentMethod(isOnline ? 'TRANSFER' : 'CASH');
-                      }}
+                      onClick={() => openDeliverModal(order)}
                       className="py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-black hover:bg-emerald-700 transition-all flex items-center justify-center gap-1 shadow-xs cursor-pointer"
                     >
                       <DollarSign className="w-4 h-4" />
@@ -952,12 +953,7 @@ export const WcOrdersPage: React.FC = () => {
                 {order.status === 'SHIPPED_VIA_COURIER' && (
                   <div className="grid grid-cols-2 gap-2">
                     <button
-                      onClick={() => {
-                        const isOnline = order.payment_status === 'PAID_ONLINE' || (order.wc_payment_method && order.wc_payment_method !== 'cod');
-                        setDeliverModalOrder(order);
-                        setCollectedAmount(isOnline ? 0 : Number(order.total));
-                        setPaymentMethod(isOnline ? 'TRANSFER' : 'COURIER_COD');
-                      }}
+                      onClick={() => openDeliverModal(order)}
                       className="py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-black hover:bg-emerald-700 transition-all flex items-center justify-center gap-1 shadow-xs cursor-pointer"
                     >
                       <DollarSign className="w-4 h-4" />
@@ -1322,10 +1318,7 @@ export const WcOrdersPage: React.FC = () => {
                     onClick={() => {
                       const order = viewingOrder;
                       setViewingOrder(null);
-                      const isOnline = order.payment_status === 'PAID_ONLINE' || (order.wc_payment_method && order.wc_payment_method !== 'cod');
-                      setDeliverModalOrder(order);
-                      setCollectedAmount(isOnline ? 0 : Number(order.total));
-                      setPaymentMethod(isOnline ? 'TRANSFER' : 'CASH');
+                      openDeliverModal(order);
                     }}
                     className="py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-black hover:bg-emerald-700 transition-all flex items-center justify-center gap-1 shadow-xs cursor-pointer"
                   >
@@ -1353,10 +1346,7 @@ export const WcOrdersPage: React.FC = () => {
                     onClick={() => {
                       const order = viewingOrder;
                       setViewingOrder(null);
-                      const isOnline = order.payment_status === 'PAID_ONLINE' || (order.wc_payment_method && order.wc_payment_method !== 'cod');
-                      setDeliverModalOrder(order);
-                      setCollectedAmount(isOnline ? 0 : Number(order.total));
-                      setPaymentMethod(isOnline ? 'TRANSFER' : 'COURIER_COD');
+                      openDeliverModal(order);
                     }}
                     className="py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-black hover:bg-emerald-700 transition-all flex items-center justify-center gap-1 shadow-xs cursor-pointer"
                   >
@@ -1931,196 +1921,88 @@ export const WcOrdersPage: React.FC = () => {
         </div>
       )}
 
-      {/* Modal 5: Print Delivery Slip / Invoice Modal */}
+      {/* Universal POS Receipt Modal for WooCommerce Order Invoices */}
       {printOrder && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 flex flex-col max-h-[92vh]">
-            {/* Modal Header */}
-            <div className="p-4 bg-slate-900 text-white flex items-center justify-between no-print">
-              <div className="flex items-center gap-2">
-                <Printer className="w-5 h-5 text-indigo-400" />
-                <h3 className="text-sm font-black">
-                  طباعة بوليصة التوصيل / الفاتورة (طلب #{printOrder.wc_order_id})
-                </h3>
-              </div>
-              <button
-                onClick={() => setPrintOrder(null)}
-                className="p-1.5 text-slate-400 hover:text-white rounded-lg transition-colors cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Printable Container */}
-            <div className="p-4 overflow-y-auto flex-1 bg-slate-100/50 flex justify-center">
-              <div
-                className="printable-area w-full max-w-md bg-white p-6 rounded-2xl border border-slate-200 shadow-sm text-slate-900 font-sans text-xs leading-relaxed"
-                dir="rtl"
-              >
-                {/* Store Header */}
-                <div className="text-center pb-3 border-b-2 border-dashed border-slate-300 space-y-1">
-                  <h2 className="text-lg font-black text-slate-900">{storeName}</h2>
-                  <p className="text-[11px] font-bold text-indigo-700 bg-indigo-50 inline-block px-3 py-0.5 rounded-full">
-                    بوليصة شحن وتوصيل / فاتورة طلب
-                  </p>
-                  {storePhone && <p className="text-[10px] text-slate-500 font-mono">هاتف: {storePhone}</p>}
-                  {storeAddress && <p className="text-[9px] text-slate-400">{storeAddress}</p>}
-                </div>
-
-                {/* Order Metadata */}
-                <div className="py-2.5 border-b border-dashed border-slate-200 grid grid-cols-2 gap-2 text-[11px]">
-                  <div>
-                    <span className="text-slate-400 block text-[10px]">رقم الطلب (ووكومرس):</span>
-                    <span className="font-mono font-black text-indigo-700 text-sm">#{printOrder.wc_order_id}</span>
-                  </div>
-                  <div className="text-left">
-                    <span className="text-slate-400 block text-[10px]">تاريخ الطلب:</span>
-                    <span className="font-mono text-slate-700">
-                      {formatOrderDate(printOrder)}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Customer & Shipping Info */}
-                <div className="py-2.5 border-b border-dashed border-slate-200 space-y-1.5 text-[11px] bg-slate-50/60 p-2.5 rounded-xl mt-2">
-                  <div className="flex justify-between">
-                    <span className="text-slate-500 font-bold">العميل:</span>
-                    <span className="font-black text-slate-900">{printOrder.customer_name}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500 font-bold">رقم الهاتف:</span>
-                    <span className="font-mono font-bold text-slate-800">{printOrder.customer_phone || printOrder.party?.phone || '-'}</span>
-                  </div>
-                  <div className="flex justify-between items-start">
-                    <span className="text-slate-500 font-bold shrink-0">العنوان:</span>
-                    <span className="text-slate-700 text-left">
-                      {[printOrder.customer_address || printOrder.party?.address, printOrder.city, printOrder.governorate]
-                        .filter(Boolean)
-                        .join(' - ')}
-                    </span>
-                  </div>
-                  {printOrder.branch && (
-                    <div className="flex justify-between border-t border-slate-200 pt-1 text-slate-600">
-                      <span className="font-bold">مخزن الخروج:</span>
-                      <span>{printOrder.branch.name}</span>
-                    </div>
-                  )}
-                  {printOrder.mandob && (
-                    <div className="flex justify-between border-t border-slate-200 pt-1 text-indigo-900">
-                      <span className="font-bold">مندوب التوصيل:</span>
-                      <span className="font-bold">{printOrder.mandob.name}</span>
-                    </div>
-                  )}
-                  {printOrder.courier_name && (
-                    <div className="flex justify-between border-t border-slate-200 pt-1 text-purple-900">
-                      <span className="font-bold">شركة الشحن:</span>
-                      <span className="font-bold">
-                        {printOrder.courier_name} {printOrder.tracking_number ? `(بوليصة: ${printOrder.tracking_number})` : ''}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Items Table */}
-                <div className="py-3 border-b-2 border-dashed border-slate-300">
-                  <table className="w-full text-right text-[11px]">
-                    <thead>
-                      <tr className="border-b border-slate-200 text-slate-500 font-bold">
-                        <th className="pb-1.5">الصنف</th>
-                        <th className="pb-1.5 text-center">الكمية</th>
-                        <th className="pb-1.5 text-left">السعر</th>
-                        <th className="pb-1.5 text-left">الإجمالي</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {(printOrder.items_snapshot || []).map((item: any, idx: number) => {
-                        const unitPrice =
-                          item.price ||
-                          (item.total && item.quantity ? Number(item.total) / Number(item.quantity) : 0);
-                        const lineTotal = item.total || Number(unitPrice) * Number(item.quantity || 1);
-                        return (
-                          <tr key={idx} className="py-1.5">
-                            <td className="py-1.5 font-bold">
-                              <div>{cleanItemName(item.name)}</div>
-                            </td>
-                            <td className="py-1.5 text-center font-mono font-bold">{item.quantity}</td>
-                            <td className="py-1.5 text-left font-mono text-slate-600">
-                              {formatCurrency(unitPrice)}
-                            </td>
-                            <td className="py-1.5 text-left font-mono font-bold text-slate-900">
-                              {formatCurrency(lineTotal)}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Totals Breakdown */}
-                <div className="py-2.5 border-b-2 border-dashed border-slate-300 space-y-1 text-[11px]">
-                  <div className="flex justify-between text-slate-500">
-                    <span>مصاريف الشحن:</span>
-                    <span className="font-mono font-bold">{formatCurrency(printOrder.shipping_cost)}</span>
-                  </div>
-                  {Number(printOrder.discount_total) > 0 && (
-                    <div className="flex justify-between text-emerald-600">
-                      <span>الخصم / كوبون:</span>
-                      <span className="font-mono font-bold">-{formatCurrency(printOrder.discount_total)}</span>
-                    </div>
-                  )}
-                  {printOrder.payment_status === 'PAID_ONLINE' || (printOrder.wc_payment_method && printOrder.wc_payment_method !== 'cod') ? (
-                    <div className="border-t-2 border-dashed border-emerald-300 pt-2 pb-1 space-y-1 bg-emerald-50/80 p-2 rounded-xl mt-1">
-                      <div className="flex items-center justify-between text-emerald-800 font-black text-xs">
-                        <span>حالة السداد:</span>
-                        <span className="bg-emerald-600 text-white px-2 py-0.5 rounded-md text-[10px]">
-                          مدفوع إلكترونياً بالكامل ✓
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-sm font-black text-emerald-950 pt-1">
-                        <span>المطلوب تحصيله نقدياً:</span>
-                        <span className="font-mono text-base font-black">0.00 ج.م</span>
-                      </div>
-                      <p className="text-[10px] text-emerald-800 font-bold text-center pt-0.5">
-                        ⚠️ تنبيه للمندوب: تم استلام المبلغ مسبقاً عبر بوابة الدفع الإلكترونية، لا تستلم أي مبالغ نقدية من العميل.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="flex justify-between text-sm font-black text-slate-900 border-t border-slate-200 pt-1.5">
-                      <span>المطلوب تحصيله عند الاستلام (COD):</span>
-                      <span className="font-mono text-base text-primary-700">{formatCurrency(printOrder.total)}</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Slip Footer */}
-                <div className="text-center pt-3 space-y-1">
-                  <p className="text-[10px] text-slate-400 font-bold">
-                    يرجى مراجعة المنتجات والمبلغ مع مندوب التوصيل قبل الاستلام
-                  </p>
-                  <p className="text-[9px] text-slate-300">تم الإصدار عبر منظومة إنجاز برو لإدارة نقاط البيع والتوصيل</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Modal Actions */}
-            <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between no-print gap-3">
-              <button
-                onClick={() => window.print()}
-                className="flex-1 py-2.5 bg-primary-600 hover:bg-primary-500 text-slate-950 font-black rounded-xl text-xs flex items-center justify-center gap-2 shadow-sm cursor-pointer transition-all"
-              >
-                <Printer className="w-4 h-4" />
-                <span>طباعة البوليصة / الفاتورة الآن</span>
-              </button>
-              <button
-                onClick={() => setPrintOrder(null)}
-                className="px-5 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl text-xs cursor-pointer transition-all"
-              >
-                إغلاق
-              </button>
-            </div>
-          </div>
-        </div>
+        <PosReceiptModal
+          isOpen={Boolean(printOrder)}
+          onClose={() => setPrintOrder(null)}
+          invoice={
+            printOrder.invoice
+              ? {
+                  ...printOrder.invoice,
+                  party: printOrder.party || {
+                    name: printOrder.customer_name,
+                    phone: printOrder.customer_phone,
+                    address: printOrder.customer_address,
+                  },
+                  customer_phone: printOrder.customer_phone || printOrder.party?.phone,
+                  customer_address: [
+                    printOrder.customer_address || printOrder.party?.address,
+                    printOrder.city,
+                    printOrder.governorate,
+                  ]
+                    .filter(Boolean)
+                    .join(' - '),
+                  items: printOrder.invoice.items?.length
+                    ? printOrder.invoice.items
+                    : (printOrder.items_snapshot || []).map((i: any) => ({
+                        product_name: cleanItemName(i.name),
+                        unit_price: i.price || (i.total && i.quantity ? Number(i.total) / Number(i.quantity) : 0),
+                        quantity: i.quantity,
+                        total: i.total || Number(i.price || 0) * Number(i.quantity || 1),
+                      })),
+                  courier_name: printOrder.courier_name,
+                  tracking_number: printOrder.tracking_number,
+                }
+              : {
+                  id: printOrder.id,
+                  invoice_number: `WC-${printOrder.wc_order_id}`,
+                  date: (printOrder.order_date || printOrder.created_at || '').split('T')[0],
+                  created_at: printOrder.order_date || printOrder.created_at,
+                  party: printOrder.party || {
+                    name: printOrder.customer_name,
+                    phone: printOrder.customer_phone,
+                    address: printOrder.customer_address,
+                  },
+                  customer_phone: printOrder.customer_phone || printOrder.party?.phone,
+                  customer_address: [
+                    printOrder.customer_address || printOrder.party?.address,
+                    printOrder.city,
+                    printOrder.governorate,
+                  ]
+                    .filter(Boolean)
+                    .join(' - '),
+                  party_name: printOrder.customer_name,
+                  items: (printOrder.items_snapshot || []).map((i: any) => ({
+                    product_name: cleanItemName(i.name),
+                    unit_price: i.price || (i.total && i.quantity ? Number(i.total) / Number(i.quantity) : 0),
+                    quantity: i.quantity,
+                    total: i.total || Number(i.price || 0) * Number(i.quantity || 1),
+                  })),
+                  subtotal:
+                    Number(printOrder.total) -
+                    Number(printOrder.shipping_cost || 0) +
+                    Number(printOrder.discount_total || 0),
+                  discount: printOrder.discount_total,
+                  shipping_amount: printOrder.shipping_cost,
+                  total: printOrder.total,
+                  paid_amount:
+                    printOrder.payment_status === 'PAID_ONLINE' ||
+                    (printOrder.wc_payment_method && printOrder.wc_payment_method !== 'cod')
+                      ? printOrder.total
+                      : 0,
+                  payment_method:
+                    printOrder.payment_status === 'PAID_ONLINE' ||
+                    (printOrder.wc_payment_method && printOrder.wc_payment_method !== 'cod')
+                      ? 'CARD'
+                      : printOrder.courier_party_id
+                        ? 'COURIER_COD'
+                        : 'CASH',
+                  courier_name: printOrder.courier_name,
+                  tracking_number: printOrder.tracking_number,
+                }
+          }
+        />
       )}
     </div>
   );

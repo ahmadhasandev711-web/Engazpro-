@@ -11,13 +11,17 @@ use App\Models\LedgerEntry;
 use App\Models\Party;
 use App\Models\User;
 use App\Models\WcOrder;
+use App\Exceptions\PosDomainException;
+use App\Models\Payment;
+use App\Services\PaymentService;
 use App\Support\Money;
 use Illuminate\Support\Facades\DB;
 
 class CourierService
 {
     public function __construct(
-        protected LedgerService $ledgerService
+        protected LedgerService $ledgerService,
+        protected PaymentService $paymentService
     ) {}
 
     /**
@@ -307,5 +311,53 @@ class CourierService
         }
 
         return $syncedCount;
+    }
+
+    /**
+     * تصفية رصيد ومستحقات شركة الشحن الصافية بضغطة واحدة
+     */
+    public function settleCourierNet(User $user, int $courierPartyId, array $data): array
+    {
+        $accountId = $user->getAccountId();
+        $courier = Party::where('user_id', $accountId)
+            ->where('type', PartyType::COURIER->value)
+            ->findOrFail($courierPartyId);
+
+        $balance = (float) $courier->balance;
+        $amount = !empty($data['amount']) ? (float) $data['amount'] : abs($balance);
+
+        if ($amount <= 0) {
+            throw new PosDomainException("المبلغ المطلوب تصفيته يجب أن يكون أكبر من الصفر.", "INVALID_SETTLEMENT_AMOUNT");
+        }
+
+        // إذا كان رصيد شركة الشحن مديناً (موجب) أي أنها حصلت كاش لصالح المتجر -> نوع السند قبض RECEIPT
+        // إذا كان الرصيد دائناً (سالب) أي أن المتجر مدين لها بمصاريف شحن -> نوع السند صرف PAYMENT
+        $type = !empty($data['type'])
+            ? $data['type']
+            : ($balance >= 0 ? 'RECEIPT' : 'PAYMENT');
+
+        $method = $data['method'] ?? 'CASH';
+        $notes = $data['notes'] ?? ($type === 'RECEIPT'
+            ? "تصفية مستحقات شحن COD - شركة {$courier->name}"
+            : "سداد أتعاب ومصاريف شحن - شركة {$courier->name}");
+
+        $payment = $this->paymentService->createPayment($user, [
+            'party_id' => $courier->id,
+            'type' => $type,
+            'amount' => $amount,
+            'method' => $method,
+            'date' => $data['date'] ?? now()->toDateString(),
+            'notes' => $notes,
+            'idempotency_key' => $data['idempotency_key'] ?? null,
+        ]);
+
+        $courier->refresh();
+
+        return [
+            'payment' => $payment->load(['party', 'treasury']),
+            'courier' => (new PartyResource($courier))->resolve(),
+            'settled_amount' => $amount,
+            'remaining_balance' => Money::of($courier->balance)->getAmount(),
+        ];
     }
 }
