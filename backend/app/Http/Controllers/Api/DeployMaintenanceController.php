@@ -23,33 +23,51 @@ class DeployMaintenanceController extends Controller
             abort(403, 'Access denied.');
         }
 
+        $results = [];
+
         // 1. تشغيل أي ترحيلات قاعدة بيانات معلقة بأمان
-        Artisan::call('migrate', ['--force' => true]);
-        $migrateOutput = Artisan::output();
+        try {
+            Artisan::call('migrate', ['--force' => true]);
+            $results['migrate'] = trim(Artisan::output());
+        } catch (\Throwable $e) {
+            $results['migrate_error'] = $e->getMessage();
+        }
 
         // 2. مسح الكاش القديم
-        Artisan::call('optimize:clear');
-        $clearOutput = Artisan::output();
+        try {
+            Artisan::call('optimize:clear');
+            $results['optimize_clear'] = trim(Artisan::output());
+        } catch (\Throwable $e) {
+            $results['optimize_clear_error'] = $e->getMessage();
+        }
 
-        // 3. إعادة بناء كاش الإنتاج فائق السرعة
-        Artisan::call('config:cache');
-        $configOutput = Artisan::output();
+        // 3. محاولة بناء كاش الإنتاج السريع
+        try {
+            Artisan::call('config:cache');
+            $results['config_cache'] = trim(Artisan::output());
+        } catch (\Throwable $e) {
+            $results['config_cache_error'] = $e->getMessage();
+        }
 
-        Artisan::call('route:cache');
-        $routeOutput = Artisan::output();
+        try {
+            Artisan::call('route:cache');
+            $results['route_cache'] = trim(Artisan::output());
+        } catch (\Throwable $e) {
+            $results['route_cache_error'] = $e->getMessage();
+        }
 
-        Artisan::call('view:cache');
-        $viewOutput = Artisan::output();
+        try {
+            Artisan::call('view:cache');
+            $results['view_cache'] = trim(Artisan::output());
+        } catch (\Throwable $e) {
+            $results['view_cache_error'] = $e->getMessage();
+        }
 
         return response()->json([
             'status' => 'success',
-            'message' => 'EngazPro production migrations executed & caches built successfully!',
+            'message' => 'EngazPro maintenance & migration cycle executed safely.',
             'timestamp' => now()->toIso8601String(),
-            'migrate' => trim($migrateOutput),
-            'clear' => trim($clearOutput),
-            'config_cache' => trim($configOutput),
-            'route_cache' => trim($routeOutput),
-            'view_cache' => trim($viewOutput),
+            'details' => $results,
         ]);
     }
 }
