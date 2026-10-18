@@ -142,12 +142,12 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
           </button>
         </div>
 
-        {/* Printable Receipt Paper Container (Calibrated 74mm on 80mm roll) */}
+        {/* Printable Receipt Paper Container */}
         <div className="p-4 overflow-y-auto flex-1 bg-slate-100/50 flex justify-center">
           <div
             ref={printRef}
             id="payment-thermal-receipt"
-            className="w-full bg-white p-4 rounded-2xl border border-slate-200 shadow-xs text-slate-900 font-mono text-xs leading-relaxed"
+            className="w-full bg-white p-4 rounded-2xl border border-slate-200 shadow-xs text-slate-900 font-sans text-xs leading-relaxed"
             dir="rtl"
           >
             {/* Store Branding Header */}
@@ -302,22 +302,24 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
         </div>
       </div>
 
-      {/* Embedded Print CSS for 80mm thermal printers (Calibrated to 72mm printable area, strict 1-page output) */}
+      {/* Embedded Print CSS for thermal receipt printers (Calibrated to auto paper width, safe margins, strict 1-page output) */}
       <style>{`
         @media print {
           @page {
-            size: 80mm auto;
+            size: auto;
             margin: 0 !important;
           }
           html, body {
             margin: 0 !important;
             padding: 0 !important;
-            width: 80mm !important;
+            width: 100% !important;
             height: auto !important;
             min-height: 0 !important;
             max-height: 100% !important;
             overflow: hidden !important;
             background: white !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
           body *:not(:has(#payment-thermal-receipt)):not(#payment-thermal-receipt):not(#payment-thermal-receipt *):not(style) {
             display: none !important;
@@ -325,7 +327,8 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
           #root, body *:has(#payment-thermal-receipt) {
             position: static !important;
             display: block !important;
-            width: 80mm !important;
+            width: 100% !important;
+            max-width: 100% !important;
             height: auto !important;
             min-height: 0 !important;
             max-height: none !important;
@@ -342,18 +345,18 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
           }
           #payment-thermal-receipt {
             position: relative !important;
-            top: 0 !important;
-            left: 0 !important;
-            right: 0 !important;
+            display: block !important;
             margin: 0 auto !important;
-            width: 72mm !important;
-            max-width: 72mm !important;
+            width: 94% !important;
+            max-width: 70mm !important;
             box-sizing: border-box !important;
-            padding: 2mm 3.5mm !important;
+            padding: 2mm 4mm !important;
             border: none !important;
             box-shadow: none !important;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Cairo', 'Tajawal', sans-serif !important;
             font-size: 11px !important;
             line-height: 1.35 !important;
+            color: #000 !important;
             page-break-after: avoid !important;
             break-after: avoid !important;
             page-break-inside: avoid !important;

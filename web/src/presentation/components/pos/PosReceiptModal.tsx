@@ -116,7 +116,7 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
           <div
             ref={printRef}
             id="pos-thermal-receipt"
-            className="w-full bg-white p-5 rounded-2xl border border-slate-200 shadow-sm text-slate-900 font-mono text-xs leading-relaxed"
+            className="w-full bg-white p-5 rounded-2xl border border-slate-200 shadow-sm text-slate-900 font-sans text-xs leading-relaxed"
             dir="rtl"
           >
             {/* Header Branding */}
@@ -133,44 +133,44 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
 
             {/* Invoice Info */}
             <div className="py-2.5 border-b border-dashed border-slate-300 space-y-1 text-[11px]">
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center">
                 <span className="text-slate-500">رقم الفاتورة:</span>
-                <span className="font-bold">{invoice.invoice_number}</span>
+                <span className="font-bold font-mono">{invoice.invoice_number}</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center">
                 <span className="text-slate-500">التاريخ والوقت:</span>
-                <span>
+                <span className="font-mono">
                   {dateStr} {timeStr}
                 </span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center">
                 <span className="text-slate-500">الكاشير:</span>
                 <span className="font-bold text-slate-800">{cashierName}</span>
               </div>
               {(invoice.salesperson_name || invoice.salesperson?.name) && (invoice.salesperson_name || invoice.salesperson?.name) !== cashierName && (
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <span className="text-slate-500">مسؤول البيع:</span>
                   <span className="font-bold text-slate-800">{invoice.salesperson_name || invoice.salesperson?.name}</span>
                 </div>
               )}
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center">
                 <span className="text-slate-500">العميل:</span>
-                <span>{invoice.party?.name || invoice.party_name || 'عميل نقدي'}</span>
+                <span className="font-medium text-slate-900">{invoice.party?.name || invoice.party_name || 'عميل نقدي'}</span>
               </div>
               {(invoice.party?.phone || invoice.customer_phone) && (
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <span className="text-slate-500">هاتف العميل:</span>
                   <span className="font-mono">{invoice.party?.phone || invoice.customer_phone}</span>
                 </div>
               )}
               {(invoice.party?.address || invoice.customer_address) && (
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <span className="text-slate-500">العنوان:</span>
-                  <span className="text-left font-sans text-[10px]">{invoice.party?.address || invoice.customer_address}</span>
+                  <span className="text-left text-[10px]">{invoice.party?.address || invoice.customer_address}</span>
                 </div>
               )}
               {invoice.courier_name && (
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <span className="text-slate-500">شركة الشحن:</span>
                   <span className="font-bold text-purple-800">{invoice.courier_name} {invoice.tracking_number ? `(#${invoice.tracking_number})` : ''}</span>
                 </div>
@@ -179,12 +179,12 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
 
             {/* Items Table */}
             <div className="py-2.5 border-b border-dashed border-slate-300">
-              <table className="w-full text-right text-[11px]">
+              <table className="w-full text-right text-[11px] table-fixed">
                 <thead>
                   <tr className="border-b border-slate-200 text-slate-500 font-bold">
-                    <th className="pb-1">الصنف</th>
-                    <th className="pb-1 text-center">الكمية</th>
-                    <th className="pb-1 text-left">الإجمالي</th>
+                    <th className="pb-1 w-[50%]">الصنف</th>
+                    <th className="pb-1 text-center w-[18%]">الكمية</th>
+                    <th className="pb-1 text-left w-[32%]">الإجمالي</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -193,11 +193,11 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
                       <td className="py-1 font-bold">
                         <div className="line-clamp-1">{item.product_name}</div>
                         <div className="text-[10px] text-slate-400 font-normal">
-                          {formatCurrency(item.unit_price, currencySymbol)} للقطعة
+                          <span className="font-mono">{formatCurrency(item.unit_price, currencySymbol)}</span> للقطعة
                         </div>
                       </td>
-                      <td className="py-1 text-center font-bold">{item.quantity}</td>
-                      <td className="py-1 text-left font-bold">{formatCurrency(item.total, currencySymbol)}</td>
+                      <td className="py-1 text-center font-bold font-mono">{item.quantity}</td>
+                      <td className="py-1 text-left font-bold font-mono">{formatCurrency(item.total, currencySymbol)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -319,22 +319,24 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
         </div>
       </div>
 
-      {/* Embedded Print CSS for 80mm thermal receipt printers (Calibrated to 72mm printable area, strict 1-page output) */}
+      {/* Embedded Print CSS for thermal receipt printers (Calibrated to auto paper width, safe margins, strict 1-page output) */}
       <style>{`
         @media print {
           @page {
-            size: 80mm auto;
+            size: auto;
             margin: 0 !important;
           }
           html, body {
             margin: 0 !important;
             padding: 0 !important;
-            width: 80mm !important;
+            width: 100% !important;
             height: auto !important;
             min-height: 0 !important;
             max-height: 100% !important;
             overflow: hidden !important;
             background: white !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
           body *:not(:has(#pos-thermal-receipt)):not(#pos-thermal-receipt):not(#pos-thermal-receipt *):not(style) {
             display: none !important;
@@ -342,7 +344,8 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
           #root, body *:has(#pos-thermal-receipt) {
             position: static !important;
             display: block !important;
-            width: 80mm !important;
+            width: 100% !important;
+            max-width: 100% !important;
             height: auto !important;
             min-height: 0 !important;
             max-height: none !important;
@@ -359,22 +362,32 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
           }
           #pos-thermal-receipt {
             position: relative !important;
-            top: 0 !important;
-            left: 0 !important;
-            right: 0 !important;
+            display: block !important;
             margin: 0 auto !important;
-            width: 72mm !important;
-            max-width: 72mm !important;
+            width: 94% !important;
+            max-width: 70mm !important;
             box-sizing: border-box !important;
-            padding: 2mm 3.5mm !important;
+            padding: 2mm 4mm !important;
             border: none !important;
             box-shadow: none !important;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Cairo', 'Tajawal', sans-serif !important;
             font-size: 11px !important;
             line-height: 1.35 !important;
+            color: #000 !important;
             page-break-after: avoid !important;
             break-after: avoid !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
+          }
+          #pos-thermal-receipt table {
+            width: 100% !important;
+            table-layout: fixed !important;
+            border-collapse: collapse !important;
+          }
+          #pos-thermal-receipt th, #pos-thermal-receipt td {
+            padding-left: 2px !important;
+            padding-right: 2px !important;
+            word-break: break-word !important;
           }
           .no-print {
             display: none !important;
