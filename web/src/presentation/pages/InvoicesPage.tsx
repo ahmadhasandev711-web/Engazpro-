@@ -579,106 +579,108 @@ export const InvoicesPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Salesperson Attribution & Reassignment Card (Owner/Admin/Manager) */}
-                  <div className="p-4 bg-gradient-to-r from-slate-50 to-indigo-50/40 rounded-2xl border border-indigo-100/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 text-xs">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2.5 bg-indigo-100/80 text-indigo-700 rounded-xl flex-shrink-0">
-                        <UserCheck className="w-5 h-5" />
+                  {/* Salesperson Attribution & Reassignment Card (Only for SALE and SALE_RETURN) */}
+                  {(invoiceDetails.type === 'SALE' || invoiceDetails.type === 'SALE_RETURN') && (
+                    <div className="p-4 bg-gradient-to-r from-slate-50 to-indigo-50/40 rounded-2xl border border-indigo-100/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 text-xs">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-indigo-100/80 text-indigo-700 rounded-xl flex-shrink-0">
+                          <UserCheck className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <span className="text-slate-500 font-medium block text-[11px]">
+                            مسؤول المبيعات المعتمد (لحساب العمولات والأرباح):
+                          </span>
+                          {!isEditingSalesperson ? (
+                            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                              <span className="font-black text-slate-900 text-sm">
+                                {invoiceDetails.salesperson_name || invoiceDetails.created_by_name || 'المالك / المنشئ'}
+                              </span>
+                              {invoiceDetails.salesperson_role ? (
+                                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-100 text-indigo-800">
+                                  {invoiceDetails.salesperson_role === 'SALES' ? 'بائع / سيلز' :
+                                   invoiceDetails.salesperson_role === 'MANDOB' ? 'مندوب مبيعات' :
+                                   invoiceDetails.salesperson_role === 'CASHIER' ? 'كاشير' :
+                                   invoiceDetails.salesperson_role === 'MANAGER' ? 'مدير' : invoiceDetails.salesperson_role}
+                                </span>
+                              ) : invoiceDetails.created_by_role && (
+                                <span className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-slate-200 text-slate-700">
+                                  {invoiceDetails.created_by_role === 'MANDOB' ? 'مندوب' :
+                                   invoiceDetails.created_by_role === 'CASHIER' ? 'كاشير' :
+                                   invoiceDetails.created_by_role === 'SALES' ? 'بائع / سيلز' :
+                                   invoiceDetails.created_by_role === 'MANAGER' ? 'مدير' : 'المنشئ'}
+                                </span>
+                              )}
+                              {!invoiceDetails.salesperson_id && invoiceDetails.created_by_name && (
+                                <span className="text-[10px] text-slate-400 font-normal">
+                                  (تلقائياً حسب منشئ الفاتورة)
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="mt-1">
+                              <select
+                                value={selectedSalespersonId}
+                                onChange={(e) => setSelectedSalespersonId(e.target.value)}
+                                className="w-full sm:w-64 border border-indigo-300 rounded-xl text-xs px-3 py-1.5 bg-white text-slate-800 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                              >
+                                <option value="">-- تلقائياً (المنشئ / بدون تحديد) --</option>
+                                {employeesData?.map((emp: any) => (
+                                  <option key={emp.id} value={emp.id}>
+                                    {emp.name} ({emp.role === 'SALES' ? 'بائع / سيلز' : emp.role === 'MANDOB' ? 'مندوب' : emp.role === 'CASHIER' ? 'كاشير' : emp.role === 'MANAGER' ? 'مدير' : 'مشرف'})
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <span className="text-slate-500 font-medium block text-[11px]">
-                          مسؤول المبيعات المعتمد (لحساب العمولات والأرباح):
-                        </span>
-                        {!isEditingSalesperson ? (
-                          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                            <span className="font-black text-slate-900 text-sm">
-                              {invoiceDetails.salesperson_name || invoiceDetails.created_by_name || 'المالك / المنشئ'}
-                            </span>
-                            {invoiceDetails.salesperson_role ? (
-                              <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-100 text-indigo-800">
-                                {invoiceDetails.salesperson_role === 'SALES' ? 'بائع / سيلز' :
-                                 invoiceDetails.salesperson_role === 'MANDOB' ? 'مندوب مبيعات' :
-                                 invoiceDetails.salesperson_role === 'CASHIER' ? 'كاشير' :
-                                 invoiceDetails.salesperson_role === 'MANAGER' ? 'مدير' : invoiceDetails.salesperson_role}
-                              </span>
-                            ) : invoiceDetails.created_by_role && (
-                              <span className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-slate-200 text-slate-700">
-                                {invoiceDetails.created_by_role === 'MANDOB' ? 'مندوب' :
-                                 invoiceDetails.created_by_role === 'CASHIER' ? 'كاشير' :
-                                 invoiceDetails.created_by_role === 'SALES' ? 'بائع / سيلز' :
-                                 invoiceDetails.created_by_role === 'MANAGER' ? 'مدير' : 'المنشئ'}
-                              </span>
-                            )}
-                            {!invoiceDetails.salesperson_id && invoiceDetails.created_by_name && (
-                              <span className="text-[10px] text-slate-400 font-normal">
-                                (تلقائياً حسب منشئ الفاتورة)
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="mt-1">
-                            <select
-                              value={selectedSalespersonId}
-                              onChange={(e) => setSelectedSalespersonId(e.target.value)}
-                              className="w-full sm:w-64 border border-indigo-300 rounded-xl text-xs px-3 py-1.5 bg-white text-slate-800 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            >
-                              <option value="">-- تلقائياً (المنشئ / بدون تحديد) --</option>
-                              {employeesData?.map((emp: any) => (
-                                <option key={emp.id} value={emp.id}>
-                                  {emp.name} ({emp.role === 'SALES' ? 'بائع / سيلز' : emp.role === 'MANDOB' ? 'مندوب' : emp.role === 'CASHIER' ? 'كاشير' : emp.role === 'MANAGER' ? 'مدير' : 'مشرف'})
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        )}
-                      </div>
-                    </div>
 
-                    {canEditInvoiceSalesperson && (
-                      <div className="flex items-center gap-2 self-end sm:self-center flex-shrink-0">
-                        {isEditingSalesperson ? (
-                          <>
+                      {canEditInvoiceSalesperson && (
+                        <div className="flex items-center gap-2 self-end sm:self-center flex-shrink-0">
+                          {isEditingSalesperson ? (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  updateSalespersonMutation.mutate({
+                                    invoiceId: invoiceDetails.id,
+                                    salespersonId: selectedSalespersonId ? Number(selectedSalespersonId) : null,
+                                  });
+                                }}
+                                disabled={updateSalespersonMutation.isPending}
+                                className="inline-flex items-center gap-1 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-xl font-bold text-xs shadow-sm transition-colors disabled:opacity-50"
+                              >
+                                <Save className="w-3.5 h-3.5" />
+                                {updateSalespersonMutation.isPending ? 'جاري الحفظ...' : 'حفظ'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setIsEditingSalesperson(false)}
+                                className="inline-flex items-center gap-1 bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-xl font-bold text-xs transition-colors"
+                              >
+                                إلغاء
+                              </button>
+                            </>
+                          ) : (
                             <button
                               type="button"
                               onClick={() => {
-                                updateSalespersonMutation.mutate({
-                                  invoiceId: invoiceDetails.id,
-                                  salespersonId: selectedSalespersonId ? Number(selectedSalespersonId) : null,
-                                });
+                                setSelectedSalespersonId(
+                                  invoiceDetails.salesperson_id ? String(invoiceDetails.salesperson_id) : (invoiceDetails.created_by ? String(invoiceDetails.created_by) : '')
+                                );
+                                setIsEditingSalesperson(true);
                               }}
-                              disabled={updateSalespersonMutation.isPending}
-                              className="inline-flex items-center gap-1 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-xl font-bold text-xs shadow-sm transition-colors disabled:opacity-50"
+                              className="inline-flex items-center gap-1.5 text-indigo-700 bg-indigo-100 hover:bg-indigo-200 px-3 py-1.5 rounded-xl font-bold text-xs transition-colors"
+                              title="تعديل مسؤول البيع لتصحيح عمولة الموظف"
                             >
-                              <Save className="w-3.5 h-3.5" />
-                              {updateSalespersonMutation.isPending ? 'جاري الحفظ...' : 'حفظ'}
+                              <Edit2 className="w-3.5 h-3.5" />
+                              تعديل مسؤول البيع
                             </button>
-                            <button
-                              type="button"
-                              onClick={() => setIsEditingSalesperson(false)}
-                              className="inline-flex items-center gap-1 bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-xl font-bold text-xs transition-colors"
-                            >
-                              إلغاء
-                            </button>
-                          </>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedSalespersonId(
-                                invoiceDetails.salesperson_id ? String(invoiceDetails.salesperson_id) : (invoiceDetails.created_by ? String(invoiceDetails.created_by) : '')
-                              );
-                              setIsEditingSalesperson(true);
-                            }}
-                            className="inline-flex items-center gap-1.5 text-indigo-700 bg-indigo-100 hover:bg-indigo-200 px-3 py-1.5 rounded-xl font-bold text-xs transition-colors"
-                            title="تعديل مسؤول البيع لتصحيح عمولة الموظف"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                            تعديل مسؤول البيع
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Items Table */}
                   <div>

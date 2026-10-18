@@ -108,7 +108,7 @@ export const InvoiceFormPage: React.FC = () => {
   const selectedBranchId = watch('branch_id');
 
   const subtotal = items.reduce(
-    (acc: number, item: any) => acc + (item?.quantity || 0) * (item?.unit_price || 0),
+    (acc: number, item: any) => acc + (Number(item?.quantity) || 0) * (Number(item?.unit_price) || 0),
     0
   );
   const total = Math.max(0, subtotal - discount + tax);
@@ -193,8 +193,8 @@ export const InvoiceFormPage: React.FC = () => {
   const addProductToInvoice = (product: Product, defaultPrice?: number) => {
     const existingIndex = fields.findIndex((f: any) => f.product_id === product.id);
     if (existingIndex >= 0) {
-      const currentQty = items[existingIndex].quantity;
-      setValue(`items.${existingIndex}.quantity`, currentQty + 1);
+      const currentQty = Number(items[existingIndex]?.quantity || 0);
+      setValue(`items.${existingIndex}.quantity`, currentQty + 1, { shouldValidate: true, shouldDirty: true });
     } else {
       const price =
         defaultPrice !== undefined
@@ -238,7 +238,7 @@ export const InvoiceFormPage: React.FC = () => {
 
     if (existingIndex >= 0) {
       const currentQty = Number(items[existingIndex]?.quantity || 0);
-      setValue(`items.${existingIndex}.quantity`, currentQty + payload.quantity);
+      setValue(`items.${existingIndex}.quantity`, currentQty + payload.quantity, { shouldValidate: true, shouldDirty: true });
     } else {
       append({
         product_id: prod.id,
@@ -258,8 +258,8 @@ export const InvoiceFormPage: React.FC = () => {
   const addParentItemToReturn = (item: any) => {
     const existingIndex = fields.findIndex((f: any) => f.product_id === item.product_id);
     if (existingIndex >= 0) {
-      const currentQty = items[existingIndex].quantity;
-      setValue(`items.${existingIndex}.quantity`, currentQty + 1);
+      const currentQty = Number(items[existingIndex]?.quantity || 0);
+      setValue(`items.${existingIndex}.quantity`, currentQty + 1, { shouldValidate: true, shouldDirty: true });
     } else {
       append({
         product_id: item.product_id,
@@ -409,6 +409,7 @@ export const InvoiceFormPage: React.FC = () => {
             items={items}
             productsData={productsData}
             register={register}
+            setValue={setValue}
             remove={remove}
             isReturn={isReturn}
           />

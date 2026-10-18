@@ -518,4 +518,42 @@ class PayrollAndCommissionTest extends TestCase
             'shift_id' => $shiftId,
         ]);
     }
+
+    /**
+     * اختبار حظر إسناد أو تعديل مسؤول المبيعات على فواتير المشتريات (Strict Purchase Invariance)
+     */
+    public function test_purchase_invoice_strictly_forbids_salesperson_assignment(): void
+    {
+        // 1. المالك ينشئ فاتورة شراء نقدية
+        $purchaseRes = $this->actingAs($this->owner)->postJson('/api/invoices', [
+            'type' => 'PURCHASE',
+            'payment_method' => 'CASH',
+            'date' => now()->toDateString(),
+            'paid_amount' => 500.00,
+            'salesperson_id' => $this->salesperson->id, // محاولة تمرير مسؤول مبيعات
+            'items' => [
+                [
+                    'product_id' => $this->product->id,
+                    'quantity' => 10,
+                    'unit_price' => 50.00,
+                ],
+            ],
+        ]);
+        $purchaseRes->assertStatus(201);
+        $invoiceId = $purchaseRes->json('data.id');
+
+        // التحقق من أن salesperson_id خالي (null) تماماً
+        $this->assertDatabaseHas('invoices', [
+            'id' => $invoiceId,
+            'type' => 'PURCHASE',
+            'salesperson_id' => null,
+        ]);
+
+        // 2. محاولة إسناد مسؤول مبيعات لفاتورة الشراء -> مرفوض 403 Forbidden
+        $patchRes = $this->actingAs($this->owner)->patchJson("/api/invoices/{$invoiceId}/salesperson", [
+            'salesperson_id' => $this->salesperson->id,
+        ]);
+        $patchRes->assertStatus(403);
+    }
 }
+

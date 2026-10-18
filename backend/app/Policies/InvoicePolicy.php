@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\InvoiceType;
 use App\Models\Invoice;
 use App\Models\User;
 use Illuminate\Auth\Access\Response;
@@ -53,6 +54,15 @@ class InvoicePolicy
 
     public function updateSalesperson(User $user, Invoice $invoice): Response
     {
+        $isSale = $invoice->type === InvoiceType::SALE
+            || $invoice->type === InvoiceType::SALE_RETURN
+            || $invoice->type === 'SALE'
+            || $invoice->type === 'SALE_RETURN';
+
+        if (!$isSale) {
+            return Response::deny('عذراً، لا يمكن تعيين أو تعديل مسؤول المبيعات إلا لفواتير المبيعات فقط.');
+        }
+
         if ($user->isOwnerOrAdmin()) {
             return Response::allow();
         }

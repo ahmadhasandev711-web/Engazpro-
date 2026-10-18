@@ -206,7 +206,10 @@ class InvoiceService
                     ?? Branch::where('user_id', $user->getAccountId())->value('id');
             }
 
-            $salespersonId = !empty($data['salesperson_id']) ? (int) $data['salesperson_id'] : $createdBy;
+            $isSaleType = in_array($type, ['SALE', 'SALE_RETURN'], true);
+            $salespersonId = $isSaleType
+                ? (!empty($data['salesperson_id']) ? (int) $data['salesperson_id'] : $createdBy)
+                : null;
 
             // إنشاء الفاتورة
             $invoice = Invoice::create([

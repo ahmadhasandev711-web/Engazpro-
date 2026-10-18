@@ -1,6 +1,6 @@
 import React from 'react';
 import { Trash2 } from 'lucide-react';
-import { UseFormRegister } from 'react-hook-form';
+import { UseFormRegister, UseFormSetValue } from 'react-hook-form';
 import { Product, formatCurrency, InvoiceInput } from '@pos-mandob/shared';
 
 interface InvoiceItemsTableProps {
@@ -8,6 +8,7 @@ interface InvoiceItemsTableProps {
   items: any[];
   productsData?: Product[];
   register: UseFormRegister<InvoiceInput>;
+  setValue: UseFormSetValue<InvoiceInput>;
   remove: (index: number) => void;
   isReturn: boolean;
 }
@@ -17,6 +18,7 @@ export const InvoiceItemsTable: React.FC<InvoiceItemsTableProps> = ({
   items,
   productsData,
   register,
+  setValue,
   remove,
   isReturn,
 }) => {
@@ -54,7 +56,7 @@ export const InvoiceItemsTable: React.FC<InvoiceItemsTableProps> = ({
                   {fields.map((field: any, index) => {
                     const product = productsData?.find((p) => p.id === field.product_id);
                     const currentItem = items[index];
-                    const rowTotal = (currentItem?.quantity || 0) * (currentItem?.unit_price || 0);
+                    const rowTotal = (Number(currentItem?.quantity) || 0) * (Number(currentItem?.unit_price) || 0);
 
                     return (
                       <tr key={field.id}>
@@ -83,8 +85,12 @@ export const InvoiceItemsTable: React.FC<InvoiceItemsTableProps> = ({
                             type="number"
                             step="0.01"
                             min="0"
-                            {...register(`items.${index}.quantity`, { valueAsNumber: true })}
-                            className="w-full p-1.5 border border-slate-200 rounded text-center text-sm font-bold"
+                            value={currentItem?.quantity !== undefined && currentItem?.quantity !== null ? currentItem.quantity : ''}
+                            onChange={(e) => {
+                              const val = e.target.value === '' ? '' : Number(e.target.value);
+                              setValue(`items.${index}.quantity`, val as any, { shouldValidate: true, shouldDirty: true });
+                            }}
+                            className="w-full p-1.5 border border-slate-200 rounded text-center text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary-500"
                           />
                         </td>
                         <td className="py-3">
@@ -92,8 +98,12 @@ export const InvoiceItemsTable: React.FC<InvoiceItemsTableProps> = ({
                             type="number"
                             step="0.01"
                             min="0"
-                            {...register(`items.${index}.unit_price`, { valueAsNumber: true })}
-                            className="w-full p-1.5 border border-slate-200 rounded text-center text-sm font-bold"
+                            value={currentItem?.unit_price !== undefined && currentItem?.unit_price !== null ? currentItem.unit_price : ''}
+                            onChange={(e) => {
+                              const val = e.target.value === '' ? '' : Number(e.target.value);
+                              setValue(`items.${index}.unit_price`, val as any, { shouldValidate: true, shouldDirty: true });
+                            }}
+                            className="w-full p-1.5 border border-slate-200 rounded text-center text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary-500"
                           />
                         </td>
                         <td className="py-3 font-bold text-primary-600">
@@ -120,21 +130,13 @@ export const InvoiceItemsTable: React.FC<InvoiceItemsTableProps> = ({
               {fields.map((field: any, index) => {
                 const product = productsData?.find((p) => p.id === field.product_id);
                 const currentItem = items[index];
-                const rowTotal = (currentItem?.quantity || 0) * (currentItem?.unit_price || 0);
+                const rowTotal = (Number(currentItem?.quantity) || 0) * (Number(currentItem?.unit_price) || 0);
 
                 return (
                   <div
                     key={field.id}
                     className="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200 space-y-3"
                   >
-                    {/* Hidden Form Inputs */}
-                    <input type="hidden" {...register(`items.${index}.product_id`, { valueAsNumber: true })} />
-                    <input type="hidden" {...register(`items.${index}.product_variant_id`, { setValueAs: (v) => (v ? Number(v) : null) })} />
-                    <input type="hidden" {...register(`items.${index}.variant_name`)} />
-                    <input type="hidden" {...register(`items.${index}.product_batch_id`, { setValueAs: (v) => (v ? Number(v) : null) })} />
-                    <input type="hidden" {...register(`items.${index}.batch_number`)} />
-                    <input type="hidden" {...register(`items.${index}.unit_name`)} />
-
                     {/* Card Header: Product Name + Delete */}
                     <div className="flex items-start justify-between gap-2">
                       <div>
@@ -172,7 +174,11 @@ export const InvoiceItemsTable: React.FC<InvoiceItemsTableProps> = ({
                           type="number"
                           step="0.01"
                           min="0"
-                          {...register(`items.${index}.quantity`, { valueAsNumber: true })}
+                          value={currentItem?.quantity !== undefined && currentItem?.quantity !== null ? currentItem.quantity : ''}
+                          onChange={(e) => {
+                            const val = e.target.value === '' ? '' : Number(e.target.value);
+                            setValue(`items.${index}.quantity`, val as any, { shouldValidate: true, shouldDirty: true });
+                          }}
                           className="w-full h-10 px-3 border border-slate-200 bg-white rounded-xl text-center text-sm font-black focus:outline-none focus:ring-2 focus:ring-primary-500"
                         />
                       </div>
@@ -182,7 +188,11 @@ export const InvoiceItemsTable: React.FC<InvoiceItemsTableProps> = ({
                           type="number"
                           step="0.01"
                           min="0"
-                          {...register(`items.${index}.unit_price`, { valueAsNumber: true })}
+                          value={currentItem?.unit_price !== undefined && currentItem?.unit_price !== null ? currentItem.unit_price : ''}
+                          onChange={(e) => {
+                            const val = e.target.value === '' ? '' : Number(e.target.value);
+                            setValue(`items.${index}.unit_price`, val as any, { shouldValidate: true, shouldDirty: true });
+                          }}
                           className="w-full h-10 px-3 border border-slate-200 bg-white rounded-xl text-center text-sm font-black focus:outline-none focus:ring-2 focus:ring-primary-500"
                         />
                       </div>

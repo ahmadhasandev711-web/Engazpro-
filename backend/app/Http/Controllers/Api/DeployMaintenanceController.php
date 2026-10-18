@@ -23,14 +23,33 @@ class DeployMaintenanceController extends Controller
             abort(403, 'Access denied.');
         }
 
+        // 1. تشغيل أي ترحيلات قاعدة بيانات معلقة بأمان
+        Artisan::call('migrate', ['--force' => true]);
+        $migrateOutput = Artisan::output();
+
+        // 2. مسح الكاش القديم
         Artisan::call('optimize:clear');
-        $output = Artisan::output();
+        $clearOutput = Artisan::output();
+
+        // 3. إعادة بناء كاش الإنتاج فائق السرعة
+        Artisan::call('config:cache');
+        $configOutput = Artisan::output();
+
+        Artisan::call('route:cache');
+        $routeOutput = Artisan::output();
+
+        Artisan::call('view:cache');
+        $viewOutput = Artisan::output();
 
         return response()->json([
             'status' => 'success',
-            'message' => 'EngazPro production cache cleared successfully!',
+            'message' => 'EngazPro production migrations executed & caches built successfully!',
             'timestamp' => now()->toIso8601String(),
-            'output' => trim($output),
+            'migrate' => trim($migrateOutput),
+            'clear' => trim($clearOutput),
+            'config_cache' => trim($configOutput),
+            'route_cache' => trim($routeOutput),
+            'view_cache' => trim($viewOutput),
         ]);
     }
 }
