@@ -20,6 +20,7 @@ import { apiClient } from '../../data/api/client';
 import { usePermissions } from '../../hooks/usePermissions';
 import { MobileFilterChips, FilterChipOption } from '../components/mobile/MobileFilterChips';
 import { StockTransferMobileCard } from '../components/mobile/StockTransferMobileCard';
+import { PaginationBar } from '../components/common/PaginationBar';
 import { nativeBackButton } from '../../platform/nativeBackButton';
 
 export const StockTransfersPage: React.FC = () => {
@@ -29,6 +30,7 @@ export const StockTransfersPage: React.FC = () => {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [selectedTransfer, setSelectedTransfer] = useState<any | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [page, setPage] = useState(1);
 
   const [formData, setFormData] = useState<{
     from_branch_id: string;
@@ -68,19 +70,21 @@ export const StockTransfersPage: React.FC = () => {
   });
 
   // 3. Fetch Stock Transfers
-  const { data: transfersData, isLoading } = useQuery({
-    queryKey: ['stock-transfers', statusFilter],
+  const { data: transfersData, isLoading, isFetching } = useQuery({
+    queryKey: ['stock-transfers', statusFilter, page],
     queryFn: async () => {
-      const params: any = {};
+      const params: any = { page, per_page: 25 };
       if (statusFilter !== 'ALL') {
         params.status = statusFilter;
       }
       const res = await apiClient.get('/stock-transfers', { params });
       return {
         items: res.data?.data || [],
+        meta: res.data?.meta || null,
         total: res.data?.meta?.total || 0,
       };
     },
+    placeholderData: (previousData) => previousData,
     refetchInterval: 15000,
   });
 
@@ -401,7 +405,10 @@ export const StockTransfersPage: React.FC = () => {
       <MobileFilterChips
         options={statusFilterOptions}
         selectedId={statusFilter}
-        onSelect={(id) => setStatusFilter(id)}
+        onSelect={(id) => {
+          setStatusFilter(id);
+          setPage(1);
+        }}
       />
 
       {/* Transfers Table */}
@@ -532,6 +539,16 @@ export const StockTransfersPage: React.FC = () => {
                 />
               ))}
             </div>
+
+            <PaginationBar
+              currentPage={transfersData?.meta?.current_page || page}
+              lastPage={transfersData?.meta?.last_page || 1}
+              total={transfersData?.total || transfers.length}
+              perPage={transfersData?.meta?.per_page || 25}
+              isFetching={isFetching}
+              onPageChange={setPage}
+              itemLabel="أمر تحويل"
+            />
           </>
         )}
       </div>

@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
+use App\Enums\UserRole;
+use App\Enums\UserStatus;
 use App\Http\Resources\UserResource;
 use App\Models\Subscription;
 use App\Models\User;
@@ -34,9 +36,10 @@ class AuthController extends Controller
                 'phone' => $validated['phone'],
                 'email' => $validated['email'] ?? null,
                 'password' => Hash::make($validated['password']),
-                'role' => 'OWNER',
-                'status' => 'ACTIVE',
+                'status' => UserStatus::ACTIVE,
             ]);
+            $user->role = UserRole::OWNER;
+            $user->save();
 
             // إنشاء فترة تجريبية مجانية بناءً على إعدادات المنصة
             $trialDays = (int) config('pos.trial_days', 7);

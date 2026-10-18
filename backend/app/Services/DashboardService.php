@@ -56,7 +56,7 @@ class DashboardService
             $todayExpenses = $profitData['today_expenses'];
             $todayProfit = $profitData['today_net_profit'];
         } else {
-            $todayExpenses = (float) Expense::whereDate('date', $today)
+            $expensesSum = Expense::whereBetween('date', [$today, $today . ' 23:59:59'])
                 ->when($user->isManager() && $user->branch_id, function ($q) use ($user) {
                     $q->where(function ($sub) use ($user) {
                         $sub->whereHas('treasury', fn($t) => $t->where('branch_id', $user->branch_id))
@@ -65,6 +65,7 @@ class DashboardService
                 })
                 ->when($user->isMandob() || $user->isCashier(), fn($q) => $q->where('created_by', $user->id))
                 ->sum('amount');
+            $todayExpenses = Money::of($expensesSum ?? 0)->getAmount();
             $todayProfit = null;
         }
 
@@ -101,15 +102,15 @@ class DashboardService
         $query = Invoice::query()
             ->when($isEmployee, fn($q) => $q->where('created_by', $user->id))
             ->when($user->isManager() && $user->branch_id, fn($q) => $q->where('branch_id', $user->branch_id))
-            ->whereDate('date', '>=', $startDate)
-            ->whereDate('date', '<=', $endDate);
+            ->where('date', '>=', $startDate)
+            ->where('date', '<=', $endDate . ' 23:59:59');
 
-        $gross = Money::of((float) (clone $query)->where('type', 'SALE')->sum('total'));
-        $cashSales = Money::of((float) (clone $query)->where('type', 'SALE')->where('payment_method', 'CASH')->sum('paid_amount'));
-        $courierPendingSales = Money::of((float) (clone $query)->where('type', 'SALE')->where('payment_method', 'COURIER_COD')->sum('paid_amount'));
-        $electronicSales = Money::of((float) (clone $query)->where('type', 'SALE')->whereIn('payment_method', ['CARD', 'INSTAPAY', 'VODAFONE_CASH', 'TRANSFER', 'BANK', 'WALLET'])->sum('paid_amount'));
-        $creditSales = Money::of((float) (clone $query)->where('type', 'SALE')->sum('remaining_amount'));
-        $returns = Money::of((float) (clone $query)->where('type', 'SALE_RETURN')->sum('total'));
+        $gross = Money::of((clone $query)->where('type', 'SALE')->sum('total') ?? 0);
+        $cashSales = Money::of((clone $query)->where('type', 'SALE')->where('payment_method', 'CASH')->sum('paid_amount') ?? 0);
+        $courierPendingSales = Money::of((clone $query)->where('type', 'SALE')->where('payment_method', 'COURIER_COD')->sum('paid_amount') ?? 0);
+        $electronicSales = Money::of((clone $query)->where('type', 'SALE')->whereIn('payment_method', ['CARD', 'INSTAPAY', 'VODAFONE_CASH', 'TRANSFER', 'BANK', 'WALLET'])->sum('paid_amount') ?? 0);
+        $creditSales = Money::of((clone $query)->where('type', 'SALE')->sum('remaining_amount') ?? 0);
+        $returns = Money::of((clone $query)->where('type', 'SALE_RETURN')->sum('total') ?? 0);
         $net = $gross->subtract($returns);
 
         return [
@@ -128,16 +129,18 @@ class DashboardService
      */
     protected function calculateTodayProfit(string $today, float $todayNetSales): array
     {
-        $cogsSales = (float) InvoiceItem::whereHas('invoice', fn($q) => $q->where('type', 'SALE')->whereDate('date', $today))
+        $dayRange = [$today, $today . ' 23:59:59'];
+
+        $cogsSales = InvoiceItem::whereHas('invoice', fn($q) => $q->where('type', 'SALE')->whereBetween('date', $dayRange))
             ->sum(DB::raw('quantity * purchase_price_at_sale'));
 
-        $cogsReturns = (float) InvoiceItem::whereHas('invoice', fn($q) => $q->where('type', 'SALE_RETURN')->whereDate('date', $today))
+        $cogsReturns = InvoiceItem::whereHas('invoice', fn($q) => $q->where('type', 'SALE_RETURN')->whereBetween('date', $dayRange))
             ->sum(DB::raw('quantity * purchase_price_at_sale'));
 
-        $netCogs = Money::of($cogsSales)->subtract($cogsReturns);
+        $netCogs = Money::of($cogsSales ?? 0)->subtract(Money::of($cogsReturns ?? 0));
         $grossProfit = Money::of($todayNetSales)->subtract($netCogs);
 
-        $todayExpenses = Money::of((float) Expense::whereDate('date', $today)->sum('amount'));
+        $todayExpenses = Money::of(Expense::whereBetween('date', $dayRange)->sum('amount') ?? 0);
         $todayNetProfit = $grossProfit->subtract($todayExpenses);
 
         return [
@@ -153,74 +156,75 @@ class DashboardService
     {
         $isEmployee = $user->isMandob() || $user->isCashier();
         $isManager = $user->isManager() && $user->branch_id;
+        $dayRange = [$today, $today . ' 23:59:59'];
 
-        $directCashSales = (float) Invoice::where('type', 'SALE')
+        $directCashSales = Invoice::where('type', 'SALE')
             ->where('payment_method', 'CASH')
-            ->whereDate('date', $today)
+            ->whereBetween('date', $dayRange)
             ->when($isEmployee, fn($q) => $q->where('created_by', $user->id))
             ->when($isManager, fn($q) => $q->where('branch_id', $user->branch_id))
             ->sum('paid_amount');
 
-        $splitCashSales = (float) Payment::where('type', 'RECEIPT')
+        $splitCashSales = Payment::where('type', 'RECEIPT')
             ->where('method', 'CASH')
             ->whereHas('invoice', fn($q) => $q->where('payment_method', 'SPLIT')->when($isManager, fn($inv) => $inv->where('branch_id', $user->branch_id)))
-            ->whereDate('date', $today)
+            ->whereBetween('date', $dayRange)
             ->when($isEmployee, fn($q) => $q->where('created_by', $user->id))
             ->when($isManager, fn($q) => $q->where(fn($sub) => $sub->whereHas('treasury', fn($t) => $t->where('branch_id', $user->branch_id))->orWhereHas('creator', fn($c) => $c->where('branch_id', $user->branch_id))))
             ->sum('amount');
 
-        $cashSales = Money::of($directCashSales)->add($splitCashSales)->getAmount();
+        $cashSales = Money::of($directCashSales ?? 0)->add(Money::of($splitCashSales ?? 0))->getAmount();
 
-        $directElectronicSales = (float) Invoice::where('type', 'SALE')
+        $directElectronicSales = Invoice::where('type', 'SALE')
             ->whereIn('payment_method', ['BANK', 'CARD', 'WALLET', 'INSTAPAY', 'VODAFONE_CASH', 'TRANSFER'])
-            ->whereDate('date', $today)
+            ->whereBetween('date', $dayRange)
             ->when($isEmployee, fn($q) => $q->where('created_by', $user->id))
             ->when($isManager, fn($q) => $q->where('branch_id', $user->branch_id))
             ->sum('paid_amount');
 
-        $splitElectronicSales = (float) Payment::where('type', 'RECEIPT')
+        $splitElectronicSales = Payment::where('type', 'RECEIPT')
             ->whereIn('method', ['BANK', 'CARD', 'WALLET', 'INSTAPAY', 'VODAFONE_CASH', 'TRANSFER'])
             ->whereHas('invoice', fn($q) => $q->where('payment_method', 'SPLIT')->when($isManager, fn($inv) => $inv->where('branch_id', $user->branch_id)))
-            ->whereDate('date', $today)
+            ->whereBetween('date', $dayRange)
             ->when($isEmployee, fn($q) => $q->where('created_by', $user->id))
             ->when($isManager, fn($q) => $q->where(fn($sub) => $sub->whereHas('treasury', fn($t) => $t->where('branch_id', $user->branch_id))->orWhereHas('creator', fn($c) => $c->where('branch_id', $user->branch_id))))
             ->sum('amount');
 
-        $electronicSales = Money::of($directElectronicSales)->add($splitElectronicSales)->getAmount();
+        $electronicSales = Money::of($directElectronicSales ?? 0)->add(Money::of($splitElectronicSales ?? 0))->getAmount();
 
-        $cashReceipts = (float) Payment::where('type', 'RECEIPT')
+        $cashReceipts = Money::of(Payment::where('type', 'RECEIPT')
             ->where('method', 'CASH')
             ->whereNull('invoice_id')
-            ->whereDate('date', $today)
+            ->whereBetween('date', $dayRange)
             ->when($isEmployee, fn($q) => $q->where('created_by', $user->id))
             ->when($isManager, fn($q) => $q->where(fn($sub) => $sub->whereHas('treasury', fn($t) => $t->where('branch_id', $user->branch_id))->orWhereHas('creator', fn($c) => $c->where('branch_id', $user->branch_id))))
-            ->sum('amount');
+            ->sum('amount') ?? 0)->getAmount();
 
-        $cashPurchaseReturns = $isEmployee ? 0.0 : (float) Invoice::where('type', 'PURCHASE_RETURN')
+        $cashPurchaseReturns = $isEmployee ? 0.0 : Money::of(Invoice::where('type', 'PURCHASE_RETURN')
             ->where('payment_method', 'CASH')
-            ->whereDate('date', $today)
+            ->whereBetween('date', $dayRange)
             ->when($isManager, fn($q) => $q->where('branch_id', $user->branch_id))
-            ->sum('paid_amount');
+            ->sum('paid_amount') ?? 0)->getAmount();
 
-        $cashPurchases = $isEmployee ? 0.0 : (float) Invoice::where('type', 'PURCHASE')
+        $cashPurchases = $isEmployee ? 0.0 : Money::of(Invoice::where('type', 'PURCHASE')
             ->where('payment_method', 'CASH')
-            ->whereDate('date', $today)
+            ->whereBetween('date', $dayRange)
             ->when($isManager, fn($q) => $q->where('branch_id', $user->branch_id))
-            ->sum('paid_amount');
+            ->sum('paid_amount') ?? 0)->getAmount();
 
-        $cashPayments = $isEmployee ? 0.0 : (float) Payment::where('type', 'PAYMENT')
+        $cashPayments = $isEmployee ? 0.0 : Money::of(Payment::where('type', 'PAYMENT')
             ->where('method', 'CASH')
             ->whereNull('invoice_id')
-            ->whereDate('date', $today)
+            ->whereBetween('date', $dayRange)
             ->when($isManager, fn($q) => $q->where(fn($sub) => $sub->whereHas('treasury', fn($t) => $t->where('branch_id', $user->branch_id))->orWhereHas('creator', fn($c) => $c->where('branch_id', $user->branch_id))))
-            ->sum('amount');
+            ->sum('amount') ?? 0)->getAmount();
 
-        $cashSaleReturns = (float) Invoice::where('type', 'SALE_RETURN')
+        $cashSaleReturns = Money::of(Invoice::where('type', 'SALE_RETURN')
             ->where('payment_method', 'CASH')
-            ->whereDate('date', $today)
+            ->whereBetween('date', $dayRange)
             ->when($isEmployee, fn($q) => $q->where('created_by', $user->id))
             ->when($isManager, fn($q) => $q->where('branch_id', $user->branch_id))
-            ->sum('paid_amount');
+            ->sum('paid_amount') ?? 0)->getAmount();
 
         $totalIn = Money::of($cashSales)->add($cashReceipts)->add($cashPurchaseReturns);
         $totalOut = Money::of($cashPurchases)->add($cashPayments)->add($cashSaleReturns)->add($todayExpenses);
@@ -277,7 +281,7 @@ class DashboardService
                     'party_name' => $inv->party?->name ?? 'عميل/مورد نقدي',
                     'created_by_name' => $inv->creator?->name ?? 'صاحب المتجر',
                     'created_by_role' => $roleStr,
-                    'amount' => (float) $inv->total,
+                    'amount' => Money::of($inv->total ?? 0)->getAmount(),
                     'date' => $inv->date->format('Y-m-d'),
                     'created_at' => $inv->created_at->toDateTimeString(),
                 ];
@@ -302,7 +306,7 @@ class DashboardService
                     'party_name' => $pay->party?->name ?? '-',
                     'created_by_name' => $pay->creator?->name ?? 'صاحب المتجر',
                     'created_by_role' => $roleStr,
-                    'amount' => (float) $pay->amount,
+                    'amount' => Money::of($pay->amount ?? 0)->getAmount(),
                     'date' => $pay->date->format('Y-m-d'),
                     'created_at' => $pay->created_at->toDateTimeString(),
                 ];
@@ -325,7 +329,7 @@ class DashboardService
                     'party_name' => $exp->category ?? 'مصروفات عامة',
                     'created_by_name' => $exp->creator?->name ?? 'صاحب المتجر',
                     'created_by_role' => $roleStr,
-                    'amount' => (float) $exp->amount,
+                    'amount' => Money::of($exp->amount ?? 0)->getAmount(),
                     'date' => $exp->date->format('Y-m-d'),
                     'created_at' => $exp->created_at->toDateTimeString(),
                 ];

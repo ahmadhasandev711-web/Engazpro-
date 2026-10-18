@@ -105,35 +105,7 @@ class ShiftController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $user = $request->user();
-        $accountId = $user->getAccountId();
-
-        $query = Shift::withoutGlobalScopes()
-            ->where('user_id', $accountId)
-            ->with(['creator', 'treasury', 'settledByUser'])
-            ->latest('id');
-
-        // الموظف العادي يرى وردياته فقط
-        if ($user->isMandob() || $user->isCashier()) {
-            $query->where('created_by', $user->id);
-        }
-
-        if ($status = $request->input('status')) {
-            $query->where('status', $status);
-        }
-
-        if ($createdBy = $request->input('created_by')) {
-            if (!$user->isMandob() && !$user->isCashier()) {
-                $query->where('created_by', $createdBy);
-            }
-        }
-
-        if ($date = $request->input('date')) {
-            $query->whereDate('opened_at', $date);
-        }
-
-        $perPage = min((int) $request->input('per_page', 20), 100);
-        $shifts = $query->paginate($perPage);
+        $shifts = $this->shiftService->getShiftsPaginated($request->user(), $request->all());
 
         return response()->json([
             'success' => true,

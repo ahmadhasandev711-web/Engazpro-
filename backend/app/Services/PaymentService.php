@@ -193,37 +193,77 @@ class PaymentService
     }
 
     /**
-     * استعلام قائمة السندات مع التصفية والصفحات
+     * بناء استعلام السندات المفلتر بشكل مركزي موحد (DRY)
      */
-    public function getPaymentsPaginated(User $user, array $filters = []): \Illuminate\Contracts\Pagination\LengthAwarePaginator
+    protected function buildFilteredPaymentsQuery(User $user, array $filters = []): \Illuminate\Database\Eloquent\Builder
     {
         $isEmployee = $user->isMandob() || $user->isCashier();
 
-        $query = Payment::with(['party', 'invoice', 'creator'])
+        $query = Payment::query()
             ->when($isEmployee, fn($q) => $q->where('created_by', $user->id));
 
         if (!empty($filters['type'])) {
             $query->where('type', $filters['type']);
         }
 
-        if (!empty($filters['created_by'])) {
-            if (!$isEmployee) {
-                $query->where('created_by', $filters['created_by']);
-            }
+        if (!empty($filters['created_by']) && !$isEmployee) {
+            $query->where('created_by', $filters['created_by']);
         }
 
         if (!empty($filters['party_id'])) {
             $query->where('party_id', $filters['party_id']);
         }
 
-        if (!empty($filters['date_from'])) {
-            $query->whereDate('date', '>=', $filters['date_from']);
-        }
-        if (!empty($filters['date_to'])) {
-            $query->whereDate('date', '<=', $filters['date_to']);
+        if (!empty($filters['search'])) {
+            $search = trim((string) $filters['search']);
+            $numericSearch = ltrim($search, '#');
+            $query->where(function ($q) use ($search, $numericSearch) {
+                if (is_numeric($numericSearch)) {
+                    $q->where('id', (int) $numericSearch)
+                      ->orWhere('notes', 'like', "%{$search}%");
+                } else {
+                    $q->where('notes', 'like', "%{$search}%");
+                }
+                $q->orWhereHas('party', fn($pq) => $pq->where('name', 'like', "%{$search}%")->orWhere('phone', 'like', "%{$search}%"));
+            });
         }
 
+        if (!empty($filters['date_from'])) {
+            $query->where('date', '>=', $filters['date_from']);
+        }
+        if (!empty($filters['date_to'])) {
+            $query->where('date', '<=', $filters['date_to'] . ' 23:59:59');
+        }
+
+        return $query;
+    }
+
+    /**
+     * استعلام قائمة السندات مع التصفية والصفحات
+     */
+    public function getPaymentsPaginated(User $user, array $filters = []): \Illuminate\Contracts\Pagination\LengthAwarePaginator
+    {
         $perPage = min((int) ($filters['per_page'] ?? 20), 100);
-        return $query->latest()->paginate($perPage);
+
+        return $this->buildFilteredPaymentsQuery($user, $filters)
+            ->with(['party', 'invoice', 'creator'])
+            ->latest()
+            ->paginate($perPage);
+    }
+
+    /**
+     * حساب إجمالي سندات القبض والصرف للفترة المفلترة بدقة عبر كائن Money
+     */
+    public function getPaymentsSummary(User $user, array $filters = []): array
+    {
+        $baseQuery = $this->buildFilteredPaymentsQuery($user, $filters);
+
+        $receiptsMoney = Money::of((clone $baseQuery)->where('type', 'RECEIPT')->sum('amount') ?? 0);
+        $paymentsMoney = Money::of((clone $baseQuery)->where('type', 'PAYMENT')->sum('amount') ?? 0);
+
+        return [
+            'total_receipts' => $receiptsMoney->getAmount(),
+            'total_payments' => $paymentsMoney->getAmount(),
+        ];
     }
 }

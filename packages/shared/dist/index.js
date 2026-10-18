@@ -389,9 +389,9 @@ var EmployeeSchema = import_zod.z.object({
   name: import_zod.z.string().min(2, "\u0627\u0644\u0627\u0633\u0645 \u0645\u0637\u0644\u0648\u0628"),
   phone: import_zod.z.string().min(8, "\u0631\u0642\u0645 \u0627\u0644\u0647\u0627\u062A\u0641 \u064A\u062C\u0628 \u0623\u0644\u0627 \u064A\u0642\u0644 \u0639\u0646 8 \u0623\u0631\u0642\u0627\u0645"),
   password: import_zod.z.string().min(6, "\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u064A\u062C\u0628 \u0623\u0644\u0627 \u062A\u0642\u0644 \u0639\u0646 6 \u0623\u062D\u0631\u0641").optional().or(import_zod.z.literal("")),
-  role: import_zod.z.enum(["ADMIN", "MANAGER", "SUPERVISOR", "MANDOB", "CASHIER"], { errorMap: () => ({ message: "\u0627\u0644\u062F\u0648\u0631 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D" }) }),
+  role: import_zod.z.nativeEnum(UserRole, { errorMap: () => ({ message: "\u0627\u0644\u062F\u0648\u0631 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D" }) }).refine((role) => role !== "OWNER" /* OWNER */, { message: "\u0644\u0627 \u064A\u0645\u0643\u0646 \u062A\u0639\u064A\u064A\u0646 \u062F\u0648\u0631 \u0645\u0627\u0644\u0643 \u0644\u0645\u0648\u0638\u0641" }),
   branch_id: import_zod.z.number().optional().nullable(),
-  status: import_zod.z.enum(["ACTIVE", "INACTIVE"]).default("ACTIVE"),
+  status: import_zod.z.nativeEnum(UserStatus).default("ACTIVE" /* ACTIVE */),
   email: import_zod.z.string().email("\u0628\u0631\u064A\u062F \u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A \u063A\u064A\u0631 \u0635\u0627\u0644\u062D").optional().nullable().or(import_zod.z.literal(""))
 });
 var BranchSchema = import_zod.z.object({

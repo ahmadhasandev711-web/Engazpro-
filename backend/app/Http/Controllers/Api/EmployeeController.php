@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
 use App\Models\User;
@@ -41,9 +42,21 @@ class EmployeeController extends Controller
 
         $user = $request->user();
         $accountId = $user->getAccountId();
-        $allowedRoles = ['ADMIN', 'MANAGER', 'SUPERVISOR', 'MANDOB', 'CASHIER', 'SALES'];
+        $allowedRoles = [
+            UserRole::ADMIN->value,
+            UserRole::MANAGER->value,
+            UserRole::SUPERVISOR->value,
+            UserRole::MANDOB->value,
+            UserRole::CASHIER->value,
+            UserRole::SALES->value,
+        ];
         if ($user->isManager()) {
-            $allowedRoles = ['SUPERVISOR', 'MANDOB', 'CASHIER', 'SALES'];
+            $allowedRoles = [
+                UserRole::SUPERVISOR->value,
+                UserRole::MANDOB->value,
+                UserRole::CASHIER->value,
+                UserRole::SALES->value,
+            ];
         }
 
         $validated = $request->validate([
@@ -93,9 +106,21 @@ class EmployeeController extends Controller
 
         $user = $request->user();
         $accountId = $user->getAccountId();
-        $allowedRoles = ['ADMIN', 'MANAGER', 'SUPERVISOR', 'MANDOB', 'CASHIER', 'SALES'];
+        $allowedRoles = [
+            UserRole::ADMIN->value,
+            UserRole::MANAGER->value,
+            UserRole::SUPERVISOR->value,
+            UserRole::MANDOB->value,
+            UserRole::CASHIER->value,
+            UserRole::SALES->value,
+        ];
         if ($user->isManager()) {
-            $allowedRoles = ['SUPERVISOR', 'MANDOB', 'CASHIER', 'SALES'];
+            $allowedRoles = [
+                UserRole::SUPERVISOR->value,
+                UserRole::MANDOB->value,
+                UserRole::CASHIER->value,
+                UserRole::SALES->value,
+            ];
         }
 
         $validated = $request->validate([

@@ -20,33 +20,33 @@ class ReportService
     {
         // 1. استعلامات المبيعات ومرتجعاتها
         $salesQuery = Invoice::where('type', 'SALE')
-            ->when($fromDate, fn($q) => $q->whereDate('date', '>=', $fromDate))
-            ->when($toDate, fn($q) => $q->whereDate('date', '<=', $toDate));
+            ->when($fromDate, fn($q) => $q->where('date', '>=', $fromDate))
+            ->when($toDate, fn($q) => $q->where('date', '<=', $toDate . ' 23:59:59'));
 
         $returnsQuery = Invoice::where('type', 'SALE_RETURN')
-            ->when($fromDate, fn($q) => $q->whereDate('date', '>=', $fromDate))
-            ->when($toDate, fn($q) => $q->whereDate('date', '<=', $toDate));
+            ->when($fromDate, fn($q) => $q->where('date', '>=', $fromDate))
+            ->when($toDate, fn($q) => $q->where('date', '<=', $toDate . ' 23:59:59'));
 
-        $grossSales = Money::of((float) $salesQuery->sum('total'));
-        $saleReturns = Money::of((float) $returnsQuery->sum('total'));
+        $grossSales = Money::of($salesQuery->sum('total') ?? 0);
+        $saleReturns = Money::of($returnsQuery->sum('total') ?? 0);
         $netSales = $grossSales->subtract($saleReturns);
-        $shippingRevenue = Money::of((float) $salesQuery->sum('shipping_amount'));
-        $productSales = Money::of((float) $salesQuery->sum('subtotal'));
-        $discounts = Money::of((float) $salesQuery->sum('discount'));
+        $shippingRevenue = Money::of($salesQuery->sum('shipping_amount') ?? 0);
+        $productSales = Money::of($salesQuery->sum('subtotal') ?? 0);
+        $discounts = Money::of($salesQuery->sum('discount') ?? 0);
 
         // 2. حساب تكلفة البضاعة المباعة (COGS)
-        $cogsSales = Money::of($this->calculateCogs('SALE', $fromDate, $toDate));
-        $cogsReturns = Money::of($this->calculateCogs('SALE_RETURN', $fromDate, $toDate));
+        $cogsSales = $this->calculateCogs('SALE', $fromDate, $toDate);
+        $cogsReturns = $this->calculateCogs('SALE_RETURN', $fromDate, $toDate);
         $netCogs = $cogsSales->subtract($cogsReturns);
 
         // 3. إجمالي وصافي الربح
         $grossProfit = $netSales->subtract($netCogs);
 
         $expensesQuery = Expense::query()
-            ->when($fromDate, fn($q) => $q->whereDate('date', '>=', $fromDate))
-            ->when($toDate, fn($q) => $q->whereDate('date', '<=', $toDate));
+            ->when($fromDate, fn($q) => $q->where('date', '>=', $fromDate))
+            ->when($toDate, fn($q) => $q->where('date', '<=', $toDate . ' 23:59:59'));
 
-        $totalExpenses = Money::of((float) $expensesQuery->sum('amount'));
+        $totalExpenses = Money::of($expensesQuery->sum('amount') ?? 0);
         $netProfit = $grossProfit->subtract($totalExpenses);
 
         $netSalesAmount = $netSales->getAmount();
@@ -87,13 +87,15 @@ class ReportService
     /**
      * حساب تكلفة البضاعة لنوع فاتورة محدد
      */
-    protected function calculateCogs(string $invoiceType, ?string $fromDate, ?string $toDate): float
+    protected function calculateCogs(string $invoiceType, ?string $fromDate, ?string $toDate): Money
     {
-        return (float) InvoiceItem::whereHas('invoice', function ($q) use ($invoiceType, $fromDate, $toDate) {
+        $rawSum = InvoiceItem::whereHas('invoice', function ($q) use ($invoiceType, $fromDate, $toDate) {
             $q->where('type', $invoiceType)
-              ->when($fromDate, fn($iq) => $iq->whereDate('date', '>=', $fromDate))
-              ->when($toDate, fn($iq) => $iq->whereDate('date', '<=', $toDate));
+              ->when($fromDate, fn($iq) => $iq->where('date', '>=', $fromDate))
+              ->when($toDate, fn($iq) => $iq->where('date', '<=', $toDate . ' 23:59:59'));
         })->sum(DB::raw('quantity * purchase_price_at_sale'));
+
+        return Money::of($rawSum ?? 0);
     }
 
     /**
@@ -103,8 +105,8 @@ class ReportService
     {
         $query = Invoice::query()
             ->when($user->isMandob(), fn($q) => $q->where('created_by', $user->id))
-            ->when($fromDate, fn($q) => $q->whereDate('date', '>=', $fromDate))
-            ->when($toDate, fn($q) => $q->whereDate('date', '<=', $toDate));
+            ->when($fromDate, fn($q) => $q->where('date', '>=', $fromDate))
+            ->when($toDate, fn($q) => $q->where('date', '<=', $toDate . ' 23:59:59'));
 
         $aggregates = (clone $query)
             ->select(
@@ -130,13 +132,13 @@ class ReportService
             ->get();
 
         return [
-            'total_sales' => (float) ($saleRow?->total_amount ?? 0),
-            'total_shipping' => (float) ($saleRow?->shipping_amount ?? 0),
-            'total_purchases' => (float) ($purchaseRow?->total_amount ?? 0),
-            'total_sale_returns' => (float) ($saleReturnRow?->total_amount ?? 0),
-            'total_purchase_returns' => (float) ($purchaseReturnRow?->total_amount ?? 0),
-            'sales_paid' => (float) ($saleRow?->paid_amount ?? 0),
-            'sales_remaining' => (float) ($saleRow?->remaining_amount ?? 0),
+            'total_sales' => Money::of($saleRow?->total_amount ?? 0)->getAmount(),
+            'total_shipping' => Money::of($saleRow?->shipping_amount ?? 0)->getAmount(),
+            'total_purchases' => Money::of($purchaseRow?->total_amount ?? 0)->getAmount(),
+            'total_sale_returns' => Money::of($saleReturnRow?->total_amount ?? 0)->getAmount(),
+            'total_purchase_returns' => Money::of($purchaseReturnRow?->total_amount ?? 0)->getAmount(),
+            'sales_paid' => Money::of($saleRow?->paid_amount ?? 0)->getAmount(),
+            'sales_remaining' => Money::of($saleRow?->remaining_amount ?? 0)->getAmount(),
             'payment_methods' => $paymentMethodsBreakdown,
         ];
     }
@@ -158,20 +160,22 @@ class ReportService
         $lowStockCount = 0;
 
         foreach ($products as $product) {
-            $qty = (float) $product->quantity;
-            $purchasePrice = $user->isMandob() ? null : (float) $product->purchase_price;
-            $salePrice = (float) $product->sale_price;
-            $minQty = $product->min_quantity !== null ? (float) $product->min_quantity : null;
+            $qty = $product->quantity + 0;
+            $purchasePriceMoney = Money::of($product->purchase_price ?? 0);
+            $salePriceMoney = Money::of($product->sale_price ?? 0);
+            $purchasePrice = $user->isMandob() ? null : $purchasePriceMoney->getAmount();
+            $salePrice = $salePriceMoney->getAmount();
+            $minQty = $product->min_quantity !== null ? ($product->min_quantity + 0) : null;
 
-            $costVal = $user->isMandob() ? null : ($qty * (float) $product->purchase_price);
-            $retailVal = $qty * $salePrice;
+            $costValMoney = $user->isMandob() ? null : $purchasePriceMoney->multiply($qty);
+            $retailValMoney = $salePriceMoney->multiply($qty);
             $isLowStock = $minQty !== null && $qty <= $minQty;
 
             $totalQuantity += $qty;
-            if (!$user->isMandob()) {
-                $totalCost = $totalCost->add($costVal);
+            if (!$user->isMandob() && $costValMoney) {
+                $totalCost = $totalCost->add($costValMoney);
             }
-            $totalRetail = $totalRetail->add($retailVal);
+            $totalRetail = $totalRetail->add($retailValMoney);
             if ($isLowStock) {
                 $lowStockCount++;
             }
@@ -186,8 +190,8 @@ class ReportService
                 'unit' => $product->unit,
                 'purchase_price' => $purchasePrice,
                 'sale_price' => $salePrice,
-                'cost_value' => $costVal,
-                'retail_value' => $retailVal,
+                'cost_value' => $costValMoney?->getAmount(),
+                'retail_value' => $retailValMoney->getAmount(),
                 'min_quantity' => $minQty,
                 'is_low_stock' => $isLowStock,
             ];
@@ -297,37 +301,38 @@ class ReportService
         $expensesQuery = Expense::query();
 
         if ($fromDate) {
-            $salesQuery->whereDate('date', '>=', $fromDate);
-            $splitSalesQuery->whereDate('date', '>=', $fromDate);
-            $receiptsQuery->whereDate('date', '>=', $fromDate);
-            $purchaseReturnsQuery->whereDate('date', '>=', $fromDate);
-            $purchasesQuery->whereDate('date', '>=', $fromDate);
-            $paymentsQuery->whereDate('date', '>=', $fromDate);
-            $saleReturnsQuery->whereDate('date', '>=', $fromDate);
-            $expensesQuery->whereDate('date', '>=', $fromDate);
+            $salesQuery->where('date', '>=', $fromDate);
+            $splitSalesQuery->where('date', '>=', $fromDate);
+            $receiptsQuery->where('date', '>=', $fromDate);
+            $purchaseReturnsQuery->where('date', '>=', $fromDate);
+            $purchasesQuery->where('date', '>=', $fromDate);
+            $paymentsQuery->where('date', '>=', $fromDate);
+            $saleReturnsQuery->where('date', '>=', $fromDate);
+            $expensesQuery->where('date', '>=', $fromDate);
         }
         if ($toDate) {
-            $salesQuery->whereDate('date', '<=', $toDate);
-            $splitSalesQuery->whereDate('date', '<=', $toDate);
-            $receiptsQuery->whereDate('date', '<=', $toDate);
-            $purchaseReturnsQuery->whereDate('date', '<=', $toDate);
-            $purchasesQuery->whereDate('date', '<=', $toDate);
-            $paymentsQuery->whereDate('date', '<=', $toDate);
-            $saleReturnsQuery->whereDate('date', '<=', $toDate);
-            $expensesQuery->whereDate('date', '<=', $toDate);
+            $endBound = $toDate . ' 23:59:59';
+            $salesQuery->where('date', '<=', $endBound);
+            $splitSalesQuery->where('date', '<=', $endBound);
+            $receiptsQuery->where('date', '<=', $endBound);
+            $purchaseReturnsQuery->where('date', '<=', $endBound);
+            $purchasesQuery->where('date', '<=', $endBound);
+            $paymentsQuery->where('date', '<=', $endBound);
+            $saleReturnsQuery->where('date', '<=', $endBound);
+            $expensesQuery->where('date', '<=', $endBound);
         }
 
-        $directSales = Money::of((float) $salesQuery->sum('paid_amount'));
-        $splitSales = Money::of((float) $splitSalesQuery->sum('amount'));
+        $directSales = Money::of($salesQuery->sum('paid_amount') ?? 0);
+        $splitSales = Money::of($splitSalesQuery->sum('amount') ?? 0);
         $sales = $directSales->add($splitSales);
-        $receipts = Money::of((float) $receiptsQuery->sum('amount'));
-        $purchaseReturns = Money::of((float) $purchaseReturnsQuery->sum('paid_amount'));
+        $receipts = Money::of($receiptsQuery->sum('amount') ?? 0);
+        $purchaseReturns = Money::of($purchaseReturnsQuery->sum('paid_amount') ?? 0);
         $totalInflow = $sales->add($receipts)->add($purchaseReturns);
 
-        $purchases = Money::of((float) $purchasesQuery->sum('paid_amount'));
-        $payments = Money::of((float) $paymentsQuery->sum('amount'));
-        $saleReturns = Money::of((float) $saleReturnsQuery->sum('paid_amount'));
-        $expenses = $includeExpenses ? Money::of((float) $expensesQuery->sum('amount')) : Money::zero();
+        $purchases = Money::of($purchasesQuery->sum('paid_amount') ?? 0);
+        $payments = Money::of($paymentsQuery->sum('amount') ?? 0);
+        $saleReturns = Money::of($saleReturnsQuery->sum('paid_amount') ?? 0);
+        $expenses = $includeExpenses ? Money::of($expensesQuery->sum('amount') ?? 0) : Money::zero();
         $totalOutflow = $purchases->add($payments)->add($saleReturns)->add($expenses);
 
         return [

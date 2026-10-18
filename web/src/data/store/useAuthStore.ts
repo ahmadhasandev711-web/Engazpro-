@@ -7,6 +7,7 @@ interface AuthState {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
+  authHydrated: boolean;
   isLoading: boolean;
   error: string | null;
   login: (input: LoginInput) => Promise<boolean>;
@@ -19,21 +20,21 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
-  token: secureStorage.getToken(),
-  isAuthenticated: !!secureStorage.getToken(),
+  token: null,
+  isAuthenticated: false,
+  authHydrated: false,
   isLoading: false,
   error: null,
 
   initializeAuth: async () => {
-    await secureStorage.init();
+    await secureStorage.whenReady();
     const token = secureStorage.getToken();
     const user = await secureStorage.getUser<User>();
     if (token) {
-      set({ token, user, isAuthenticated: true });
-      // Refresh profile in background
+      set({ token, user, isAuthenticated: true, authHydrated: true });
       get().fetchMe().catch(() => {});
     } else {
-      set({ token: null, user: null, isAuthenticated: false });
+      set({ token: null, user: null, isAuthenticated: false, authHydrated: true });
     }
   },
 

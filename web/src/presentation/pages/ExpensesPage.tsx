@@ -7,7 +7,8 @@ import { ExpenseSchema, ExpenseInput, Expense, formatCurrency } from '@pos-mando
 import { apiClient } from '../../data/api/client';
 import { exportExpensesToExcel } from '../utils/excelExport';
 import { usePermissions } from '../../hooks/usePermissions';
-import { DateRangeFilter } from '../components/common/DateRangeFilter';
+import { DateRangeFilter, calculatePresetDates } from '../components/common/DateRangeFilter';
+import { PaginationBar } from '../components/common/PaginationBar';
 import { MobileFilterChips, FilterChipOption } from '../components/mobile/MobileFilterChips';
 import { ExpenseMobileCard } from '../components/mobile/ExpenseMobileCard';
 import { nativeBackButton } from '../../platform/nativeBackButton';
@@ -15,10 +16,12 @@ import { nativeBackButton } from '../../platform/nativeBackButton';
 export const ExpensesPage: React.FC = () => {
   const queryClient = useQueryClient();
   const { canDeleteExpense, isOwnerOrAdmin, isCashier, isMandob } = usePermissions();
+  const initialDates = calculatePresetDates('today');
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const [fromDate, setFromDate] = useState<string>('');
-  const [toDate, setToDate] = useState<string>('');
+  const [fromDate, setFromDate] = useState<string>(initialDates.from);
+  const [toDate, setToDate] = useState<string>(initialDates.to);
+  const [page, setPage] = useState<number>(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCategoriesModalOpen, setIsCategoriesModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
@@ -105,7 +108,7 @@ export const ExpensesPage: React.FC = () => {
 
   // Query
   const { data: expensesData, isLoading } = useQuery({
-    queryKey: ['expenses', selectedCategory, search, fromDate, toDate],
+    queryKey: ['expenses', selectedCategory, search, fromDate, toDate, page],
     queryFn: async () => {
       const res = await apiClient.get('/expenses', {
         params: {
@@ -113,14 +116,17 @@ export const ExpensesPage: React.FC = () => {
           search: search || undefined,
           date_from: fromDate || undefined,
           date_to: toDate || undefined,
+          page,
         },
       });
       return res.data;
     },
+    placeholderData: (previousData) => previousData,
   });
 
   const expenses = expensesData?.data || [];
   const totalExpenses = expensesData?.summary?.total_amount || 0;
+  const meta = expensesData?.meta;
 
   // Hardware Back Button integration
   useEffect(() => {
@@ -331,7 +337,10 @@ export const ExpensesPage: React.FC = () => {
             <MobileFilterChips
               options={categoryFilterOptions}
               selectedId={selectedCategory}
-              onSelect={(catId) => setSelectedCategory(catId)}
+              onSelect={(catId) => {
+                setSelectedCategory(catId);
+                setPage(1);
+              }}
             />
           </div>
 
@@ -342,7 +351,10 @@ export const ExpensesPage: React.FC = () => {
               type="text"
               placeholder="بحث في المصروفات..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
               className="w-full pl-3 pr-9 py-1.5 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
@@ -353,10 +365,11 @@ export const ExpensesPage: React.FC = () => {
           <DateRangeFilter
             fromDate={fromDate}
             toDate={toDate}
-            defaultPreset="all"
+            defaultPreset="today"
             onChange={(from, to) => {
               setFromDate(from);
               setToDate(to);
+              setPage(1);
             }}
           />
         </div>
@@ -460,6 +473,15 @@ export const ExpensesPage: React.FC = () => {
                 />
               ))}
             </div>
+
+            <PaginationBar
+              currentPage={meta?.current_page || page}
+              lastPage={meta?.last_page || 1}
+              total={meta?.total || expenses.length}
+              perPage={meta?.per_page || 20}
+              onPageChange={(newPage) => setPage(newPage)}
+              itemLabel="مصروف"
+            />
           </>
         )}
       </div>

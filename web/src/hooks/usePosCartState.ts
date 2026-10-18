@@ -1,7 +1,14 @@
 import { useState, useCallback, useMemo } from 'react';
+import { Money } from '@pos-mandob/shared';
 import { PosCartItem } from './useHoldInvoices';
 import { ProductItem } from '../presentation/components/pos/PosProductCatalog';
 import { VariantSelectionPayload } from '../presentation/components/products/ProductVariantModal';
+
+const lineTotal = (quantity: number, unitPrice: number): number =>
+  Money.of(unitPrice).multiply(quantity).getAmount();
+
+const sumAmounts = (amounts: number[]): number =>
+  amounts.reduce((acc, amount) => Money.of(acc).add(amount).getAmount(), 0);
 
 interface UsePosCartStateProps {
   onItemAdded?: (itemName: string) => void;
@@ -28,7 +35,7 @@ export const usePosCartState = ({ onItemAdded }: UsePosCartStateProps = {}) => {
           updated[existingIndex] = {
             ...current,
             quantity: newQty,
-            total: Math.round(newQty * current.unit_price * 100) / 100,
+            total: lineTotal(newQty, current.unit_price),
           };
           return updated;
         } else {
@@ -42,7 +49,7 @@ export const usePosCartState = ({ onItemAdded }: UsePosCartStateProps = {}) => {
             unit_price: unitPrice,
             quantity: 1,
             stock_quantity: product.quantity,
-            total: unitPrice,
+            total: lineTotal(1, unitPrice),
           };
           return [...prev, newItem];
         }
@@ -67,7 +74,7 @@ export const usePosCartState = ({ onItemAdded }: UsePosCartStateProps = {}) => {
           updated[existingIndex] = {
             ...current,
             quantity: newQty,
-            total: Math.round(newQty * current.unit_price * 100) / 100,
+            total: lineTotal(newQty, current.unit_price),
           };
           return updated;
         } else {
@@ -86,7 +93,7 @@ export const usePosCartState = ({ onItemAdded }: UsePosCartStateProps = {}) => {
             unit_price: unit_price,
             quantity: quantity,
             stock_quantity: variant?.quantity ?? batch?.quantity ?? product.quantity,
-            total: Math.round(quantity * unit_price * 100) / 100,
+            total: lineTotal(quantity, unit_price),
           };
           return [...prev, newItem];
         }
@@ -110,7 +117,7 @@ export const usePosCartState = ({ onItemAdded }: UsePosCartStateProps = {}) => {
           return {
             ...item,
             quantity: newQty,
-            total: Math.round(newQty * item.unit_price * 100) / 100,
+            total: lineTotal(newQty, item.unit_price),
           };
         }
         return item;
@@ -152,14 +159,14 @@ export const usePosCartState = ({ onItemAdded }: UsePosCartStateProps = {}) => {
 
   // Computed totals
   const subtotal = useMemo(
-    () => cartItems.reduce((acc, i) => acc + i.total, 0),
+    () => sumAmounts(cartItems.map((i) => i.total)),
     [cartItems]
   );
 
-  const totalAmount = useMemo(
-    () => Math.max(0, subtotal - discount + (shippingCost || 0)),
-    [subtotal, discount, shippingCost]
-  );
+  const totalAmount = useMemo(() => {
+    const net = Money.of(subtotal).subtract(discount).add(shippingCost || 0);
+    return net.isNegative() ? 0 : net.getAmount();
+  }, [subtotal, discount, shippingCost]);
 
   return {
     cartItems,

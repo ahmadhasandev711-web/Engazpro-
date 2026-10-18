@@ -112,19 +112,20 @@ class LedgerService
             ->where('party_id', $party->id);
 
         if (!empty($filters['from_date'])) {
-            $query->whereDate('date', '>=', $filters['from_date']);
+            $query->where('date', '>=', $filters['from_date']);
         }
 
         if (!empty($filters['to_date'])) {
-            $query->whereDate('date', '<=', $filters['to_date']);
+            $query->where('date', '<=', $filters['to_date'] . ' 23:59:59');
         }
 
         $entries = $query->orderBy('date', 'asc')
             ->orderBy('id', 'asc')
             ->get();
 
-        $totalDebit = (float) $entries->sum('debit');
-        $totalCredit = (float) $entries->sum('credit');
+        $totalDebit = Money::of($entries->sum('debit') ?? 0)->getAmount();
+        $totalCredit = Money::of($entries->sum('credit') ?? 0)->getAmount();
+        $currentBalance = Money::of($party->balance ?? 0)->getAmount();
 
         return [
             'party' => [
@@ -132,12 +133,12 @@ class LedgerService
                 'name' => $party->name,
                 'type' => $party->type,
                 'phone' => $party->phone,
-                'current_balance' => (float) $party->balance,
+                'current_balance' => $currentBalance,
             ],
             'summary' => [
                 'total_debit' => $totalDebit,
                 'total_credit' => $totalCredit,
-                'current_balance' => (float) $party->balance,
+                'current_balance' => $currentBalance,
             ],
             'entries' => $entries,
         ];

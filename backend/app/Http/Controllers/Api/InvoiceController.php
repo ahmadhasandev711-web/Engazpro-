@@ -22,11 +22,14 @@ class InvoiceController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $invoices = $this->invoiceService->getInvoicesPaginated($request->user(), $request->all());
+        $filters = $request->all();
+        $invoices = $this->invoiceService->getInvoicesPaginated($request->user(), $filters);
+        $summary = $this->invoiceService->getInvoicesSummary($request->user(), $filters);
 
         return response()->json([
             'success' => true,
             'data' => InvoiceResource::collection($invoices),
+            'summary' => $summary,
             'meta' => [
                 'current_page' => $invoices->currentPage(),
                 'last_page' => $invoices->lastPage(),

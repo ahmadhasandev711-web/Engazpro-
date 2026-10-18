@@ -29,6 +29,7 @@ class WooCommerceIntegration extends Model
     protected $casts = [
         'consumer_key' => 'encrypted',
         'consumer_secret' => 'encrypted',
+        'webhook_secret' => 'encrypted',
         'auto_sync_stock' => 'boolean',
         'is_active' => 'boolean',
         'last_synced_at' => 'datetime',

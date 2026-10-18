@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\WcOrderResource;
 use App\Models\WcOrder;
 use App\Services\WooCommerce\WooCommerceOrderSyncService;
 use Illuminate\Http\JsonResponse;
@@ -28,6 +29,12 @@ class WcOrderController extends Controller
         } elseif ($user->isManager()) {
             if ($user->branch_id) {
                 $query->where('branch_id', $user->branch_id);
+            }
+        } elseif ($user->isCashier() || $user->isSales()) {
+            if ($user->branch_id) {
+                $query->where('branch_id', $user->branch_id);
+            } else {
+                $query->whereRaw('1 = 0');
             }
         } elseif ($request->filled('mandob_id')) {
             $query->where('mandob_id', $request->input('mandob_id'));
@@ -55,28 +62,30 @@ class WcOrderController extends Controller
         }
 
         if ($request->filled('date_from')) {
-            $dateFrom = $request->input('date_from');
-            $query->where(function ($q) use ($dateFrom) {
-                $q->whereDate('order_date', '>=', $dateFrom)
-                    ->orWhere(function ($sub) use ($dateFrom) {
+            $dateFromStart = $request->input('date_from') . ' 00:00:00';
+            $query->where(function ($q) use ($dateFromStart) {
+                $q->where('order_date', '>=', $dateFromStart)
+                    ->orWhere(function ($sub) use ($dateFromStart) {
                         $sub->whereNull('order_date')
-                            ->whereDate('created_at', '>=', $dateFrom);
+                            ->where('created_at', '>=', $dateFromStart);
                     });
             });
         }
 
         if ($request->filled('date_to')) {
-            $dateTo = $request->input('date_to');
-            $query->where(function ($q) use ($dateTo) {
-                $q->whereDate('order_date', '<=', $dateTo)
-                    ->orWhere(function ($sub) use ($dateTo) {
+            $dateToEnd = $request->input('date_to') . ' 23:59:59';
+            $query->where(function ($q) use ($dateToEnd) {
+                $q->where('order_date', '<=', $dateToEnd)
+                    ->orWhere(function ($sub) use ($dateToEnd) {
                         $sub->whereNull('order_date')
-                            ->whereDate('created_at', '<=', $dateTo);
+                            ->where('created_at', '<=', $dateToEnd);
                     });
             });
         }
 
-        $orders = $query->orderByRaw('COALESCE(order_date, created_at) DESC')->orderByDesc('id')->paginate($request->input('per_page', 20));
+        $perPage = min(max((int) $request->input('per_page', 20), 1), 100);
+        $orders = $query->orderByRaw('COALESCE(order_date, created_at) DESC')->orderByDesc('id')->paginate($perPage)
+            ->through(fn (WcOrder $order) => (new WcOrderResource($order))->resolve($request));
 
         return response()->json([
             'success' => true,
@@ -97,13 +106,19 @@ class WcOrderController extends Controller
             $query->where('mandob_id', $user->id);
         } elseif ($user->isManager() && $user->branch_id) {
             $query->where('branch_id', $user->branch_id);
+        } elseif ($user->isCashier() || $user->isSales()) {
+            if ($user->branch_id) {
+                $query->where('branch_id', $user->branch_id);
+            } else {
+                $query->whereRaw('1 = 0');
+            }
         }
 
         $order = $query->findOrFail($id);
 
         return response()->json([
             'success' => true,
-            'data' => $order,
+            'data' => new WcOrderResource($order),
         ]);
     }
 

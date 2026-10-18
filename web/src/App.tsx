@@ -10,6 +10,7 @@ import { UserRole } from '@pos-mandob/shared';
 import { useAuthStore } from './data/store/useAuthStore';
 import { useCapacitorBootstrap } from './platform/useCapacitorBootstrap';
 import { Capacitor } from '@capacitor/core';
+import { AuthHydrationGate } from './presentation/components/AuthHydrationGate';
 
 // Code-Splitting & Lazy Loading for blazing-fast POS initialization
 const LandingPage = lazy(() => import('./presentation/pages/LandingPage').then((m) => ({ default: m.LandingPage })));
@@ -47,8 +48,8 @@ const queryClient = new QueryClient({
   },
 });
 
-// Prefetch critical chunks in the background during browser idle time for zero-lag navigation
-if (typeof window !== 'undefined') {
+// Prefetch critical chunks on web only (native APK keeps startup lean)
+if (typeof window !== 'undefined' && !Capacitor.isNativePlatform()) {
   const prefetchCorePages = () => {
     import('./presentation/pages/DashboardPage');
     import('./presentation/pages/ProductsPage');
@@ -85,6 +86,13 @@ const RootRouteHandler: React.FC = () => {
   return <LandingPage />;
 };
 
+const LandingRoute: React.FC = () => {
+  if (Capacitor.isNativePlatform()) {
+    return <Navigate to="/login" replace />;
+  }
+  return <LandingPage />;
+};
+
 const AppLifecycleManager: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   useCapacitorBootstrap();
   return <>{children}</>;
@@ -95,12 +103,13 @@ export const App: React.FC = () => {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <AppLifecycleManager>
+          <AuthHydrationGate>
           <ConfirmProvider>
           <Suspense fallback={<PageLoadingFallback />}>
             <Routes>
               {/* Public Landing & Auth Routes */}
               <Route path="/" element={<RootRouteHandler />} />
-              <Route path="/landing" element={<LandingPage />} />
+              <Route path="/landing" element={<LandingRoute />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
 
@@ -127,12 +136,12 @@ export const App: React.FC = () => {
                   <Route path="/wc-orders" element={<WcOrdersPage />} />
 
                   {/* Treasuries & Shifts Management (Owner, Admin, Manager, Supervisor) */}
-                  <Route element={<RoleRoute allowedRoles={[UserRole.OWNER, 'OWNER', UserRole.ADMIN, 'ADMIN', UserRole.MANAGER, 'MANAGER', UserRole.SUPERVISOR, 'SUPERVISOR']} />}>
+                  <Route element={<RoleRoute allowedRoles={[UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPERVISOR]} />}>
                     <Route path="/treasuries" element={<TreasuriesPage />} />
                   </Route>
 
                   {/* Purchases, Suppliers, Reports, Transfers & Employees (Owner, Admin, Manager) */}
-                  <Route element={<RoleRoute allowedRoles={[UserRole.OWNER, 'OWNER', UserRole.ADMIN, 'ADMIN', UserRole.MANAGER, 'MANAGER']} />}>
+                  <Route element={<RoleRoute allowedRoles={[UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER]} />}>
                     <Route path="/purchases" element={<InvoicesPage />} />
                     <Route path="/purchases/new" element={<InvoiceFormPage />} />
                     <Route path="/purchases/returns" element={<InvoicesPage />} />
@@ -145,7 +154,7 @@ export const App: React.FC = () => {
                   </Route>
 
                   {/* Sovereign Owner & Admin Only Routes (Settings, Branches & WooCommerce) */}
-                  <Route element={<RoleRoute allowedRoles={[UserRole.OWNER, 'OWNER', UserRole.ADMIN, 'ADMIN']} />}>
+                  <Route element={<RoleRoute allowedRoles={[UserRole.OWNER, UserRole.ADMIN]} />}>
                     <Route path="/branches" element={<BranchesPage />} />
                     <Route path="/woocommerce" element={<WooCommerceSettingsPage />} />
                     <Route path="/settings" element={<SettingsPage />} />
@@ -167,6 +176,7 @@ export const App: React.FC = () => {
             </Routes>
           </Suspense>
         </ConfirmProvider>
+          </AuthHydrationGate>
         </AppLifecycleManager>
       </BrowserRouter>
     </QueryClientProvider>

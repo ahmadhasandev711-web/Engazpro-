@@ -85,8 +85,10 @@ class WooCommerceWebhookController extends Controller
                 ], 200);
             }
         } catch (Exception $e) {
-            Log::error("Failed to process WooCommerce webhook order for user #{$userId}: " . $e->getMessage());
-            return response()->json(['message' => 'Error processing order: ' . $e->getMessage()], 500);
+            Log::error("Failed to process WooCommerce webhook order for user #{$userId}: " . $e->getMessage(), [
+                'exception' => $e,
+            ]);
+            return response()->json(['message' => 'تعذر معالجة الطلب. يرجى مراجعة سجلات النظام.'], 500);
         }
 
         return response()->json(['message' => 'Webhook received'], 200);

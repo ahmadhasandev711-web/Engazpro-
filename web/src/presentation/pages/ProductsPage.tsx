@@ -34,6 +34,7 @@ import { BarcodePrintModal } from '../components/products/BarcodePrintModal';
 import { OpeningStockModal } from '../components/products/OpeningStockModal';
 import { MobileFilterChips, FilterChipOption } from '../components/mobile/MobileFilterChips';
 import { ProductMobileCard } from '../components/mobile/ProductMobileCard';
+import { PaginationBar } from '../components/common/PaginationBar';
 import { nativeBackButton } from '../../platform/nativeBackButton';
 
 export const ProductsPage: React.FC = () => {
@@ -50,6 +51,7 @@ export const ProductsPage: React.FC = () => {
 
   const [search, setSearch] = useState('');
   const [filterTab, setFilterTab] = useState<'ALL' | 'VARIABLE' | 'EXPIRY' | 'NEAR_EXPIRY' | 'LOW_STOCK'>('ALL');
+  const [page, setPage] = useState<number>(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -105,10 +107,11 @@ export const ProductsPage: React.FC = () => {
 
   // Fetch Products
   const { data, isLoading } = useQuery({
-    queryKey: ['products', search, filterTab],
+    queryKey: ['products', search, filterTab, page],
     queryFn: async () => {
       const params: any = {
         search: search || undefined,
+        page,
       };
       if (filterTab === 'VARIABLE') params.type = 'VARIABLE';
       if (filterTab === 'EXPIRY') params.type = 'EXPIRY';
@@ -118,9 +121,11 @@ export const ProductsPage: React.FC = () => {
       const res = await apiClient.get('/products', { params });
       return res.data;
     },
+    placeholderData: (previousData) => previousData,
   });
 
   const products: Product[] = data?.data || [];
+  const meta = data?.meta;
 
   // Form handling
   const {
@@ -447,7 +452,10 @@ export const ProductsPage: React.FC = () => {
       <MobileFilterChips
         options={filterOptions}
         selectedId={filterTab}
-        onSelect={(tab) => setFilterTab(tab as any)}
+        onSelect={(tab) => {
+          setFilterTab(tab as any);
+          setPage(1);
+        }}
       />
 
       {/* Search Bar */}
@@ -458,7 +466,10 @@ export const ProductsPage: React.FC = () => {
             type="text"
             placeholder="البحث بالاسم أو الباركود أو الكود أو المتغير..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
             className="w-full pl-4 pr-9 sm:pr-10 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:bg-white text-right"
           />
         </div>
@@ -725,6 +736,15 @@ export const ProductsPage: React.FC = () => {
                 />
               ))}
             </div>
+
+            <PaginationBar
+              currentPage={meta?.current_page || page}
+              lastPage={meta?.last_page || 1}
+              total={meta?.total || products.length}
+              perPage={meta?.per_page || 20}
+              onPageChange={(newPage) => setPage(newPage)}
+              itemLabel="صنف"
+            />
           </>
         )}
       </div>

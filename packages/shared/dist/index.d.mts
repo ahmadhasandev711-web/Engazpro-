@@ -1212,24 +1212,24 @@ declare const EmployeeSchema: z.ZodObject<{
     name: z.ZodString;
     phone: z.ZodString;
     password: z.ZodUnion<[z.ZodOptional<z.ZodString>, z.ZodLiteral<"">]>;
-    role: z.ZodEnum<["ADMIN", "MANAGER", "SUPERVISOR", "MANDOB", "CASHIER"]>;
+    role: z.ZodEffects<z.ZodNativeEnum<typeof UserRole>, UserRole.ADMIN | UserRole.MANAGER | UserRole.SUPERVISOR | UserRole.MANDOB | UserRole.CASHIER | UserRole.SALES, UserRole>;
     branch_id: z.ZodNullable<z.ZodOptional<z.ZodNumber>>;
-    status: z.ZodDefault<z.ZodEnum<["ACTIVE", "INACTIVE"]>>;
+    status: z.ZodDefault<z.ZodNativeEnum<typeof UserStatus>>;
     email: z.ZodUnion<[z.ZodNullable<z.ZodOptional<z.ZodString>>, z.ZodLiteral<"">]>;
 }, "strip", z.ZodTypeAny, {
     phone: string;
-    status: "ACTIVE" | "INACTIVE";
+    status: UserStatus;
     name: string;
-    role: "ADMIN" | "MANAGER" | "SUPERVISOR" | "MANDOB" | "CASHIER";
+    role: UserRole.ADMIN | UserRole.MANAGER | UserRole.SUPERVISOR | UserRole.MANDOB | UserRole.CASHIER | UserRole.SALES;
     password?: string | undefined;
     email?: string | null | undefined;
     branch_id?: number | null | undefined;
 }, {
     phone: string;
     name: string;
-    role: "ADMIN" | "MANAGER" | "SUPERVISOR" | "MANDOB" | "CASHIER";
+    role: UserRole;
     password?: string | undefined;
-    status?: "ACTIVE" | "INACTIVE" | undefined;
+    status?: UserStatus | undefined;
     email?: string | null | undefined;
     branch_id?: number | null | undefined;
 }>;

@@ -1,0 +1,5 @@
+# Copy to gradle.properties (local only — do not commit secrets)
+# RELEASE_STORE_FILE=../keystore/engazpro-release.jks
+# RELEASE_STORE_PASSWORD=your-store-password
+# RELEASE_KEY_ALIAS=engazpro
+# RELEASE_KEY_PASSWORD=your-key-password

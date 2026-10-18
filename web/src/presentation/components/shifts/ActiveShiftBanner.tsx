@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Play, LogOut, Wallet, AlertCircle } from 'lucide-react';
+import { Play, LogOut, Wallet, AlertCircle, Printer } from 'lucide-react';
 import { formatCurrency } from '@pos-mandob/shared';
 import { apiClient } from '../../../data/api/client';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { OpenShiftModal } from './OpenShiftModal';
 import { CloseShiftModal } from './CloseShiftModal';
+import { ShiftZReportModal, ShiftZReportData } from './ShiftZReportModal';
 
 export const ActiveShiftBanner: React.FC = () => {
   const { canOperateShift } = usePermissions();
   const [isOpenModalOpen, setIsOpenModalOpen] = useState(false);
   const [isCloseModalOpen, setIsCloseModalOpen] = useState(false);
+  const [shiftForZReport, setShiftForZReport] = useState<ShiftZReportData | null>(null);
 
   const { data: shiftData, isLoading } = useQuery({
     queryKey: ['active-shift'],
@@ -22,10 +24,20 @@ export const ActiveShiftBanner: React.FC = () => {
     refetchInterval: 30000,
   });
 
+  const activeShift = shiftData;
+
+  const { data: latestClosedShift } = useQuery({
+    queryKey: ['my-latest-closed-shift', activeShift?.id],
+    queryFn: async () => {
+      const res = await apiClient.get('/shifts', { params: { per_page: 1 } });
+      const list = res.data?.data || [];
+      return list.length > 0 ? (list[0] as ShiftZReportData) : null;
+    },
+    enabled: !activeShift && canOperateShift,
+  });
+
   if (!canOperateShift) return null;
   if (isLoading) return null;
-
-  const activeShift = shiftData;
 
   return (
     <>
@@ -69,13 +81,28 @@ export const ActiveShiftBanner: React.FC = () => {
               <span>لا توجد وردية مفتوحة حالياً باسمك. افتح وردية لبدء تسجيل المبيعات النقدية والتحصيلات.</span>
             </div>
 
-            <button
-              onClick={() => setIsOpenModalOpen(true)}
-              className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-1.5 rounded-xl text-xs font-black transition-all shadow-sm"
-            >
-              <Play className="w-3.5 h-3.5 fill-current" />
-              <span>بدء وردية جديدة</span>
-            </button>
+            <div className="flex items-center gap-2">
+              {latestClosedShift && (
+                <button
+                  type="button"
+                  onClick={() => setShiftForZReport(latestClosedShift)}
+                  className="inline-flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm"
+                  title="طباعة بون إغلاق آخر وردية تم إغلاقها"
+                >
+                  <Printer className="w-3.5 h-3.5 text-amber-400" />
+                  <span>بون آخر وردية ({latestClosedShift.shift_number})</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setIsOpenModalOpen(true)}
+                className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-1.5 rounded-xl text-xs font-black transition-all shadow-sm"
+              >
+                <Play className="w-3.5 h-3.5 fill-current" />
+                <span>بدء وردية جديدة</span>
+              </button>
+            </div>
           </>
         )}
       </div>
@@ -89,9 +116,20 @@ export const ActiveShiftBanner: React.FC = () => {
         <CloseShiftModal
           isOpen={isCloseModalOpen}
           onClose={() => setIsCloseModalOpen(false)}
+          onClosedSuccess={(closedShift) => {
+            setIsCloseModalOpen(false);
+            setShiftForZReport(closedShift);
+          }}
           shift={activeShift}
         />
       )}
+
+      {/* Persistent Shift Z-Report Modal (Does not unmount when activeShift becomes null) */}
+      <ShiftZReportModal
+        isOpen={Boolean(shiftForZReport)}
+        onClose={() => setShiftForZReport(null)}
+        shift={shiftForZReport}
+      />
     </>
   );
 };

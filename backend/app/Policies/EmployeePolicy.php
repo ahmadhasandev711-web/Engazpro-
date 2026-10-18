@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Auth\Access\Response;
 
@@ -36,7 +37,7 @@ class EmployeePolicy
                 return Response::deny('عذراً، يمكنك تعديل بيانات موظفي فرعك فقط');
             }
             $roleVal = $employee->role instanceof \BackedEnum ? $employee->role->value : (string) $employee->role;
-            if (in_array($roleVal, ['OWNER', 'ADMIN', 'MANAGER'])) {
+            if (in_array($roleVal, [UserRole::OWNER->value, UserRole::ADMIN->value, UserRole::MANAGER->value], true)) {
                 return Response::deny('عذراً، لا تملك صلاحية تعديل بيانات هذا المستوى الإداري');
             }
             return Response::allow();

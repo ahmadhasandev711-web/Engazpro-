@@ -42,13 +42,13 @@ class ExpenseService
         }
 
         if (!empty($filters['date_from'])) {
-            $query->whereDate('date', '>=', $filters['date_from']);
+            $query->where('date', '>=', $filters['date_from']);
         }
         if (!empty($filters['date_to'])) {
-            $query->whereDate('date', '<=', $filters['date_to']);
+            $query->where('date', '<=', $filters['date_to'] . ' 23:59:59');
         }
 
-        $totalAmount = (float) (clone $query)->sum('amount');
+        $totalAmount = Money::of((clone $query)->sum('amount') ?? 0)->getAmount();
         $perPage = min((int) ($filters['per_page'] ?? 20), 100);
         $expenses = $query->latest()->paginate($perPage);
 

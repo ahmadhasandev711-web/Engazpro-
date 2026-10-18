@@ -22,11 +22,14 @@ class PaymentController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $payments = $this->paymentService->getPaymentsPaginated($request->user(), $request->all());
+        $filters = $request->all();
+        $payments = $this->paymentService->getPaymentsPaginated($request->user(), $filters);
+        $summary = $this->paymentService->getPaymentsSummary($request->user(), $filters);
 
         return response()->json([
             'success' => true,
             'data' => PaymentResource::collection($payments),
+            'summary' => $summary,
             'meta' => [
                 'current_page' => $payments->currentPage(),
                 'last_page' => $payments->lastPage(),

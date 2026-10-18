@@ -397,10 +397,10 @@ class TreasuryService
             ->latest('id');
 
         if (!empty($filters['date_from'])) {
-            $query->whereDate('date', '>=', $filters['date_from']);
+            $query->where('date', '>=', $filters['date_from']);
         }
         if (!empty($filters['date_to'])) {
-            $query->whereDate('date', '<=', $filters['date_to']);
+            $query->where('date', '<=', $filters['date_to'] . ' 23:59:59');
         }
 
         $perPage = min((int) ($filters['per_page'] ?? 30), 100);

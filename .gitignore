@@ -67,6 +67,8 @@ build-artifacts/
 public/build/
 public/hot
 public/storage
+*.apk
+*.aab
 
 # ------------------------------------------------------------------------------
 # 7. Framework Storage, Caches & Temporary Files

@@ -316,9 +316,9 @@ var EmployeeSchema = z.object({
   name: z.string().min(2, "\u0627\u0644\u0627\u0633\u0645 \u0645\u0637\u0644\u0648\u0628"),
   phone: z.string().min(8, "\u0631\u0642\u0645 \u0627\u0644\u0647\u0627\u062A\u0641 \u064A\u062C\u0628 \u0623\u0644\u0627 \u064A\u0642\u0644 \u0639\u0646 8 \u0623\u0631\u0642\u0627\u0645"),
   password: z.string().min(6, "\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u064A\u062C\u0628 \u0623\u0644\u0627 \u062A\u0642\u0644 \u0639\u0646 6 \u0623\u062D\u0631\u0641").optional().or(z.literal("")),
-  role: z.enum(["ADMIN", "MANAGER", "SUPERVISOR", "MANDOB", "CASHIER"], { errorMap: () => ({ message: "\u0627\u0644\u062F\u0648\u0631 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D" }) }),
+  role: z.nativeEnum(UserRole, { errorMap: () => ({ message: "\u0627\u0644\u062F\u0648\u0631 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D" }) }).refine((role) => role !== "OWNER" /* OWNER */, { message: "\u0644\u0627 \u064A\u0645\u0643\u0646 \u062A\u0639\u064A\u064A\u0646 \u062F\u0648\u0631 \u0645\u0627\u0644\u0643 \u0644\u0645\u0648\u0638\u0641" }),
   branch_id: z.number().optional().nullable(),
-  status: z.enum(["ACTIVE", "INACTIVE"]).default("ACTIVE"),
+  status: z.nativeEnum(UserStatus).default("ACTIVE" /* ACTIVE */),
   email: z.string().email("\u0628\u0631\u064A\u062F \u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A \u063A\u064A\u0631 \u0635\u0627\u0644\u062D").optional().nullable().or(z.literal(""))
 });
 var BranchSchema = z.object({

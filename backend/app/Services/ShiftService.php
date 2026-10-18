@@ -254,4 +254,36 @@ class ShiftService
             return $transaction;
         });
     }
+
+    /**
+     * استعلام قائمة الورديات مع الفلترة بالتاريخ والحالة والصفحات (متوافق مع الفهارس)
+     */
+    public function getShiftsPaginated(User $user, array $filters = []): \Illuminate\Contracts\Pagination\LengthAwarePaginator
+    {
+        $accountId = $user->getAccountId();
+        $isEmployee = $user->isMandob() || $user->isCashier();
+
+        $query = Shift::withoutGlobalScopes()
+            ->where('user_id', $accountId)
+            ->with(['creator', 'treasury', 'settledByUser'])
+            ->when($isEmployee, fn($q) => $q->where('created_by', $user->id))
+            ->when(!empty($filters['status']), fn($q) => $q->where('status', $filters['status']))
+            ->when(!empty($filters['created_by']) && !$isEmployee, fn($q) => $q->where('created_by', $filters['created_by']))
+            ->latest('id');
+
+        if (!empty($filters['date'])) {
+            $d = $filters['date'];
+            $query->where('opened_at', '>=', "{$d} 00:00:00")
+                  ->where('opened_at', '<=', "{$d} 23:59:59");
+        }
+        if (!empty($filters['date_from'])) {
+            $query->where('opened_at', '>=', "{$filters['date_from']} 00:00:00");
+        }
+        if (!empty($filters['date_to'])) {
+            $query->where('opened_at', '<=', "{$filters['date_to']} 23:59:59");
+        }
+
+        $perPage = min((int) ($filters['per_page'] ?? 20), 100);
+        return $query->paginate($perPage);
+    }
 }

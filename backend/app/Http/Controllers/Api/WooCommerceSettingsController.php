@@ -5,13 +5,13 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\WooCommerceIntegration;
 use App\Services\WooCommerce\WooCommerceApiClient;
-use App\Services\WooCommerce\WooCommerceProductImportService;
 use App\Services\WooCommerce\WooCommerceCustomerSyncService;
-use App\Models\Party;
+use App\Services\WooCommerce\WooCommerceBulkStockPushService;
+use App\Services\WooCommerce\WooCommerceProductImportService;
+use App\Jobs\ImportWooCommerceProductsJob;
+use App\Jobs\PushAllWooCommerceStocksJob;
 use App\Models\Product;
 use App\Models\Branch;
-use App\Models\BranchStock;
-use App\Models\ProductVariant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -20,9 +20,13 @@ class WooCommerceSettingsController extends Controller
 {
     public function __construct(
         protected WooCommerceApiClient $apiClient,
-        protected WooCommerceProductImportService $importService,
         protected WooCommerceCustomerSyncService $customerSyncService
     ) {}
+
+    protected function resolveImportService(): WooCommerceProductImportService
+    {
+        return app(WooCommerceProductImportService::class);
+    }
 
     protected function checkOwnerOrAdmin(Request $request): ?JsonResponse
     {
@@ -210,13 +214,26 @@ class WooCommerceSettingsController extends Controller
         }
 
         $importStock = $request->boolean('import_stock', false);
-        $result = $this->importService->importProducts($user, $integration, $importStock);
+        $accountId = $user->getAccountId();
+        $job = new ImportWooCommerceProductsJob($accountId, $user->id, $importStock);
+
+        if (config('queue.default') === 'sync') {
+            $result = $job->handle($this->resolveImportService());
+
+            return response()->json([
+                'success' => true,
+                'message' => "اكتمل استيراد الأصناف: تم إنشاء {$result['imported']} صنف جديد، وتحديث {$result['updated']} صنف.",
+                'data' => $result,
+            ]);
+        }
+
+        ImportWooCommerceProductsJob::dispatch($accountId, $user->id, $importStock);
 
         return response()->json([
             'success' => true,
-            'message' => "اكتمل استيراد الأصناف: تم إنشاء {$result['imported']} صنف جديد، وتحديث {$result['updated']} صنف.",
-            'data' => $result,
-        ]);
+            'message' => 'بدأ استيراد الأصناف من ووكومرس في الخلفية. راجع آخر مزامنة في الإعدادات بعد اكتمال العملية.',
+            'data' => ['status' => 'queued'],
+        ], 202);
     }
 
     /**
@@ -365,74 +382,38 @@ class WooCommerceSettingsController extends Controller
             ], 422);
         }
 
-        if (!empty($integration->online_branch_id)) {
-            $targetBranchIds = Branch::where('user_id', $accountId)
-                ->where('id', $integration->online_branch_id)
-                ->where('is_active', true)
-                ->pluck('id');
-        } else {
-            $targetBranchIds = Branch::where('user_id', $accountId)
-                ->whereIn('type', ['STORE', 'WAREHOUSE'])
-                ->where('is_active', true)
-                ->pluck('id');
-        }
-
-        $products = Product::where('user_id', $accountId)
+        $linkedCount = Product::where('user_id', $accountId)
             ->whereNotNull('wc_product_id')
-            ->with('variants')
-            ->get();
+            ->count();
 
-        if ($products->isEmpty()) {
+        if ($linkedCount === 0) {
             return response()->json([
                 'success' => false,
                 'message' => 'لا توجد أصناف مرتبطة بمتجر ووكومرس حالياً لمزامنة أرصدتها.',
             ], 422);
         }
 
-        $syncedCount = 0;
-        foreach ($products as $product) {
-            try {
-                if ($product->variants->isNotEmpty()) {
-                    foreach ($product->variants as $variant) {
-                        if ($variant->wc_variation_id) {
-                            $varStock = BranchStock::whereIn('branch_id', $targetBranchIds)
-                                ->where('product_id', $product->id)
-                                ->where('product_variant_id', $variant->id)
-                                ->sum('quantity');
+        $job = new PushAllWooCommerceStocksJob($accountId, $user->id);
 
-                            $this->apiClient->updateVariationStock(
-                                $integration,
-                                $product->wc_product_id,
-                                $variant->wc_variation_id,
-                                max(0, (float) $varStock)
-                            );
-                        }
-                    }
-                }
+        if (config('queue.default') === 'sync') {
+            $result = $job->handle(app(WooCommerceBulkStockPushService::class));
 
-                $totalStock = BranchStock::whereIn('branch_id', $targetBranchIds)
-                    ->where('product_id', $product->id)
-                    ->sum('quantity');
-
-                $this->apiClient->updateProductStock(
-                    $integration,
-                    $product->wc_product_id,
-                    max(0, (float) $totalStock)
-                );
-
-                $syncedCount++;
-            } catch (\Throwable $e) {
-                // Continue on individual failure
-            }
+            return response()->json([
+                'success' => true,
+                'message' => "تمت مزامنة وتحديث أرصدة {$result['synced_count']} صنف مع متجر ووكومرس بنجاح 🟢",
+                'data' => $result,
+            ]);
         }
+
+        PushAllWooCommerceStocksJob::dispatch($accountId, $user->id);
 
         return response()->json([
             'success' => true,
-            'message' => "تمت مزامنة وتحديث أرصدة {$syncedCount} صنف مع متجر ووكومرس بنجاح 🟢",
+            'message' => 'بدأت مزامنة الأرصدة مع ووكومرس في الخلفية. قد تستغرق العملية عدة دقائق حسب حجم الكتالوج.',
             'data' => [
-                'synced_count' => $syncedCount,
-                'total_linked_products' => $products->count(),
+                'status' => 'queued',
+                'total_linked_products' => $linkedCount,
             ],
-        ]);
+        ], 202);
     }
 }

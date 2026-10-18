@@ -21,7 +21,6 @@ class User extends Authenticatable
         'phone',
         'email',
         'password',
-        'is_admin',
         'owner_id',
         'branch_id',
         'base_salary',
@@ -29,7 +28,6 @@ class User extends Authenticatable
         'commission_rate',
         'role',
         'status',
-        'permissions',
     ];
 
     protected $hidden = [
@@ -97,7 +95,7 @@ class User extends Authenticatable
 
     public function isPartnerOrAdmin(): bool
     {
-        return $this->role?->value === 'ADMIN' || (bool) $this->is_admin;
+        return $this->role === UserRole::ADMIN || (bool) $this->is_admin;
     }
 
     public function isOwnerOrAdmin(): bool

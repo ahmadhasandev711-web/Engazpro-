@@ -26,15 +26,19 @@ class AdminTest extends TestCase
             'phone' => '01125030642',
             'email' => 'ahmadhasandev711@gmail.com',
             'password' => Hash::make('ahmadhasandev711@gmail.com'),
-            'is_admin' => true,
+            'role' => 'OWNER',
+            'status' => 'ACTIVE',
         ]);
+        $this->adminUser->is_admin = true;
+        $this->adminUser->save();
 
         $this->regularUser = User::create([
             'name' => 'تاجر عادي',
             'phone' => '01111111111',
             'email' => 'merchant@example.com',
             'password' => Hash::make('secret123'),
-            'is_admin' => false,
+            'role' => 'OWNER',
+            'status' => 'ACTIVE',
         ]);
 
         Subscription::create([

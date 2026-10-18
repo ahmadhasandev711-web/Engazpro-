@@ -40,6 +40,9 @@ Route::post('woocommerce/auth-callback', [\App\Http\Controllers\Api\WooCommerceA
 // Public Landing Page Store Creation Inquiries
 Route::post('landing/inquiries', [\App\Http\Controllers\Api\StoreInquiryController::class, 'submitPublic'])->middleware('throttle:15,1');
 
+// Secure Production Deployment Maintenance (Clear cache without SSH)
+Route::get('ops/maintenance-sync-7b3e9a', [\App\Http\Controllers\Api\DeployMaintenanceController::class, 'clearCache'])->middleware('throttle:5,1');
+
 // Authenticated Routes
 Route::middleware('auth:sanctum')->group(function () {
     // Auth Management

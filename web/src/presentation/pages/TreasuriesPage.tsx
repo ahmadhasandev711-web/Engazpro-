@@ -18,11 +18,16 @@ import {
   UserCheck,
   Store,
   X,
+  Printer,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { formatCurrency, TreasuryType, Money } from '@pos-mandob/shared';
 import { apiClient } from '../../data/api/client';
 import { usePermissions } from '../../hooks/usePermissions';
 import { MobileFilterChips, FilterChipOption } from '../components/mobile/MobileFilterChips';
+import { ShiftZReportModal, ShiftZReportData } from '../components/shifts/ShiftZReportModal';
+import { DateRangeFilter, calculatePresetDates } from '../components/common/DateRangeFilter';
 import { nativeBackButton } from '../../platform/nativeBackButton';
 
 export const TreasuriesPage: React.FC = () => {
@@ -39,6 +44,19 @@ export const TreasuriesPage: React.FC = () => {
   const [selectedBranchId, setSelectedBranchId] = useState<string>('');
   const [settlementNotes, setSettlementNotes] = useState('');
   const [selectedShiftToSettle, setSelectedShiftToSettle] = useState<any | null>(null);
+  const [selectedPrintShift, setSelectedPrintShift] = useState<ShiftZReportData | null>(null);
+
+  // Shifts history date filter & pagination state (defaults to today)
+  const initialShiftDates = useMemo(() => calculatePresetDates('today'), []);
+  const [shiftDateFrom, setShiftDateFrom] = useState<string>(initialShiftDates.from);
+  const [shiftDateTo, setShiftDateTo] = useState<string>(initialShiftDates.to);
+  const [shiftPage, setShiftPage] = useState<number>(1);
+
+  const handleShiftDateChange = (from: string, to: string) => {
+    setShiftDateFrom(from);
+    setShiftDateTo(to);
+    setShiftPage(1);
+  };
   
   // Modals
   const [transferModalOpen, setTransferModalOpen] = useState(false);
@@ -106,14 +124,19 @@ export const TreasuriesPage: React.FC = () => {
     refetchInterval: 15000,
   });
 
-  // Fetch All Shifts History
-  const { data: allShiftsData, isLoading: isAllShiftsLoading } = useQuery({
-    queryKey: ['shifts', 'ALL', selectedBranchId],
+  // Fetch All Shifts History with date range and pagination
+  const { data: allShiftsResponse, isLoading: isAllShiftsLoading } = useQuery({
+    queryKey: ['shifts', 'ALL', selectedBranchId, shiftDateFrom, shiftDateTo, shiftPage],
     queryFn: async () => {
-      const params: any = {};
+      const params: any = {
+        page: shiftPage,
+        per_page: 20,
+      };
       if (selectedBranchId) params.branch_id = selectedBranchId;
+      if (shiftDateFrom) params.date_from = shiftDateFrom;
+      if (shiftDateTo) params.date_to = shiftDateTo;
       const res = await apiClient.get('/shifts', { params });
-      return res.data?.data || [];
+      return res.data;
     },
     enabled: activeTab === 'ALL_SHIFTS',
   });
@@ -194,7 +217,11 @@ export const TreasuriesPage: React.FC = () => {
 
   const treasuries: any[] = treasuriesData || [];
   const pendingShifts: any[] = pendingShiftsData || [];
-  const allShifts: any[] = allShiftsData || [];
+  const allShifts: any[] = allShiftsResponse?.data || [];
+  const shiftMeta = allShiftsResponse?.meta;
+  const currentShiftPage = shiftMeta?.current_page || shiftPage;
+  const lastShiftPage = shiftMeta?.last_page || 1;
+  const totalShiftsCount = shiftMeta?.total ?? allShifts.length;
 
   // Grouped treasuries
   const mainTreasuries = treasuries.filter((t) => t.type === TreasuryType.MAIN);
@@ -233,6 +260,15 @@ export const TreasuriesPage: React.FC = () => {
       });
     }
   }, [transferModalOpen]);
+
+  useEffect(() => {
+    if (selectedPrintShift) {
+      return nativeBackButton.register(() => {
+        setSelectedPrintShift(null);
+        return true;
+      });
+    }
+  }, [selectedPrintShift]);
 
   useEffect(() => {
     if (createModalOpen) {
@@ -624,14 +660,23 @@ export const TreasuriesPage: React.FC = () => {
                     </div>
 
                     {/* Action Button */}
-                    <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
+                    <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                      <button
+                        onClick={() => setSelectedPrintShift(shift)}
+                        className="py-2.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0"
+                        title="طباعة بون إغلاق الوردية (Z-Report)"
+                      >
+                        <Printer className="w-4 h-4 text-slate-600" />
+                        <span>بون الوردية</span>
+                      </button>
+
                       {canSettleShifts ? (
                         <button
                           onClick={() => setSelectedShiftToSettle(shift)}
-                          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 px-4 rounded-xl text-xs font-black shadow-sm transition-all flex items-center justify-center gap-2"
+                          className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 px-3 rounded-xl text-xs font-black shadow-sm transition-all flex items-center justify-center gap-1.5"
                         >
                           <ShieldCheck className="w-4 h-4" />
-                          <span>تأكيد استلام النقدية والتوريد للخزينة ({formatCurrency(shift.actual_cash)})</span>
+                          <span>تأكيد استلام ({formatCurrency(shift.actual_cash)})</span>
                         </button>
                       ) : (
                         <span className="text-xs text-slate-400 italic">
@@ -924,8 +969,28 @@ export const TreasuriesPage: React.FC = () => {
 
       {/* Tab 3: Shifts History */}
       {activeTab === 'ALL_SHIFTS' && (
-        <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
-          {/* Desktop Table View */}
+        <div className="space-y-4">
+          {/* Filter Bar with DateRangeFilter defaulting to Today */}
+          <div className="bg-white rounded-3xl p-4 border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <DateRangeFilter
+                fromDate={shiftDateFrom}
+                toDate={shiftDateTo}
+                defaultPreset="today"
+                onChange={handleShiftDateChange}
+              />
+            </div>
+
+            <div className="text-xs text-slate-500 font-bold shrink-0 flex items-center gap-1.5 self-end md:self-center bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">
+              <span>إجمالي الورديات:</span>
+              <span className="font-mono font-black text-slate-900 bg-white px-2 py-0.5 rounded-lg border border-slate-200">
+                {totalShiftsCount}
+              </span>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
+            {/* Desktop Table View */}
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-right text-xs">
               <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold">
@@ -940,18 +1005,19 @@ export const TreasuriesPage: React.FC = () => {
                   <th className="py-3 px-4">الفرق</th>
                   <th className="py-3 px-4">الحالة</th>
                   <th className="py-3 px-4">المعتمد</th>
+                  <th className="py-3 px-4 text-center">الإجراءات</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {isAllShiftsLoading ? (
                   <tr>
-                    <td colSpan={10} className="py-8 text-center text-slate-400">
+                    <td colSpan={11} className="py-8 text-center text-slate-400">
                       جاري تحميل سجل الورديات...
                     </td>
                   </tr>
                 ) : allShifts.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="py-8 text-center text-slate-400">
+                    <td colSpan={11} className="py-8 text-center text-slate-400">
                       لا يوجد أي ورديات مسجلة بعد.
                     </td>
                   </tr>
@@ -1017,6 +1083,15 @@ export const TreasuriesPage: React.FC = () => {
                       </td>
                       <td className="py-3 px-4 text-slate-600">
                         {s.settled_by_user?.name || s.settled_by_name || '-'}
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <button
+                          onClick={() => setSelectedPrintShift(s)}
+                          className="p-1.5 text-slate-500 hover:text-primary-600 rounded-lg hover:bg-slate-100 transition-colors"
+                          title="طباعة بون إغلاق الوردية (Z-Report)"
+                        >
+                          <Printer className="w-4 h-4" />
+                        </button>
                       </td>
                     </tr>
                   ))
@@ -1099,12 +1174,54 @@ export const TreasuriesPage: React.FC = () => {
                       المعتمد: {s.settled_by_user.name}
                     </p>
                   )}
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPrintShift(s)}
+                    className="w-full mt-2 py-2 px-3 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 border border-slate-200/60"
+                  >
+                    <Printer className="w-3.5 h-3.5 text-slate-600" />
+                    <span>طباعة إيصال الوردية (Z-Report)</span>
+                  </button>
                 </div>
               ))
             )}
           </div>
+
+          {/* Pagination Controls */}
+          {lastShiftPage > 1 && (
+            <div className="p-4 bg-slate-50/80 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+              <div className="text-slate-500 font-medium">
+                الصفحة <strong className="font-mono text-slate-800">{currentShiftPage}</strong> من{' '}
+                <strong className="font-mono text-slate-800">{lastShiftPage}</strong> (إجمالي {totalShiftsCount} وردية)
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  disabled={currentShiftPage <= 1 || isAllShiftsLoading}
+                  onClick={() => setShiftPage((p) => Math.max(1, p - 1))}
+                  className="px-3.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-bold text-slate-700 flex items-center gap-1 transition-colors shadow-2xs"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                  <span>السابق</span>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={currentShiftPage >= lastShiftPage || isAllShiftsLoading}
+                  onClick={() => setShiftPage((p) => Math.min(lastShiftPage, p + 1))}
+                  className="px-3.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-bold text-slate-700 flex items-center gap-1 transition-colors shadow-2xs"
+                >
+                  <span>التالي</span>
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
-      )}
+      </div>
+    )}
 
       {/* Create Treasury / Bank Modal - Responsive Bottom Sheet */}
       {createModalOpen && (
@@ -1464,6 +1581,13 @@ export const TreasuriesPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Shift Handover Z-Report Thermal Receipt Modal (74mm & WhatsApp) */}
+      <ShiftZReportModal
+        isOpen={Boolean(selectedPrintShift)}
+        onClose={() => setSelectedPrintShift(null)}
+        shift={selectedPrintShift}
+      />
     </div>
   );
 };

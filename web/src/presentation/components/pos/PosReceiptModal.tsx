@@ -1,8 +1,9 @@
-import React, { useRef } from 'react';
-import { Printer, X, CheckCircle2, RotateCcw, Share2 } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { Printer, X, CheckCircle2, RotateCcw, Share2, Bluetooth } from 'lucide-react';
 import { formatCurrency } from '@pos-mandob/shared';
 import { useAuthStore } from '../../../data/store/useAuthStore';
 import { webShareService } from '../../../infrastructure/pwa/webShareService';
+import { thermalPrinterService } from '../../../infrastructure/hardware/thermalPrinter';
 
 interface PosReceiptModalProps {
   isOpen: boolean;
@@ -19,11 +20,58 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
 }) => {
   const user = useAuthStore((state) => state.user);
   const printRef = useRef<HTMLDivElement>(null);
+  const [isBluetoothPrinting, setIsBluetoothPrinting] = useState(false);
 
   if (!isOpen || !invoice) return null;
 
+  const storeIdentity = user?.store_identity;
+  const storeName = storeIdentity?.business_name || (user as any)?.store_name || user?.name || 'متجر إنجاز برو';
+  const storePhone = storeIdentity?.store_phone || user?.phone;
+  const storeAddress = storeIdentity?.store_address;
+  const currencySymbol = storeIdentity?.currency || 'ج.م';
+  const cashierName = invoice.creator?.name || invoice.created_by_name || user?.name || 'كاشير';
+  const dateStr = invoice.date || new Date().toISOString().split('T')[0];
+  const timeStr = invoice.created_at
+    ? new Date(invoice.created_at).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })
+    : new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleBluetoothPrint = async () => {
+    if (!thermalPrinterService.isSupported()) return;
+    setIsBluetoothPrinting(true);
+    try {
+      const lines = (invoice.items || []).map((item: any) => ({
+        name: item.product_name || item.name || 'صنف',
+        quantity: Number(item.quantity) || 0,
+        unitPrice: Number(item.unit_price ?? item.price) || 0,
+        lineTotal: Number(item.total ?? item.line_total) || 0,
+      }));
+      await thermalPrinterService.printReceipt({
+        storeName,
+        storePhone,
+        storeAddress,
+        invoiceNumber: String(invoice.invoice_number || invoice.id),
+        dateLabel: dateStr,
+        timeLabel: timeStr,
+        cashierName,
+        customerName: invoice.party?.name || invoice.party_name || 'عميل نقدي',
+        lines,
+        subtotal: Number(invoice.subtotal ?? invoice.total) || 0,
+        discount: Number(invoice.discount) || 0,
+        shipping: Number(invoice.shipping_amount ?? invoice.shipping_cost) || 0,
+        total: Number(invoice.total_amount ?? invoice.total) || 0,
+        paidAmount: Number(invoice.paid_amount ?? invoice.total) || 0,
+        currencySymbol,
+      });
+    } catch (err) {
+      console.error('Bluetooth print failed:', err);
+      window.alert('تعذر الطباعة على الطابعة. تأكد من إقران الطابعة الحرارية عبر البلوتوث.');
+    } finally {
+      setIsBluetoothPrinting(false);
+    }
   };
 
   const handleShareWhatsApp = async () => {
@@ -44,16 +92,7 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
   };
 
   const items = invoice.items || [];
-  const storeIdentity = user?.store_identity;
-  const storeName = storeIdentity?.business_name || (user as any)?.store_name || user?.name || 'متجر إنجاز برو';
-  const storePhone = storeIdentity?.store_phone || user?.phone;
-  const storeAddress = storeIdentity?.store_address;
-  const currencySymbol = storeIdentity?.currency || 'ج.م';
-  const cashierName = invoice.creator?.name || invoice.created_by_name || user?.name || 'كاشير';
-  const dateStr = invoice.date || new Date().toISOString().split('T')[0];
-  const timeStr = invoice.created_at
-    ? new Date(invoice.created_at).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })
-    : new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+  const showBluetoothPrint = thermalPrinterService.isSupported();
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
@@ -227,20 +266,32 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
 
         {/* Modal Buttons */}
         <div className="p-4 bg-white border-t border-slate-200 space-y-2 no-print">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handlePrint}
-              className="flex-1 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white py-3 rounded-2xl text-xs font-black shadow-md shadow-emerald-700/20 transition-all flex items-center justify-center gap-1.5"
-            >
-              <Printer className="w-4 h-4" />
-              <span>طباعة الإيصال</span>
-            </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            {showBluetoothPrint ? (
+              <button
+                type="button"
+                onClick={handleBluetoothPrint}
+                disabled={isBluetoothPrinting}
+                className="flex-1 min-w-[45%] bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white py-3 rounded-2xl text-xs font-black shadow-md shadow-emerald-700/20 transition-all flex items-center justify-center gap-1.5"
+              >
+                <Bluetooth className="w-4 h-4" />
+                <span>{isBluetoothPrinting ? 'جاري الطباعة...' : 'طباعة بلوتوث'}</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handlePrint}
+                className="flex-1 min-w-[45%] bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white py-3 rounded-2xl text-xs font-black shadow-md shadow-emerald-700/20 transition-all flex items-center justify-center gap-1.5"
+              >
+                <Printer className="w-4 h-4" />
+                <span>طباعة الإيصال</span>
+              </button>
+            )}
 
             <button
               type="button"
               onClick={handleShareWhatsApp}
-              className="flex-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 py-3 rounded-2xl text-xs font-black transition-all active:scale-98 flex items-center justify-center gap-1.5 shadow-2xs"
+              className="flex-1 min-w-[45%] bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 py-3 rounded-2xl text-xs font-black transition-all active:scale-98 flex items-center justify-center gap-1.5 shadow-2xs"
             >
               <Share2 className="w-4 h-4 text-emerald-600" />
               <span>مشاركة واتساب</span>
@@ -268,41 +319,62 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
         </div>
       </div>
 
-      {/* Embedded Print CSS for 80mm thermal receipt printers */}
+      {/* Embedded Print CSS for 80mm thermal receipt printers (Calibrated to 72mm printable area, strict 1-page output) */}
       <style>{`
         @media print {
           @page {
             size: 80mm auto;
-            margin: 0;
+            margin: 0 !important;
           }
           html, body {
             margin: 0 !important;
             padding: 0 !important;
             width: 80mm !important;
+            height: auto !important;
+            min-height: 0 !important;
+            max-height: 100% !important;
+            overflow: hidden !important;
             background: white !important;
           }
-          body * {
-            visibility: hidden;
-          }
-          .printable-area, .printable-area * {
-            visibility: hidden !important;
+          body *:not(:has(#pos-thermal-receipt)):not(#pos-thermal-receipt):not(#pos-thermal-receipt *):not(style) {
             display: none !important;
+          }
+          #root, body *:has(#pos-thermal-receipt) {
+            position: static !important;
+            display: block !important;
+            width: 80mm !important;
+            height: auto !important;
+            min-height: 0 !important;
+            max-height: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: none !important;
+            box-shadow: none !important;
+            background: white !important;
+            overflow: visible !important;
+            transform: none !important;
           }
           #pos-thermal-receipt, #pos-thermal-receipt * {
             visibility: visible !important;
           }
           #pos-thermal-receipt {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 80mm !important;
-            max-width: 80mm !important;
-            padding: 3mm 2mm !important;
-            margin: 0 !important;
+            position: relative !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            margin: 0 auto !important;
+            width: 72mm !important;
+            max-width: 72mm !important;
+            box-sizing: border-box !important;
+            padding: 2mm 3.5mm !important;
             border: none !important;
             box-shadow: none !important;
             font-size: 11px !important;
             line-height: 1.35 !important;
+            page-break-after: avoid !important;
+            break-after: avoid !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
           }
           .no-print {
             display: none !important;

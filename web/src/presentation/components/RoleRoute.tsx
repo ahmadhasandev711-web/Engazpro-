@@ -14,8 +14,10 @@ export const RoleRoute: React.FC<RoleRouteProps> = ({ allowedRoles }) => {
     return <Navigate to="/login" replace />;
   }
 
-  const role = user?.role || UserRole.OWNER;
-  const isAllowed = allowedRoles.includes(role);
+  const role = (user?.role as UserRole | string | undefined) || UserRole.OWNER;
+  const isAllowed = allowedRoles.some(
+    (allowed) => String(allowed) === String(role)
+  );
 
   if (!isAllowed) {
     return <Navigate to="/dashboard" replace />;

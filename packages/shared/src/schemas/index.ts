@@ -1,5 +1,13 @@
 import { z } from 'zod';
-import { InvoiceType, PaymentMethod, PartyType, BranchType, BarcodeLabelSize } from '../enums';
+import {
+  InvoiceType,
+  PaymentMethod,
+  PartyType,
+  BranchType,
+  BarcodeLabelSize,
+  UserRole,
+  UserStatus,
+} from '../enums';
 
 // Auth Schemas
 export const LoginSchema = z.object({
@@ -165,9 +173,11 @@ export const EmployeeSchema = z.object({
   name: z.string().min(2, 'الاسم مطلوب'),
   phone: z.string().min(8, 'رقم الهاتف يجب ألا يقل عن 8 أرقام'),
   password: z.string().min(6, 'كلمة المرور يجب ألا تقل عن 6 أحرف').optional().or(z.literal('')),
-  role: z.enum(['ADMIN', 'MANAGER', 'SUPERVISOR', 'MANDOB', 'CASHIER'], { errorMap: () => ({ message: 'الدور غير صالح' }) }),
+  role: z
+    .nativeEnum(UserRole, { errorMap: () => ({ message: 'الدور غير صالح' }) })
+    .refine((role) => role !== UserRole.OWNER, { message: 'لا يمكن تعيين دور مالك لموظف' }),
   branch_id: z.number().optional().nullable(),
-  status: z.enum(['ACTIVE', 'INACTIVE']).default('ACTIVE'),
+  status: z.nativeEnum(UserStatus).default(UserStatus.ACTIVE),
   email: z.string().email('بريد إلكتروني غير صالح').optional().nullable().or(z.literal('')),
 });
 

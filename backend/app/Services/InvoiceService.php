@@ -643,13 +643,13 @@ class InvoiceService
     }
 
     /**
-     * استعلام قائمة الفواتير مع التصفية والبحث والصفحات
+     * بناء استعلام الفواتير المفلتر بشكل مركزي موحد (DRY)
      */
-    public function getInvoicesPaginated(User $user, array $filters = []): \Illuminate\Contracts\Pagination\LengthAwarePaginator
+    protected function buildFilteredInvoicesQuery(User $user, array $filters = []): \Illuminate\Database\Eloquent\Builder
     {
         $isEmployee = $user->isMandob() || $user->isCashier();
 
-        $query = Invoice::with(['party', 'creator', 'salesperson'])
+        $query = Invoice::query()
             ->when($isEmployee, fn($q) => $q->where('created_by', $user->id))
             ->when($user->isManager() && $user->branch_id, fn($q) => $q->where('branch_id', $user->branch_id))
             ->when(!empty($filters['branch_id']) && $user->isOwnerOrAdmin(), fn($q) => $q->where('branch_id', $filters['branch_id']));
@@ -658,30 +658,50 @@ class InvoiceService
             $query->where('type', $filters['type']);
         }
 
-        if (!empty($filters['created_by'])) {
-            if (!$isEmployee) {
-                $query->where('created_by', $filters['created_by']);
-            }
+        if (!empty($filters['created_by']) && !$isEmployee) {
+            $query->where('created_by', $filters['created_by']);
         }
 
         if (!empty($filters['search'])) {
             $search = $filters['search'];
             $query->where(function ($q) use ($search) {
                 $q->where('invoice_number', 'like', "%{$search}%")
-                  ->orWhereHas('party', function ($pq) use ($search) {
-                      $pq->where('name', 'like', "%{$search}%");
-                  });
+                  ->orWhereHas('party', fn($pq) => $pq->where('name', 'like', "%{$search}%"));
             });
         }
 
         if (!empty($filters['date_from'])) {
-            $query->whereDate('date', '>=', $filters['date_from']);
+            $query->where('date', '>=', $filters['date_from']);
         }
         if (!empty($filters['date_to'])) {
-            $query->whereDate('date', '<=', $filters['date_to']);
+            $query->where('date', '<=', $filters['date_to'] . ' 23:59:59');
         }
 
+        return $query;
+    }
+
+    /**
+     * استعلام قائمة الفواتير مع التصفية والبحث والصفحات
+     */
+    public function getInvoicesPaginated(User $user, array $filters = []): \Illuminate\Contracts\Pagination\LengthAwarePaginator
+    {
         $perPage = min((int) ($filters['per_page'] ?? 20), 100);
-        return $query->latest()->paginate($perPage);
+
+        return $this->buildFilteredInvoicesQuery($user, $filters)
+            ->with(['party', 'creator', 'salesperson'])
+            ->latest()
+            ->paginate($perPage);
+    }
+
+    /**
+     * حساب إجمالي الفواتير للفترة المفلترة بدقة عبر كائن Money
+     */
+    public function getInvoicesSummary(User $user, array $filters = []): array
+    {
+        $query = $this->buildFilteredInvoicesQuery($user, $filters);
+
+        return [
+            'total_amount' => Money::of($query->sum('total') ?? 0)->getAmount(),
+        ];
     }
 }

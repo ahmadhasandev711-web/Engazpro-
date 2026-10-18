@@ -1,35 +1,44 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Trash2, ArrowDownLeft, ArrowUpRight, AlertCircle, X, CheckCircle2, Receipt } from 'lucide-react';
+import { Plus, Search, Trash2, ArrowDownLeft, ArrowUpRight, AlertCircle, X, CheckCircle2, Receipt, Printer } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { PaymentSchema, PaymentInput, PaymentMethod, Party, formatCurrency } from '@pos-mandob/shared';
 import { apiClient } from '../../data/api/client';
 import { usePermissions } from '../../hooks/usePermissions';
-import { DateRangeFilter } from '../components/common/DateRangeFilter';
+import { DateRangeFilter, calculatePresetDates } from '../components/common/DateRangeFilter';
+import { PaginationBar } from '../components/common/PaginationBar';
 import { PaymentMobileCard } from '../components/mobile/PaymentMobileCard';
 import { MobileFilterChips, FilterChipOption } from '../components/mobile/MobileFilterChips';
+import { PaymentReceiptModal, PaymentReceiptData } from '../components/payments/PaymentReceiptModal';
 import { nativeBackButton } from '../../platform/nativeBackButton';
 
 export const PaymentsPage: React.FC = () => {
   const queryClient = useQueryClient();
   const { canDeletePayment, isOwner } = usePermissions();
+  const initialDates = calculatePresetDates('today');
   const [activeTab, setActiveTab] = useState<'ALL' | 'RECEIPT' | 'PAYMENT'>(isOwner ? 'ALL' : 'RECEIPT');
   const [search, setSearch] = useState('');
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
-  const [fromDate, setFromDate] = useState<string>('');
-  const [toDate, setToDate] = useState<string>('');
+  const [fromDate, setFromDate] = useState<string>(initialDates.from);
+  const [toDate, setToDate] = useState<string>(initialDates.to);
+  const [page, setPage] = useState<number>(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedPrintPayment, setSelectedPrintPayment] = useState<PaymentReceiptData | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Hardware back button listener for modal
   useEffect(() => {
-    if (!isModalOpen) return;
+    if (!isModalOpen && !selectedPrintPayment) return;
     return nativeBackButton.register(() => {
+      if (selectedPrintPayment) {
+        setSelectedPrintPayment(null);
+        return true;
+      }
       setIsModalOpen(false);
       return true;
     });
-  }, [isModalOpen]);
+  }, [isModalOpen, selectedPrintPayment]);
 
   const { data: employeesData } = useQuery({
     queryKey: ['employees-filter'],
@@ -63,18 +72,21 @@ export const PaymentsPage: React.FC = () => {
 
   // Queries
   const { data: paymentsData, isLoading } = useQuery({
-    queryKey: ['payments', activeTab, selectedEmployeeId, fromDate, toDate],
+    queryKey: ['payments', activeTab, selectedEmployeeId, search, fromDate, toDate, page],
     queryFn: async () => {
       const res = await apiClient.get('/payments', {
         params: {
           type: activeTab === 'ALL' ? undefined : activeTab,
           created_by: selectedEmployeeId || undefined,
+          search: search || undefined,
           date_from: fromDate || undefined,
           date_to: toDate || undefined,
+          page,
         },
       });
       return res.data;
     },
+    placeholderData: (previousData) => previousData,
   });
 
   const targetPartyType = selectedType === 'RECEIPT' ? 'CUSTOMER' : 'SUPPLIER';
@@ -91,17 +103,22 @@ export const PaymentsPage: React.FC = () => {
 
   const availableParties = partiesData || [];
   const payments = paymentsData?.data || [];
+  const meta = paymentsData?.meta;
+  const summary = paymentsData?.summary;
 
   // Mutations
   const createMutation = useMutation({
     mutationFn: async (data: PaymentInput) => {
       return apiClient.post('/payments', data);
     },
-    onSuccess: () => {
+    onSuccess: (res: any) => {
       queryClient.invalidateQueries({ queryKey: ['payments'] });
       queryClient.invalidateQueries({ queryKey: ['parties'] });
       setIsModalOpen(false);
       reset();
+      if (res?.data?.data) {
+        setSelectedPrintPayment(res.data.data);
+      }
     },
     onError: (err: any) => {
       setErrorMessage(err.response?.data?.message || 'حدث خطأ أثناء حفظ السند');
@@ -133,30 +150,29 @@ export const PaymentsPage: React.FC = () => {
     createMutation.mutate(data);
   };
 
-  const filteredPayments = payments.filter((p: any) => {
-    if (!search) return true;
-    return (
-      p.party_name?.toLowerCase().includes(search.toLowerCase()) ||
-      p.notes?.toLowerCase().includes(search.toLowerCase()) ||
-      p.id.toString().includes(search)
-    );
-  });
+  const filteredPayments = payments;
 
   const paymentFilterChips: FilterChipOption<'ALL' | 'RECEIPT' | 'PAYMENT'>[] = [
-    { id: 'ALL', label: 'جميع السندات', count: payments.length },
+    { id: 'ALL', label: 'جميع السندات', count: meta?.total ?? payments.length },
     {
       id: 'RECEIPT',
       label: 'سندات قبض',
-      count: payments.filter((p: any) => p.type === 'RECEIPT').length,
       icon: ArrowDownLeft,
     },
     {
       id: 'PAYMENT',
       label: 'سندات صرف',
-      count: payments.filter((p: any) => p.type === 'PAYMENT').length,
       icon: ArrowUpRight,
     },
   ];
+
+  const totalReceiptsAmount = summary?.total_receipts ?? filteredPayments
+    .filter((p: any) => p.type === 'RECEIPT')
+    .reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0);
+
+  const totalPaymentsAmount = summary?.total_payments ?? filteredPayments
+    .filter((p: any) => p.type === 'PAYMENT')
+    .reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0);
 
   return (
     <div className="space-y-6 flex flex-col h-full">
@@ -195,28 +211,20 @@ export const PaymentsPage: React.FC = () => {
         <div>
           <div className="flex items-center gap-1 text-[11px] font-bold opacity-90">
             <Receipt className="w-3.5 h-3.5" />
-            <span>سندات الحركة ({filteredPayments.length})</span>
+            <span>سندات الحركة ({meta?.total ?? filteredPayments.length})</span>
           </div>
           <div className="flex items-center gap-3 mt-0.5">
             <div>
               <span className="text-[10px] text-emerald-200 block">المقبوض</span>
               <span className="text-lg font-black tracking-tight">
-                {formatCurrency(
-                  filteredPayments
-                    .filter((p: any) => p.type === 'RECEIPT')
-                    .reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0)
-                )}
+                {formatCurrency(totalReceiptsAmount)}
               </span>
             </div>
             {isOwner && (
               <div className="border-r border-white/20 pr-3">
                 <span className="text-[10px] text-rose-200 block">المنصرف</span>
                 <span className="text-base font-bold text-rose-100">
-                  {formatCurrency(
-                    filteredPayments
-                      .filter((p: any) => p.type === 'PAYMENT')
-                      .reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0)
-                  )}
+                  {formatCurrency(totalPaymentsAmount)}
                 </span>
               </div>
             )}
@@ -259,7 +267,10 @@ export const PaymentsPage: React.FC = () => {
                 <MobileFilterChips
                   options={paymentFilterChips}
                   selectedId={activeTab}
-                  onSelect={(id) => setActiveTab(id)}
+                  onSelect={(id) => {
+                    setActiveTab(id);
+                    setPage(1);
+                  }}
                 />
               </div>
 
@@ -267,7 +278,10 @@ export const PaymentsPage: React.FC = () => {
               <div className="hidden md:flex items-center gap-1 bg-slate-100 p-1 rounded-xl w-full sm:w-auto overflow-x-auto no-scrollbar scroll-smooth">
                 <button
                   type="button"
-                  onClick={() => setActiveTab('ALL')}
+                  onClick={() => {
+                    setActiveTab('ALL');
+                    setPage(1);
+                  }}
                   className={`flex-shrink-0 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
                     activeTab === 'ALL' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
                   }`}
@@ -276,7 +290,10 @@ export const PaymentsPage: React.FC = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setActiveTab('RECEIPT')}
+                  onClick={() => {
+                    setActiveTab('RECEIPT');
+                    setPage(1);
+                  }}
                   className={`flex-shrink-0 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 whitespace-nowrap ${
                     activeTab === 'RECEIPT' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
                   }`}
@@ -286,7 +303,10 @@ export const PaymentsPage: React.FC = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setActiveTab('PAYMENT')}
+                  onClick={() => {
+                    setActiveTab('PAYMENT');
+                    setPage(1);
+                  }}
                   className={`flex-shrink-0 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 whitespace-nowrap ${
                     activeTab === 'PAYMENT' ? 'bg-rose-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
                   }`}
@@ -310,7 +330,10 @@ export const PaymentsPage: React.FC = () => {
               type="text"
               placeholder="بحث بالاسم أو البيان أو رقم السند..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
               className="w-full pl-3 pr-9 py-1.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
@@ -319,7 +342,10 @@ export const PaymentsPage: React.FC = () => {
             <div className="sm:w-52">
               <select
                 value={selectedEmployeeId}
-                onChange={(e) => setSelectedEmployeeId(e.target.value)}
+                onChange={(e) => {
+                  setSelectedEmployeeId(e.target.value);
+                  setPage(1);
+                }}
                 className="w-full border border-slate-200 rounded-lg text-xs px-2.5 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500 font-medium"
               >
                 <option value="">جميع المحصلين (الكل)</option>
@@ -338,10 +364,11 @@ export const PaymentsPage: React.FC = () => {
           <DateRangeFilter
             fromDate={fromDate}
             toDate={toDate}
-            defaultPreset="all"
+            defaultPreset="today"
             onChange={(from, to) => {
               setFromDate(from);
               setToDate(to);
+              setPage(1);
             }}
           />
         </div>
@@ -423,15 +450,24 @@ export const PaymentsPage: React.FC = () => {
                         </td>
                         <td className="py-3.5 px-4 text-slate-500 max-w-xs truncate">{p.notes || '-'}</td>
                         <td className="py-3.5 px-4 text-center">
-                          {canDeletePayment && (
+                          <div className="flex items-center justify-center gap-1">
                             <button
-                              onClick={() => handleDelete(p.id)}
-                              className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-slate-100 transition-colors"
-                              title="إلغاء السند"
+                              onClick={() => setSelectedPrintPayment(p)}
+                              className="p-1.5 text-slate-500 hover:text-primary-600 rounded-lg hover:bg-slate-100 transition-colors"
+                              title="طباعة / مشاركة إيصال السند"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <Printer className="w-4 h-4" />
                             </button>
-                          )}
+                            {canDeletePayment && (
+                              <button
+                                onClick={() => handleDelete(p.id)}
+                                className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-slate-100 transition-colors"
+                                title="إلغاء السند"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -449,9 +485,19 @@ export const PaymentsPage: React.FC = () => {
                   isOwner={isOwner}
                   canDelete={canDeletePayment}
                   onDelete={handleDelete}
+                  onPrint={(payment) => setSelectedPrintPayment(payment)}
                 />
               ))}
             </div>
+
+            <PaginationBar
+              currentPage={meta?.current_page || page}
+              lastPage={meta?.last_page || 1}
+              total={meta?.total || filteredPayments.length}
+              perPage={meta?.per_page || 20}
+              onPageChange={(newPage) => setPage(newPage)}
+              itemLabel="سند"
+            />
           </>
         )}
       </div>
@@ -607,6 +653,13 @@ export const PaymentsPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Payment Voucher Receipt Modal (74mm Thermal & WhatsApp) */}
+      <PaymentReceiptModal
+        isOpen={Boolean(selectedPrintPayment)}
+        onClose={() => setSelectedPrintPayment(null)}
+        payment={selectedPrintPayment}
+      />
     </div>
   );
 };

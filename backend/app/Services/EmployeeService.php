@@ -2,10 +2,13 @@
 
 namespace App\Services;
 
+use App\Enums\UserRole;
+use App\Enums\UserStatus;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\User;
 use App\Exceptions\EmployeeDomainException;
+use App\Support\Money;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -36,11 +39,13 @@ class EmployeeService
 
         $employeeIds = $employeeList->pluck('id');
 
+        $dayRange = [$today, $today . ' 23:59:59'];
+
         // استعلام تجميعي واحد لمبيعات اليوم
         $salesStats = Invoice::selectRaw('created_by, SUM(total) as total_sales, COUNT(*) as invoices_count')
             ->whereIn('created_by', $employeeIds)
             ->where('type', 'SALE')
-            ->whereDate('date', $today)
+            ->whereBetween('date', $dayRange)
             ->groupBy('created_by')
             ->get()
             ->keyBy('created_by');
@@ -49,7 +54,7 @@ class EmployeeService
         $collectionsStats = Payment::selectRaw('created_by, SUM(amount) as total_collections')
             ->whereIn('created_by', $employeeIds)
             ->where('type', 'RECEIPT')
-            ->whereDate('date', $today)
+            ->whereBetween('date', $dayRange)
             ->groupBy('created_by')
             ->get()
             ->keyBy('created_by');
@@ -74,15 +79,15 @@ class EmployeeService
                 ] : null,
                 'role' => $emp->role,
                 'status' => $emp->status,
-                'base_salary' => (float) ($emp->base_salary ?? 0),
+                'base_salary' => Money::of($emp->base_salary ?? 0)->getAmount(),
                 'commission_type' => $emp->commission_type?->value ?? ($emp->commission_type ?? 'NONE'),
-                'commission_rate' => (float) ($emp->commission_rate ?? 0),
+                'commission_rate' => Money::of($emp->commission_rate ?? 0)->getAmount(),
                 'is_eligible_for_payroll' => $emp->isEligibleForPayroll(),
                 'created_at' => $emp->created_at->toIso8601String(),
                 'today_stats' => $isManagement ? [
-                    'sales' => (float) ($empSales->total_sales ?? 0),
+                    'sales' => Money::of($empSales->total_sales ?? 0)->getAmount(),
                     'invoices_count' => (int) ($empSales->invoices_count ?? 0),
-                    'collections' => (float) ($empCollections->total_collections ?? 0),
+                    'collections' => Money::of($empCollections->total_collections ?? 0)->getAmount(),
                 ] : null,
             ];
         })->values();
@@ -97,18 +102,19 @@ class EmployeeService
             $accountId = $user->getAccountId();
 
             $employee = User::create([
-                'owner_id' => $accountId,
                 'branch_id' => $data['branch_id'] ?? null,
                 'name' => $data['name'],
                 'phone' => $data['phone'],
                 'email' => $data['email'] ?? null,
                 'password' => Hash::make($data['password']),
-                'role' => $data['role'],
                 'base_salary' => $data['base_salary'] ?? 0.00,
                 'commission_type' => $data['commission_type'] ?? 'NONE',
                 'commission_rate' => $data['commission_rate'] ?? 0.00,
-                'status' => 'ACTIVE',
+                'status' => UserStatus::ACTIVE,
             ]);
+            $employee->owner_id = $accountId;
+            $employee->role = $data['role'] instanceof UserRole ? $data['role'] : UserRole::from($data['role']);
+            $employee->save();
 
             // تهيئة درج الكاشير أو عهدة المندوب تلقائياً داخل نفس المعاملة
             if ($employee->isCashier() || $employee->isMandob()) {
@@ -129,7 +135,6 @@ class EmployeeService
                 'name' => $data['name'],
                 'phone' => $data['phone'],
                 'email' => $data['email'] ?? null,
-                'role' => $data['role'],
                 'branch_id' => $data['branch_id'] ?? null,
             ];
 
@@ -148,6 +153,8 @@ class EmployeeService
             }
 
             $employee->update($updateData);
+            $employee->role = $data['role'] instanceof UserRole ? $data['role'] : UserRole::from($data['role']);
+            $employee->save();
 
             return $employee->fresh()->load('branch:id,name,code,type');
         });

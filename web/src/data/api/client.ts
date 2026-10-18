@@ -27,8 +27,9 @@ export const apiClient = axios.create({
   timeout: 20000,
 });
 
-// Interceptor لإرفاق Token المصادقة من التخزين المشفر
-apiClient.interceptors.request.use((config) => {
+// Interceptor لإرفاق Token بعد اكتمال تهيئة التخزين الآمن (يتجنب مسح الجلسة عند الإقلاع البارد)
+apiClient.interceptors.request.use(async (config) => {
+  await secureStorage.whenReady();
   const token = secureStorage.getToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;

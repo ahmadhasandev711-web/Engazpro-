@@ -14,6 +14,8 @@ class PaymentResource extends JsonResource
             'party_id' => $this->party_id,
             'party_name' => $this->party?->name,
             'party_type' => $this->party?->type,
+            'party_phone' => $this->party?->phone,
+            'party_balance' => (float) ($this->party?->balance ?? 0),
             'invoice_id' => $this->invoice_id,
             'invoice_number' => $this->invoice?->invoice_number,
             'type' => $this->type instanceof \BackedEnum ? $this->type->value : $this->type,

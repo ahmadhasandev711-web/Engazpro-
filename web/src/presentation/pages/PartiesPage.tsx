@@ -25,6 +25,7 @@ import { exportPartiesToExcel } from '../utils/excelExport';
 import { usePermissions } from '../../hooks/usePermissions';
 import { MobileFilterChips, FilterChipOption } from '../components/mobile/MobileFilterChips';
 import { PartyMobileCard } from '../components/mobile/PartyMobileCard';
+import { PaginationBar } from '../components/common/PaginationBar';
 import { nativeBackButton } from '../../platform/nativeBackButton';
 
 export const PartiesPage: React.FC = () => {
@@ -42,26 +43,34 @@ export const PartiesPage: React.FC = () => {
   const Icon = isSupplier ? Truck : Users;
 
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState<number>(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingParty, setEditingParty] = useState<Party | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  useEffect(() => {
+    setPage(1);
+  }, [type]);
+
   // Fetch Parties
   const { data, isLoading } = useQuery({
-    queryKey: ['parties', type, search],
+    queryKey: ['parties', type, search, page],
     queryFn: async () => {
       const res = await apiClient.get('/parties', {
         params: {
           type,
           search: search || undefined,
+          page,
         },
       });
       return res.data;
     },
+    placeholderData: (previousData) => previousData,
   });
 
   const parties: Party[] = data?.data || [];
+  const meta = data?.meta;
 
   // Form handling
   const {
@@ -289,7 +298,10 @@ export const PartiesPage: React.FC = () => {
             type="text"
             placeholder={`البحث بالاسم أو رقم هاتف ${isSupplier ? 'المورد' : 'العميل'}...`}
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
             className="w-full pl-4 pr-9 sm:pr-10 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:bg-white text-right"
           />
         </div>
@@ -426,6 +438,15 @@ export const PartiesPage: React.FC = () => {
                 />
               ))}
             </div>
+
+            <PaginationBar
+              currentPage={meta?.current_page || page}
+              lastPage={meta?.last_page || 1}
+              total={meta?.total || displayedParties.length}
+              perPage={meta?.per_page || 20}
+              onPageChange={(newPage) => setPage(newPage)}
+              itemLabel={isSupplier ? 'مورد' : 'عميل'}
+            />
           </>
         )}
       </div>

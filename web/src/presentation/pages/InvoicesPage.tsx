@@ -6,7 +6,8 @@ import { InvoiceType, formatCurrency } from '@pos-mandob/shared';
 import { apiClient } from '../../data/api/client';
 import { exportInvoicesToExcel } from '../utils/excelExport';
 import { usePermissions } from '../../hooks/usePermissions';
-import { DateRangeFilter } from '../components/common/DateRangeFilter';
+import { DateRangeFilter, calculatePresetDates } from '../components/common/DateRangeFilter';
+import { PaginationBar } from '../components/common/PaginationBar';
 import { PosReceiptModal } from '../components/pos/PosReceiptModal';
 import { InvoiceMobileCard } from '../components/mobile/InvoiceMobileCard';
 import { nativeBackButton } from '../../platform/nativeBackButton';
@@ -47,15 +48,22 @@ export const InvoicesPage: React.FC = () => {
   }
 
   const { canDeleteInvoice, isOwnerOrAdmin, isManager, canEditInvoiceSalesperson } = usePermissions();
+  const initialDates = calculatePresetDates('today');
   const [search, setSearch] = useState('');
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
-  const [fromDate, setFromDate] = useState<string>('');
-  const [toDate, setToDate] = useState<string>('');
+  const [fromDate, setFromDate] = useState<string>(initialDates.from);
+  const [toDate, setToDate] = useState<string>(initialDates.to);
+  const [page, setPage] = useState<number>(1);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
   const [isEditingSalesperson, setIsEditingSalesperson] = useState(false);
   const [selectedSalespersonId, setSelectedSalespersonId] = useState<string>('');
+
+  // Reset page when route changes
+  useEffect(() => {
+    setPage(1);
+  }, [invoiceType]);
 
   const { data: employeesData } = useQuery({
     queryKey: ['employees-filter'],
@@ -67,7 +75,7 @@ export const InvoicesPage: React.FC = () => {
   });
 
   const { data, isLoading } = useQuery({
-    queryKey: ['invoices', invoiceType, search, selectedEmployeeId, fromDate, toDate],
+    queryKey: ['invoices', invoiceType, search, selectedEmployeeId, fromDate, toDate, page],
     queryFn: async () => {
       const res = await apiClient.get('/invoices', {
         params: {
@@ -76,13 +84,17 @@ export const InvoicesPage: React.FC = () => {
           created_by: selectedEmployeeId || undefined,
           date_from: fromDate || undefined,
           date_to: toDate || undefined,
+          page,
         },
       });
       return res.data;
     },
+    placeholderData: (previousData) => previousData,
   });
 
   const invoices = data?.data || [];
+  const meta = data?.meta;
+  const totalInvoicesAmount = data?.summary?.total_amount ?? invoices.reduce((sum: number, inv: any) => sum + (Number(inv.total) || 0), 0);
 
   // Query for single invoice details
   const { data: invoiceDetails, isLoading: isDetailsLoading } = useQuery({
@@ -214,10 +226,10 @@ export const InvoicesPage: React.FC = () => {
         <div>
           <div className="flex items-center gap-1 text-[11px] font-bold opacity-90">
             <Receipt className="w-3.5 h-3.5" />
-            <span>{pageTitle} ({invoices.length})</span>
+            <span>{pageTitle} ({meta?.total ?? invoices.length})</span>
           </div>
           <h3 className="text-xl font-black mt-0.5 tracking-tight">
-            {formatCurrency(invoices.reduce((sum: number, inv: any) => sum + (Number(inv.total) || 0), 0))}
+            {formatCurrency(totalInvoicesAmount)}
           </h3>
         </div>
         <div className="flex items-center gap-1.5">
@@ -265,7 +277,10 @@ export const InvoicesPage: React.FC = () => {
               type="text"
               placeholder="البحث برقم المستند أو اسم الطرف..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
               className="w-full pl-4 pr-10 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
@@ -274,7 +289,10 @@ export const InvoicesPage: React.FC = () => {
             <div className="sm:w-56">
               <select
                 value={selectedEmployeeId}
-                onChange={(e) => setSelectedEmployeeId(e.target.value)}
+                onChange={(e) => {
+                  setSelectedEmployeeId(e.target.value);
+                  setPage(1);
+                }}
                 className="w-full border border-slate-200 rounded-lg text-sm px-3 py-2 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500 font-medium"
               >
                 <option value="">جميع الموظفين (الكل)</option>
@@ -293,10 +311,11 @@ export const InvoicesPage: React.FC = () => {
           <DateRangeFilter
             fromDate={fromDate}
             toDate={toDate}
-            defaultPreset="all"
+            defaultPreset="today"
             onChange={(from, to) => {
               setFromDate(from);
               setToDate(to);
+              setPage(1);
             }}
           />
         </div>
@@ -440,6 +459,15 @@ export const InvoicesPage: React.FC = () => {
                 />
               ))}
             </div>
+
+            <PaginationBar
+              currentPage={meta?.current_page || page}
+              lastPage={meta?.last_page || 1}
+              total={meta?.total || invoices.length}
+              perPage={meta?.per_page || 20}
+              onPageChange={(newPage) => setPage(newPage)}
+              itemLabel="فاتورة"
+            />
           </>
         )}
       </div>

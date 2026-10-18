@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, X, AlertCircle, Coins, Calculator, AlertTriangle } from 'lucide-react';
 import { formatCurrency } from '@pos-mandob/shared';
 import { apiClient } from '../../../data/api/client';
+import { ShiftZReportModal, ShiftZReportData } from './ShiftZReportModal';
 
 interface ShiftData {
   id: number;
@@ -20,14 +21,21 @@ interface ShiftData {
 interface CloseShiftModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onClosedSuccess?: (closedShift: ShiftZReportData) => void;
   shift: ShiftData;
 }
 
-export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({ isOpen, onClose, shift }) => {
+export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
+  isOpen,
+  onClose,
+  onClosedSuccess,
+  shift,
+}) => {
   const queryClient = useQueryClient();
   const [actualCash, setActualCash] = useState<number | string>(shift.expected_cash || 0);
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [closedShiftResult, setClosedShiftResult] = useState<ShiftZReportData | null>(null);
 
   const numActual = Number(actualCash) || 0;
   const diff = useMemo(() => {
@@ -42,11 +50,19 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({ isOpen, onClos
       });
       return res.data;
     },
-    onSuccess: () => {
+    onSuccess: (res: any) => {
       queryClient.invalidateQueries({ queryKey: ['active-shift'] });
       queryClient.invalidateQueries({ queryKey: ['shifts'] });
       queryClient.invalidateQueries({ queryKey: ['treasuries'] });
-      onClose();
+      if (res?.data) {
+        if (onClosedSuccess) {
+          onClosedSuccess(res.data);
+        } else {
+          setClosedShiftResult(res.data);
+        }
+      } else {
+        onClose();
+      }
     },
     onError: (err: any) => {
       setError(err.response?.data?.message || 'تعذر تقفيل الوردية، يرجى المحاولة لاحقاً');
@@ -54,6 +70,19 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({ isOpen, onClos
   });
 
   if (!isOpen) return null;
+
+  if (closedShiftResult) {
+    return (
+      <ShiftZReportModal
+        isOpen={true}
+        onClose={() => {
+          setClosedShiftResult(null);
+          onClose();
+        }}
+        shift={closedShiftResult}
+      />
+    );
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

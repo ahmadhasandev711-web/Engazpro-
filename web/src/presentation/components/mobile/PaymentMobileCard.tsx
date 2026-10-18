@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowDownLeft, ArrowUpRight, Trash2, User, FileText, CreditCard } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, Trash2, User, FileText, CreditCard, Printer } from 'lucide-react';
 import { formatCurrency } from '@pos-mandob/shared';
 
 interface PaymentMobileCardProps {
@@ -7,6 +7,7 @@ interface PaymentMobileCardProps {
   isOwner?: boolean;
   canDelete?: boolean;
   onDelete?: (id: number) => void;
+  onPrint?: (payment: any) => void;
 }
 
 export const PaymentMobileCard: React.FC<PaymentMobileCardProps> = ({
@@ -14,6 +15,7 @@ export const PaymentMobileCard: React.FC<PaymentMobileCardProps> = ({
   isOwner = false,
   canDelete = false,
   onDelete,
+  onPrint,
 }) => {
   const isReceipt = payment.type === 'RECEIPT';
 
@@ -99,23 +101,37 @@ export const PaymentMobileCard: React.FC<PaymentMobileCardProps> = ({
         </div>
       </div>
 
-      {/* Footer: Payment Method & Delete action */}
+      {/* Footer: Payment Method & Actions */}
       <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 text-xs">
         <span className="inline-flex items-center gap-1.5 bg-slate-100 text-slate-700 px-2.5 py-1 rounded-xl font-bold text-[11px]">
           <CreditCard className="w-3 h-3 text-slate-500" />
           {methodLabel}
         </span>
 
-        {canDelete && onDelete && (
-          <button
-            type="button"
-            onClick={() => onDelete(payment.id)}
-            className="min-h-[44px] px-3.5 py-1.5 text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 active:bg-rose-200 rounded-xl flex items-center gap-1.5 border border-rose-200/80 active:scale-95 transition-all"
-          >
-            <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-            <span>إلغاء السند</span>
-          </button>
-        )}
+        <div className="flex items-center gap-1.5">
+          {onPrint && (
+            <button
+              type="button"
+              onClick={() => onPrint(payment)}
+              className="min-h-[44px] px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 rounded-xl flex items-center gap-1.5 border border-slate-200 active:scale-95 transition-all"
+              title="طباعة / مشاركة الإيصال"
+            >
+              <Printer className="w-3.5 h-3.5 text-slate-600" />
+              <span>إيصال</span>
+            </button>
+          )}
+
+          {canDelete && onDelete && (
+            <button
+              type="button"
+              onClick={() => onDelete(payment.id)}
+              className="min-h-[44px] px-3 py-1.5 text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 active:bg-rose-200 rounded-xl flex items-center gap-1.5 border border-rose-200/80 active:scale-95 transition-all"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+              <span>إلغاء</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Notes if present */}
