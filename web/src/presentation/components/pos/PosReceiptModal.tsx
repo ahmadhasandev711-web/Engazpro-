@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import { Printer, X, CheckCircle2, RotateCcw, Share2, Bluetooth } from 'lucide-react';
 import { formatCurrency } from '@pos-mandob/shared';
 import { useAuthStore } from '../../../data/store/useAuthStore';
-import { webShareService } from '../../../infrastructure/pwa/webShareService';
+import { webShareService, formatInvoiceWhatsAppText } from '../../../infrastructure/pwa/webShareService';
 import { thermalPrinterService } from '../../../infrastructure/hardware/thermalPrinter';
 
 interface PosReceiptModalProps {
@@ -75,14 +75,13 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
   };
 
   const handleShareWhatsApp = async () => {
-    const totalFormatted = formatCurrency(invoice.total_amount || 0);
+    const text = formatInvoiceWhatsAppText(invoice, {
+      storeName,
+      storePhone,
+      currencySymbol,
+    });
     const invoiceNo = invoice.invoice_number || `#${invoice.id}`;
-    const customerPhone = invoice.party?.phone || invoice.customer_phone;
-    const text = `🧾 إيصال فاتورة من ${storeName}
-رقم الفاتورة: ${invoiceNo}
-التاريخ: ${dateStr}
-الإجمالي: ${totalFormatted}
-شكراً لتعاملكم معنا!`;
+    const customerPhone = invoice.party?.phone || invoice.customer_phone || (invoice.party as any)?.phone;
 
     await webShareService.shareInvoice({
       title: `فاتورة ${invoiceNo} - ${storeName}`,

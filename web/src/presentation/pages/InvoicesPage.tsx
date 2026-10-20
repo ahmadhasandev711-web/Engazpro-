@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Receipt, Plus, Search, Trash2, Eye, AlertCircle, RotateCcw, Download, X, Printer, Calendar, User, CreditCard, UserCheck, Edit2, Save } from 'lucide-react';
+import { Receipt, Plus, Search, Trash2, Eye, AlertCircle, RotateCcw, Download, X, Printer, Calendar, User, CreditCard, UserCheck, Edit2, Save, Share2 } from 'lucide-react';
 import { InvoiceType, formatCurrency } from '@pos-mandob/shared';
 import { apiClient } from '../../data/api/client';
 import { exportInvoicesToExcel } from '../utils/excelExport';
@@ -11,6 +11,8 @@ import { PaginationBar } from '../components/common/PaginationBar';
 import { PosReceiptModal } from '../components/pos/PosReceiptModal';
 import { InvoiceMobileCard } from '../components/mobile/InvoiceMobileCard';
 import { nativeBackButton } from '../../platform/nativeBackButton';
+import { useAuthStore } from '../../data/store/useAuthStore';
+import { webShareService, formatInvoiceWhatsAppText } from '../../infrastructure/pwa/webShareService';
 
 export const InvoicesPage: React.FC = () => {
   const location = useLocation();
@@ -167,6 +169,8 @@ export const InvoicesPage: React.FC = () => {
     },
   });
 
+  const user = useAuthStore((state) => state.user);
+
   const handleDelete = (id: number, number: string) => {
     if (window.confirm(`هل أنت متأكد من إلغاء ${number}؟ هذا الإجراء سيقوم بعكس حركات المخزون والقيود المحاسبية المرتبطة به.`)) {
       deleteMutation.mutate(id);
@@ -175,6 +179,27 @@ export const InvoicesPage: React.FC = () => {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleShareWhatsApp = async () => {
+    if (!invoiceDetails) return;
+    const storeIdentity = user?.store_identity;
+    const storeName = storeIdentity?.business_name || (user as any)?.store_name || user?.name || 'المتجر';
+    const storePhone = storeIdentity?.store_phone || user?.phone;
+    const currencySymbol = storeIdentity?.currency || 'ج.م';
+    const text = formatInvoiceWhatsAppText(invoiceDetails, {
+      storeName,
+      storePhone,
+      currencySymbol,
+    });
+    const invoiceNo = invoiceDetails.invoice_number || `#${invoiceDetails.id}`;
+    const customerPhone = invoiceDetails.party?.phone || (invoiceDetails as any).party_phone || (invoiceDetails as any).customer_phone;
+
+    await webShareService.shareInvoice({
+      title: `فاتورة ${invoiceNo} - ${storeName}`,
+      text,
+      phone: customerPhone,
+    });
   };
 
   return (
@@ -765,7 +790,7 @@ export const InvoicesPage: React.FC = () => {
 
             {/* Modal Footer */}
             <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 no-print">
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 flex-1">
+              <div className="flex flex-wrap items-stretch sm:items-center gap-2 flex-1">
                 <button
                   type="button"
                   onClick={() => setIsReceiptModalOpen(true)}
@@ -773,6 +798,15 @@ export const InvoicesPage: React.FC = () => {
                 >
                   <Printer className="w-4 h-4" />
                   <span>طباعة إيصال كاشير (حراري 80mm)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleShareWhatsApp}
+                  className="inline-flex items-center justify-center gap-2 px-3.5 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl text-xs font-bold transition-all active:scale-98"
+                  title="مشاركة الفاتورة عبر واتساب"
+                >
+                  <Share2 className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>إرسال واتساب</span>
                 </button>
                 <button
                   type="button"
