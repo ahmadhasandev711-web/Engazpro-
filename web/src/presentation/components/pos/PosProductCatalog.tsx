@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Package, X, Camera } from 'lucide-react';
+import { Search, Package, X } from 'lucide-react';
 import { formatCurrency } from '@pos-mandob/shared';
 
 export interface ProductItem {
@@ -31,7 +31,6 @@ interface PosProductCatalogProps {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   onScanBarcode?: (barcode: string) => boolean;
-  onOpenMobileScanner?: () => void;
 }
 
 export const PosProductCatalog: React.FC<PosProductCatalogProps> = ({
@@ -42,7 +41,6 @@ export const PosProductCatalog: React.FC<PosProductCatalogProps> = ({
   searchQuery,
   setSearchQuery,
   onScanBarcode,
-  onOpenMobileScanner,
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
 
@@ -106,16 +104,6 @@ export const PosProductCatalog: React.FC<PosProductCatalogProps> = ({
                 className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
               >
                 <X className="w-4 h-4" />
-              </button>
-            )}
-            {onOpenMobileScanner && (
-              <button
-                type="button"
-                onClick={onOpenMobileScanner}
-                className="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl transition-all active:scale-95 cursor-pointer shadow-2xs"
-                title="مسح الباركود بكاميرا الهاتف"
-              >
-                <Camera className="w-4 h-4" />
               </button>
             )}
           </div>

@@ -11,7 +11,6 @@ import {
   Sparkles,
   Building2,
   ShoppingBag,
-  Camera,
 } from 'lucide-react';
 import { formatCurrency } from '@pos-mandob/shared';
 import { apiClient } from '../../data/api/client';
@@ -27,7 +26,6 @@ import { PosReceiptModal } from '../components/pos/PosReceiptModal';
 import { HeldCartsModal } from '../components/pos/HeldCartsModal';
 import { OpenShiftModal } from '../components/shifts/OpenShiftModal';
 import { ProductVariantModal } from '../components/products/ProductVariantModal';
-import { MobileCameraScannerModal } from '../components/mobile/MobileCameraScannerModal';
 import { MobileBottomSheet } from '../components/mobile/MobileBottomSheet';
 import { nativeBackButton } from '../../platform/nativeBackButton';
 import { useHaptic } from '../hooks/useHaptic';
@@ -52,8 +50,7 @@ export const PosPage: React.FC = () => {
   const [isHeldCartsModalOpen, setIsHeldCartsModalOpen] = useState<boolean>(false);
   const [isOpenShiftModalOpen, setIsOpenShiftModalOpen] = useState<boolean>(false);
   const [isMobileCartOpen, setIsMobileCartOpen] = useState<boolean>(false);
-  const [isMobileScannerOpen, setIsMobileScannerOpen] = useState<boolean>(false);
-  const { selection: hapticSelection, success: hapticSuccess } = useHaptic();
+  const { selection: hapticSelection } = useHaptic();
   const [completedInvoice, setCompletedInvoice] = useState<any | null>(null);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [notification, setNotification] = useState<string | null>(null);
@@ -180,18 +177,6 @@ export const PosPage: React.FC = () => {
       showToast(`لم يتم العثور على صنف بالباركود: ${barcode}`);
     },
   });
-
-  // Mobile Camera Barcode Scan Handler
-  const handleBarcodeScanFromCamera = useCallback(
-    (scannedCode: string) => {
-      const found = handleScanOrInputBarcode(scannedCode);
-      if (found) {
-        hapticSuccess();
-        showToast(`تمت إضافة الصنف بالباركود: ${scannedCode}`);
-      }
-    },
-    [handleScanOrInputBarcode, hapticSuccess, showToast]
-  );
 
   // Hold current cart
   const handleHoldCurrentCart = () => {
@@ -348,15 +333,6 @@ export const PosPage: React.FC = () => {
     }
   }, [isOpenShiftModalOpen]);
 
-  useEffect(() => {
-    if (isMobileScannerOpen) {
-      return nativeBackButton.register(() => {
-        setIsMobileScannerOpen(false);
-        return true;
-      });
-    }
-  }, [isMobileScannerOpen]);
-
   // Comprehensive Cashier Keyboard Shortcuts (F2: Search, F4: Hold, F8: Held Carts, F9: Checkout, Escape: Close/Clear)
   useEffect(() => {
     const handleShortcuts = (e: KeyboardEvent) => {
@@ -387,11 +363,6 @@ export const PosPage: React.FC = () => {
         }
         if (isMobileCartOpen) {
           setIsMobileCartOpen(false);
-          e.preventDefault();
-          return;
-        }
-        if (isMobileScannerOpen) {
-          setIsMobileScannerOpen(false);
           e.preventDefault();
           return;
         }
@@ -454,7 +425,6 @@ export const PosPage: React.FC = () => {
     isHeldCartsModalOpen,
     variantModalProduct,
     isMobileCartOpen,
-    isMobileScannerOpen,
     activeShift,
     canOperateShift,
     handleHoldCurrentCart,
@@ -598,7 +568,6 @@ export const PosPage: React.FC = () => {
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
             onScanBarcode={handleScanOrInputBarcode}
-            onOpenMobileScanner={() => setIsMobileScannerOpen(true)}
           />
         </div>
 
@@ -657,24 +626,6 @@ export const PosPage: React.FC = () => {
           </button>
         </div>
       )}
-
-      {/* Mobile Floating Barcode Scanner FAB */}
-      <button
-        type="button"
-        onClick={() => {
-          hapticSelection();
-          setIsMobileScannerOpen(true);
-        }}
-        className={`lg:hidden fixed z-30 start-4 w-12 h-12 rounded-2xl bg-slate-900/90 text-white shadow-xl shadow-slate-900/25 border border-slate-700/50 backdrop-blur-md flex items-center justify-center active:scale-95 transition-all cursor-pointer ${
-          cartItems.length > 0
-            ? 'bottom-[calc(8.8rem+env(safe-area-inset-bottom,0px))]'
-            : 'bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))]'
-        }`}
-        aria-label="مسح الباركود بالكاميرا"
-        title="مسح الباركود بالكاميرا"
-      >
-        <Camera className="w-5 h-5 text-emerald-400" />
-      </button>
 
       {/* Mobile Cart Bottom Sheet Modal */}
       <MobileBottomSheet
@@ -761,13 +712,6 @@ export const PosPage: React.FC = () => {
           setIsOpenShiftModalOpen(false);
           refetchShift();
         }}
-      />
-
-      {/* Mobile Camera Barcode Scanner */}
-      <MobileCameraScannerModal
-        isOpen={isMobileScannerOpen}
-        onClose={() => setIsMobileScannerOpen(false)}
-        onScan={handleBarcodeScanFromCamera}
       />
     </div>
   );
