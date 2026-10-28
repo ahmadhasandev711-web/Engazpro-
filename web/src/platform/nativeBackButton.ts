@@ -1,7 +1,6 @@
 /**
- * Platform Layer - Native Back Button Manager
- * Conforms to GR-3 (SoC) & GR-7 (DIP)
- * Manages modal / bottom sheet back-stack for Android hardware back button.
+ * Modal dismiss stack. Pages register the topmost sheet so a later browser-back
+ * handler can close it before leaving the screen.
  */
 type DismissHandler = () => boolean;
 

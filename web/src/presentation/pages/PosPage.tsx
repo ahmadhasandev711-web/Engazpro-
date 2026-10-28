@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight,
@@ -19,7 +19,7 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { useHoldInvoices, HeldCart } from '../../hooks/useHoldInvoices';
 import { usePosCartState } from '../../hooks/usePosCartState';
 import { usePosBarcodeLookup } from '../../hooks/usePosBarcodeLookup';
-import { PosProductCatalog, ProductItem } from '../components/pos/PosProductCatalog';
+import { PosProductCatalog, PosCategoryChip, ProductItem } from '../components/pos/PosProductCatalog';
 import { PosCartTicket, CustomerParty } from '../components/pos/PosCartTicket';
 import { PosPaymentModal } from '../components/pos/PosPaymentModal';
 import { PosReceiptModal } from '../components/pos/PosReceiptModal';
@@ -44,6 +44,11 @@ export const PosPage: React.FC = () => {
   const [selectedBranchId, setSelectedBranchId] = useState<number | null>(() => user?.branch_id || null);
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerParty | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [debouncedSearch, setDebouncedSearch] = useState<string>('');
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
+  const [browseTotal, setBrowseTotal] = useState<number | null>(null);
+  const [searchMs, setSearchMs] = useState<number | null>(null);
+  const searchStartedAt = useRef(0);
   const [variantModalProduct, setVariantModalProduct] = useState<ProductItem | null>(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState<boolean>(false);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState<boolean>(false);
@@ -86,18 +91,57 @@ export const PosPage: React.FC = () => {
   // Hold Invoices Hook
   const { heldCarts, holdCart, removeHeldCart } = useHoldInvoices();
 
-  // Queries
-  const { data: productsData, isLoading: isProductsLoading } = useQuery({
-    queryKey: ['products', selectedBranchId],
-    queryFn: async () => {
-      const params: Record<string, any> = { per_page: 250 };
-      if (selectedBranchId) {
-        params.branch_id = selectedBranchId;
-      }
-      const res = await apiClient.get('/products', { params });
-      return res.data?.data || [];
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedSearch(searchQuery.trim()), 180);
+    return () => window.clearTimeout(timer);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    if (!debouncedSearch) {
+      setSearchMs(null);
+      return;
+    }
+    searchStartedAt.current = performance.now();
+  }, [debouncedSearch, selectedCategoryId, selectedBranchId]);
+
+  const {
+    data: catalogPages,
+    isLoading: isProductsLoading,
+    isFetching: isCatalogFetching,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+  } = useInfiniteQuery({
+    queryKey: ['pos-catalog', selectedBranchId, debouncedSearch, selectedCategoryId],
+    queryFn: async ({ pageParam }) => {
+      const params: Record<string, string | number> = {
+        page: pageParam,
+        per_page: 48,
+      };
+      if (selectedBranchId) params.branch_id = selectedBranchId;
+      if (debouncedSearch) params.search = debouncedSearch;
+      if (selectedCategoryId) params.category_id = selectedCategoryId;
+      const res = await apiClient.get('/products/pos-catalog', { params });
+      return res.data;
     },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      const meta = lastPage?.meta;
+      if (!meta || meta.current_page >= meta.last_page) return undefined;
+      return meta.current_page + 1;
+    },
+    placeholderData: (previous) => previous,
     enabled: selectedBranchId !== null || isOwner,
+  });
+
+  const { data: categoryChips = [] } = useQuery({
+    queryKey: ['pos-categories'],
+    queryFn: async () => {
+      const res = await apiClient.get('/categories');
+      const raw = res.data?.data;
+      const list = Array.isArray(raw) ? raw : Array.isArray(raw?.data) ? raw.data : [];
+      return list as PosCategoryChip[];
+    },
   });
 
   // Active Shift Query
@@ -146,7 +190,42 @@ export const PosPage: React.FC = () => {
     }
   }, [branchList, user?.branch_id, selectedBranchId, isOwnerOrAdmin]);
 
-  const products: ProductItem[] = productsData || [];
+  const products: ProductItem[] = catalogPages?.pages.flatMap((page) => page?.data || []) || [];
+  const catalogTotal = Number(catalogPages?.pages[0]?.meta?.total || 0);
+
+  useEffect(() => {
+    if (!debouncedSearch && selectedCategoryId === null && catalogPages?.pages[0]?.meta?.total != null) {
+      setBrowseTotal(Number(catalogPages.pages[0].meta.total));
+    }
+  }, [debouncedSearch, selectedCategoryId, catalogPages]);
+
+  useEffect(() => {
+    if (!isCatalogFetching && debouncedSearch && searchStartedAt.current) {
+      setSearchMs(Math.round(performance.now() - searchStartedAt.current));
+    }
+  }, [isCatalogFetching, debouncedSearch]);
+
+  const lookupCode = useCallback(async (code: string) => {
+    try {
+      const params: Record<string, string | number> = { code };
+      if (selectedBranchId) params.branch_id = selectedBranchId;
+      const res = await apiClient.get('/products/lookup', { params });
+      const product = res.data?.data as ProductItem | undefined;
+      if (!product) return null;
+      return {
+        product,
+        variantId: res.data?.matched_variant_id ?? null,
+      };
+    } catch (error: any) {
+      if (error?.response?.status === 404) return null;
+      throw error;
+    }
+  }, [selectedBranchId]);
+
+  const loadMoreCatalog = useCallback(() => {
+    if (!hasNextPage || isFetchingNextPage) return;
+    void fetchNextPage();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   // Catalog item click router (opens modal if variant/sub-unit/batch present)
   const handleCatalogProductClick = useCallback(
@@ -169,6 +248,7 @@ export const PosPage: React.FC = () => {
   // Barcode Lookup & Scanning Hook
   const { handleScanOrInputBarcode } = usePosBarcodeLookup({
     products,
+    lookupCode,
     onAddToCart: addToCart,
     onAddCustomSelection: addCustomSelectionToCart,
     onOpenVariantModal: setVariantModalProduct,
@@ -176,6 +256,7 @@ export const PosPage: React.FC = () => {
       setSearchQuery(barcode);
       showToast(`لم يتم العثور على صنف بالباركود: ${barcode}`);
     },
+    onLookupError: () => showToast('تعذر البحث عن الباركود. حاول مرة أخرى.'),
   });
 
   // Hold current cart
@@ -562,7 +643,17 @@ export const PosPage: React.FC = () => {
         <div className="flex-1 h-full min-w-0">
           <PosProductCatalog
             products={products}
+            totalCount={catalogTotal}
+            browseTotal={browseTotal}
+            categories={categoryChips}
+            selectedCategoryId={selectedCategoryId}
+            onSelectCategory={setSelectedCategoryId}
             isLoading={isProductsLoading}
+            isSearching={searchQuery.trim() !== debouncedSearch || (isCatalogFetching && !isFetchingNextPage)}
+            isFetchingMore={isFetchingNextPage}
+            onNearEnd={loadMoreCatalog}
+            listKey={`${selectedBranchId ?? 'all'}-${selectedCategoryId ?? 'all'}-${debouncedSearch}`}
+            searchMs={searchMs}
             onAddToCart={handleCatalogProductClick}
             searchInputRef={searchInputRef}
             searchQuery={searchQuery}

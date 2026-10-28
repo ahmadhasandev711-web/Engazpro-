@@ -1,75 +1,129 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { useBarcodeScanner } from './useBarcodeScanner';
 import { ProductItem } from '../presentation/components/pos/PosProductCatalog';
 import { VariantSelectionPayload } from '../presentation/components/products/ProductVariantModal';
 
+export interface PosScanMatch {
+  product: ProductItem;
+  variantId: number | null;
+}
+
 interface UsePosBarcodeLookupProps {
   products: ProductItem[];
+  lookupCode: (code: string) => Promise<PosScanMatch | null>;
   onAddToCart: (product: ProductItem) => void;
   onAddCustomSelection: (selection: VariantSelectionPayload) => void;
   onOpenVariantModal: (product: ProductItem) => void;
   onNotFound: (barcode: string) => void;
+  onLookupError: () => void;
 }
+
+const matchesCode = (value: string | undefined | null, code: string): boolean => {
+  return Boolean(value && value.toLowerCase() === code);
+};
 
 export const usePosBarcodeLookup = ({
   products,
+  lookupCode,
   onAddToCart,
   onAddCustomSelection,
   onOpenVariantModal,
   onNotFound,
+  onLookupError,
 }: UsePosBarcodeLookupProps) => {
-  const handleScanOrInputBarcode = useCallback(
-    (barcode: string): boolean => {
-      const cleanCode = barcode.trim().toLowerCase();
-      if (!cleanCode) return false;
+  const inflightRef = useRef(new Set<string>());
 
-      // 1. Direct variant barcode match (Fast scan for variants/matrices)
-      for (const p of products) {
-        if (p.variants && p.variants.length > 0) {
-          const matchedVariant = p.variants.find(
-            (v: any) =>
-              (v.barcode && v.barcode.toLowerCase() === cleanCode) ||
-              (v.code && v.code.toLowerCase() === cleanCode)
-          );
-          if (matchedVariant) {
-            onAddCustomSelection({
-              product: p,
-              variant: matchedVariant,
-              unit_name: p.unit || 'قطعة',
-              unit_price: Number(matchedVariant.sale_price || p.sale_price || 0),
-              quantity: 1,
-            });
-            return true;
-          }
+  const applyMatch = useCallback(
+    (product: ProductItem, variantId: number | null, cleanCode: string) => {
+      if (variantId) {
+        const variant = product.variants?.find((item) => Number(item.id) === Number(variantId));
+        if (variant) {
+          onAddCustomSelection({
+            product,
+            variant,
+            unit_name: product.unit || 'قطعة',
+            unit_price: Number(variant.sale_price || product.sale_price || 0),
+            quantity: 1,
+          });
+          return;
         }
       }
 
-      // 2. Direct product match
-      const matched = products.find(
-        (p) =>
-          (p.code && p.code.toLowerCase() === cleanCode) ||
-          (p.barcode && p.barcode.toLowerCase() === cleanCode)
+      const matchedVariant = product.variants?.find(
+        (variant) => matchesCode(variant.barcode, cleanCode) || matchesCode(variant.code, cleanCode)
       );
+      if (matchedVariant) {
+        onAddCustomSelection({
+          product,
+          variant: matchedVariant,
+          unit_name: product.unit || 'قطعة',
+          unit_price: Number(matchedVariant.sale_price || product.sale_price || 0),
+          quantity: 1,
+        });
+        return;
+      }
 
-      if (matched) {
-        if (matched.has_variants || (matched.variants && matched.variants.length > 0)) {
-          onOpenVariantModal(matched);
-        } else {
-          onAddToCart(matched);
+      if (
+        product.has_variants ||
+        (product.variants && product.variants.length > 0) ||
+        product.sub_unit ||
+        product.has_expiry ||
+        (product.batches && product.batches.length > 0)
+      ) {
+        onOpenVariantModal(product);
+        return;
+      }
+
+      onAddToCart(product);
+    },
+    [onAddCustomSelection, onAddToCart, onOpenVariantModal]
+  );
+
+  const handleScanOrInputBarcode = useCallback(
+    async (barcode: string): Promise<boolean> => {
+      const cleanCode = barcode.trim().toLowerCase();
+      if (!cleanCode || inflightRef.current.has(cleanCode)) return false;
+
+      for (const product of products) {
+        const matchedVariant = product.variants?.find(
+          (variant) => matchesCode(variant.barcode, cleanCode) || matchesCode(variant.code, cleanCode)
+        );
+        if (matchedVariant) {
+          applyMatch(product, matchedVariant.id, cleanCode);
+          return true;
         }
+      }
+
+      const matched = products.find(
+        (product) => matchesCode(product.code, cleanCode) || matchesCode(product.barcode, cleanCode)
+      );
+      if (matched) {
+        applyMatch(matched, null, cleanCode);
         return true;
       }
 
-      onNotFound(barcode);
-      return false;
+      inflightRef.current.add(cleanCode);
+      try {
+        const found = await lookupCode(barcode.trim());
+        if (!found) {
+          onNotFound(barcode);
+          return false;
+        }
+        applyMatch(found.product, found.variantId, cleanCode);
+        return true;
+      } catch {
+        onLookupError();
+        return false;
+      } finally {
+        inflightRef.current.delete(cleanCode);
+      }
     },
-    [products, onAddToCart, onAddCustomSelection, onOpenVariantModal, onNotFound]
+    [products, lookupCode, applyMatch, onNotFound, onLookupError]
   );
 
-  // Wire up hardware scanner listener
   useBarcodeScanner({
     onScan: (barcode) => {
-      handleScanOrInputBarcode(barcode);
+      void handleScanOrInputBarcode(barcode);
     },
   });
 

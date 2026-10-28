@@ -24,6 +24,7 @@ class UpdateStoreIdentityRequest extends FormRequest
             'store_phone' => ['nullable', 'string', 'max:30'],
             'store_address' => ['nullable', 'string', 'max:255'],
             'currency' => ['required', 'string', 'max:10'],
+            'max_discount_percent' => ['nullable', 'numeric', 'between:0,100'],
         ];
     }
 

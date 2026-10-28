@@ -7,7 +7,6 @@ import {
   Wallet,
   Users,
   Landmark,
-  BarChart3,
   LucideIcon,
 } from 'lucide-react';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -54,7 +53,6 @@ export const useMobileNavigation = () => {
         { to: '/dashboard', label: 'المؤشرات', icon: LayoutDashboard },
         { to: '/sales', label: 'المبيعات', icon: Receipt },
         { to: '/treasuries', label: 'الورديات والخزن', icon: Landmark },
-        { to: '/reports', label: 'التقارير', icon: BarChart3 },
       ];
     }
 

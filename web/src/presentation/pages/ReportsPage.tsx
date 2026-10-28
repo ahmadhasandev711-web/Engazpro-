@@ -13,18 +13,55 @@ import {
   useSalesReport,
   useStockReport,
   useCashFlowReport,
+  fetchAllCashFlowTransactions,
 } from '../../hooks/useReports';
 import { useAuthStore } from '../../data/store/useAuthStore';
 import { formatCurrency } from '@pos-mandob/shared';
 import { usePermissions } from '../../hooks/usePermissions';
 import { ProfitReportTab } from '../components/reports/ProfitReportTab';
 import { SalesReportTab } from '../components/reports/SalesReportTab';
-import { CashFlowTab } from '../components/reports/CashFlowTab';
+import { CashFlowTab, CashFlowPrintData } from '../components/reports/CashFlowTab';
 import { StockReportTab } from '../components/reports/StockReportTab';
 import { DateRangeFilter, DatePreset, calculatePresetDates } from '../components/common/DateRangeFilter';
 import { MobileFilterChips, FilterChipOption } from '../components/mobile/MobileFilterChips';
 
 type ActiveTab = 'profit' | 'sales' | 'cash-flow' | 'stock';
+
+const getTreasuryLabel = (t: string) => {
+  switch (t) {
+    case 'CASH':
+      return 'متحصلات المبيعات النقدية (الكاش)';
+    case 'CARD':
+      return 'متحصلات البطاقة (POS)';
+    case 'INSTAPAY':
+      return 'متحصلات إنستاباي (InstaPay)';
+    case 'VODAFONE_CASH':
+      return 'متحصلات فودافون كاش والمحافظ';
+    case 'TRANSFER':
+      return 'متحصلات التحويلات البنكية المباشرة';
+    default:
+      return t;
+  }
+};
+
+const getPresetLabel = (p: DatePreset | string) => {
+  switch (p) {
+    case 'today':
+      return 'اليوم';
+    case 'yesterday':
+      return 'أمس';
+    case 'this_week':
+      return 'هذا الأسبوع';
+    case 'this_month':
+      return 'هذا الشهر';
+    case 'last_30_days':
+      return 'آخر 30 يوم';
+    case 'custom':
+      return 'نطاق مخصص';
+    default:
+      return p;
+  }
+};
 
 export const ReportsPage: React.FC = () => {
   const user = useAuthStore((state) => state.user);
@@ -49,6 +86,43 @@ export const ReportsPage: React.FC = () => {
   const { data: salesData, isLoading: isSalesLoading } = useSalesReport(fromDate, toDate, activeTab === 'sales');
   const { data: stockData, isLoading: isStockLoading } = useStockReport(activeTab === 'stock');
   const { data: cashFlowData, isLoading: isCashFlowLoading } = useCashFlowReport(fromDate, toDate, activeTab === 'cash-flow');
+
+  const [cashFlowPrintData, setCashFlowPrintData] = useState<CashFlowPrintData | null>(null);
+  const [isTopPrinting, setIsTopPrinting] = useState(false);
+
+  const handlePrintReport = async () => {
+    if (activeTab === 'cash-flow') {
+      // If transactions are not yet prepared or for a different treasury, fetch up to 200 items
+      if (!cashFlowPrintData || cashFlowPrintData.transactions.length === 0) {
+        setIsTopPrinting(true);
+        try {
+          const res = await fetchAllCashFlowTransactions({
+            channel: selectedTreasury,
+            fromDate,
+            toDate,
+            perPage: 200,
+          });
+          setCashFlowPrintData({
+            treasuryName: getTreasuryLabel(selectedTreasury),
+            transactions: res.data || [],
+            flowFilter: 'ALL',
+            preset,
+            fromDate,
+            toDate,
+          });
+          setTimeout(() => {
+            window.print();
+            setIsTopPrinting(false);
+          }, 100);
+          return;
+        } catch (err) {
+          console.error('Failed to fetch transactions for print:', err);
+          setIsTopPrinting(false);
+        }
+      }
+    }
+    window.print();
+  };
 
   const handleExportCurrentTab = () => {
     if (activeTab === 'cash-flow' && cashFlowData) {
@@ -112,11 +186,16 @@ export const ReportsPage: React.FC = () => {
             تصدير Excel
           </button>
           <button
-            onClick={() => window.print()}
-            className="inline-flex items-center gap-2 bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition-colors"
+            onClick={handlePrintReport}
+            disabled={isTopPrinting}
+            className="inline-flex items-center gap-2 bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition-colors disabled:opacity-60"
           >
-            <Printer className="w-4 h-4" />
-            طباعة التقرير
+            {isTopPrinting ? (
+              <span className="inline-block animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+            ) : (
+              <Printer className="w-4 h-4" />
+            )}
+            <span>طباعة التقرير</span>
           </button>
         </div>
       </div>
@@ -146,11 +225,16 @@ export const ReportsPage: React.FC = () => {
             <Download className="w-4 h-4 text-emerald-600" />
           </button>
           <button
-            onClick={() => window.print()}
-            className="p-2 bg-slate-800 active:bg-slate-900 text-white rounded-xl active:scale-95 transition-all"
+            onClick={handlePrintReport}
+            disabled={isTopPrinting}
+            className="p-2 bg-slate-800 active:bg-slate-900 text-white rounded-xl active:scale-95 transition-all disabled:opacity-60"
             title="طباعة التقرير"
           >
-            <Printer className="w-4 h-4" />
+            {isTopPrinting ? (
+              <span className="inline-block animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+            ) : (
+              <Printer className="w-4 h-4" />
+            )}
           </button>
         </div>
       </div>
@@ -240,6 +324,9 @@ export const ReportsPage: React.FC = () => {
           selectedTreasury={selectedTreasury}
           onSelectTreasury={setSelectedTreasury}
           preset={preset}
+          fromDate={fromDate}
+          toDate={toDate}
+          onUpdatePrintData={setCashFlowPrintData}
         />
       )}
       {activeTab === 'stock' && <StockReportTab data={stockData} isLoading={isStockLoading} />}
@@ -262,12 +349,12 @@ export const ReportsPage: React.FC = () => {
             <div className="inline-block bg-slate-900 text-white font-black px-3 py-1 rounded text-sm">
               {activeTab === 'profit' && 'تقرير الأرباح والخسائر الشامل'}
               {activeTab === 'sales' && 'كشف حركة المبيعات والمتحصلات'}
-              {activeTab === 'cash-flow' && 'كشف الحصيلة والتدفقات النقدية'}
+              {activeTab === 'cash-flow' && `كشف حركة ${cashFlowPrintData?.treasuryName || getTreasuryLabel(selectedTreasury)}`}
               {activeTab === 'stock' && 'تقرير جرد وتقييم المخزون'}
             </div>
             {activeTab !== 'stock' && (
               <p className="text-[11px] text-slate-600 font-mono">
-                الفترة: من {fromDate || 'البداية'} إلى {toDate || 'اليوم'}
+                الفترة: {getPresetLabel(preset)} ({fromDate || 'البداية'} إلى {toDate || 'اليوم'})
               </p>
             )}
             <p className="text-[10px] text-slate-400 font-mono">
@@ -396,23 +483,139 @@ export const ReportsPage: React.FC = () => {
         {/* Tab 3: Cash Flow Report Table */}
         {activeTab === 'cash-flow' && cashFlowData && (
           <div className="space-y-4">
-            <h2 className="text-sm font-black text-slate-900 border-b border-slate-300 pb-1">
-              كشف حركة الحصيلة النقدية والخزن
-            </h2>
-            <div className="grid grid-cols-3 gap-2 text-center mb-3">
-              <div className="border border-slate-300 p-2 bg-emerald-50">
-                <span className="text-[10px] text-emerald-700 block">إجمالي المقبوضات (+):</span>
-                <span className="font-mono font-black text-xs text-emerald-800">{formatCurrency(cashFlowData.inflow?.total || 0)}</span>
+            <div className="border-b border-slate-300 pb-1.5 flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-black text-slate-900">
+                  كشف حركة الحصيلة والخزينة — {cashFlowPrintData?.treasuryName || getTreasuryLabel(selectedTreasury)}
+                </h2>
+                <div className="flex items-center gap-2 text-[10px] text-slate-600 font-medium mt-0.5">
+                  <span>الفترة: {getPresetLabel(preset)} ({fromDate || 'البداية'} إلى {toDate || 'اليوم'})</span>
+                  {cashFlowPrintData?.flowFilter && cashFlowPrintData.flowFilter !== 'ALL' && (
+                    <span className="font-bold text-slate-800">
+                      • التصفية: {cashFlowPrintData.flowFilter === 'INFLOW' ? 'الوارد فقط (+)' : 'الصادر فقط (-)'}
+                    </span>
+                  )}
+                  {cashFlowPrintData?.movementCategory && (
+                    <span className="font-bold text-slate-800">
+                      • تصنيف الحركة: {cashFlowPrintData.movementCategory}
+                    </span>
+                  )}
+                  {cashFlowPrintData?.search && (
+                    <span className="font-bold text-slate-800">
+                      • نتيجة البحث عن: "{cashFlowPrintData.search}"
+                    </span>
+                  )}
+                </div>
               </div>
-              <div className="border border-slate-300 p-2 bg-rose-50">
-                <span className="text-[10px] text-rose-700 block">إجمالي المدفوعات (-):</span>
-                <span className="font-mono font-black text-xs text-rose-800">{formatCurrency(cashFlowData.outflow?.total || 0)}</span>
+              {cashFlowPrintData?.transactions && (
+                <span className="text-[11px] font-bold font-mono bg-slate-100 border border-slate-300 px-2 py-0.5 rounded">
+                  {cashFlowPrintData.transactions.length} حركة مسجلة
+                </span>
+              )}
+            </div>
+
+            {/* Summary statistics boxes */}
+            <div className="grid grid-cols-3 gap-2 text-center mb-3">
+              <div className="border border-slate-300 p-2 bg-slate-50">
+                <span className="text-[10px] text-slate-600 font-bold block">إجمالي المقبوضات (الوارد +):</span>
+                <span className="font-mono font-black text-xs text-emerald-800">
+                  {formatCurrency(
+                    cashFlowPrintData?.transactions && cashFlowPrintData.transactions.length > 0
+                      ? cashFlowPrintData.transactions
+                          .filter((t) => t.flow_direction === 'IN')
+                          .reduce((sum, t) => sum + Number(t.amount || 0), 0)
+                      : cashFlowData.inflow?.total || 0
+                  )}
+                </span>
+              </div>
+              <div className="border border-slate-300 p-2 bg-slate-50">
+                <span className="text-[10px] text-slate-600 font-bold block">إجمالي المدفوعات (الصادر -):</span>
+                <span className="font-mono font-black text-xs text-rose-800">
+                  {formatCurrency(
+                    cashFlowPrintData?.transactions && cashFlowPrintData.transactions.length > 0
+                      ? cashFlowPrintData.transactions
+                          .filter((t) => t.flow_direction === 'OUT')
+                          .reduce((sum, t) => sum + Number(t.amount || 0), 0)
+                      : cashFlowData.outflow?.total || 0
+                  )}
+                </span>
               </div>
               <div className="border border-slate-300 p-2 bg-slate-100">
-                <span className="text-[10px] text-slate-600 block">صافي التدفق النقدي:</span>
-                <span className="font-mono font-black text-xs">{formatCurrency(cashFlowData.net_cash_flow || 0)}</span>
+                <span className="text-[10px] text-slate-700 font-bold block">صافي رصيد الحركة:</span>
+                <span className="font-mono font-black text-xs text-slate-900">
+                  {formatCurrency(
+                    cashFlowPrintData?.transactions && cashFlowPrintData.transactions.length > 0
+                      ? cashFlowPrintData.transactions.reduce(
+                          (sum, t) => sum + (t.flow_direction === 'IN' ? Number(t.amount || 0) : -Number(t.amount || 0)),
+                          0
+                        )
+                      : cashFlowData.net_cash_flow || 0
+                  )}
+                </span>
               </div>
             </div>
+
+            {/* Detailed Transactions Log Table */}
+            {cashFlowPrintData?.transactions && cashFlowPrintData.transactions.length > 0 ? (
+              <table className="w-full text-right border-collapse border border-slate-300 text-[10px]">
+                <thead>
+                  <tr className="bg-slate-100 font-bold border-b border-slate-300 text-slate-800">
+                    <th className="p-1.5 border border-slate-300 text-center w-7">م</th>
+                    <th className="p-1.5 border border-slate-300 whitespace-nowrap">التاريخ والوقت</th>
+                    <th className="p-1.5 border border-slate-300 whitespace-nowrap">المرجع / الرقم</th>
+                    <th className="p-1.5 border border-slate-300 whitespace-nowrap">نوع الحركة</th>
+                    <th className="p-1.5 border border-slate-300">الطرف / العميل / المورد</th>
+                    <th className="p-1.5 border border-slate-300 whitespace-nowrap">المسؤول</th>
+                    <th className="p-1.5 border border-slate-300">البيان / ملاحظات</th>
+                    <th className="p-1.5 border border-slate-300 text-left whitespace-nowrap">المبلغ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cashFlowPrintData.transactions.map((tx, idx) => {
+                    const isInflow = tx.flow_direction === 'IN';
+                    return (
+                      <tr key={idx} className="border-b border-slate-200 break-inside-avoid">
+                        <td className="p-1.5 border border-slate-300 text-center font-mono">{idx + 1}</td>
+                        <td className="p-1.5 border border-slate-300 whitespace-nowrap font-mono">{tx.date}</td>
+                        <td className="p-1.5 border border-slate-300 whitespace-nowrap font-mono font-bold">
+                          {tx.reference_number || `#${tx.id}`}
+                        </td>
+                        <td className="p-1.5 border border-slate-300 whitespace-nowrap font-bold">
+                          {tx.category_label}
+                        </td>
+                        <td className="p-1.5 border border-slate-300">{tx.party_name || '—'}</td>
+                        <td className="p-1.5 border border-slate-300 whitespace-nowrap">{tx.creator_name || '—'}</td>
+                        <td className="p-1.5 border border-slate-300 text-slate-600">{tx.notes || '—'}</td>
+                        <td className="p-1.5 border border-slate-300 text-left font-mono font-bold whitespace-nowrap">
+                          <span className={isInflow ? 'text-emerald-800' : 'text-rose-800'}>
+                            {isInflow ? '+' : '-'} {formatCurrency(tx.amount)}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-slate-100 font-bold border-t-2 border-slate-400">
+                    <td colSpan={7} className="p-2 border border-slate-300 text-right font-black">
+                      إجمالي صافي حركة العمليات أعلاه:
+                    </td>
+                    <td className="p-2 border border-slate-300 text-left font-mono font-black text-xs whitespace-nowrap">
+                      {formatCurrency(
+                        cashFlowPrintData.transactions.reduce(
+                          (sum, t) => sum + (t.flow_direction === 'IN' ? Number(t.amount || 0) : -Number(t.amount || 0)),
+                          0
+                        )
+                      )}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            ) : (
+              <p className="text-center py-4 text-slate-500 font-medium border border-dashed border-slate-300 rounded">
+                لا توجد حركات مسجلة تطابق هذه الخزينة والفترة المحددة.
+              </p>
+            )}
           </div>
         )}
 

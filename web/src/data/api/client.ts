@@ -1,20 +1,10 @@
 import axios from 'axios';
-import { Capacitor } from '@capacitor/core';
 import { secureStorage } from '../../platform/secureStorage';
 
-// Production API URL for native mobile apps (Android & iOS)
-const NATIVE_API_BASE_URL = 'https://backendapi.engazpro.com/api';
-
 const getBaseURL = (): string => {
-  // 1. Explicitly configured Vite environment variable takes highest priority
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
   }
-  // 2. When running as a Native Mobile App (Capacitor), always connect directly to cloud backend
-  if (Capacitor.isNativePlatform()) {
-    return NATIVE_API_BASE_URL;
-  }
-  // 3. Web browser environment defaults to relative /api proxy
   return '/api';
 };
 

@@ -95,7 +95,7 @@ class ProductResource extends JsonResource
                 'status' => $b->expiry_status,
                 'notes' => $b->notes,
             ]) : [],
-            'has_movements' => (bool) (
+            'has_movements' => $request->attributes->get('pos_catalog') ? false : (bool) (
                 (isset($this->invoice_items_exists)
                     ? (bool) $this->invoice_items_exists
                     : ($this->relationLoaded('invoiceItems') ? $this->invoiceItems->isNotEmpty() : $this->invoiceItems()->exists()))

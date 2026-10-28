@@ -38,6 +38,51 @@ class ProductController extends Controller
         ]);
     }
 
+    public function posCatalog(Request $request): JsonResponse
+    {
+        $request->attributes->set('pos_catalog', true);
+        $products = $this->productService->getPosCatalog($request->user(), $request->all());
+
+        return response()->json([
+            'success' => true,
+            'data' => ProductResource::collection($products),
+            'meta' => [
+                'current_page' => $products->currentPage(),
+                'last_page' => $products->lastPage(),
+                'per_page' => $products->perPage(),
+                'total' => $products->total(),
+            ],
+        ]);
+    }
+
+    public function lookup(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'code' => ['required', 'string', 'max:100'],
+            'branch_id' => ['nullable', 'integer'],
+        ]);
+
+        $request->attributes->set('pos_catalog', true);
+        $match = $this->productService->findByScanCode(
+            $request->user(),
+            $validated['code'],
+            isset($validated['branch_id']) ? (int) $validated['branch_id'] : null
+        );
+
+        if (!$match) {
+            return response()->json([
+                'success' => false,
+                'message' => 'لم يتم العثور على صنف بهذا الباركود',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => new ProductResource($match['product']),
+            'matched_variant_id' => $match['variant_id'],
+        ]);
+    }
+
     /**
      * إضافة صنف جديد
      */

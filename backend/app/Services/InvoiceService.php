@@ -17,21 +17,27 @@ use App\Exceptions\ShiftDomainException;
 use App\Exceptions\PosDomainException;
 use Exception;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Database\QueryException;
 
 class InvoiceService
 {
+    private const MAX_NUMBERING_RETRIES = 5;
+
     public function __construct(
         protected StockService $stockService,
         protected LedgerService $ledgerService,
         protected ?TreasuryService $treasuryService = null,
-        protected ?ShiftService $shiftService = null
+        protected ?ShiftService $shiftService = null,
+        protected ?SettingService $settingService = null
     ) {
         $this->treasuryService ??= app(TreasuryService::class);
         $this->shiftService ??= app(ShiftService::class);
+        $this->settingService ??= app(SettingService::class);
     }
 
     /**
      * إنشاء فاتورة ومعالجة المخزون والحسابات والدفع في عملية واحدة ذرية (Database Transaction)
+     * مع حماية ترقيم الفاتورة من سباقات التزامن عبر المعيد الفريد وإعادة المحاولة.
      */
     public function createInvoice(User $user, array $data): Invoice
     {
@@ -45,6 +51,23 @@ class InvoiceService
             }
         }
 
+        $attempts = 0;
+        while (true) {
+            try {
+                return $this->doCreateInvoice($user, $data, $idempotencyKey);
+            } catch (QueryException $e) {
+                $isDuplicate = (int) ($e->errorInfo[1] ?? 0) === 1062
+                    || str_contains(strtolower($e->getMessage()), 'unique constraint failed')
+                    || str_contains(strtolower($e->getMessage()), 'duplicate entry');
+                if (!$isDuplicate || ++$attempts >= self::MAX_NUMBERING_RETRIES) {
+                    throw $e;
+                }
+            }
+        }
+    }
+
+    private function doCreateInvoice(User $user, array $data, $idempotencyKey): Invoice
+    {
         return DB::transaction(function () use ($user, $data, $idempotencyKey) {
             $type = $data['type']; // SALE, PURCHASE, SALE_RETURN, PURCHASE_RETURN
             if (in_array($type, ['PURCHASE', 'PURCHASE_RETURN'], true) && !$user->isOwnerOrAdmin() && !$user->isManager()) {
@@ -65,8 +88,22 @@ class InvoiceService
                 'PURCHASE_RETURN' => 'PRT-',
                 default => 'DOC-',
             };
-            $count = Invoice::where('user_id', $user->getAccountId())->where('type', $type)->count() + 1;
-            $invoiceNumber = $data['invoice_number'] ?? ($prefix . str_pad($count, 5, '0', STR_PAD_LEFT));
+            if (!empty($data['invoice_number'])) {
+                $invoiceNumber = (string) $data['invoice_number'];
+            } else {
+                // ترقيم دفتري يشمل الفواتير المحذوفة (لمنع إعادة استخدام الرقم) مع اجتياز أي فجوات تاريخية
+                $sequential = (int) Invoice::withTrashed()
+                    ->where('user_id', $user->getAccountId())
+                    ->where('type', $type)
+                    ->count() + 1;
+                do {
+                    $invoiceNumber = $prefix . str_pad((string) $sequential, 5, '0', STR_PAD_LEFT);
+                    $sequential++;
+                } while (Invoice::withTrashed()
+                    ->where('user_id', $user->getAccountId())
+                    ->where('invoice_number', $invoiceNumber)
+                    ->exists());
+            }
 
             // حساب الإجماليات باستخدام كائن Money الموحد لمنع أخطاء التقريب
             $discountMoney = Money::of($data['discount'] ?? 0);
@@ -135,6 +172,37 @@ class InvoiceService
                     'total' => $itemTotalMoney->getAmount(),
                     'notes' => $itemData['notes'] ?? null,
                 ];
+            }
+
+            // سقف الخصم: لا يجوز أن يتجاوز إجمالي الأصناف (السلة)، مع تسامح يُفرض فقط على أوامر WooCommerce المتزامنة
+            if ($discountMoney->isGreaterThan($subtotalMoney)) {
+                if (!empty($data['wc_order_id'])) {
+                    $discountMoney = $subtotalMoney;
+                } else {
+                    throw new PosDomainException(
+                        'قيمة الخصم لا يمكن أن تتجاوز إجمالي الأصناف (قيمة السلة).',
+                        'DISCOUNT_EXCEEDS_SUBTOTAL',
+                        422
+                    );
+                }
+            }
+
+            // سقف النسبة المئوية للخصم على موظفي البيع (الكاشير/المندوب)، المالك والإدارة وادارة الفروع متجاوزون
+            $maxDiscountPercent = $this->settingService->getMaxDiscountPercent($user);
+            if (
+                !$user->isOwnerOrAdmin() && !$user->isManager()
+                && $maxDiscountPercent < 100.0
+                && $discountMoney->isGreaterThan($subtotalMoney->multiply($maxDiscountPercent / 100.0))
+            ) {
+                throw new PosDomainException(
+                    sprintf(
+                        'أقصى نسبة خصم مسموحة لك هي %.2f%% (بحد أقصى %s).',
+                        $maxDiscountPercent,
+                        number_format($subtotalMoney->multiply($maxDiscountPercent / 100.0)->getAmount(), 2)
+                    ),
+                    'DISCOUNT_EXCEEDS_LIMIT',
+                    422
+                );
             }
 
             $shippingMoney = Money::of($data['shipping_amount'] ?? 0);

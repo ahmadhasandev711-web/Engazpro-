@@ -55,5 +55,6 @@ class AppServiceProvider extends ServiceProvider
 
         \App\Models\BranchStock::observe(\App\Observers\BranchStockWooCommerceObserver::class);
         \App\Models\Party::observe(\App\Observers\PartyWooCommerceObserver::class);
+
     }
 }

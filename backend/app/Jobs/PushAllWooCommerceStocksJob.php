@@ -17,6 +17,8 @@ class PushAllWooCommerceStocksJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries = 2;
+
+    /** Must stay below config('queue.connections.database.retry_after'). */
     public int $timeout = 900;
 
     public function __construct(

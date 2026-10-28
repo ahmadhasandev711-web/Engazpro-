@@ -406,4 +406,5 @@ class TreasuryService
         $perPage = min((int) ($filters['per_page'] ?? 30), 100);
         return $query->paginate($perPage);
     }
+
 }

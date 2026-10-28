@@ -1,8 +1,24 @@
-import React from 'react';
-import { Wallet, TrendingUp, Receipt, ArrowDownLeft, ArrowUpRight, Smartphone, Landmark, Info } from 'lucide-react';
-import { formatCurrency, CashFlowReportData } from '@pos-mandob/shared';
+import React, { useState, useRef, useEffect } from 'react';
+import { CashFlowReportData, CashFlowTransaction } from '@pos-mandob/shared';
+import { useCashFlowTransactions, fetchAllCashFlowTransactions } from '../../../hooks/useReports';
+import { CashFlowGuidanceBanner } from './cash-flow/CashFlowGuidanceBanner';
+import { CashFlowTotalBanner } from './cash-flow/CashFlowTotalBanner';
+import { CashFlowChannelCards, SelectedTreasuryType } from './cash-flow/CashFlowChannelCards';
+import { CashFlowBreakdownCards } from './cash-flow/CashFlowBreakdownCards';
+import { CashFlowTransactionsTable } from './cash-flow/CashFlowTransactionsTable';
 
-export type SelectedTreasuryType = 'CASH' | 'CARD' | 'INSTAPAY' | 'VODAFONE_CASH' | 'TRANSFER';
+export type { SelectedTreasuryType } from './cash-flow/CashFlowChannelCards';
+
+export interface CashFlowPrintData {
+  treasuryName: string;
+  transactions: CashFlowTransaction[];
+  flowFilter: 'ALL' | 'INFLOW' | 'OUTFLOW';
+  movementCategory?: string;
+  search?: string;
+  preset: string;
+  fromDate?: string;
+  toDate?: string;
+}
 
 interface CashFlowTabProps {
   data?: CashFlowReportData;
@@ -10,6 +26,9 @@ interface CashFlowTabProps {
   selectedTreasury: SelectedTreasuryType;
   onSelectTreasury: (t: SelectedTreasuryType) => void;
   preset: string;
+  fromDate?: string;
+  toDate?: string;
+  onUpdatePrintData?: (printData: CashFlowPrintData) => void;
 }
 
 export const CashFlowTab: React.FC<CashFlowTabProps> = ({
@@ -18,9 +37,75 @@ export const CashFlowTab: React.FC<CashFlowTabProps> = ({
   selectedTreasury,
   onSelectTreasury,
   preset,
+  fromDate,
+  toDate,
+  onUpdatePrintData,
 }) => {
+  // Collapsed by default to keep the overview clean and fast
+  const [isTableOpen, setIsTableOpen] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
+  const [flowFilter, setFlowFilter] = useState<'ALL' | 'INFLOW' | 'OUTFLOW'>('ALL');
+  const [movementCategory, setMovementCategory] = useState<string | undefined>(undefined);
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const tableRef = useRef<HTMLDivElement>(null);
+
+  const treasuryName =
+    selectedTreasury === 'CASH'
+      ? 'متحصلات المبيعات النقدية (الكاش)'
+      : selectedTreasury === 'CARD'
+      ? 'متحصلات البطاقة (POS)'
+      : selectedTreasury === 'INSTAPAY'
+      ? 'متحصلات إنستاباي (InstaPay)'
+      : selectedTreasury === 'VODAFONE_CASH'
+      ? 'متحصلات فودافون كاش والمحافظ'
+      : 'متحصلات التحويلات البنكية المباشرة';
+
+  // Reset page, drill-down and search on filter/treasury change
+  useEffect(() => {
+    setPage(1);
+    setMovementCategory(undefined);
+    setFlowFilter('ALL');
+    setSearch('');
+  }, [selectedTreasury, fromDate, toDate]);
+
+  // Query transactions strictly on-demand (only when table is open)
+  const { data: txResponse, isLoading: isTxLoading } = useCashFlowTransactions(
+    {
+      channel: selectedTreasury,
+      fromDate,
+      toDate,
+      flowType: flowFilter,
+      movementCategory,
+      search,
+      page,
+      perPage: 15,
+    },
+    isTableOpen && !isLoading
+  );
+
+  // Sync active transactions & filters with parent for printable view (Top-level Hook before any returns)
+  useEffect(() => {
+    if (txResponse?.data) {
+      onUpdatePrintData?.({
+        treasuryName,
+        transactions: txResponse.data,
+        flowFilter,
+        movementCategory,
+        search,
+        preset,
+        fromDate,
+        toDate,
+      });
+    }
+  }, [txResponse, treasuryName, flowFilter, movementCategory, search, preset, fromDate, toDate, onUpdatePrintData]);
+
   if (isLoading) {
-    return <div className="text-center py-16 text-sm text-slate-400 font-medium">جاري احتساب حركة الخزن والنقدية...</div>;
+    return (
+      <div className="text-center py-16 text-sm text-slate-400 font-medium">
+        جاري احتساب حركة الخزن والنقدية...
+      </div>
+    );
   }
 
   const treasuries = data?.treasuries;
@@ -34,17 +119,6 @@ export const CashFlowTab: React.FC<CashFlowTabProps> = ({
       : selectedTreasury === 'VODAFONE_CASH'
       ? treasuries?.vodafone_cash
       : treasuries?.transfer;
-
-  const treasuryName =
-    selectedTreasury === 'CASH'
-      ? 'متحصلات المبيعات النقدية (الكاش)'
-      : selectedTreasury === 'CARD'
-      ? 'متحصلات البطاقة (فيزا / شبكة)'
-      : selectedTreasury === 'INSTAPAY'
-      ? 'متحصلات إنستاباي (InstaPay)'
-      : selectedTreasury === 'VODAFONE_CASH'
-      ? 'متحصلات فودافون كاش والمحافظ'
-      : 'متحصلات التحويلات البنكية المباشرة';
 
   const inflow =
     currentTreasury?.inflow ||
@@ -62,314 +136,121 @@ export const CashFlowTab: React.FC<CashFlowTabProps> = ({
     currentTreasury?.net_balance ??
     (selectedTreasury === 'CASH' ? data?.net_cash_flow || 0 : 0);
 
-  const totalFunds = data?.total_funds ?? data?.net_cash_flow ?? 0;
+  const handleDrillDown = (category: string, flow: 'INFLOW' | 'OUTFLOW') => {
+    if (movementCategory === category) {
+      setMovementCategory(undefined);
+      setFlowFilter('ALL');
+    } else {
+      setMovementCategory(category);
+      setFlowFilter(flow);
+    }
+    setPage(1);
+    setIsTableOpen(true);
+    setTimeout(() => {
+      tableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 120);
+  };
+
+  const handleClearDrillDown = () => {
+    setMovementCategory(undefined);
+    setFlowFilter('ALL');
+    setPage(1);
+  };
+
+  const handlePrint = async () => {
+    setIsPrinting(true);
+    try {
+      let printItems: CashFlowTransaction[] = [];
+      if (txResponse?.data && txResponse.meta && txResponse.meta.total <= txResponse.data.length) {
+        printItems = txResponse.data;
+      } else {
+        const res = await fetchAllCashFlowTransactions({
+          channel: selectedTreasury,
+          fromDate,
+          toDate,
+          flowType: flowFilter,
+          movementCategory,
+          search,
+          perPage: 200,
+        });
+        printItems = res.data || [];
+      }
+
+      onUpdatePrintData?.({
+        treasuryName,
+        transactions: printItems,
+        flowFilter,
+        movementCategory,
+        search,
+        preset,
+        fromDate,
+        toDate,
+      });
+
+      setTimeout(() => {
+        window.print();
+        setIsPrinting(false);
+      }, 100);
+    } catch (err) {
+      console.error('Failed to prepare print transactions:', err);
+      setIsPrinting(false);
+      window.print();
+    }
+  };
 
   return (
     <div className="space-y-6">
-      {/* Informative Guidance Banner */}
-      <div className="p-4 bg-amber-50/70 border border-amber-200/80 rounded-2xl flex items-start gap-3 text-xs text-amber-900 shadow-xs">
-        <div className="p-1.5 bg-amber-100 text-amber-700 rounded-xl mt-0.5">
-          <Info className="w-4 h-4" />
-        </div>
-        <div className="space-y-0.5">
-          <p className="font-bold text-amber-950">
-            طبيعة هذا التقرير: تقرير التدفقات والمتحصلات المحصلة خلال الفترة المحددة
-          </p>
-          <p className="text-amber-800 leading-relaxed text-[11px]">
-            يوضح هذا التقرير صافي الإيرادات والمبيعات المقبوضة مطروحاً منها المصروفات بحسب قناة الدفع (كاش، فيزا، إنستاباي، فودافون كاش، تحويل).
-            أما <strong>الأرصدة اللحظية الفعلية للخزائن النقدية والحسابات البنكية والمحافظ</strong>، فتتابعها وتديرها بدقة لحظة بلحظة من شاشة <span className="font-bold text-amber-950 underline">إدارة الخزن والحسابات</span>.
-          </p>
-        </div>
-      </div>
+      {/* 1. Guidance Information Banner */}
+      <CashFlowGuidanceBanner />
 
-      {/* Total Funds Overview Banner */}
-      <div className="p-6 rounded-3xl border shadow-sm flex flex-col md:flex-row items-center justify-between gap-6 bg-gradient-to-br from-teal-700 to-teal-900 text-white border-teal-600">
-        <div>
-          <div className="flex items-center gap-2 text-white/90 text-sm font-medium mb-1">
-            <Wallet className="w-5 h-5" />
-            <span>صافي المتحصلات والتدفقات ({preset === 'today' ? 'اليوم' : 'الفترة المحددة'})</span>
-          </div>
-          <h3 className="text-4xl font-black tracking-tight font-mono">
-            {formatCurrency(totalFunds)}
-          </h3>
-          <p className="text-xs text-teal-100 mt-1">
-            صافي ما تم تحصيله من العملاء مطروحاً منه المصروفات خلال هذه الفترة بكل الوسائل
-          </p>
-        </div>
+      {/* 2. Total Net Funds Banner */}
+      <CashFlowTotalBanner data={data} preset={preset} />
 
-        <div className="flex items-center flex-wrap gap-3 bg-white/10 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/20">
-          <div className="text-center px-1.5">
-            <span className="text-[10px] text-teal-100 font-bold block">💵 الكاش</span>
-            <span className="text-xs font-black font-mono">
-              {formatCurrency(treasuries?.cash?.net_balance ?? data?.net_cash_flow ?? 0)}
-            </span>
-          </div>
-          <div className="h-5 w-px bg-white/20" />
-          <div className="text-center px-1.5">
-            <span className="text-[10px] text-teal-100 font-bold block">💳 البطاقة</span>
-            <span className="text-xs font-black font-mono">
-              {formatCurrency(treasuries?.card?.net_balance ?? 0)}
-            </span>
-          </div>
-          <div className="h-5 w-px bg-white/20" />
-          <div className="text-center px-1.5">
-            <span className="text-[10px] text-teal-100 font-bold block">⚡ إنستاباي</span>
-            <span className="text-xs font-black font-mono">
-              {formatCurrency(treasuries?.instapay?.net_balance ?? 0)}
-            </span>
-          </div>
-          <div className="h-5 w-px bg-white/20" />
-          <div className="text-center px-1.5">
-            <span className="text-[10px] text-teal-100 font-bold block">📱 فودافون</span>
-            <span className="text-xs font-black font-mono">
-              {formatCurrency(treasuries?.vodafone_cash?.net_balance ?? 0)}
-            </span>
-          </div>
-        </div>
-      </div>
+      {/* 3. Five Payment Channel Cards */}
+      <CashFlowChannelCards
+        data={data}
+        selectedTreasury={selectedTreasury}
+        onSelectTreasury={onSelectTreasury}
+      />
 
-      {/* 5 Channels Interactive Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        {/* Cash */}
-        <button
-          type="button"
-          onClick={() => onSelectTreasury('CASH')}
-          className={`p-4 rounded-2xl border text-right transition-all flex flex-col justify-between ${
-            selectedTreasury === 'CASH'
-              ? 'bg-amber-50/80 border-amber-500 shadow-md ring-2 ring-amber-500/20'
-              : 'bg-white border-slate-200 hover:border-slate-300'
-          }`}
-        >
-          <div className="flex items-center justify-between w-full mb-2">
-            <span className="text-xs font-bold text-amber-800 flex items-center gap-1">
-              <Wallet className="w-3.5 h-3.5 text-amber-600" />
-              متحصلات الكاش
-            </span>
-            {selectedTreasury === 'CASH' && (
-              <span className="text-[9px] font-bold bg-amber-600 text-white px-1.5 py-0.5 rounded-full">نشطة</span>
-            )}
-          </div>
-          <p className="text-lg font-black text-slate-900 font-mono">
-            {formatCurrency(treasuries?.cash?.net_balance ?? data?.net_cash_flow ?? 0)}
-          </p>
-          <p className="text-[10px] text-slate-400 mt-1">صافي المقبوض نقداً في الفترة</p>
-        </button>
+      {/* 4. Inflow & Outflow Breakdown Cards */}
+      <CashFlowBreakdownCards
+        treasuryName={treasuryName}
+        selectedTreasury={selectedTreasury}
+        inflow={inflow}
+        outflow={outflow}
+        netBalance={netBalance}
+        movementCategory={movementCategory}
+        onDrillDown={handleDrillDown}
+      />
 
-        {/* Card */}
-        <button
-          type="button"
-          onClick={() => onSelectTreasury('CARD')}
-          className={`p-4 rounded-2xl border text-right transition-all flex flex-col justify-between ${
-            selectedTreasury === 'CARD'
-              ? 'bg-purple-50/80 border-purple-500 shadow-md ring-2 ring-purple-500/20'
-              : 'bg-white border-slate-200 hover:border-slate-300'
-          }`}
-        >
-          <div className="flex items-center justify-between w-full mb-2">
-            <span className="text-xs font-bold text-purple-800 flex items-center gap-1">
-              <Receipt className="w-3.5 h-3.5 text-purple-600" />
-              متحصلات البطاقة (POS)
-            </span>
-            {selectedTreasury === 'CARD' && (
-              <span className="text-[9px] font-bold bg-purple-600 text-white px-1.5 py-0.5 rounded-full">نشطة</span>
-            )}
-          </div>
-          <p className="text-lg font-black text-slate-900 font-mono">
-            {formatCurrency(treasuries?.card?.net_balance ?? 0)}
-          </p>
-          <p className="text-[10px] text-slate-400 mt-1">مدفوعات نقاط البيع والفيزا</p>
-        </button>
-
-        {/* InstaPay */}
-        <button
-          type="button"
-          onClick={() => onSelectTreasury('INSTAPAY')}
-          className={`p-4 rounded-2xl border text-right transition-all flex flex-col justify-between ${
-            selectedTreasury === 'INSTAPAY'
-              ? 'bg-indigo-50/80 border-indigo-500 shadow-md ring-2 ring-indigo-500/20'
-              : 'bg-white border-slate-200 hover:border-slate-300'
-          }`}
-        >
-          <div className="flex items-center justify-between w-full mb-2">
-            <span className="text-xs font-bold text-indigo-800 flex items-center gap-1">
-              <TrendingUp className="w-3.5 h-3.5 text-indigo-600" />
-              متحصلات إنستاباي
-            </span>
-            {selectedTreasury === 'INSTAPAY' && (
-              <span className="text-[9px] font-bold bg-indigo-600 text-white px-1.5 py-0.5 rounded-full">نشطة</span>
-            )}
-          </div>
-          <p className="text-lg font-black text-slate-900 font-mono">
-            {formatCurrency(treasuries?.instapay?.net_balance ?? 0)}
-          </p>
-          <p className="text-[10px] text-slate-400 mt-1">تحويلات InstaPay الفورية</p>
-        </button>
-
-        {/* Vodafone Cash */}
-        <button
-          type="button"
-          onClick={() => onSelectTreasury('VODAFONE_CASH')}
-          className={`p-4 rounded-2xl border text-right transition-all flex flex-col justify-between ${
-            selectedTreasury === 'VODAFONE_CASH'
-              ? 'bg-rose-50/80 border-rose-500 shadow-md ring-2 ring-rose-500/20'
-              : 'bg-white border-slate-200 hover:border-slate-300'
-          }`}
-        >
-          <div className="flex items-center justify-between w-full mb-2">
-            <span className="text-xs font-bold text-rose-800 flex items-center gap-1">
-              <Smartphone className="w-3.5 h-3.5 text-rose-600" />
-              فودافون والمحافظ
-            </span>
-            {selectedTreasury === 'VODAFONE_CASH' && (
-              <span className="text-[9px] font-bold bg-rose-600 text-white px-1.5 py-0.5 rounded-full">نشطة</span>
-            )}
-          </div>
-          <p className="text-lg font-black text-slate-900 font-mono">
-            {formatCurrency(treasuries?.vodafone_cash?.net_balance ?? 0)}
-          </p>
-          <p className="text-[10px] text-slate-400 mt-1">محافظ الموبايل الذكية</p>
-        </button>
-
-        {/* Other Transfers */}
-        <button
-          type="button"
-          onClick={() => onSelectTreasury('TRANSFER')}
-          className={`p-4 rounded-2xl border text-right transition-all flex flex-col justify-between ${
-            selectedTreasury === 'TRANSFER'
-              ? 'bg-sky-50/80 border-sky-500 shadow-md ring-2 ring-sky-500/20'
-              : 'bg-white border-slate-200 hover:border-slate-300'
-          }`}
-        >
-          <div className="flex items-center justify-between w-full mb-2">
-            <span className="text-xs font-bold text-sky-800 flex items-center gap-1">
-              <Landmark className="w-3.5 h-3.5 text-sky-600" />
-              التحويلات البنكية
-            </span>
-            {selectedTreasury === 'TRANSFER' && (
-              <span className="text-[9px] font-bold bg-sky-600 text-white px-1.5 py-0.5 rounded-full">نشطة</span>
-            )}
-          </div>
-          <p className="text-lg font-black text-slate-900 font-mono">
-            {formatCurrency(treasuries?.transfer?.net_balance ?? 0)}
-          </p>
-          <p className="text-[10px] text-slate-400 mt-1">حسابات بنكية وتحويلات مباشرة</p>
-        </button>
-      </div>
-
-      {/* Detailed Inflow vs Outflow Cards for Active Treasury */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Inflow */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <div className="flex items-center gap-2">
-              <ArrowDownLeft className="w-5 h-5 text-emerald-600" />
-              <h4 className="font-bold text-sm text-slate-900">الوارد إلى {treasuryName} (+)</h4>
-            </div>
-            <span className="text-xs font-black text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
-              {formatCurrency(inflow?.total || (inflow as any)?.total_inflow || 0)}
-            </span>
-          </div>
-
-          <div className="space-y-3 text-xs">
-            <div className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
-              <div>
-                <p className="font-bold text-slate-800">مبيعات محصلة</p>
-                <p className="text-[11px] text-slate-400">إجمالي المبيعات المسددة عبر {treasuryName}</p>
-              </div>
-              <span className="font-black text-slate-900 font-mono text-sm">
-                {formatCurrency(inflow?.sales ?? (inflow as any)?.cash_sales ?? 0)}
-              </span>
-            </div>
-
-            <div className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
-              <div>
-                <p className="font-bold text-slate-800">سندات قبض</p>
-                <p className="text-[11px] text-slate-400">مقبوضات سندات القبض من العملاء</p>
-              </div>
-              <span className="font-black text-slate-900 font-mono text-sm">
-                {formatCurrency(inflow?.receipt_vouchers ?? 0)}
-              </span>
-            </div>
-
-            <div className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
-              <div>
-                <p className="font-bold text-slate-800">مرتجعات شراء مستردة</p>
-                <p className="text-[11px] text-slate-400">المبالغ المستردة من الموردين</p>
-              </div>
-              <span className="font-black text-slate-900 font-mono text-sm">
-                {formatCurrency(inflow?.purchase_returns ?? 0)}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Outflow */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <div className="flex items-center gap-2">
-              <ArrowUpRight className="w-5 h-5 text-rose-600" />
-              <h4 className="font-bold text-sm text-slate-900">الصادر من {treasuryName} (-)</h4>
-            </div>
-            <span className="text-xs font-black text-rose-700 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200">
-              {formatCurrency(outflow?.total || (outflow as any)?.total_outflow || 0)}
-            </span>
-          </div>
-
-          <div className="space-y-3 text-xs">
-            <div className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
-              <div>
-                <p className="font-bold text-slate-800">مشتريات مدفوعة</p>
-                <p className="text-[11px] text-slate-400">المدفوع للموردين لشراء بضاعة</p>
-              </div>
-              <span className="font-black text-slate-900 font-mono text-sm">
-                {formatCurrency(outflow?.purchases ?? (outflow as any)?.cash_purchases ?? 0)}
-              </span>
-            </div>
-
-            <div className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
-              <div>
-                <p className="font-bold text-slate-800">سندات صرف</p>
-                <p className="text-[11px] text-slate-400">مدفوعات سندات الصرف للموردين</p>
-              </div>
-              <span className="font-black text-slate-900 font-mono text-sm">
-                {formatCurrency(outflow?.payment_vouchers ?? 0)}
-              </span>
-            </div>
-
-            <div className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
-              <div>
-                <p className="font-bold text-slate-800">مرتجعات بيع مردودة</p>
-                <p className="text-[11px] text-slate-400">المبالغ المردودة للعملاء عند الإرجاع</p>
-              </div>
-              <span className="font-black text-slate-900 font-mono text-sm">
-                {formatCurrency(outflow?.sale_returns ?? 0)}
-              </span>
-            </div>
-
-            {selectedTreasury === 'CASH' && (
-              <div className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
-                <div>
-                  <p className="font-bold text-slate-800">المصروفات النقدية</p>
-                  <p className="text-[11px] text-slate-400">المصروفات المنصرفة نقدًا</p>
-                </div>
-                <span className="font-black text-slate-900 font-mono text-sm">
-                  {formatCurrency(outflow?.expenses ?? 0)}
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Net Balance Footer Card for Active Treasury */}
-      <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Wallet className="w-5 h-5 text-primary-600" />
-          <span className="font-bold text-sm text-slate-800">صافي رصيد {treasuryName}:</span>
-        </div>
-        <span className="text-xl font-black font-mono text-primary-700">
-          {formatCurrency(netBalance)}
-        </span>
+      {/* 5. On-Demand Collapsible & Searchable Transactions Table */}
+      <div ref={tableRef}>
+        <CashFlowTransactionsTable
+          treasuryName={treasuryName}
+          isTableOpen={isTableOpen}
+          onToggleTable={() => setIsTableOpen(!isTableOpen)}
+          transactions={txResponse?.data || []}
+          isLoading={isTxLoading}
+          meta={txResponse?.meta}
+          flowFilter={flowFilter}
+          onFlowFilterChange={(flow) => {
+            setFlowFilter(flow);
+            setMovementCategory(undefined);
+            setPage(1);
+          }}
+          movementCategory={movementCategory}
+          onClearDrillDown={handleClearDrillDown}
+          search={search}
+          onSearchChange={(val) => {
+            setSearch(val);
+            setPage(1);
+          }}
+          page={page}
+          onPageChange={setPage}
+          onPrint={handlePrint}
+          isPrinting={isPrinting}
+        />
       </div>
     </div>
   );

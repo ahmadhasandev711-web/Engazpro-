@@ -20,6 +20,7 @@ export const SettingsPage: React.FC = () => {
     store_phone: '',
     store_address: '',
     currency: 'ج.م',
+    max_discount_percent: '100',
   });
   const [loadingStore, setLoadingStore] = useState(false);
   const [savingStore, setSavingStore] = useState(false);
@@ -36,6 +37,7 @@ export const SettingsPage: React.FC = () => {
             store_phone: res.data.data.store_phone || '',
             store_address: res.data.data.store_address || '',
             currency: res.data.data.currency || 'ج.م',
+            max_discount_percent: String(res.data.data.max_discount_percent ?? 100),
           });
         }
       } catch (err) {
@@ -300,6 +302,28 @@ export const SettingsPage: React.FC = () => {
                 placeholder="مثال: القاهرة - المعادي - شارع 9"
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900 text-sm focus:outline-none focus:border-blue-500 disabled:opacity-60"
               />
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-slate-700 block mb-1.5">
+                أقصى نسبة خصم لموظفي البيع
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  disabled={!isOwnerOrAdmin || loadingStore}
+                  value={storeData.max_discount_percent}
+                  onChange={(e) => setStoreData({ ...storeData, max_discount_percent: e.target.value })}
+                  placeholder="100"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 pl-10 text-slate-900 text-sm font-bold focus:outline-none focus:border-blue-500 disabled:opacity-60"
+                />
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">%</span>
+              </div>
+              <p className="text-[10px] text-slate-400 mt-1">
+                100 يعني بلا سقف. أصغر قيمة تمنع الكاشير والمندوب من تجاوزها (الإدارة والمديرون متجاوزون دائماً)
+              </p>
             </div>
           </div>
 

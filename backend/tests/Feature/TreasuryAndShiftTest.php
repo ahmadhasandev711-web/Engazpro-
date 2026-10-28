@@ -192,4 +192,5 @@ class TreasuryAndShiftTest extends TestCase
             ->first();
         $this->assertEquals(350, (float) $mainTreasury->balance);
     }
+
 }

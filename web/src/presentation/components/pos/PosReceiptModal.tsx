@@ -1,9 +1,8 @@
-import React, { useRef, useState } from 'react';
-import { Printer, X, CheckCircle2, RotateCcw, Share2, Bluetooth } from 'lucide-react';
+import React, { useRef } from 'react';
+import { Printer, X, CheckCircle2, RotateCcw, Share2 } from 'lucide-react';
 import { formatCurrency } from '@pos-mandob/shared';
 import { useAuthStore } from '../../../data/store/useAuthStore';
 import { webShareService, formatInvoiceWhatsAppText } from '../../../infrastructure/pwa/webShareService';
-import { thermalPrinterService } from '../../../infrastructure/hardware/thermalPrinter';
 
 interface PosReceiptModalProps {
   isOpen: boolean;
@@ -20,7 +19,6 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
 }) => {
   const user = useAuthStore((state) => state.user);
   const printRef = useRef<HTMLDivElement>(null);
-  const [isBluetoothPrinting, setIsBluetoothPrinting] = useState(false);
 
   if (!isOpen || !invoice) return null;
 
@@ -37,41 +35,6 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
 
   const handlePrint = () => {
     window.print();
-  };
-
-  const handleBluetoothPrint = async () => {
-    if (!thermalPrinterService.isSupported()) return;
-    setIsBluetoothPrinting(true);
-    try {
-      const lines = (invoice.items || []).map((item: any) => ({
-        name: item.product_name || item.name || 'صنف',
-        quantity: Number(item.quantity) || 0,
-        unitPrice: Number(item.unit_price ?? item.price) || 0,
-        lineTotal: Number(item.total ?? item.line_total) || 0,
-      }));
-      await thermalPrinterService.printReceipt({
-        storeName,
-        storePhone,
-        storeAddress,
-        invoiceNumber: String(invoice.invoice_number || invoice.id),
-        dateLabel: dateStr,
-        timeLabel: timeStr,
-        cashierName,
-        customerName: invoice.party?.name || invoice.party_name || 'عميل نقدي',
-        lines,
-        subtotal: Number(invoice.subtotal ?? invoice.total) || 0,
-        discount: Number(invoice.discount) || 0,
-        shipping: Number(invoice.shipping_amount ?? invoice.shipping_cost) || 0,
-        total: Number(invoice.total_amount ?? invoice.total) || 0,
-        paidAmount: Number(invoice.paid_amount ?? invoice.total) || 0,
-        currencySymbol,
-      });
-    } catch (err) {
-      console.error('Bluetooth print failed:', err);
-      window.alert('تعذر الطباعة على الطابعة. تأكد من إقران الطابعة الحرارية عبر البلوتوث.');
-    } finally {
-      setIsBluetoothPrinting(false);
-    }
   };
 
   const handleShareWhatsApp = async () => {
@@ -91,7 +54,6 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
   };
 
   const items = invoice.items || [];
-  const showBluetoothPrint = thermalPrinterService.isSupported();
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
@@ -266,26 +228,14 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
         {/* Modal Buttons */}
         <div className="p-4 bg-white border-t border-slate-200 space-y-2 no-print">
           <div className="flex items-center gap-2 flex-wrap">
-            {showBluetoothPrint ? (
-              <button
-                type="button"
-                onClick={handleBluetoothPrint}
-                disabled={isBluetoothPrinting}
-                className="flex-1 min-w-[45%] bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white py-3 rounded-2xl text-xs font-black shadow-md shadow-emerald-700/20 transition-all flex items-center justify-center gap-1.5"
-              >
-                <Bluetooth className="w-4 h-4" />
-                <span>{isBluetoothPrinting ? 'جاري الطباعة...' : 'طباعة بلوتوث'}</span>
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handlePrint}
-                className="flex-1 min-w-[45%] bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white py-3 rounded-2xl text-xs font-black shadow-md shadow-emerald-700/20 transition-all flex items-center justify-center gap-1.5"
-              >
-                <Printer className="w-4 h-4" />
-                <span>طباعة الإيصال</span>
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="flex-1 min-w-[45%] bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white py-3 rounded-2xl text-xs font-black shadow-md shadow-emerald-700/20 transition-all flex items-center justify-center gap-1.5"
+            >
+              <Printer className="w-4 h-4" />
+              <span>طباعة الإيصال</span>
+            </button>
 
             <button
               type="button"

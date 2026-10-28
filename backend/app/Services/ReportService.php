@@ -352,4 +352,205 @@ class ReportService
             'net_balance' => $totalInflow->subtract($totalOutflow)->getAmount(),
         ];
     }
+
+    /**
+     * استعلام حركات الخزينة / قناة الدفع التفصيلية مع التصفح والفلترة
+     */
+    public function getCashFlowTransactions(string $channel, array $filters = []): \Illuminate\Contracts\Pagination\LengthAwarePaginator
+    {
+        $fromDate = $filters['from_date'] ?? null;
+        $toDate = $filters['to_date'] ?? null;
+        $flowType = strtoupper($filters['flow_type'] ?? 'ALL'); // ALL, INFLOW, OUTFLOW
+        $movementCategory = !empty($filters['movement_category']) ? strtoupper($filters['movement_category']) : null;
+        $search = !empty($filters['search']) ? trim($filters['search']) : null;
+        $cashierId = !empty($filters['cashier_id']) ? (int) $filters['cashier_id'] : null;
+        $perPage = min((int) ($filters['per_page'] ?? 15), 50);
+        $page = (int) ($filters['page'] ?? 1);
+
+        $shouldIncludeInvoices = true;
+        $shouldIncludePayments = true;
+        $shouldIncludeExpenses = ($channel === 'CASH');
+
+        if ($flowType === 'INFLOW') {
+            $shouldIncludeExpenses = false;
+        }
+
+        if ($movementCategory) {
+            $invoiceCategories = ['SALE', 'PURCHASE', 'SALE_RETURN', 'PURCHASE_RETURN'];
+            $paymentCategories = ['RECEIPT_VOUCHER', 'PAYMENT_VOUCHER', 'SPLIT_SALE'];
+
+            $shouldIncludeInvoices = in_array($movementCategory, $invoiceCategories, true);
+            $shouldIncludePayments = in_array($movementCategory, $paymentCategories, true);
+            $shouldIncludeExpenses = ($movementCategory === 'EXPENSE' && $channel === 'CASH');
+        }
+
+        $queries = [];
+
+        // 1. Invoices Query
+        if ($shouldIncludeInvoices) {
+            $invoiceQuery = Invoice::query()
+                ->selectRaw("
+                    invoices.id,
+                    'INVOICE' as source_type,
+                    invoices.type as movement_category,
+                    invoices.invoice_number as reference_number,
+                    invoices.date,
+                    invoices.created_at,
+                    invoices.paid_amount as amount,
+                    case when invoices.type in ('SALE', 'PURCHASE_RETURN') then 'IN' else 'OUT' end as flow_direction,
+                    invoices.party_id,
+                    parties.name as party_name,
+                    invoices.created_by,
+                    users.name as creator_name,
+                    invoices.notes
+                ")
+                ->leftJoin('parties', 'invoices.party_id', '=', 'parties.id')
+                ->leftJoin('users', 'invoices.created_by', '=', 'users.id')
+                ->where('invoices.payment_method', $channel)
+                ->where('invoices.paid_amount', '>', 0);
+
+            if ($movementCategory && in_array($movementCategory, ['SALE', 'PURCHASE', 'SALE_RETURN', 'PURCHASE_RETURN'], true)) {
+                $invoiceQuery->where('invoices.type', $movementCategory);
+            } else {
+                $invoiceQuery->whereIn('invoices.type', ['SALE', 'PURCHASE', 'SALE_RETURN', 'PURCHASE_RETURN']);
+                if ($flowType === 'INFLOW') {
+                    $invoiceQuery->whereIn('invoices.type', ['SALE', 'PURCHASE_RETURN']);
+                } elseif ($flowType === 'OUTFLOW') {
+                    $invoiceQuery->whereIn('invoices.type', ['PURCHASE', 'SALE_RETURN']);
+                }
+            }
+
+            if ($fromDate) {
+                $invoiceQuery->where('invoices.date', '>=', $fromDate);
+            }
+            if ($toDate) {
+                $invoiceQuery->where('invoices.date', '<=', $toDate . ' 23:59:59');
+            }
+
+            $queries[] = $invoiceQuery;
+        }
+
+        // 2. Payments Query
+        if ($shouldIncludePayments) {
+            $paymentQuery = Payment::query()
+                ->selectRaw("
+                    payments.id,
+                    'PAYMENT' as source_type,
+                    case 
+                        when payments.invoice_id is not null then 'SPLIT_SALE'
+                        when payments.type = 'RECEIPT' then 'RECEIPT_VOUCHER'
+                        else 'PAYMENT_VOUCHER'
+                    end as movement_category,
+                    payments.id as reference_number,
+                    payments.date,
+                    payments.created_at,
+                    payments.amount,
+                    case when payments.type = 'RECEIPT' then 'IN' else 'OUT' end as flow_direction,
+                    payments.party_id,
+                    parties.name as party_name,
+                    payments.created_by,
+                    users.name as creator_name,
+                    payments.notes
+                ")
+                ->leftJoin('parties', 'payments.party_id', '=', 'parties.id')
+                ->leftJoin('users', 'payments.created_by', '=', 'users.id')
+                ->where('payments.method', $channel)
+                ->where(function ($q) {
+                    $q->whereNull('payments.invoice_id')
+                      ->orWhereHas('invoice', fn($iq) => $iq->where('payment_method', 'SPLIT'));
+                });
+
+            if ($movementCategory === 'SPLIT_SALE') {
+                $paymentQuery->whereNotNull('payments.invoice_id')
+                    ->whereHas('invoice', fn($iq) => $iq->where('payment_method', 'SPLIT'));
+            } elseif ($movementCategory === 'RECEIPT_VOUCHER') {
+                $paymentQuery->where('payments.type', 'RECEIPT')->whereNull('payments.invoice_id');
+            } elseif ($movementCategory === 'PAYMENT_VOUCHER') {
+                $paymentQuery->where('payments.type', 'PAYMENT')->whereNull('payments.invoice_id');
+            } else {
+                if ($flowType === 'INFLOW') {
+                    $paymentQuery->where('payments.type', 'RECEIPT');
+                } elseif ($flowType === 'OUTFLOW') {
+                    $paymentQuery->where('payments.type', 'PAYMENT');
+                }
+            }
+
+            if ($fromDate) {
+                $paymentQuery->where('payments.date', '>=', $fromDate);
+            }
+            if ($toDate) {
+                $paymentQuery->where('payments.date', '<=', $toDate . ' 23:59:59');
+            }
+
+            $queries[] = $paymentQuery;
+        }
+
+        // 3. Expenses Query
+        if ($shouldIncludeExpenses) {
+            $expenseQuery = Expense::query()
+                ->selectRaw("
+                    expenses.id,
+                    'EXPENSE' as source_type,
+                    'EXPENSE' as movement_category,
+                    expenses.title as reference_number,
+                    expenses.date,
+                    expenses.created_at,
+                    expenses.amount,
+                    'OUT' as flow_direction,
+                    null as party_id,
+                    expenses.category as party_name,
+                    expenses.created_by,
+                    users.name as creator_name,
+                    expenses.notes
+                ")
+                ->leftJoin('users', 'expenses.created_by', '=', 'users.id');
+
+            if ($channel === 'CASH') {
+                $expenseQuery->where(function ($q) {
+                    $q->whereNull('expenses.payment_method')
+                      ->orWhere('expenses.payment_method', 'CASH');
+                });
+            } else {
+                $expenseQuery->where('expenses.payment_method', $channel);
+            }
+
+            if ($fromDate) {
+                $expenseQuery->where('expenses.date', '>=', $fromDate);
+            }
+            if ($toDate) {
+                $expenseQuery->where('expenses.date', '<=', $toDate . ' 23:59:59');
+            }
+
+            $queries[] = $expenseQuery;
+        }
+
+        if (empty($queries)) {
+            return new \Illuminate\Pagination\LengthAwarePaginator([], 0, $perPage, $page);
+        }
+
+        $baseQuery = array_shift($queries);
+        foreach ($queries as $q) {
+            $baseQuery->unionAll($q);
+        }
+
+        $outerQuery = DB::query()->fromSub($baseQuery, 'cash_flow_tx');
+
+        if ($search) {
+            $outerQuery->where(function ($q) use ($search) {
+                $q->where('reference_number', 'like', "%{$search}%")
+                  ->orWhere('party_name', 'like', "%{$search}%")
+                  ->orWhere('creator_name', 'like', "%{$search}%")
+                  ->orWhere('notes', 'like', "%{$search}%");
+            });
+        }
+
+        if ($cashierId) {
+            $outerQuery->where('created_by', $cashierId);
+        }
+
+        return $outerQuery
+            ->orderBy('date', 'desc')
+            ->orderBy('created_at', 'desc')
+            ->paginate($perPage, ['*'], 'page', $page);
+    }
 }

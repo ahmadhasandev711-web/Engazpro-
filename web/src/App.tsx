@@ -8,8 +8,6 @@ import { AdminRoute } from './presentation/components/AdminRoute';
 import { ConfirmProvider } from './presentation/context/ConfirmContext';
 import { UserRole } from '@pos-mandob/shared';
 import { useAuthStore } from './data/store/useAuthStore';
-import { useCapacitorBootstrap } from './platform/useCapacitorBootstrap';
-import { Capacitor } from '@capacitor/core';
 import { AuthHydrationGate } from './presentation/components/AuthHydrationGate';
 
 // Code-Splitting & Lazy Loading for blazing-fast POS initialization
@@ -48,8 +46,7 @@ const queryClient = new QueryClient({
   },
 });
 
-// Prefetch critical chunks on web only (native APK keeps startup lean)
-if (typeof window !== 'undefined' && !Capacitor.isNativePlatform()) {
+if (typeof window !== 'undefined') {
   const prefetchCorePages = () => {
     import('./presentation/pages/DashboardPage');
     import('./presentation/pages/ProductsPage');
@@ -79,37 +76,20 @@ const RootRouteHandler: React.FC = () => {
   if (isAuthenticated) {
     return <Navigate to="/dashboard" replace />;
   }
-  // On native mobile devices, go straight to login register screen
-  if (Capacitor.isNativePlatform()) {
-    return <Navigate to="/login" replace />;
-  }
   return <LandingPage />;
-};
-
-const LandingRoute: React.FC = () => {
-  if (Capacitor.isNativePlatform()) {
-    return <Navigate to="/login" replace />;
-  }
-  return <LandingPage />;
-};
-
-const AppLifecycleManager: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  useCapacitorBootstrap();
-  return <>{children}</>;
 };
 
 export const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <AppLifecycleManager>
           <AuthHydrationGate>
           <ConfirmProvider>
           <Suspense fallback={<PageLoadingFallback />}>
             <Routes>
               {/* Public Landing & Auth Routes */}
               <Route path="/" element={<RootRouteHandler />} />
-              <Route path="/landing" element={<LandingRoute />} />
+              <Route path="/landing" element={<LandingPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
 
@@ -177,7 +157,6 @@ export const App: React.FC = () => {
           </Suspense>
         </ConfirmProvider>
           </AuthHydrationGate>
-        </AppLifecycleManager>
       </BrowserRouter>
     </QueryClientProvider>
   );

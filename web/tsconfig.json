@@ -20,10 +20,9 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
 
-    /* Path aliases */
-    "baseUrl": ".",
+    /* Path aliases are resolved from this file, without baseUrl. */
     "paths": {
-      "@/*": ["src/*"],
+      "@/*": ["./src/*"],
       "@pos-mandob/shared": ["../packages/shared/src"]
     }
   },

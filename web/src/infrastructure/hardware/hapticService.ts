@@ -1,10 +1,5 @@
-import { Capacitor } from '@capacitor/core';
-import { Haptics, NotificationType } from '@capacitor/haptics';
-
 /**
- * Infrastructure Layer - Haptic Service
- * Conforms to DIP (GR-7) & SoC (GR-3)
- * Provides safe tactile feedback with Capacitor Native Haptics and web fallback.
+ * Browser vibration feedback. Native haptics left with the Capacitor app.
  */
 
 export interface IHapticService {
@@ -15,59 +10,35 @@ export interface IHapticService {
   error(): void;
 }
 
-class HybridHapticService implements IHapticService {
+const vibrate = (pattern: number | number[]): void => {
+  if (typeof navigator === 'undefined' || typeof navigator.vibrate !== 'function') return;
+  try {
+    navigator.vibrate(pattern);
+  } catch {
+    /* browsers may reject vibration without a user gesture */
+  }
+};
+
+class BrowserHapticService implements IHapticService {
   isSupported(): boolean {
-    if (Capacitor.isNativePlatform()) return true;
-    return typeof window !== 'undefined' && 'navigator' in window && 'vibrate' in navigator;
+    return typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function';
   }
 
   selection(): void {
-    if (Capacitor.isNativePlatform()) {
-      Haptics.selectionChanged().catch(() => {});
-      return;
-    }
-    if (typeof window !== 'undefined' && 'navigator' in window && 'vibrate' in navigator) {
-      try {
-        navigator.vibrate(10);
-      } catch {}
-    }
+    vibrate(10);
   }
 
   success(): void {
-    if (Capacitor.isNativePlatform()) {
-      Haptics.notification({ type: NotificationType.Success }).catch(() => {});
-      return;
-    }
-    if (typeof window !== 'undefined' && 'navigator' in window && 'vibrate' in navigator) {
-      try {
-        navigator.vibrate([15, 40, 20]);
-      } catch {}
-    }
+    vibrate([15, 40, 20]);
   }
 
   warning(): void {
-    if (Capacitor.isNativePlatform()) {
-      Haptics.notification({ type: NotificationType.Warning }).catch(() => {});
-      return;
-    }
-    if (typeof window !== 'undefined' && 'navigator' in window && 'vibrate' in navigator) {
-      try {
-        navigator.vibrate([30, 50, 30]);
-      } catch {}
-    }
+    vibrate([30, 50, 30]);
   }
 
   error(): void {
-    if (Capacitor.isNativePlatform()) {
-      Haptics.notification({ type: NotificationType.Error }).catch(() => {});
-      return;
-    }
-    if (typeof window !== 'undefined' && 'navigator' in window && 'vibrate' in navigator) {
-      try {
-        navigator.vibrate([50, 100, 50]);
-      } catch {}
-    }
+    vibrate([50, 100, 50]);
   }
 }
 
-export const hapticService: IHapticService = new HybridHapticService();
+export const hapticService: IHapticService = new BrowserHapticService();

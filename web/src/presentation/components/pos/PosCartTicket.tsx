@@ -73,6 +73,7 @@ export const PosCartTicket: React.FC<PosCartTicketProps> = ({
   });
 
   const [isShippingSelected, setIsShippingSelected] = useState(Boolean(shippingCost > 0 || courierPartyId));
+  const [discountMode, setDiscountMode] = useState<'AMOUNT' | 'PERCENT'>('AMOUNT');
 
   const subtotal = items.reduce((acc, item) => acc + item.total, 0);
   const total = Math.max(0, subtotal - discount + (shippingCost || 0));
@@ -247,17 +248,37 @@ export const PosCartTicket: React.FC<PosCartTicketProps> = ({
               <Percent className="w-3.5 h-3.5 text-slate-400" />
               <span>خصم الفاتورة:</span>
             </span>
-            <div className="flex items-center gap-1 w-24">
+            <div className="flex items-center gap-1 w-28">
               <input
                 type="number"
                 min="0"
-                step="1"
-                value={discount || ''}
-                onChange={(e) => onUpdateDiscount(Number(e.target.value) || 0)}
+                step={discountMode === 'PERCENT' ? '1' : '1'}
+                value={
+                  discountMode === 'PERCENT'
+                    ? subtotal > 0 && discount > 0
+                      ? Number(((discount / subtotal) * 100).toFixed(2))
+                      : ''
+                    : discount || ''
+                }
+                onChange={(e) => {
+                  const raw = Number(e.target.value) || 0;
+                  if (discountMode === 'PERCENT') {
+                    onUpdateDiscount(Number(((subtotal * raw) / 100).toFixed(2)));
+                  } else {
+                    onUpdateDiscount(raw);
+                  }
+                }}
                 placeholder="0.00"
                 className="w-full text-left font-mono font-bold text-xs px-2 py-1 bg-white border border-slate-200 rounded-lg text-rose-600 focus:outline-none focus:ring-1 focus:ring-primary-500"
               />
-              <span className="text-[10px] text-slate-400 font-bold">ج.م</span>
+              <button
+                type="button"
+                onClick={() => setDiscountMode((m) => (m === 'AMOUNT' ? 'PERCENT' : 'AMOUNT'))}
+                title={discountMode === 'AMOUNT' ? 'التبديل إلى خصم بالنسبة المئوية' : 'التبديل إلى خصم بمبلغ ثابت'}
+                className="w-8 shrink-0 text-[10px] font-black rounded-lg border border-slate-200 bg-white text-rose-600 hover:bg-rose-50 active:scale-95 transition-all py-1"
+              >
+                {discountMode === 'AMOUNT' ? 'ج.م' : '%'}
+              </button>
             </div>
           </div>
 

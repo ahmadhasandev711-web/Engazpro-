@@ -40,7 +40,7 @@ Route::post('woocommerce/auth-callback', [\App\Http\Controllers\Api\WooCommerceA
 // Public Landing Page Store Creation Inquiries
 Route::post('landing/inquiries', [\App\Http\Controllers\Api\StoreInquiryController::class, 'submitPublic'])->middleware('throttle:15,1');
 
-// Secure Production Deployment Maintenance (Clear cache without SSH)
+// Production cache refresh without SSH. Secret required. Migrations are not run here.
 Route::get('ops/maintenance-sync-7b3e9a', [\App\Http\Controllers\Api\DeployMaintenanceController::class, 'clearCache'])->middleware('throttle:5,1');
 
 // Authenticated Routes
@@ -62,6 +62,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('subscription')->group(function () {
         // Products & Categories
         Route::apiResource('categories', CategoryController::class);
+        Route::get('products/lookup', [ProductController::class, 'lookup']);
+        Route::get('products/pos-catalog', [ProductController::class, 'posCatalog']);
         Route::post('products/opening-balance', [ProductController::class, 'recordOpeningBalance']);
         Route::post('products/{id}/batches', [ProductController::class, 'addBatch']);
         Route::apiResource('products', ProductController::class);
@@ -147,6 +149,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('sales', [ReportController::class, 'sales']);
             Route::get('stock', [ReportController::class, 'stock']);
             Route::get('cash-flow', [ReportController::class, 'cashFlow']);
+            Route::get('cash-flow/transactions', [ReportController::class, 'cashFlowTransactions']);
         });
 
         // Import & Export (الاستيراد والتصدير)
@@ -188,6 +191,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('store-identity', [\App\Http\Controllers\Api\SettingController::class, 'getStoreIdentity']);
             Route::put('store-identity', [\App\Http\Controllers\Api\SettingController::class, 'updateStoreIdentity']);
         });
+
     });
 
     // Super Admin Routes (حماية مشددة للمدير العام فقط)

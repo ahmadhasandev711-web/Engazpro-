@@ -228,4 +228,125 @@ class ReportsAndLedgerTest extends TestCase
             ->assertJsonPath('data.summary.total_retail_value', 1900)
             ->assertJsonPath('data.summary.low_stock_count', 1);
     }
+
+    public function test_cash_flow_transactions_returns_paginated_data_for_channel(): void
+    {
+        // 1. Create Cash Sale
+        $this->invoiceService->createInvoice($this->user, [
+            'type' => 'SALE',
+            'party_id' => $this->customer->id,
+            'date' => '2026-08-01',
+            'payment_method' => 'CASH',
+            'paid_amount' => 150.00,
+            'items' => [
+                [
+                    'product_id' => $this->productA->id,
+                    'quantity' => 10,
+                    'unit_price' => 15.00,
+                ],
+            ],
+        ]);
+
+        // 2. Create Cash Expense
+        Expense::create([
+            'user_id' => $this->user->id,
+            'created_by' => $this->user->id,
+            'title' => 'فاتورة كهرباء',
+            'category' => 'مرافق',
+            'amount' => 50.00,
+            'payment_method' => 'CASH',
+            'date' => '2026-08-01',
+        ]);
+
+        // 3. Create InstaPay Sale
+        $this->invoiceService->createInvoice($this->user, [
+            'type' => 'SALE',
+            'party_id' => $this->customer->id,
+            'date' => '2026-08-01',
+            'payment_method' => 'INSTAPAY',
+            'paid_amount' => 220.00,
+            'items' => [
+                [
+                    'product_id' => $this->productA->id,
+                    'quantity' => 10,
+                    'unit_price' => 22.00,
+                ],
+            ],
+        ]);
+
+        // Fetch Cash Transactions
+        $responseCash = $this->actingAs($this->user, 'sanctum')
+            ->getJson('/api/reports/cash-flow/transactions?channel=CASH');
+
+        $responseCash->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('meta.total', 2)
+            ->assertJsonCount(2, 'data');
+
+        // Fetch InstaPay Transactions
+        $responseInstapay = $this->actingAs($this->user, 'sanctum')
+            ->getJson('/api/reports/cash-flow/transactions?channel=INSTAPAY');
+
+        $responseInstapay->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.amount', 220);
+    }
+
+    public function test_cash_flow_transactions_filters_by_flow_type_and_movement(): void
+    {
+        // 1. Cash Sale
+        $this->invoiceService->createInvoice($this->user, [
+            'type' => 'SALE',
+            'party_id' => $this->customer->id,
+            'date' => '2026-08-01',
+            'payment_method' => 'CASH',
+            'paid_amount' => 300.00,
+            'items' => [
+                [
+                    'product_id' => $this->productA->id,
+                    'quantity' => 20,
+                    'unit_price' => 15.00,
+                ],
+            ],
+        ]);
+
+        // 2. Cash Expense
+        Expense::create([
+            'user_id' => $this->user->id,
+            'created_by' => $this->user->id,
+            'title' => 'بنزين سيارة',
+            'category' => 'انتقالات',
+            'amount' => 80.00,
+            'payment_method' => 'CASH',
+            'date' => '2026-08-01',
+        ]);
+
+        // Filter Inflow
+        $resInflow = $this->actingAs($this->user, 'sanctum')
+            ->getJson('/api/reports/cash-flow/transactions?channel=CASH&flow_type=INFLOW');
+
+        $resInflow->assertStatus(200)
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('data.0.movement_category', 'SALE')
+            ->assertJsonPath('data.0.flow_direction', 'IN');
+
+        // Filter Outflow
+        $resOutflow = $this->actingAs($this->user, 'sanctum')
+            ->getJson('/api/reports/cash-flow/transactions?channel=CASH&flow_type=OUTFLOW');
+
+        $resOutflow->assertStatus(200)
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('data.0.movement_category', 'EXPENSE')
+            ->assertJsonPath('data.0.flow_direction', 'OUT');
+
+        // Filter Movement Category
+        $resCat = $this->actingAs($this->user, 'sanctum')
+            ->getJson('/api/reports/cash-flow/transactions?channel=CASH&movement_category=EXPENSE');
+
+        $resCat->assertStatus(200)
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('data.0.reference_number', 'بنزين سيارة');
+    }
 }

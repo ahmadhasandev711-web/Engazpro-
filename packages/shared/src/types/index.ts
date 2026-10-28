@@ -416,6 +416,34 @@ export interface CashFlowReportData {
   };
 }
 
+export interface CashFlowTransaction {
+  id: number;
+  source_type: 'INVOICE' | 'PAYMENT' | 'EXPENSE';
+  movement_category: string;
+  category_label: string;
+  reference_number: string;
+  date: string | null;
+  created_at: string | null;
+  amount: number;
+  flow_direction: 'IN' | 'OUT';
+  party_id: number | null;
+  party_name: string | null;
+  created_by: number | null;
+  creator_name: string | null;
+  notes: string | null;
+}
+
+export interface CashFlowTransactionsResponse {
+  success: boolean;
+  data: CashFlowTransaction[];
+  meta: {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+  };
+}
+
 export interface AdminStatsData {
   users: {
     total: number;

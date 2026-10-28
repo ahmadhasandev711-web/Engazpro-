@@ -20,4 +20,7 @@ return [
         'auth_throttle_attempts' => 30,
         'auth_throttle_decay_minutes' => 1,
     ],
+
+    // فارغ افتراضياً. مسار الصيانة يرفض أي طلب ما لم يُضبط هذا السر في البيئة.
+    'deploy_sync_secret' => env('DEPLOY_SYNC_SECRET'),
 ];

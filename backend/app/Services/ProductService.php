@@ -4,7 +4,9 @@ namespace App\Services;
 
 use App\Exceptions\PosDomainException;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 
 class ProductService
@@ -359,5 +361,111 @@ class ProductService
 
         $perPage = min((int) ($filters['per_page'] ?? 20), 500);
         return $query->orderBy('name')->paginate($perPage);
+    }
+
+    public function getPosCatalog(?User $user, array $filters = []): \Illuminate\Contracts\Pagination\LengthAwarePaginator
+    {
+        $branchId = $this->resolveCatalogBranchId($user, $filters);
+        $query = Product::query()->with($this->posCatalogRelations($branchId));
+        $this->applyPosCatalogFilters($query, $filters);
+        $perPage = min(max((int) ($filters['per_page'] ?? 48), 1), 60);
+
+        return $query->orderBy('name')->paginate($perPage);
+    }
+
+    public function findByScanCode(User $user, string $code, ?int $branchId): ?array
+    {
+        $code = trim($code);
+        if ($code === '') {
+            return null;
+        }
+
+        $resolvedBranchId = $this->resolveCatalogBranchId($user, ['branch_id' => $branchId]);
+        $with = $this->posCatalogRelations($resolvedBranchId);
+        $product = $this->findProductByExactCode($code, $with);
+
+        if ($product) {
+            return ['product' => $product, 'variant_id' => null];
+        }
+
+        $variant = ProductVariant::query()
+            ->where(function (Builder $query) use ($code) {
+                $query->where('barcode', $code)->orWhere('code', $code);
+            })
+            ->first();
+
+        if (!$variant) {
+            return null;
+        }
+
+        $parent = Product::with($with)->find($variant->product_id);
+
+        return $parent ? ['product' => $parent, 'variant_id' => $variant->id] : null;
+    }
+
+    private function resolveCatalogBranchId(?User $user, array $filters): ?int
+    {
+        if ($user && ($user->isCashier() || $user->isMandob())) {
+            return $user->branch_id ? (int) $user->branch_id : null;
+        }
+
+        return !empty($filters['branch_id']) ? (int) $filters['branch_id'] : null;
+    }
+
+    private function posCatalogRelations(?int $branchId): array
+    {
+        $with = ['category', 'variants', 'batches'];
+        if ($branchId) {
+            $with['branchStocks'] = function ($query) use ($branchId) {
+                $query->where('branch_id', $branchId);
+            };
+        }
+
+        return $with;
+    }
+
+    private function applyPosCatalogFilters(Builder $query, array $filters): void
+    {
+        $term = trim((string) ($filters['search'] ?? ''));
+        if ($term !== '') {
+            $this->applyPosSearch($query, $term);
+        }
+
+        if (!empty($filters['category_id'])) {
+            $query->where('category_id', (int) $filters['category_id']);
+        }
+    }
+
+    private function applyPosSearch(Builder $query, string $term): void
+    {
+        $like = '%'.$this->escapeLike($term).'%';
+        $prefix = $this->escapeLike($term).'%';
+
+        $query->where(function (Builder $inner) use ($term, $like, $prefix) {
+            $inner->where('barcode', $term)
+                ->orWhere('code', $term)
+                ->orWhere('name', 'like', $prefix)
+                ->orWhere('name', 'like', $like)
+                ->orWhere('barcode', 'like', $prefix)
+                ->orWhere('code', 'like', $prefix)
+                ->orWhereHas('variants', function (Builder $variantQuery) use ($term, $like, $prefix) {
+                    $variantQuery->where('barcode', $term)
+                        ->orWhere('code', $term)
+                        ->orWhere('name', 'like', $like)
+                        ->orWhere('barcode', 'like', $prefix)
+                        ->orWhere('code', 'like', $prefix);
+                });
+        });
+    }
+
+    private function findProductByExactCode(string $code, array $with): ?Product
+    {
+        return Product::with($with)->where('barcode', $code)->first()
+            ?? Product::with($with)->where('code', $code)->first();
+    }
+
+    private function escapeLike(string $value): string
+    {
+        return str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $value);
     }
 }
