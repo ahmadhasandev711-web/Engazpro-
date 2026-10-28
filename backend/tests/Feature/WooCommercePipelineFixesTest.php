@@ -8,6 +8,7 @@ use App\Enums\StockTransferStatus;
 use App\Enums\WcOrderStatus;
 use App\Enums\WcPaymentStatus;
 use App\Exceptions\PosDomainException;
+use App\Exceptions\WooCommerceConnectionException;
 use App\Jobs\SyncOrderStatusToWooCommerceJob;
 use App\Models\Branch;
 use App\Models\BranchStock;
@@ -159,6 +160,27 @@ class WooCommercePipelineFixesTest extends TestCase
     }
 
     /**
+     * Commit 1: SyncOrderStatusToWooCommerceJob throws WooCommerceConnectionException when updateOrderStatus returns false
+     */
+    public function test_sync_job_throws_when_api_client_returns_false(): void
+    {
+        $mockClient = Mockery::mock(WooCommerceApiClientInterface::class);
+        $mockClient->shouldReceive('updateOrderStatus')
+            ->once()
+            ->withArgs(function ($integration, $wcOrderId, $status) {
+                return $integration->id === $this->integration->id
+                    && $wcOrderId === 5001
+                    && $status === 'completed';
+            })
+            ->andReturn(false);
+
+        $this->expectException(WooCommerceConnectionException::class);
+
+        $job = new SyncOrderStatusToWooCommerceJob($this->owner->id, 5001, 'completed');
+        $job->handle($mockClient);
+    }
+
+    /**
      * Commit 1: deliverOrder calls updateOrderStatus with completed once via API client mock
      */
     public function test_deliver_order_calls_api_client_update_order_status_once_with_completed(): void
@@ -187,7 +209,7 @@ class WooCommercePipelineFixesTest extends TestCase
     }
 
     /**
-     * Commit 1: Network failure during api update does not affect deliverOrder
+     * Commit 1: Network failure or false response during api update does not affect deliverOrder
      */
     public function test_deliver_order_succeeds_even_when_api_client_fails(): void
     {
@@ -195,7 +217,7 @@ class WooCommercePipelineFixesTest extends TestCase
 
         $mockClient = Mockery::mock(WooCommerceApiClientInterface::class);
         $mockClient->shouldReceive('updateOrderStatus')
-            ->andThrow(new Exception('Network timeout connecting to WooCommerce'));
+            ->andReturn(false);
         $this->app->instance(WooCommerceApiClientInterface::class, $mockClient);
 
         $syncService = app(WooCommerceOrderSyncService::class);

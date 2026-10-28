@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Contracts\WooCommerceApiClientInterface;
+use App\Exceptions\WooCommerceConnectionException;
 use App\Models\WooCommerceIntegration;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -37,7 +38,10 @@ class SyncOrderStatusToWooCommerceJob implements ShouldQueue
         }
 
         try {
-            $apiClient->updateOrderStatus($integration, $this->wcOrderId, $this->status);
+            $updated = $apiClient->updateOrderStatus($integration, $this->wcOrderId, $this->status);
+            if (!$updated) {
+                throw new WooCommerceConnectionException("Failed to update WooCommerce order #{$this->wcOrderId} status to {$this->status}.");
+            }
         } catch (Throwable $e) {
             Log::warning("Failed to sync order status to WooCommerce for order #{$this->wcOrderId}: " . $e->getMessage());
             throw $e;
