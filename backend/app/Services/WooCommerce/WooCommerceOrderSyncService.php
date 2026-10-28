@@ -642,6 +642,7 @@ class WooCommerceOrderSyncService
             $notePrefix = self::buildTransferNotePrefix($lockedOrder->wc_order_id);
             $transfer = StockTransfer::where('user_id', $accountId)
                 ->where('notes', 'like', $notePrefix . '%')
+                ->lockForUpdate()
                 ->latest()
                 ->first();
 
