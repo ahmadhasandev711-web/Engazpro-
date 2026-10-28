@@ -35,7 +35,8 @@ class WooCommerceOrderSyncService
         protected WooCommerceCustomerSyncService $customerSyncService,
         protected InvoiceService $invoiceService,
         protected StockTransferService $stockTransferService,
-        protected CourierService $courierService
+        protected CourierService $courierService,
+        protected WcOrderVanTransferService $vanTransferService
     ) {}
 
     /**
@@ -256,7 +257,7 @@ class WooCommerceOrderSyncService
      */
     public static function buildTransferNote(int $wcOrderId, string $mandobName): string
     {
-        return "شحن طلب ووكومرس #{$wcOrderId} مع المندوب {$mandobName}";
+        return WcOrderVanTransferService::buildTransferNote($wcOrderId, $mandobName);
     }
 
     /**
@@ -264,7 +265,7 @@ class WooCommerceOrderSyncService
      */
     public static function buildTransferNotePrefix(int $wcOrderId): string
     {
-        return "شحن طلب ووكومرس #{$wcOrderId} ";
+        return WcOrderVanTransferService::buildTransferNotePrefix($wcOrderId);
     }
 
     /**
@@ -353,14 +354,7 @@ class WooCommerceOrderSyncService
             $q->where('id', $accountId)->orWhere('owner_id', $accountId);
         })->findOrFail($mandobId);
 
-        // Find mandob's VAN branch
-        $vanBranchId = $mandob->branch_id;
-        $vanBranch = $vanBranchId ? Branch::where('user_id', $accountId)->where('type', 'VAN')->find($vanBranchId) : null;
-
-        if (!$vanBranch) {
-            // Find any active VAN branch
-            $vanBranch = Branch::where('user_id', $accountId)->where('type', 'VAN')->where('is_active', true)->first();
-        }
+        $vanBranch = $this->vanTransferService->resolveVanBranch($accountId, $mandob);
 
         return DB::transaction(function () use ($user, $accountId, $order, $mandob, $vanBranch) {
             $lockedOrder = WcOrder::where('user_id', $accountId)->lockForUpdate()->findOrFail($order->id);
@@ -373,35 +367,8 @@ class WooCommerceOrderSyncService
                 );
             }
 
-            // If VAN branch is available and differs from source branch, create stock transfer
-            if ($vanBranch && $vanBranch->id !== $lockedOrder->branch_id) {
-                $transferItems = [];
-
-                foreach ($lockedOrder->items_snapshot ?? [] as $item) {
-                    $wcProductId = (int) ($item['product_id'] ?? 0);
-                    $wcVarId = !empty($item['variation_id']) ? (int) $item['variation_id'] : null;
-
-                    $product = Product::where('user_id', $accountId)->where('wc_product_id', $wcProductId)->first();
-                    $variant = $product && $wcVarId ? $product->variants()->where('wc_variation_id', $wcVarId)->first() : null;
-
-                    if ($product) {
-                        $transferItems[] = [
-                            'product_id' => $product->id,
-                            'product_variant_id' => $variant?->id,
-                            'quantity_sent' => (float) ($item['quantity'] ?? 1),
-                            'unit_name' => $product->unit,
-                        ];
-                    }
-                }
-
-                if (!empty($transferItems)) {
-                    $this->stockTransferService->createTransfer($user, [
-                        'from_branch_id' => $lockedOrder->branch_id,
-                        'to_branch_id' => $vanBranch->id,
-                        'items' => $transferItems,
-                        'notes' => self::buildTransferNote($lockedOrder->wc_order_id, $mandob->name),
-                    ]);
-                }
+            if ($vanBranch) {
+                $this->vanTransferService->createForDispatch($user, $lockedOrder, $mandob, $vanBranch);
             }
 
             $lockedOrder->update([
@@ -638,23 +605,7 @@ class WooCommerceOrderSyncService
                 );
             }
 
-            // Find any active VAN stock transfer for this order
-            $notePrefix = self::buildTransferNotePrefix($lockedOrder->wc_order_id);
-            $transfer = StockTransfer::where('user_id', $accountId)
-                ->where('notes', 'like', $notePrefix . '%')
-                ->lockForUpdate()
-                ->latest()
-                ->first();
-
-            $vanWarning = null;
-            if ($transfer) {
-                if ($transfer->status === StockTransferStatus::IN_TRANSIT) {
-                    $this->stockTransferService->cancelTransfer($user, $transfer, "مرتجع أوردر ووكومرس #{$lockedOrder->wc_order_id}");
-                } else {
-                    $vanWarning = "[تحذير: إذن تحويل سيارة المندوب رقم {$transfer->transfer_number} بحالة '{$transfer->status->value}' ولم يتم إلغاؤه تلقائياً]";
-                }
-            }
-
+            $vanWarning = $this->vanTransferService->reverseForReturn($user, $lockedOrder);
             $returnNote = "مرتجع: " . ($reason ?? 'تم رفض الاستلام');
             $notes = $lockedOrder->notes ? $lockedOrder->notes . ' | ' . $returnNote : $returnNote;
             if ($vanWarning) {

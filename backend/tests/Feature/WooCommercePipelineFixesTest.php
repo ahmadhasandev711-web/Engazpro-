@@ -20,6 +20,7 @@ use App\Models\Subscription;
 use App\Models\User;
 use App\Models\WcOrder;
 use App\Models\WooCommerceIntegration;
+use App\Services\WooCommerce\WcOrderVanTransferService;
 use App\Services\WooCommerce\WooCommerceOrderSyncService;
 use Exception;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -424,7 +425,7 @@ class WooCommercePipelineFixesTest extends TestCase
         $syncService->dispatchToMandob($this->owner, $order, $mandob->id);
 
         $transfer = StockTransfer::where('user_id', $this->owner->id)
-            ->where('notes', 'like', WooCommerceOrderSyncService::buildTransferNotePrefix($order->wc_order_id) . '%')
+            ->where('notes', 'like', WcOrderVanTransferService::buildTransferNotePrefix($order->wc_order_id) . '%')
             ->first();
 
         $this->assertNotNull($transfer);
@@ -528,8 +529,8 @@ class WooCommercePipelineFixesTest extends TestCase
         $syncService->dispatchToMandob($this->owner, $order12, $mandob->id);
         $syncService->dispatchToMandob($this->owner, $order123, $mandob->id);
 
-        $prefix12 = WooCommerceOrderSyncService::buildTransferNotePrefix(12);
-        $prefix123 = WooCommerceOrderSyncService::buildTransferNotePrefix(123);
+        $prefix12 = WcOrderVanTransferService::buildTransferNotePrefix(12);
+        $prefix123 = WcOrderVanTransferService::buildTransferNotePrefix(123);
 
         $transfer12 = StockTransfer::where('user_id', $this->owner->id)
             ->where('notes', 'like', $prefix12 . '%')
@@ -588,7 +589,7 @@ class WooCommercePipelineFixesTest extends TestCase
         $syncService->dispatchToMandob($this->owner, $order, $mandob->id);
 
         $transfer = StockTransfer::where('user_id', $this->owner->id)
-            ->where('notes', 'like', WooCommerceOrderSyncService::buildTransferNotePrefix($order->wc_order_id) . '%')
+            ->where('notes', 'like', WcOrderVanTransferService::buildTransferNotePrefix($order->wc_order_id) . '%')
             ->first();
 
         $this->assertNotNull($transfer);
