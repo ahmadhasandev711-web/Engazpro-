@@ -120,6 +120,23 @@ class WooCommerceOrderSyncService
                 $updates['items_snapshot'] = $this->enrichLineItems($accountId, $wcOrderData['line_items']);
             }
 
+            // Handle cancellation sync from WooCommerce
+            $incomingStatus = strtolower(trim((string)($wcOrderData['status'] ?? '')));
+            if ($incomingStatus === 'cancelled') {
+                if ($existing->status->canTransitionTo(WcOrderStatus::CANCELLED)) {
+                    $updates['status'] = WcOrderStatus::CANCELLED;
+                    $cancelTag = '[تم إلغاء الطلب من WooCommerce]';
+                    if (!str_contains($existing->notes ?? '', $cancelTag)) {
+                        $updates['notes'] = ($existing->notes ? $existing->notes . ' | ' : '') . $cancelTag;
+                    }
+                } elseif ($existing->status !== WcOrderStatus::CANCELLED) {
+                    $warningTag = "[تحذير: تم إلغاء الطلب من WooCommerce ولكن حالته بالنظام '{$existing->status->label()}']";
+                    if (!str_contains($existing->notes ?? '', $warningTag)) {
+                        $updates['notes'] = ($existing->notes ? $existing->notes . ' | ' : '') . $warningTag;
+                    }
+                }
+            }
+
             if (!empty($updates)) {
                 $existing->update($updates);
             }

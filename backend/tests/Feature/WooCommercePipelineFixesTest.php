@@ -295,4 +295,39 @@ class WooCommercePipelineFixesTest extends TestCase
             $this->assertEquals(422, $e->getStatusCode());
         }
     }
+
+    /**
+     * Commit 3: Cancellation from webhook updates status to CANCELLED if order is CONFIRMED
+     */
+    public function test_webhook_syncs_cancellation_when_order_is_confirmed(): void
+    {
+        $order = $this->createTestOrder(['status' => WcOrderStatus::CONFIRMED]);
+
+        $syncService = app(WooCommerceOrderSyncService::class);
+        $updated = $syncService->handleIncomingOrder($this->owner, [
+            'id' => $order->wc_order_id,
+            'status' => 'cancelled',
+        ]);
+
+        $this->assertEquals(WcOrderStatus::CANCELLED, $updated->status);
+        $this->assertEquals(WcOrderStatus::CANCELLED, $order->fresh()->status);
+    }
+
+    /**
+     * Commit 3: Cancellation from webhook logs warning in notes and DOES NOT cancel if already DISPATCHED
+     */
+    public function test_webhook_records_warning_without_cancelling_when_order_is_dispatched(): void
+    {
+        $order = $this->createTestOrder(['status' => WcOrderStatus::DISPATCHED]);
+
+        $syncService = app(WooCommerceOrderSyncService::class);
+        $updated = $syncService->handleIncomingOrder($this->owner, [
+            'id' => $order->wc_order_id,
+            'status' => 'cancelled',
+        ]);
+
+        $this->assertEquals(WcOrderStatus::DISPATCHED, $updated->status);
+        $this->assertEquals(WcOrderStatus::DISPATCHED, $order->fresh()->status);
+        $this->assertStringContainsString('تحذير', $order->fresh()->notes);
+    }
 }
