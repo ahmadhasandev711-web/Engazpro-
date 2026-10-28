@@ -23,6 +23,7 @@ use App\Support\Money;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use App\Contracts\WooCommerceApiClientInterface;
+use App\Jobs\SyncOrderStatusToWooCommerceJob;
 use Illuminate\Support\Facades\Log;
 
 class WooCommerceOrderSyncService
@@ -407,16 +408,20 @@ class WooCommerceOrderSyncService
      */
     public function deliverOrder(User $user, WcOrder $order, array $deliveryData = []): Invoice
     {
-        if ($order->status === WcOrderStatus::DELIVERED && $order->invoice_id) {
-            return Invoice::findOrFail($order->invoice_id);
-        }
-
         $accountId = $user->getAccountId();
 
-        return DB::transaction(function () use ($user, $accountId, $order, $deliveryData) {
+        $invoice = DB::transaction(function () use ($user, $accountId, $order, $deliveryData) {
+            $lockedOrder = WcOrder::where('user_id', $accountId)
+                ->lockForUpdate()
+                ->findOrFail($order->id);
+
+            if ($lockedOrder->status === WcOrderStatus::DELIVERED && $lockedOrder->invoice_id) {
+                return Invoice::findOrFail($lockedOrder->invoice_id);
+            }
+
             // Map items for InvoiceService
             $invoiceItems = [];
-            foreach ($order->items_snapshot ?? [] as $item) {
+            foreach ($lockedOrder->items_snapshot ?? [] as $item) {
                 $wcProductId = (int) ($item['product_id'] ?? 0);
                 $wcVarId = !empty($item['variation_id']) ? (int) $item['variation_id'] : null;
                 $qty = (float) ($item['quantity'] ?? 1);
@@ -439,20 +444,20 @@ class WooCommerceOrderSyncService
                 }
             }
 
-            $isPaidOnline = $order->payment_status === WcPaymentStatus::PAID_ONLINE;
+            $isPaidOnline = $lockedOrder->payment_status === WcPaymentStatus::PAID_ONLINE;
             $rawCollected = isset($deliveryData['collected_amount'])
                 ? (float) $deliveryData['collected_amount']
-                : (float) $order->total;
+                : (float) $lockedOrder->total;
 
-            if ($rawCollected > (float) $order->total) {
-                throw new PosDomainException("المبلغ المحصل ({$rawCollected}) لا يمكن أن يتجاوز إجمالي الطلب ({$order->total}).", 'COLLECTED_AMOUNT_EXCEEDS_TOTAL');
+            if ($rawCollected > (float) $lockedOrder->total) {
+                throw new PosDomainException("المبلغ المحصل ({$rawCollected}) لا يمكن أن يتجاوز إجمالي الطلب ({$lockedOrder->total}).", 'COLLECTED_AMOUNT_EXCEEDS_TOTAL');
             }
 
-            if ($order->courier_party_id) {
+            if ($lockedOrder->courier_party_id) {
                 if ($isPaidOnline || $rawCollected <= 0) {
                     $paymentMethod = $deliveryData['payment_method'] ?? 'TRANSFER';
                     $actualCollected = 0.0;
-                    $paidAmount = (float) $order->total;
+                    $paidAmount = (float) $lockedOrder->total;
                 } else {
                     $paymentMethod = PaymentMethod::COURIER_COD->value;
                     $actualCollected = $rawCollected;
@@ -465,35 +470,35 @@ class WooCommerceOrderSyncService
             }
 
             // Use mandob branch or order branch
-            $executingBranchId = $order->mandob?->branch_id ?? $order->branch_id;
+            $executingBranchId = $lockedOrder->mandob?->branch_id ?? $lockedOrder->branch_id;
 
             $shippingInfo = '';
-            if ($order->courier_name) {
-                $shippingInfo .= " [شركة شحن: {$order->courier_name}";
-                if ($order->tracking_number) {
-                    $shippingInfo .= " - بوليصة: {$order->tracking_number}";
+            if ($lockedOrder->courier_name) {
+                $shippingInfo .= " [شركة شحن: {$lockedOrder->courier_name}";
+                if ($lockedOrder->tracking_number) {
+                    $shippingInfo .= " - بوليصة: {$lockedOrder->tracking_number}";
                 }
                 $shippingInfo .= ']';
-            } elseif ($order->mandob) {
-                $shippingInfo .= " [مندوب: {$order->mandob->name}]";
+            } elseif ($lockedOrder->mandob) {
+                $shippingInfo .= " [مندوب: {$lockedOrder->mandob->name}]";
             }
 
-            $mandob = $order->mandob;
+            $mandob = $lockedOrder->mandob;
             $mandobTreasury = $mandob?->assignedTreasury;
             $mandobShift = $mandob ? \App\Models\Shift::where('user_id', $mandob->id)->where('status', 'OPEN')->first() : null;
 
             $invoiceData = [
                 'type' => 'SALE',
-                'party_id' => $order->party_id,
-                'courier_party_id' => $order->courier_party_id,
+                'party_id' => $lockedOrder->party_id,
+                'courier_party_id' => $lockedOrder->courier_party_id,
                 'branch_id' => $executingBranchId,
                 'items' => $invoiceItems,
-                'discount' => $order->discount_total,
-                'shipping_amount' => $order->shipping_cost,
+                'discount' => $lockedOrder->discount_total,
+                'shipping_amount' => $lockedOrder->shipping_cost,
                 'paid_amount' => $paidAmount,
                 'payment_method' => $paymentMethod,
-                'wc_order_id' => $order->wc_order_id,
-                'notes' => "أوردر ووكومرس #{$order->wc_order_id}{$shippingInfo}" . ($order->notes ? " | {$order->notes}" : ''),
+                'wc_order_id' => $lockedOrder->wc_order_id,
+                'notes' => "أوردر ووكومرس #{$lockedOrder->wc_order_id}{$shippingInfo}" . ($lockedOrder->notes ? " | {$lockedOrder->notes}" : ''),
             ];
 
             // إذا كان الطلب مسنداً لمندوب وكان التحصيل نقداً، تُنسب الفاتورة والخزينة لعهدة المندوب
@@ -509,11 +514,11 @@ class WooCommerceOrderSyncService
 
             $invoice = $this->invoiceService->createInvoice($user, $invoiceData);
 
-            if ($order->courier_party_id && $actualCollected > 0) {
-                $this->courierService->recordDeliveryCollection($user, $invoice, $order, $actualCollected);
+            if ($lockedOrder->courier_party_id && $actualCollected > 0) {
+                $this->courierService->recordDeliveryCollection($user, $invoice, $lockedOrder, $actualCollected);
             }
 
-            $order->update([
+            $lockedOrder->update([
                 'invoice_id' => $invoice->id,
                 'status' => WcOrderStatus::DELIVERED,
                 'payment_status' => WcPaymentStatus::COLLECTED,
@@ -522,14 +527,11 @@ class WooCommerceOrderSyncService
             return $invoice;
         });
 
-        // إشعار WooCommerce خارج كتلة Transaction لمنع تعليق أقفال قاعدة البيانات أثناء طلبات الشبكة
+        // إشعار WooCommerce خارج كتلة Transaction عبر Job غير متزامن
         try {
-            $integration = WooCommerceIntegration::where('user_id', $accountId)->first();
-            if ($integration && $integration->is_active) {
-                $this->apiClient->updateOrderStatus($integration, $order->wc_order_id, 'completed');
-            }
+            SyncOrderStatusToWooCommerceJob::dispatch($accountId, $order->wc_order_id, 'completed')->afterCommit();
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::warning("Failed to notify WooCommerce for completed order #{$order->wc_order_id}: " . $e->getMessage());
+            Log::warning("Failed to dispatch WooCommerce status sync for order #{$order->wc_order_id}: " . $e->getMessage());
         }
 
         return $invoice;
