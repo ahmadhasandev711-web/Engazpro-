@@ -451,4 +451,50 @@ class WooCommercePipelineFixesTest extends TestCase
                 && $job->status === 'cancelled';
         });
     }
+
+    /**
+     * Commit 5: pullRecentOrders paginates until a page has fewer than limit orders
+     */
+    public function test_pull_recent_orders_paginates_until_page_has_fewer_than_limit(): void
+    {
+        $mockClient = Mockery::mock(WooCommerceApiClientInterface::class);
+
+        // Page 1 for processing has 3 orders (limit = 3)
+        $mockClient->shouldReceive('getOrders')
+            ->once()
+            ->withArgs(function ($integration, $status, $page, $limit) {
+                return $status === 'processing' && $page === 1 && $limit === 3;
+            })
+            ->andReturn([
+                ['id' => 701, 'status' => 'processing', 'total' => 100],
+                ['id' => 702, 'status' => 'processing', 'total' => 100],
+                ['id' => 703, 'status' => 'processing', 'total' => 100],
+            ]);
+
+        // Page 2 for processing has 2 orders (< limit)
+        $mockClient->shouldReceive('getOrders')
+            ->once()
+            ->withArgs(function ($integration, $status, $page, $limit) {
+                return $status === 'processing' && $page === 2 && $limit === 3;
+            })
+            ->andReturn([
+                ['id' => 704, 'status' => 'processing', 'total' => 100],
+                ['id' => 705, 'status' => 'processing', 'total' => 100],
+            ]);
+
+        // pending and on-hold return empty
+        $mockClient->shouldReceive('getOrders')
+            ->withArgs(function ($integration, $status, $page, $limit) {
+                return in_array($status, ['pending', 'on-hold']) && $page === 1;
+            })
+            ->andReturn([]);
+
+        $this->app->instance(WooCommerceApiClientInterface::class, $mockClient);
+
+        $syncService = app(WooCommerceOrderSyncService::class);
+        $result = $syncService->pullRecentOrders($this->owner, 3);
+
+        $this->assertEquals(5, $result['imported']);
+        $this->assertEquals(5, $result['total']);
+    }
 }

@@ -684,23 +684,35 @@ class WooCommerceOrderSyncService
 
         $imported = 0;
         $updated = 0;
+        $maxPages = 10;
 
         foreach (['processing', 'pending', 'on-hold'] as $status) {
-            $orders = $this->apiClient->getOrders($integration, $status, 1, $limit);
-            foreach ($orders as $orderData) {
-                if (empty($orderData['id'])) {
-                    continue;
+            for ($page = 1; $page <= $maxPages; $page++) {
+                $orders = $this->apiClient->getOrders($integration, $status, $page, $limit);
+
+                if (empty($orders)) {
+                    break;
                 }
 
-                $wcOrderId = (int) $orderData['id'];
-                $existing = WcOrder::where('user_id', $accountId)->where('wc_order_id', $wcOrderId)->first();
+                foreach ($orders as $orderData) {
+                    if (empty($orderData['id'])) {
+                        continue;
+                    }
 
-                $this->handleIncomingOrder($user, $orderData);
+                    $wcOrderId = (int) $orderData['id'];
+                    $existing = WcOrder::where('user_id', $accountId)->where('wc_order_id', $wcOrderId)->first();
 
-                if ($existing) {
-                    $updated++;
-                } else {
-                    $imported++;
+                    $this->handleIncomingOrder($user, $orderData);
+
+                    if ($existing) {
+                        $updated++;
+                    } else {
+                        $imported++;
+                    }
+                }
+
+                if (count($orders) < $limit) {
+                    break;
                 }
             }
         }
