@@ -98,52 +98,56 @@ class WooCommerceOrderSyncService
 
         // 1. Idempotency check: update missing fields if already imported
         if ($existing) {
-            $updates = [];
-            if ($orderDate) {
-                $updates['order_date'] = $orderDate;
-            }
-            if (empty($existing->customer_phone) && $extractedPhone) {
-                $updates['customer_phone'] = $extractedPhone;
-            }
-            if (empty($existing->customer_address) && $extractedAddress) {
-                $updates['customer_address'] = $extractedAddress;
-            }
-            if (empty($existing->governorate) && !empty($state)) {
-                $updates['governorate'] = $state;
-            }
-            if (empty($existing->city) && !empty($city)) {
-                $updates['city'] = $city;
-            }
+            return DB::transaction(function () use ($existing, $accountId, $orderDate, $extractedPhone, $extractedAddress, $state, $city, $wcOrderData) {
+                $locked = WcOrder::where('user_id', $accountId)->lockForUpdate()->findOrFail($existing->id);
 
-            // Enrich items_snapshot if missing image_url or attributes
-            $existingItems = $existing->items_snapshot ?? [];
-            $needsItemEnrichment = empty($existingItems) || !isset($existingItems[0]['image_url']);
-            if ($needsItemEnrichment && !empty($wcOrderData['line_items'])) {
-                $updates['items_snapshot'] = $this->enrichLineItems($accountId, $wcOrderData['line_items']);
-            }
+                $updates = [];
+                if ($orderDate) {
+                    $updates['order_date'] = $orderDate;
+                }
+                if (empty($locked->customer_phone) && $extractedPhone) {
+                    $updates['customer_phone'] = $extractedPhone;
+                }
+                if (empty($locked->customer_address) && $extractedAddress) {
+                    $updates['customer_address'] = $extractedAddress;
+                }
+                if (empty($locked->governorate) && !empty($state)) {
+                    $updates['governorate'] = $state;
+                }
+                if (empty($locked->city) && !empty($city)) {
+                    $updates['city'] = $city;
+                }
 
-            // Handle cancellation sync from WooCommerce
-            $incomingStatus = strtolower(trim((string)($wcOrderData['status'] ?? '')));
-            if ($incomingStatus === 'cancelled') {
-                if ($existing->status->canTransitionTo(WcOrderStatus::CANCELLED)) {
-                    $updates['status'] = WcOrderStatus::CANCELLED;
-                    $cancelTag = '[تم إلغاء الطلب من WooCommerce]';
-                    if (!str_contains($existing->notes ?? '', $cancelTag)) {
-                        $updates['notes'] = ($existing->notes ? $existing->notes . ' | ' : '') . $cancelTag;
-                    }
-                } elseif ($existing->status !== WcOrderStatus::CANCELLED) {
-                    $warningTag = "[تحذير: تم إلغاء الطلب من WooCommerce ولكن حالته بالنظام '{$existing->status->label()}']";
-                    if (!str_contains($existing->notes ?? '', $warningTag)) {
-                        $updates['notes'] = ($existing->notes ? $existing->notes . ' | ' : '') . $warningTag;
+                // Enrich items_snapshot if missing image_url or attributes
+                $existingItems = $locked->items_snapshot ?? [];
+                $needsItemEnrichment = empty($existingItems) || !isset($existingItems[0]['image_url']);
+                if ($needsItemEnrichment && !empty($wcOrderData['line_items'])) {
+                    $updates['items_snapshot'] = $this->enrichLineItems($accountId, $wcOrderData['line_items']);
+                }
+
+                // Handle cancellation sync from WooCommerce
+                $incomingStatus = strtolower(trim((string)($wcOrderData['status'] ?? '')));
+                if ($incomingStatus === 'cancelled') {
+                    if ($locked->status->canTransitionTo(WcOrderStatus::CANCELLED)) {
+                        $updates['status'] = WcOrderStatus::CANCELLED;
+                        $cancelTag = '[تم إلغاء الطلب من WooCommerce]';
+                        if (!str_contains($locked->notes ?? '', $cancelTag)) {
+                            $updates['notes'] = ($locked->notes ? $locked->notes . ' | ' : '') . $cancelTag;
+                        }
+                    } elseif (!in_array($locked->status, [WcOrderStatus::CANCELLED, WcOrderStatus::RETURNED], true)) {
+                        $warningTag = "[تحذير: تم إلغاء الطلب من WooCommerce ولكن حالته بالنظام '{$locked->status->label()}']";
+                        if (!str_contains($locked->notes ?? '', $warningTag)) {
+                            $updates['notes'] = ($locked->notes ? $locked->notes . ' | ' : '') . $warningTag;
+                        }
                     }
                 }
-            }
 
-            if (!empty($updates)) {
-                $existing->update($updates);
-            }
+                if (!empty($updates)) {
+                    $locked->update($updates);
+                }
 
-            return $existing;
+                return $locked;
+            });
         }
 
         return DB::transaction(function () use ($user, $accountId, $wcOrderId, $wcOrderData, $orderDate, $extractedPhone, $extractedAddress, $state, $city, $billing, $shipping) {

@@ -356,6 +356,27 @@ class WooCommercePipelineFixesTest extends TestCase
     }
 
     /**
+     * Commit 9: Webhook cancellation on already RETURNED order does not log warning and keeps status RETURNED
+     */
+    public function test_webhook_cancellation_on_returned_order_suppresses_warnings(): void
+    {
+        $order = $this->createTestOrder(['status' => WcOrderStatus::DISPATCHED]);
+
+        $syncService = app(WooCommerceOrderSyncService::class);
+        $syncService->returnOrder($this->owner, $order, 'العميل رفض الاستلام');
+        $this->assertEquals(WcOrderStatus::RETURNED, $order->fresh()->status);
+
+        $updated = $syncService->handleIncomingOrder($this->owner, [
+            'id' => $order->wc_order_id,
+            'status' => 'cancelled',
+        ]);
+
+        $this->assertEquals(WcOrderStatus::RETURNED, $updated->status);
+        $this->assertEquals(WcOrderStatus::RETURNED, $order->fresh()->status);
+        $this->assertStringNotContainsString('تحذير', (string) $order->fresh()->notes);
+    }
+
+    /**
      * Commit 4: Returning a DELIVERED order throws PosDomainException with RETURN_AFTER_DELIVERY_UNSUPPORTED
      */
     public function test_return_delivered_order_throws_return_after_delivery_unsupported(): void
