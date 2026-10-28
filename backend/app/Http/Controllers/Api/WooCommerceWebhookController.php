@@ -47,13 +47,13 @@ class WooCommerceWebhookController extends Controller
 
         if (empty($signature)) {
             Log::warning("Missing WooCommerce webhook signature header for user #{$userId}");
-            return response()->json(['message' => 'Missing webhook signature header'], 401);
+            return response()->json(['message' => 'Unauthorized webhook signature'], 401);
         }
 
         $expectedSignature = base64_encode(hash_hmac('sha256', $rawPayload, $integration->webhook_secret, true));
         if (!hash_equals($expectedSignature, $signature)) {
             Log::warning("Invalid WooCommerce webhook signature for user #{$userId}");
-            return response()->json(['message' => 'Invalid webhook signature'], 403);
+            return response()->json(['message' => 'Unauthorized webhook signature'], 401);
         }
 
         // Establish tenant authentication context for the webhook request

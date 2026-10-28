@@ -149,7 +149,7 @@ class CriticalSecurityAndInvariantsPhase1Test extends TestCase
         );
         $res->assertStatus(401);
 
-        // 2. Invalid signature -> 403
+        // 2. Invalid signature -> 401
         $resInvalid = $this->call(
             'POST',
             "/api/webhooks/woocommerce/{$this->ownerA->id}",
@@ -162,7 +162,7 @@ class CriticalSecurityAndInvariantsPhase1Test extends TestCase
             ],
             $rawBody
         );
-        $resInvalid->assertStatus(403);
+        $resInvalid->assertStatus(401);
     }
 
     /**

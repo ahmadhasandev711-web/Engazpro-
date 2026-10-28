@@ -497,4 +497,41 @@ class WooCommercePipelineFixesTest extends TestCase
         $this->assertEquals(5, $result['imported']);
         $this->assertEquals(5, $result['total']);
     }
+
+    /**
+     * Commit 6: Webhook returns unified 401 response on missing or invalid signature
+     */
+    public function test_webhook_returns_unified_401_on_missing_or_invalid_signature(): void
+    {
+        $payload = json_encode(['id' => 888, 'status' => 'processing']);
+
+        // 1. Missing signature
+        $resMissing = $this->call(
+            'POST',
+            "/api/webhooks/woocommerce/{$this->owner->id}",
+            [],
+            [],
+            [],
+            ['CONTENT_TYPE' => 'application/json'],
+            $payload
+        );
+        $resMissing->assertStatus(401);
+        $resMissing->assertJson(['message' => 'Unauthorized webhook signature']);
+
+        // 2. Invalid signature
+        $resInvalid = $this->call(
+            'POST',
+            "/api/webhooks/woocommerce/{$this->owner->id}",
+            [],
+            [],
+            [],
+            [
+                'HTTP_X_WC_WEBHOOK_SIGNATURE' => 'invalid_signature_test',
+                'CONTENT_TYPE' => 'application/json',
+            ],
+            $payload
+        );
+        $resInvalid->assertStatus(401);
+        $resInvalid->assertJson(['message' => 'Unauthorized webhook signature']);
+    }
 }
