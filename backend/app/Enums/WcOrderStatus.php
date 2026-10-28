@@ -28,4 +28,33 @@ enum WcOrderStatus: string
             self::CANCELLED => 'ملغي',
         };
     }
+
+    public function canTransitionTo(self $to): bool
+    {
+        $allowed = match ($this) {
+            self::PENDING_CONFIRMATION => [
+                self::CONFIRMED,
+                self::CANCELLED,
+            ],
+            self::CONFIRMED => [
+                self::PREPARING,
+                self::DISPATCHED,
+                self::SHIPPED_VIA_COURIER,
+                self::CANCELLED,
+            ],
+            self::PREPARING => [
+                self::DISPATCHED,
+                self::SHIPPED_VIA_COURIER,
+                self::CANCELLED,
+            ],
+            self::DISPATCHED, self::SHIPPED_VIA_COURIER => [
+                self::DELIVERED,
+                self::PARTIALLY_DELIVERED,
+                self::RETURNED,
+            ],
+            self::DELIVERED, self::PARTIALLY_DELIVERED, self::RETURNED, self::CANCELLED => [],
+        };
+
+        return in_array($to, $allowed, true);
+    }
 }

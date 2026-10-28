@@ -229,6 +229,22 @@ class WooCommerceOrderSyncService
     }
 
     /**
+     * Build standard transfer note for mandob dispatch
+     */
+    public static function buildTransferNote(int $wcOrderId, string $mandobName): string
+    {
+        return "شحن طلب ووكومرس #{$wcOrderId} مع المندوب {$mandobName}";
+    }
+
+    /**
+     * Build exact prefix to search for mandob transfer without ambiguous ID collisions
+     */
+    public static function buildTransferNotePrefix(int $wcOrderId): string
+    {
+        return "شحن طلب ووكومرس #{$wcOrderId} ";
+    }
+
+    /**
      * Confirm order and check stock availability at specified branch
      */
     public function confirmOrder(User $user, WcOrder $order, int $branchId, bool $force = false): WcOrder
@@ -236,60 +252,72 @@ class WooCommerceOrderSyncService
         $accountId = $user->getAccountId();
         $branch = Branch::where('user_id', $accountId)->findOrFail($branchId);
 
-        $missingItems = [];
-        $lineItems = $order->items_snapshot ?? [];
+        return DB::transaction(function () use ($accountId, $order, $branchId, $branch, $force) {
+            $lockedOrder = WcOrder::where('user_id', $accountId)->lockForUpdate()->findOrFail($order->id);
 
-        foreach ($lineItems as $item) {
-            $wcProductId = (int) ($item['product_id'] ?? 0);
-            $wcVarId = !empty($item['variation_id']) ? (int) $item['variation_id'] : null;
-            $qtyRequired = (float) ($item['quantity'] ?? 1);
-
-            $product = Product::where('user_id', $accountId)
-                ->where('wc_product_id', $wcProductId)
-                ->first();
-
-            $variant = null;
-            if ($product && $wcVarId) {
-                $variant = $product->variants()->where('wc_variation_id', $wcVarId)->first();
+            if (!$lockedOrder->status->canTransitionTo(WcOrderStatus::CONFIRMED)) {
+                throw new PosDomainException(
+                    message: "لا يمكن تأكيد الطلب وهو بحالة '{$lockedOrder->status->label()}'.",
+                    errorCode: 'INVALID_ORDER_STATUS_TRANSITION',
+                    statusCode: 422
+                );
             }
 
-            if (!$product) {
-                $missingItems[] = "الصنف \"{$item['name']}\" غير مسجل بالنظام (يجب استيراد الأصناف أولاً)";
-                continue;
+            $missingItems = [];
+            $lineItems = $lockedOrder->items_snapshot ?? [];
+
+            foreach ($lineItems as $item) {
+                $wcProductId = (int) ($item['product_id'] ?? 0);
+                $wcVarId = !empty($item['variation_id']) ? (int) $item['variation_id'] : null;
+                $qtyRequired = (float) ($item['quantity'] ?? 1);
+
+                $product = Product::where('user_id', $accountId)
+                    ->where('wc_product_id', $wcProductId)
+                    ->first();
+
+                $variant = null;
+                if ($product && $wcVarId) {
+                    $variant = $product->variants()->where('wc_variation_id', $wcVarId)->first();
+                }
+
+                if (!$product) {
+                    $missingItems[] = "الصنف \"{$item['name']}\" غير مسجل بالنظام (يجب استيراد الأصناف أولاً)";
+                    continue;
+                }
+
+                $stock = BranchStock::where('branch_id', $branchId)
+                    ->where('product_id', $product->id)
+                    ->where('product_variant_id', $variant?->id)
+                    ->value('quantity') ?? 0;
+
+                if ($stock < $qtyRequired) {
+                    $variantLabel = $variant ? " ({$variant->name})" : '';
+                    $missingItems[] = "الصنف \"{$product->name}{$variantLabel}\" الرصيد المتاح في {$branch->name}: {$stock}، والمطلوب: {$qtyRequired}";
+                }
             }
 
-            $stock = BranchStock::where('branch_id', $branchId)
-                ->where('product_id', $product->id)
-                ->where('product_variant_id', $variant?->id)
-                ->value('quantity') ?? 0;
-
-            if ($stock < $qtyRequired) {
-                $variantLabel = $variant ? " ({$variant->name})" : '';
-                $missingItems[] = "الصنف \"{$product->name}{$variantLabel}\" الرصيد المتاح في {$branch->name}: {$stock}، والمطلوب: {$qtyRequired}";
+            if (!empty($missingItems) && !$force) {
+                throw new PosDomainException(
+                    message: "لا يمكن تأكيد الطلب لنقص في المخزون:\n" . implode("\n", $missingItems),
+                    errorCode: 'INSUFFICIENT_ONLINE_STOCK',
+                    statusCode: 422
+                );
             }
-        }
 
-        if (!empty($missingItems) && !$force) {
-            throw new PosDomainException(
-                message: "لا يمكن تأكيد الطلب لنقص في المخزون:\n" . implode("\n", $missingItems),
-                errorCode: 'INSUFFICIENT_ONLINE_STOCK',
-                statusCode: 422
-            );
-        }
+            $orderNotes = $lockedOrder->notes;
+            if (!empty($missingItems) && $force) {
+                $warningTag = "[تأكيد مع نقص مخزون: " . implode(' | ', $missingItems) . "]";
+                $orderNotes = $orderNotes ? "{$orderNotes}\n{$warningTag}" : $warningTag;
+            }
 
-        $orderNotes = $order->notes;
-        if (!empty($missingItems) && $force) {
-            $warningTag = "[تأكيد مع نقص مخزون: " . implode(' | ', $missingItems) . "]";
-            $orderNotes = $orderNotes ? "{$orderNotes}\n{$warningTag}" : $warningTag;
-        }
+            $lockedOrder->update([
+                'branch_id' => $branchId,
+                'status' => WcOrderStatus::CONFIRMED,
+                'notes' => $orderNotes,
+            ]);
 
-        $order->update([
-            'branch_id' => $branchId,
-            'status' => WcOrderStatus::CONFIRMED,
-            'notes' => $orderNotes,
-        ]);
-
-        return $order->fresh(['party', 'branch']);
+            return $lockedOrder->fresh(['party', 'branch']);
+        });
     }
 
     /**
@@ -312,11 +340,21 @@ class WooCommerceOrderSyncService
         }
 
         return DB::transaction(function () use ($user, $accountId, $order, $mandob, $vanBranch) {
+            $lockedOrder = WcOrder::where('user_id', $accountId)->lockForUpdate()->findOrFail($order->id);
+
+            if (!$lockedOrder->status->canTransitionTo(WcOrderStatus::DISPATCHED)) {
+                throw new PosDomainException(
+                    message: "لا يمكن إسناد الطلب للمندوب وهو بحالة '{$lockedOrder->status->label()}'.",
+                    errorCode: 'INVALID_ORDER_STATUS_TRANSITION',
+                    statusCode: 422
+                );
+            }
+
             // If VAN branch is available and differs from source branch, create stock transfer
-            if ($vanBranch && $vanBranch->id !== $order->branch_id) {
+            if ($vanBranch && $vanBranch->id !== $lockedOrder->branch_id) {
                 $transferItems = [];
 
-                foreach ($order->items_snapshot ?? [] as $item) {
+                foreach ($lockedOrder->items_snapshot ?? [] as $item) {
                     $wcProductId = (int) ($item['product_id'] ?? 0);
                     $wcVarId = !empty($item['variation_id']) ? (int) $item['variation_id'] : null;
 
@@ -335,20 +373,20 @@ class WooCommerceOrderSyncService
 
                 if (!empty($transferItems)) {
                     $this->stockTransferService->createTransfer($user, [
-                        'from_branch_id' => $order->branch_id,
+                        'from_branch_id' => $lockedOrder->branch_id,
                         'to_branch_id' => $vanBranch->id,
                         'items' => $transferItems,
-                        'notes' => "شحن طلب ووكومرس #{$order->wc_order_id} مع المندوب {$mandob->name}",
+                        'notes' => self::buildTransferNote($lockedOrder->wc_order_id, $mandob->name),
                     ]);
                 }
             }
 
-            $order->update([
+            $lockedOrder->update([
                 'mandob_id' => $mandob->id,
                 'status' => WcOrderStatus::DISPATCHED,
             ]);
 
-            return $order->fresh(['party', 'branch', 'mandob']);
+            return $lockedOrder->fresh(['party', 'branch', 'mandob']);
         });
     }
 
@@ -358,10 +396,6 @@ class WooCommerceOrderSyncService
     public function dispatchToCourier(User $user, WcOrder $order, array $courierData): WcOrder
     {
         $accountId = $user->getAccountId();
-
-        if (in_array($order->status, [WcOrderStatus::DELIVERED, WcOrderStatus::RETURNED, WcOrderStatus::CANCELLED])) {
-            throw new PosDomainException("لا يمكن إسناد طلب في حالة '{$order->status->label()}' لشركة شحن.");
-        }
 
         $courierName = trim($courierData['courier_name'] ?? '');
         $trackingNumber = !empty($courierData['tracking_number']) ? trim($courierData['tracking_number']) : $order->tracking_number;
@@ -388,18 +422,28 @@ class WooCommerceOrderSyncService
 
         $courierName = $courierParty->name;
 
-        return DB::transaction(function () use ($order, $branchId, $courierPartyId, $courierName, $trackingNumber) {
-            $order->update([
+        return DB::transaction(function () use ($order, $accountId, $branchId, $courierPartyId, $courierName, $trackingNumber) {
+            $lockedOrder = WcOrder::where('user_id', $accountId)->lockForUpdate()->findOrFail($order->id);
+
+            if (!$lockedOrder->status->canTransitionTo(WcOrderStatus::SHIPPED_VIA_COURIER)) {
+                throw new PosDomainException(
+                    message: "لا يمكن إسناد الطلب لشركة الشحن وهو بحالة '{$lockedOrder->status->label()}'.",
+                    errorCode: 'INVALID_ORDER_STATUS_TRANSITION',
+                    statusCode: 422
+                );
+            }
+
+            $lockedOrder->update([
                 'branch_id' => $branchId,
                 'shipping_type' => 'COURIER',
                 'courier_party_id' => $courierPartyId,
-                'courier_name' => $courierName ?: $order->courier_name,
+                'courier_name' => $courierName ?: $lockedOrder->courier_name,
                 'tracking_number' => $trackingNumber,
                 'shipped_at' => now(),
                 'status' => WcOrderStatus::SHIPPED_VIA_COURIER,
             ]);
 
-            return $order->fresh(['party', 'branch', 'mandob', 'courierParty']);
+            return $lockedOrder->fresh(['party', 'branch', 'mandob', 'courierParty']);
         });
     }
 
@@ -417,6 +461,14 @@ class WooCommerceOrderSyncService
 
             if ($lockedOrder->status === WcOrderStatus::DELIVERED && $lockedOrder->invoice_id) {
                 return Invoice::findOrFail($lockedOrder->invoice_id);
+            }
+
+            if (!$lockedOrder->status->canTransitionTo(WcOrderStatus::DELIVERED)) {
+                throw new PosDomainException(
+                    message: "لا يمكن تسليم الطلب وهو بحالة '{$lockedOrder->status->label()}'.",
+                    errorCode: 'INVALID_ORDER_STATUS_TRANSITION',
+                    statusCode: 422
+                );
             }
 
             // Map items for InvoiceService
@@ -542,10 +594,24 @@ class WooCommerceOrderSyncService
      */
     public function returnOrder(User $user, WcOrder $order, ?string $reason = null): void
     {
-        $order->update([
-            'status' => WcOrderStatus::RETURNED,
-            'notes' => ($order->notes ? $order->notes . ' | ' : '') . "مرتجع: " . ($reason ?? 'تم رفض الاستلام'),
-        ]);
+        $accountId = $user->getAccountId();
+
+        DB::transaction(function () use ($accountId, $order, $reason) {
+            $lockedOrder = WcOrder::where('user_id', $accountId)->lockForUpdate()->findOrFail($order->id);
+
+            if (!$lockedOrder->status->canTransitionTo(WcOrderStatus::RETURNED)) {
+                throw new PosDomainException(
+                    message: "لا يمكن تسجيل الطلب كمرتجع وهو بحالة '{$lockedOrder->status->label()}'.",
+                    errorCode: 'INVALID_ORDER_STATUS_TRANSITION',
+                    statusCode: 422
+                );
+            }
+
+            $lockedOrder->update([
+                'status' => WcOrderStatus::RETURNED,
+                'notes' => ($lockedOrder->notes ? $lockedOrder->notes . ' | ' : '') . "مرتجع: " . ($reason ?? 'تم رفض الاستلام'),
+            ]);
+        });
 
         $integration = WooCommerceIntegration::where('user_id', $user->getAccountId())->first();
         if ($integration && $integration->is_active) {

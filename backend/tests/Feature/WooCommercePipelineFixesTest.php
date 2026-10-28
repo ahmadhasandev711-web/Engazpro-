@@ -6,6 +6,7 @@ use App\Contracts\WooCommerceApiClientInterface;
 use App\Enums\BranchType;
 use App\Enums\WcOrderStatus;
 use App\Enums\WcPaymentStatus;
+use App\Exceptions\PosDomainException;
 use App\Jobs\SyncOrderStatusToWooCommerceJob;
 use App\Models\Branch;
 use App\Models\BranchStock;
@@ -90,7 +91,7 @@ class WooCommercePipelineFixesTest extends TestCase
             'user_id' => $this->owner->id,
             'wc_order_id' => 5001,
             'branch_id' => $this->mainBranch->id,
-            'status' => WcOrderStatus::CONFIRMED,
+            'status' => WcOrderStatus::DISPATCHED,
             'payment_status' => WcPaymentStatus::PENDING_COD,
             'wc_payment_method' => 'cod',
             'shipping_cost' => 20,
@@ -230,5 +231,68 @@ class WooCommercePipelineFixesTest extends TestCase
 
         $this->assertEquals($invoice1->id, $invoice2->id);
         $this->assertEquals($invoiceCountBefore, Invoice::count(), 'No new invoice should be created on duplicate delivery');
+    }
+
+    /**
+     * Commit 2: Confirming an already confirmed order throws PosDomainException (INVALID_ORDER_STATUS_TRANSITION)
+     */
+    public function test_confirm_order_twice_throws_invalid_order_status_transition(): void
+    {
+        $order = $this->createTestOrder(['status' => WcOrderStatus::PENDING_CONFIRMATION]);
+
+        $syncService = app(WooCommerceOrderSyncService::class);
+        $syncService->confirmOrder($this->owner, $order, $this->mainBranch->id);
+
+        $this->assertEquals(WcOrderStatus::CONFIRMED, $order->fresh()->status);
+
+        try {
+            $syncService->confirmOrder($this->owner, $order->fresh(), $this->mainBranch->id);
+            $this->fail('Expected PosDomainException was not thrown');
+        } catch (PosDomainException $e) {
+            $this->assertEquals('INVALID_ORDER_STATUS_TRANSITION', $e->getErrorCode());
+            $this->assertEquals(422, $e->getStatusCode());
+        }
+    }
+
+    /**
+     * Commit 2: Returning an already returned order throws PosDomainException (INVALID_ORDER_STATUS_TRANSITION)
+     */
+    public function test_return_order_twice_throws_invalid_order_status_transition(): void
+    {
+        $order = $this->createTestOrder(['status' => WcOrderStatus::DISPATCHED]);
+
+        $syncService = app(WooCommerceOrderSyncService::class);
+        $syncService->returnOrder($this->owner, $order, 'زبون رفض الاستلام');
+
+        $this->assertEquals(WcOrderStatus::RETURNED, $order->fresh()->status);
+
+        try {
+            $syncService->returnOrder($this->owner, $order->fresh(), 'محاولة مرتجع ثانية');
+            $this->fail('Expected PosDomainException was not thrown');
+        } catch (PosDomainException $e) {
+            $this->assertEquals('INVALID_ORDER_STATUS_TRANSITION', $e->getErrorCode());
+            $this->assertEquals(422, $e->getStatusCode());
+        }
+    }
+
+    /**
+     * Commit 2: Delivering a cancelled order throws PosDomainException (INVALID_ORDER_STATUS_TRANSITION)
+     */
+    public function test_deliver_cancelled_order_throws_invalid_order_status_transition(): void
+    {
+        $order = $this->createTestOrder(['status' => WcOrderStatus::CANCELLED]);
+
+        $syncService = app(WooCommerceOrderSyncService::class);
+
+        try {
+            $syncService->deliverOrder($this->owner, $order, [
+                'collected_amount' => 220,
+                'payment_method' => 'CASH',
+            ]);
+            $this->fail('Expected PosDomainException was not thrown');
+        } catch (PosDomainException $e) {
+            $this->assertEquals('INVALID_ORDER_STATUS_TRANSITION', $e->getErrorCode());
+            $this->assertEquals(422, $e->getStatusCode());
+        }
     }
 }
