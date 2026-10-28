@@ -263,7 +263,7 @@ class WooCommerceCourierAndPricingTest extends TestCase
             'wc_order_id' => 1536,
             'customer_name' => 'محمد أحمد',
             'customer_phone' => '01011223344',
-            'status' => WcOrderStatus::CONFIRMED,
+            'status' => WcOrderStatus::DISPATCHED,
             'payment_status' => WcPaymentStatus::PENDING_COD,
             'shipping_cost' => 50.00,
             'subtotal' => 300.00,
