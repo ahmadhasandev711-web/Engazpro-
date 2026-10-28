@@ -4,6 +4,7 @@ namespace App\Services\WooCommerce;
 
 use App\Enums\BranchType;
 use App\Enums\StockTransferStatus;
+use App\Exceptions\PosDomainException;
 use App\Models\Branch;
 use App\Models\Product;
 use App\Models\StockTransfer;
@@ -125,5 +126,35 @@ class WcOrderVanTransferService
         }
 
         return "[تحذير: إذن تحويل سيارة المندوب رقم {$transfer->transfer_number} بحالة '{$transfer->status->value}' ولم يتم إلغاؤه تلقائياً]";
+    }
+
+    /**
+     * Settle VAN stock transfer on delivery
+     *
+     * @throws PosDomainException
+     */
+    public function settleForDelivery(User $user, WcOrder $order): ?StockTransfer
+    {
+        $accountId = $user->getAccountId();
+        $transfer = $this->findForOrder($accountId, $order);
+
+        if (!$transfer) {
+            return null;
+        }
+
+        if ($transfer->status === StockTransferStatus::IN_TRANSIT) {
+            $transfer->load(['items.product', 'items.variant']);
+            return $this->stockTransferService->receiveTransfer($user, $transfer);
+        }
+
+        if ($transfer->status === StockTransferStatus::RECEIVED) {
+            return $transfer;
+        }
+
+        throw new PosDomainException(
+            message: "إذن تحويل سيارة المندوب رقم {$transfer->transfer_number} ليس بحالة نشطة للتسليم (حالته: '{$transfer->status->value}').",
+            errorCode: 'DISPATCH_TRANSFER_NOT_ACTIVE',
+            statusCode: 422
+        );
     }
 }

@@ -461,6 +461,10 @@ class WooCommerceOrderSyncService
                 );
             }
 
+            // تسوية تحويل مخزون سيارة المندوب إن وجد
+            $transfer = $this->vanTransferService->settleForDelivery($user, $lockedOrder);
+            $executingBranchId = $transfer?->to_branch_id ?? $lockedOrder->mandob?->branch_id ?? $lockedOrder->branch_id;
+
             // Map items for InvoiceService
             $invoiceItems = [];
             foreach ($lockedOrder->items_snapshot ?? [] as $item) {
@@ -510,9 +514,6 @@ class WooCommerceOrderSyncService
                 $actualCollected = $rawCollected;
                 $paidAmount = $rawCollected;
             }
-
-            // Use mandob branch or order branch
-            $executingBranchId = $lockedOrder->mandob?->branch_id ?? $lockedOrder->branch_id;
 
             $shippingInfo = '';
             if ($lockedOrder->courier_name) {
