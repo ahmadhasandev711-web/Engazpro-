@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Contracts\WooCommerceApiClientInterface;
 use App\Enums\BranchType;
+use App\Enums\StockTransferStatus;
 use App\Enums\WcOrderStatus;
 use App\Enums\WcPaymentStatus;
 use App\Exceptions\PosDomainException;
@@ -13,6 +14,7 @@ use App\Models\BranchStock;
 use App\Models\Invoice;
 use App\Models\Party;
 use App\Models\Product;
+use App\Models\StockTransfer;
 use App\Models\Subscription;
 use App\Models\User;
 use App\Models\WcOrder;
@@ -329,5 +331,124 @@ class WooCommercePipelineFixesTest extends TestCase
         $this->assertEquals(WcOrderStatus::DISPATCHED, $updated->status);
         $this->assertEquals(WcOrderStatus::DISPATCHED, $order->fresh()->status);
         $this->assertStringContainsString('تحذير', $order->fresh()->notes);
+    }
+
+    /**
+     * Commit 4: Returning a DELIVERED order throws PosDomainException with RETURN_AFTER_DELIVERY_UNSUPPORTED
+     */
+    public function test_return_delivered_order_throws_return_after_delivery_unsupported(): void
+    {
+        $order = $this->createTestOrder(['status' => WcOrderStatus::DELIVERED]);
+
+        $syncService = app(WooCommerceOrderSyncService::class);
+
+        try {
+            $syncService->returnOrder($this->owner, $order, 'محاولة إرجاع بعد التسليم');
+            $this->fail('Expected PosDomainException was not thrown');
+        } catch (PosDomainException $e) {
+            $this->assertEquals('RETURN_AFTER_DELIVERY_UNSUPPORTED', $e->getErrorCode());
+            $this->assertEquals(422, $e->getStatusCode());
+        }
+    }
+
+    /**
+     * Commit 4: Returning an order reverses active IN_TRANSIT VAN stock transfer
+     */
+    public function test_return_order_reverses_in_transit_van_transfer(): void
+    {
+        $vanBranch = Branch::create([
+            'user_id' => $this->owner->id,
+            'name' => 'سيارة المندوب 1',
+            'code' => 'VAN-01',
+            'type' => BranchType::VAN,
+            'is_active' => true,
+        ]);
+
+        $mandob = User::create([
+            'name' => 'مندوب التوصيل',
+            'phone' => '01099998888',
+            'password' => bcrypt('password123'),
+            'owner_id' => $this->owner->id,
+            'branch_id' => $vanBranch->id,
+        ]);
+
+        $order = $this->createTestOrder(['status' => WcOrderStatus::CONFIRMED]);
+
+        $syncService = app(WooCommerceOrderSyncService::class);
+        $syncService->dispatchToMandob($this->owner, $order, $mandob->id);
+
+        $transfer = StockTransfer::where('user_id', $this->owner->id)
+            ->where('notes', 'like', WooCommerceOrderSyncService::buildTransferNotePrefix($order->wc_order_id) . '%')
+            ->first();
+
+        $this->assertNotNull($transfer);
+        $this->assertEquals(StockTransferStatus::IN_TRANSIT, $transfer->status);
+
+        // Now return the order
+        $syncService->returnOrder($this->owner, $order->fresh(), 'العميل رفض الشحنة');
+
+        $this->assertEquals(WcOrderStatus::RETURNED, $order->fresh()->status);
+        $this->assertEquals(StockTransferStatus::CANCELLED, $transfer->fresh()->status);
+    }
+
+    /**
+     * Commit 4: Returning an order with already RECEIVED VAN transfer records warning and does not throw
+     */
+    public function test_return_order_with_received_van_transfer_records_warning(): void
+    {
+        $vanBranch = Branch::create([
+            'user_id' => $this->owner->id,
+            'name' => 'سيارة المندوب 2',
+            'code' => 'VAN-02',
+            'type' => BranchType::VAN,
+            'is_active' => true,
+        ]);
+
+        $mandob = User::create([
+            'name' => 'مندوب التوصيل 2',
+            'phone' => '01099998887',
+            'password' => bcrypt('password123'),
+            'owner_id' => $this->owner->id,
+            'branch_id' => $vanBranch->id,
+        ]);
+
+        $order = $this->createTestOrder(['status' => WcOrderStatus::CONFIRMED]);
+
+        $syncService = app(WooCommerceOrderSyncService::class);
+        $syncService->dispatchToMandob($this->owner, $order, $mandob->id);
+
+        $transfer = StockTransfer::where('user_id', $this->owner->id)
+            ->where('notes', 'like', WooCommerceOrderSyncService::buildTransferNotePrefix($order->wc_order_id) . '%')
+            ->first();
+
+        $this->assertNotNull($transfer);
+        // Simulate transfer was already received by mandob
+        $transfer->update(['status' => StockTransferStatus::RECEIVED]);
+
+        // Now return order
+        $syncService->returnOrder($this->owner, $order->fresh(), 'مرتجع بعد الاستلام');
+
+        $this->assertEquals(WcOrderStatus::RETURNED, $order->fresh()->status);
+        $this->assertEquals(StockTransferStatus::RECEIVED, $transfer->fresh()->status);
+        $this->assertStringContainsString('تحذير', $order->fresh()->notes);
+    }
+
+    /**
+     * Commit 4: Returning order sends cancelled to WooCommerce instead of refunded
+     */
+    public function test_return_order_sends_cancelled_to_woocommerce_not_refunded(): void
+    {
+        Queue::fake();
+
+        $order = $this->createTestOrder(['status' => WcOrderStatus::DISPATCHED]);
+
+        $syncService = app(WooCommerceOrderSyncService::class);
+        $syncService->returnOrder($this->owner, $order, 'رفض استلام');
+
+        Queue::assertPushed(SyncOrderStatusToWooCommerceJob::class, function ($job) use ($order) {
+            return $job->userId === $this->owner->id
+                && $job->wcOrderId === $order->wc_order_id
+                && $job->status === 'cancelled';
+        });
     }
 }

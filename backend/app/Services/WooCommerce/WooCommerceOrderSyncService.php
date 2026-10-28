@@ -4,6 +4,7 @@ namespace App\Services\WooCommerce;
 
 use App\Enums\PartyType;
 use App\Enums\PaymentMethod;
+use App\Enums\StockTransferStatus;
 use App\Enums\WcOrderStatus;
 use App\Enums\WcPaymentStatus;
 use App\Exceptions\PosDomainException;
@@ -13,6 +14,7 @@ use App\Models\Invoice;
 use App\Models\Party;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\StockTransfer;
 use App\Models\User;
 use App\Models\WcOrder;
 use App\Models\WooCommerceIntegration;
@@ -613,8 +615,16 @@ class WooCommerceOrderSyncService
     {
         $accountId = $user->getAccountId();
 
-        DB::transaction(function () use ($accountId, $order, $reason) {
+        DB::transaction(function () use ($user, $accountId, $order, $reason) {
             $lockedOrder = WcOrder::where('user_id', $accountId)->lockForUpdate()->findOrFail($order->id);
+
+            if ($lockedOrder->status === WcOrderStatus::DELIVERED) {
+                throw new PosDomainException(
+                    message: "لا يمكن إرجاع طلب تم تسليمه وإصدار فاتورته عبر هذا المسار.",
+                    errorCode: 'RETURN_AFTER_DELIVERY_UNSUPPORTED',
+                    statusCode: 422
+                );
+            }
 
             if (!$lockedOrder->status->canTransitionTo(WcOrderStatus::RETURNED)) {
                 throw new PosDomainException(
@@ -624,15 +634,39 @@ class WooCommerceOrderSyncService
                 );
             }
 
+            // Find any active VAN stock transfer for this order
+            $notePrefix = self::buildTransferNotePrefix($lockedOrder->wc_order_id);
+            $transfer = StockTransfer::where('user_id', $accountId)
+                ->where('notes', 'like', $notePrefix . '%')
+                ->latest()
+                ->first();
+
+            $vanWarning = null;
+            if ($transfer) {
+                if ($transfer->status === StockTransferStatus::IN_TRANSIT) {
+                    $this->stockTransferService->cancelTransfer($user, $transfer, "مرتجع أوردر ووكومرس #{$lockedOrder->wc_order_id}");
+                } else {
+                    $vanWarning = "[تحذير: إذن تحويل سيارة المندوب رقم {$transfer->transfer_number} بحالة '{$transfer->status->value}' ولم يتم إلغاؤه تلقائياً]";
+                }
+            }
+
+            $returnNote = "مرتجع: " . ($reason ?? 'تم رفض الاستلام');
+            $notes = $lockedOrder->notes ? $lockedOrder->notes . ' | ' . $returnNote : $returnNote;
+            if ($vanWarning) {
+                $notes .= ' | ' . $vanWarning;
+            }
+
             $lockedOrder->update([
                 'status' => WcOrderStatus::RETURNED,
-                'notes' => ($lockedOrder->notes ? $lockedOrder->notes . ' | ' : '') . "مرتجع: " . ($reason ?? 'تم رفض الاستلام'),
+                'notes' => $notes,
             ]);
         });
 
-        $integration = WooCommerceIntegration::where('user_id', $user->getAccountId())->first();
-        if ($integration && $integration->is_active) {
-            $this->apiClient->updateOrderStatus($integration, $order->wc_order_id, 'refunded');
+        // إشعار WooCommerce بحالة cancelled خارج الـ transaction عبر Job
+        try {
+            SyncOrderStatusToWooCommerceJob::dispatch($accountId, $order->wc_order_id, 'cancelled')->afterCommit();
+        } catch (\Throwable $e) {
+            Log::warning("Failed to dispatch WooCommerce status sync for returned order #{$order->wc_order_id}: " . $e->getMessage());
         }
     }
 
