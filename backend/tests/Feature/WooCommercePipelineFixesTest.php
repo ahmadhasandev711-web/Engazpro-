@@ -417,6 +417,9 @@ class WooCommercePipelineFixesTest extends TestCase
 
         $order = $this->createTestOrder(['status' => WcOrderStatus::CONFIRMED]);
 
+        $product = Product::where('user_id', $this->owner->id)->where('wc_product_id', 999)->first();
+        $initialStock = (float) BranchStock::where('branch_id', $this->mainBranch->id)->where('product_id', $product->id)->value('quantity');
+
         $syncService = app(WooCommerceOrderSyncService::class);
         $syncService->dispatchToMandob($this->owner, $order, $mandob->id);
 
@@ -432,6 +435,130 @@ class WooCommercePipelineFixesTest extends TestCase
 
         $this->assertEquals(WcOrderStatus::RETURNED, $order->fresh()->status);
         $this->assertEquals(StockTransferStatus::CANCELLED, $transfer->fresh()->status);
+
+        $restoredStock = (float) BranchStock::where('branch_id', $this->mainBranch->id)->where('product_id', $product->id)->value('quantity');
+        $this->assertEquals($initialStock, $restoredStock);
+    }
+
+    /**
+     * Commit 10: Strict prefix isolation between orders #12 and #123 when cancelling van transfers
+     */
+    public function test_return_order_prefix_isolation_between_order_12_and_123(): void
+    {
+        $vanBranch = Branch::create([
+            'user_id' => $this->owner->id,
+            'name' => 'سيارة المندوب تداخل',
+            'code' => 'VAN-ISO',
+            'type' => BranchType::VAN,
+            'is_active' => true,
+        ]);
+
+        $mandob = User::create([
+            'name' => 'مندوب التداخل',
+            'phone' => '01012341234',
+            'password' => bcrypt('password123'),
+            'owner_id' => $this->owner->id,
+            'branch_id' => $vanBranch->id,
+        ]);
+
+        $product = Product::create([
+            'user_id' => $this->owner->id,
+            'name' => 'منتج مشترك',
+            'wc_product_id' => 8888,
+            'price' => 50,
+            'cost_price' => 30,
+            'quantity' => 50,
+        ]);
+
+        BranchStock::create([
+            'branch_id' => $this->mainBranch->id,
+            'product_id' => $product->id,
+            'quantity' => 50,
+        ]);
+
+        $order12 = WcOrder::create([
+            'user_id' => $this->owner->id,
+            'wc_order_id' => 12,
+            'branch_id' => $this->mainBranch->id,
+            'status' => WcOrderStatus::CONFIRMED,
+            'payment_status' => WcPaymentStatus::PENDING_COD,
+            'wc_payment_method' => 'cod',
+            'shipping_cost' => 10,
+            'subtotal' => 100,
+            'discount_total' => 0,
+            'total' => 110,
+            'customer_name' => 'عميل 12',
+            'customer_phone' => '01012121212',
+            'items_snapshot' => [
+                [
+                    'product_id' => 8888,
+                    'name' => 'منتج مشترك',
+                    'quantity' => 2,
+                    'price' => 50,
+                    'total' => 100,
+                ],
+            ],
+        ]);
+
+        $order123 = WcOrder::create([
+            'user_id' => $this->owner->id,
+            'wc_order_id' => 123,
+            'branch_id' => $this->mainBranch->id,
+            'status' => WcOrderStatus::CONFIRMED,
+            'payment_status' => WcPaymentStatus::PENDING_COD,
+            'wc_payment_method' => 'cod',
+            'shipping_cost' => 10,
+            'subtotal' => 150,
+            'discount_total' => 0,
+            'total' => 160,
+            'customer_name' => 'عميل 123',
+            'customer_phone' => '01012312312',
+            'items_snapshot' => [
+                [
+                    'product_id' => 8888,
+                    'name' => 'منتج مشترك',
+                    'quantity' => 3,
+                    'price' => 50,
+                    'total' => 150,
+                ],
+            ],
+        ]);
+
+        $syncService = app(WooCommerceOrderSyncService::class);
+        $syncService->dispatchToMandob($this->owner, $order12, $mandob->id);
+        $syncService->dispatchToMandob($this->owner, $order123, $mandob->id);
+
+        $prefix12 = WooCommerceOrderSyncService::buildTransferNotePrefix(12);
+        $prefix123 = WooCommerceOrderSyncService::buildTransferNotePrefix(123);
+
+        $transfer12 = StockTransfer::where('user_id', $this->owner->id)
+            ->where('notes', 'like', $prefix12 . '%')
+            ->first();
+
+        $transfer123 = StockTransfer::where('user_id', $this->owner->id)
+            ->where('notes', 'like', $prefix123 . '%')
+            ->first();
+
+        $this->assertNotNull($transfer12);
+        $this->assertNotNull($transfer123);
+        $this->assertNotEquals($transfer12->id, $transfer123->id);
+        $this->assertEquals(StockTransferStatus::IN_TRANSIT, $transfer12->status);
+        $this->assertEquals(StockTransferStatus::IN_TRANSIT, $transfer123->status);
+
+        // Return order 12 only
+        $syncService->returnOrder($this->owner, $order12->fresh(), 'إرجاع طلب 12 فقط');
+
+        // Order 12 must be RETURNED and its transfer CANCELLED
+        $this->assertEquals(WcOrderStatus::RETURNED, $order12->fresh()->status);
+        $this->assertEquals(StockTransferStatus::CANCELLED, $transfer12->fresh()->status);
+
+        // Order 123 must remain DISPATCHED and its transfer remain IN_TRANSIT
+        $this->assertEquals(WcOrderStatus::DISPATCHED, $order123->fresh()->status);
+        $this->assertEquals(StockTransferStatus::IN_TRANSIT, $transfer123->fresh()->status);
+
+        // Stock in main branch: 50 initial - 2 (order 12) - 3 (order 123) + 2 (cancelled transfer 12) = 47
+        $currentStock = (float) BranchStock::where('branch_id', $this->mainBranch->id)->where('product_id', $product->id)->value('quantity');
+        $this->assertEquals(47.0, $currentStock);
     }
 
     /**
