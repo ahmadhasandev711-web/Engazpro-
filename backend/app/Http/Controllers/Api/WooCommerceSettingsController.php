@@ -39,6 +39,23 @@ class WooCommerceSettingsController extends Controller
         return null;
     }
 
+    private function presentSettings(WooCommerceIntegration $integration): array
+    {
+        return [
+            'id' => $integration->id,
+            'store_url' => $integration->store_url,
+            'consumer_key_preview' => $integration->consumer_key ? (substr($integration->consumer_key, 0, 7) . '...' . substr($integration->consumer_key, -4)) : '',
+            'online_branch_id' => $integration->online_branch_id,
+            'online_branch_name' => $integration->onlineBranch?->name,
+            'auto_sync_stock' => $integration->auto_sync_stock,
+            'is_active' => $integration->is_active,
+            'webhook_url' => url("/api/webhooks/woocommerce/{$integration->user_id}"),
+            'webhook_secret' => $integration->webhook_secret,
+            'last_synced_at' => $integration->last_synced_at?->toIso8601String(),
+            'last_error' => $integration->last_error,
+        ];
+    }
+
     /**
      * Get WooCommerce integration settings for the authenticated store
      */
@@ -62,19 +79,7 @@ class WooCommerceSettingsController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => [
-                'id' => $integration->id,
-                'store_url' => $integration->store_url,
-                'consumer_key_preview' => $integration->consumer_key ? (substr($integration->consumer_key, 0, 7) . '...' . substr($integration->consumer_key, -4)) : '',
-                'online_branch_id' => $integration->online_branch_id,
-                'online_branch_name' => $integration->onlineBranch?->name,
-                'auto_sync_stock' => $integration->auto_sync_stock,
-                'is_active' => $integration->is_active,
-                'webhook_url' => url("/api/webhooks/woocommerce/{$user->getAccountId()}"),
-                'webhook_secret' => $integration->webhook_secret,
-                'last_synced_at' => $integration->last_synced_at?->toIso8601String(),
-                'last_error' => $integration->last_error,
-            ],
+            'data' => $this->presentSettings($integration),
         ]);
     }
 
@@ -124,10 +129,12 @@ class WooCommerceSettingsController extends Controller
             }
         }
 
+        $integration->load('onlineBranch');
+
         return response()->json([
             'success' => true,
             'message' => 'تم حفظ إعدادات ووكومرس وتفعيل استقبال الطلبات اللحظية بنجاح',
-            'data' => $integration,
+            'data' => $this->presentSettings($integration),
         ]);
     }
 

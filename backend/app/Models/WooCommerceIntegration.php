@@ -35,6 +35,12 @@ class WooCommerceIntegration extends Model
         'last_synced_at' => 'datetime',
     ];
 
+    protected $hidden = [
+        'consumer_key',
+        'consumer_secret',
+        'webhook_secret',
+    ];
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
