@@ -42,6 +42,14 @@ class SecurityHardeningWave1Test extends TestCase
             'is_main' => true,
             'is_active' => true,
         ]);
+
+        $defaultResolver = new class implements \App\Contracts\HostResolver {
+            public function resolve(string $host): array
+            {
+                return ['93.184.216.34'];
+            }
+        };
+        $this->app->instance(\App\Contracts\HostResolver::class, $defaultResolver);
     }
 
     /**
@@ -324,5 +332,74 @@ class SecurityHardeningWave1Test extends TestCase
 
         $seeder = new \Database\Seeders\AdminUserSeeder();
         $seeder->run();
+    }
+
+    /**
+     * Item 7: SSRF Protection rejects http, localhost, private, and link-local IPs
+     */
+    public function test_store_url_rejects_http_and_private_loopback_ips(): void
+    {
+        $fakeResolver = new class implements \App\Contracts\HostResolver {
+            public function resolve(string $host): array
+            {
+                return match ($host) {
+                    'example.com' => ['93.184.216.34'],
+                    'evil-internal.local' => ['127.0.0.1'],
+                    'internal-metadata.com' => ['169.254.169.254'],
+                    'private-lan.com' => ['192.168.1.100'],
+                    default => [],
+                };
+            }
+        };
+        $this->app->instance(\App\Contracts\HostResolver::class, $fakeResolver);
+
+        $mockClient = \Mockery::mock(\App\Services\WooCommerce\WooCommerceApiClient::class);
+        $mockClient->shouldReceive('registerWebhooks')->andReturnTrue();
+        $this->app->instance(\App\Services\WooCommerce\WooCommerceApiClient::class, $mockClient);
+
+        $validKeys = [
+            'consumer_key' => 'ck_test_key_12345',
+            'consumer_secret' => 'cs_test_secret_67890',
+        ];
+
+        // 1) http rejected
+        $r1 = $this->actingAs($this->owner)->postJson('/api/woocommerce/settings', array_merge($validKeys, [
+            'store_url' => 'http://example.com',
+        ]));
+        $r1->assertStatus(422)->assertJsonValidationErrors(['store_url']);
+
+        // 2) localhost rejected
+        $r2 = $this->actingAs($this->owner)->postJson('/api/woocommerce/settings', array_merge($validKeys, [
+            'store_url' => 'https://localhost',
+        ]));
+        $r2->assertStatus(422)->assertJsonValidationErrors(['store_url']);
+
+        // 3) 127.0.0.1 rejected
+        $r3 = $this->actingAs($this->owner)->postJson('/api/woocommerce/settings', array_merge($validKeys, [
+            'store_url' => 'https://127.0.0.1',
+        ]));
+        $r3->assertStatus(422)->assertJsonValidationErrors(['store_url']);
+
+        // 4) 169.254.169.254 rejected
+        $r4 = $this->actingAs($this->owner)->postJson('/api/woocommerce/settings', array_merge($validKeys, [
+            'store_url' => 'https://169.254.169.254',
+        ]));
+        $r4->assertStatus(422)->assertJsonValidationErrors(['store_url']);
+
+        // 5) resolved domain to private IP rejected
+        $r5 = $this->actingAs($this->owner)->postJson('/api/woocommerce/settings', array_merge($validKeys, [
+            'store_url' => 'https://private-lan.com',
+        ]));
+        $r5->assertStatus(422)->assertJsonValidationErrors(['store_url']);
+
+        // 6) GenerateAuthUrlRequest also rejects http
+        $r6 = $this->actingAs($this->owner)->getJson('/api/woocommerce/authorize-url?store_url=' . urlencode('http://example.com'));
+        $r6->assertStatus(422)->assertJsonValidationErrors(['store_url']);
+
+        // 7) Public HTTPS URL accepted
+        $r7 = $this->actingAs($this->owner)->postJson('/api/woocommerce/settings', array_merge($validKeys, [
+            'store_url' => 'https://example.com',
+        ]));
+        $r7->assertStatus(200);
     }
 }

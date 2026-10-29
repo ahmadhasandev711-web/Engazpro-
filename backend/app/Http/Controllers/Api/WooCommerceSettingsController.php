@@ -12,6 +12,7 @@ use App\Jobs\ImportWooCommerceProductsJob;
 use App\Jobs\PushAllWooCommerceStocksJob;
 use App\Models\Product;
 use App\Models\Branch;
+use App\Rules\PublicHttpsUrl;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -94,7 +95,7 @@ class WooCommerceSettingsController extends Controller
 
         $user = $request->user();
         $validated = $request->validate([
-            'store_url' => ['required', 'url'],
+            'store_url' => ['required', 'url', new PublicHttpsUrl()],
             'consumer_key' => ['nullable', 'string'],
             'consumer_secret' => ['nullable', 'string'],
             'online_branch_id' => ['nullable', 'exists:branches,id'],

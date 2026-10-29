@@ -29,6 +29,10 @@ class AppServiceProvider extends ServiceProvider
             \App\Contracts\WooCommerceApiClientInterface::class,
             \App\Services\WooCommerce\WooCommerceApiClient::class
         );
+        $this->app->bind(
+            \App\Contracts\HostResolver::class,
+            \App\Services\DnsHostResolver::class
+        );
     }
 
     /**

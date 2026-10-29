@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Rules\PublicHttpsUrl;
 use Illuminate\Foundation\Http\FormRequest;
 
 class GenerateAuthUrlRequest extends FormRequest
@@ -21,7 +22,7 @@ class GenerateAuthUrlRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'store_url' => ['required', 'url'],
+            'store_url' => ['required', 'url', new PublicHttpsUrl()],
             'return_url' => ['nullable', 'url'],
         ];
     }
