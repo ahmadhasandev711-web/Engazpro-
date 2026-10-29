@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\PartyType;
+use App\Enums\PaymentType;
 use App\Enums\WcOrderStatus;
 use App\Enums\WcPaymentStatus;
 use App\Http\Resources\PartyResource;
@@ -259,61 +260,6 @@ class CourierService
     }
 
     /**
-     * تدقيق وتصحيح الأوردرات المسلمة سابقاً ومزامنة قيودها في كشف حساب شركة الشحن
-     */
-    public function syncExistingDeliveredOrders(User $user): int
-    {
-        $accountId = $user->getAccountId();
-
-        $deliveredOrders = WcOrder::where('user_id', $accountId)
-            ->whereNotNull('courier_party_id')
-            ->where('status', WcOrderStatus::DELIVERED)
-            ->whereNotNull('invoice_id')
-            ->get();
-
-        $syncedCount = 0;
-
-        foreach ($deliveredOrders as $order) {
-            $invoice = Invoice::find($order->invoice_id);
-            if (!$invoice) {
-                continue;
-            }
-
-            $courier = Party::where('user_id', $accountId)->find($order->courier_party_id);
-            if (!$courier) {
-                continue;
-            }
-
-            $alreadyRecorded = LedgerEntry::where('party_id', $courier->id)
-                ->where('source_type', 'INVOICE')
-                ->where('source_id', $invoice->id)
-                ->where('debit', '>', 0)
-                ->exists();
-
-            if (!$alreadyRecorded) {
-                $collected = (float) $invoice->total;
-                $desc = "تحصيل شحنة أوردر #{$order->wc_order_id} - العميل: " . ($order->customer_name ?: 'عميل ووكومرس');
-
-                $this->ledgerService->recordEntry(
-                    user: $user,
-                    party: $courier,
-                    sourceType: 'INVOICE',
-                    sourceId: $invoice->id,
-                    date: $invoice->date->format('Y-m-d'),
-                    description: $desc,
-                    debit: $collected,
-                    credit: 0.0
-                );
-                $syncedCount++;
-            }
-
-            $this->ledgerService->auditAndRecalculateBalance($courier);
-        }
-
-        return $syncedCount;
-    }
-
-    /**
      * تصفية رصيد ومستحقات شركة الشحن الصافية بضغطة واحدة
      */
     public function settleCourierNet(User $user, int $courierPartyId, array $data): array
@@ -323,28 +269,48 @@ class CourierService
             ->where('type', PartyType::COURIER->value)
             ->findOrFail($courierPartyId);
 
-        $balance = (float) $courier->balance;
-        $amount = !empty($data['amount']) ? (float) $data['amount'] : abs($balance);
+        $courierBalanceMoney = Money::of($courier->balance);
+        $maxAllowed = Money::of(abs($courierBalanceMoney->getAmount()));
 
-        if ($amount <= 0) {
-            throw new PosDomainException("المبلغ المطلوب تصفيته يجب أن يكون أكبر من الصفر.", "INVALID_SETTLEMENT_AMOUNT");
+        if ($maxAllowed->isZero()) {
+            throw new PosDomainException("رصيد شركة الشحن مسوى بالكامل بالفعل.", "SETTLEMENT_EXCEEDS_BALANCE", 422);
         }
 
+        $amountMoney = !empty($data['amount']) ? Money::of($data['amount']) : $maxAllowed;
+
+        if ($amountMoney->isZero() || $amountMoney->isNegative()) {
+            throw new PosDomainException("المبلغ المطلوب تصفيته يجب أن يكون أكبر من الصفر.", "INVALID_SETTLEMENT_AMOUNT", 422);
+        }
+
+        if ($amountMoney->greaterThan($maxAllowed)) {
+            throw new PosDomainException("المبلغ المطلوب تصفيته يتجاوز الرصيد المستحق لشركة الشحن.", "SETTLEMENT_EXCEEDS_BALANCE", 422);
+        }
+
+        // تحديد نوع السند بناءً على الرصيد أو التحقق من النوع المرسل
         // إذا كان رصيد شركة الشحن مديناً (موجب) أي أنها حصلت كاش لصالح المتجر -> نوع السند قبض RECEIPT
         // إذا كان الرصيد دائناً (سالب) أي أن المتجر مدين لها بمصاريف شحن -> نوع السند صرف PAYMENT
-        $type = !empty($data['type'])
-            ? $data['type']
-            : ($balance >= 0 ? 'RECEIPT' : 'PAYMENT');
+        if (!empty($data['type'])) {
+            $requestedType = $data['type'] instanceof PaymentType ? $data['type'] : PaymentType::from($data['type']);
+            if ($courierBalanceMoney->greaterThan(Money::zero()) && $requestedType !== PaymentType::RECEIPT) {
+                throw new PosDomainException("نوع السند غير متوافق مع اتجاه رصيد شركة الشحن.", "SETTLEMENT_DIRECTION_MISMATCH", 422);
+            }
+            if ($courierBalanceMoney->lessThan(Money::zero()) && $requestedType !== PaymentType::PAYMENT) {
+                throw new PosDomainException("نوع السند غير متوافق مع اتجاه رصيد شركة الشحن.", "SETTLEMENT_DIRECTION_MISMATCH", 422);
+            }
+            $type = $requestedType;
+        } else {
+            $type = $courierBalanceMoney->greaterThan(Money::zero()) ? PaymentType::RECEIPT : PaymentType::PAYMENT;
+        }
 
         $method = $data['method'] ?? 'CASH';
-        $notes = $data['notes'] ?? ($type === 'RECEIPT'
+        $notes = $data['notes'] ?? ($type === PaymentType::RECEIPT
             ? "تصفية مستحقات شحن COD - شركة {$courier->name}"
             : "سداد أتعاب ومصاريف شحن - شركة {$courier->name}");
 
         $payment = $this->paymentService->createPayment($user, [
             'party_id' => $courier->id,
-            'type' => $type,
-            'amount' => $amount,
+            'type' => $type->value,
+            'amount' => $amountMoney->getAmount(),
             'method' => $method,
             'date' => $data['date'] ?? now()->toDateString(),
             'notes' => $notes,
@@ -356,7 +322,7 @@ class CourierService
         return [
             'payment' => $payment->load(['party', 'treasury']),
             'courier' => (new PartyResource($courier))->resolve(),
-            'settled_amount' => $amount,
+            'settled_amount' => $amountMoney->getAmount(),
             'remaining_balance' => Money::of($courier->balance)->getAmount(),
         ];
     }

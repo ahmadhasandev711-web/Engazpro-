@@ -49,21 +49,6 @@ class CourierController extends Controller
     }
 
     /**
-     * مزامنة وتدقيق حركات الطلبات المسلمة السابقة لشركات الشحن
-     */
-    public function sync(Request $request): JsonResponse
-    {
-        $user = $request->user();
-        $synced = $this->courierService->syncExistingDeliveredOrders($user);
-
-        return response()->json([
-            'success' => true,
-            'message' => "تم تدقيق ومزامنة {$synced} شحنة بنجاح وتحديث الأرصدة الدفترية",
-            'data' => ['synced_count' => $synced],
-        ]);
-    }
-
-    /**
      * تصفية صافي مستحقات شركة الشحن واستلام النقدية/التحويل
      */
     public function settleNet(Request $request, int $id): JsonResponse

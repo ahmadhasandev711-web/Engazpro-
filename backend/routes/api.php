@@ -80,7 +80,6 @@ Route::middleware('auth:sanctum')->group(function () {
         // Couriers Management & Shipment Manifest (إدارة شركات الشحن وكشف البوالص والتسويات)
         Route::prefix('couriers')->group(function () {
             Route::get('/', [\App\Http\Controllers\Api\CourierController::class, 'index']);
-            Route::post('sync', [\App\Http\Controllers\Api\CourierController::class, 'sync']);
             Route::get('{id}/manifest', [\App\Http\Controllers\Api\CourierController::class, 'manifest']);
             Route::post('{id}/settle', [\App\Http\Controllers\Api\CourierController::class, 'settleNet']);
         });

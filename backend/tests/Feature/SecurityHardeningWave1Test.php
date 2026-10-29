@@ -106,4 +106,108 @@ class SecurityHardeningWave1Test extends TestCase
         $this->assertEquals('ck_supe...7890', $data['consumer_key_preview']);
         $this->assertNotEmpty($data['webhook_secret']);
     }
+
+    /**
+     * Item 3: Cashier settle courier exceeding balance throws 422
+     */
+    public function test_cashier_settle_courier_exceeding_balance_throws_422(): void
+    {
+        $cashier = User::create([
+            'name' => 'كاشير الفرع',
+            'phone' => '01011111111',
+            'password' => bcrypt('password123'),
+            'role' => \App\Enums\UserRole::CASHIER->value,
+            'owner_id' => $this->owner->id,
+            'branch_id' => $this->mainBranch->id,
+            'status' => 'ACTIVE',
+        ]);
+
+        $courier = \App\Models\Party::create([
+            'user_id' => $this->owner->id,
+            'name' => 'شركة أمان للشحن',
+            'type' => \App\Enums\PartyType::COURIER->value,
+            'balance' => 500,
+        ]);
+
+        $response = $this->actingAs($cashier)->postJson("/api/couriers/{$courier->id}/settle", [
+            'amount' => 600,
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJson([
+            'error_code' => 'SETTLEMENT_EXCEEDS_BALANCE',
+        ]);
+    }
+
+    /**
+     * Item 3: Courier settlement direction mismatch throws 422
+     */
+    public function test_courier_settlement_direction_mismatch_throws_422(): void
+    {
+        $cashier = User::create([
+            'name' => 'كاشير الفرع 2',
+            'phone' => '01011111112',
+            'password' => bcrypt('password123'),
+            'role' => \App\Enums\UserRole::CASHIER->value,
+            'owner_id' => $this->owner->id,
+            'branch_id' => $this->mainBranch->id,
+            'status' => 'ACTIVE',
+        ]);
+
+        $courier = \App\Models\Party::create([
+            'user_id' => $this->owner->id,
+            'name' => 'شركة أمان للشحن 2',
+            'type' => \App\Enums\PartyType::COURIER->value,
+            'balance' => 500, // Positive balance requires RECEIPT
+        ]);
+
+        $response = $this->actingAs($cashier)->postJson("/api/couriers/{$courier->id}/settle", [
+            'amount' => 200,
+            'type' => 'PAYMENT',
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJson([
+            'error_code' => 'SETTLEMENT_DIRECTION_MISMATCH',
+        ]);
+    }
+
+    /**
+     * Item 3: POST /api/couriers/sync returns 404 (dead route removed)
+     */
+    public function test_courier_sync_route_returns_404(): void
+    {
+        $response = $this->actingAs($this->owner)->postJson('/api/couriers/sync');
+        $response->assertStatus(404);
+    }
+
+    /**
+     * Item 3 (Regression Guard): Cashier can settle courier within balance
+     */
+    public function test_cashier_can_settle_courier_within_balance_regression_guard(): void
+    {
+        $cashier = User::create([
+            'name' => 'كاشير الفرع 3',
+            'phone' => '01011111113',
+            'password' => bcrypt('password123'),
+            'role' => \App\Enums\UserRole::CASHIER->value,
+            'owner_id' => $this->owner->id,
+            'branch_id' => $this->mainBranch->id,
+            'status' => 'ACTIVE',
+        ]);
+
+        $courier = \App\Models\Party::create([
+            'user_id' => $this->owner->id,
+            'name' => 'شركة أمان للشحن 3',
+            'type' => \App\Enums\PartyType::COURIER->value,
+            'balance' => 500,
+        ]);
+
+        $response = $this->actingAs($cashier)->postJson("/api/couriers/{$courier->id}/settle", [
+            'amount' => 300,
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertEquals(200, $courier->fresh()->balance);
+    }
 }
