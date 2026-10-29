@@ -175,7 +175,9 @@ class AuthController extends Controller
             'password' => Hash::make($validated['new_password']),
         ]);
 
-        $user->revokeTokens($user->currentAccessToken()?->id);
+        $currentToken = $user->currentAccessToken();
+        $tokenId = ($currentToken instanceof \Laravel\Sanctum\PersonalAccessToken) ? $currentToken->id : null;
+        $user->revokeTokens($tokenId);
 
         return response()->json([
             'success' => true,
