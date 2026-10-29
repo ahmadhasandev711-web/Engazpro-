@@ -175,6 +175,8 @@ class AuthController extends Controller
             'password' => Hash::make($validated['new_password']),
         ]);
 
+        $user->revokeTokens($user->currentAccessToken()?->id);
+
         return response()->json([
             'success' => true,
             'message' => 'تم تغيير كلمة المرور بنجاح ✅',

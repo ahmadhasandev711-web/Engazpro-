@@ -221,6 +221,11 @@ class AdminStatsService
                 : \App\Enums\UserStatus::INACTIVE;
 
             $user->update(['status' => $newStatus]);
+
+            if ($newStatus === \App\Enums\UserStatus::INACTIVE) {
+                $user->revokeTokens();
+            }
+
             return $user->fresh();
         });
     }
@@ -233,5 +238,6 @@ class AdminStatsService
         $user->update([
             'password' => \Illuminate\Support\Facades\Hash::make($newPassword),
         ]);
+        $user->revokeTokens();
     }
 }

@@ -210,4 +210,82 @@ class SecurityHardeningWave1Test extends TestCase
         $response->assertStatus(200);
         $this->assertEquals(200, $courier->fresh()->balance);
     }
+
+    /**
+     * Item 4: Change password revokes old tokens except current
+     */
+    public function test_change_password_revokes_old_tokens_except_current(): void
+    {
+        $oldToken = $this->owner->createToken('old-phone')->plainTextToken;
+        $currentToken = $this->owner->createToken('current-web')->plainTextToken;
+
+        $response = $this->withToken($currentToken)->postJson('/api/auth/change-password', [
+            'current_password' => 'password123',
+            'new_password' => 'newpassword123',
+            'new_password_confirmation' => 'newpassword123',
+        ]);
+        $response->assertStatus(200);
+
+        $this->app['auth']->forgetGuards();
+        $oldResponse = $this->withToken($oldToken)->getJson('/api/auth/me');
+        $oldResponse->assertStatus(401);
+
+        $this->app['auth']->forgetGuards();
+        $currentResponse = $this->withToken($currentToken)->getJson('/api/auth/me');
+        $currentResponse->assertStatus(200);
+    }
+
+    /**
+     * Item 4: Admin reset password revokes all tokens
+     */
+    public function test_admin_reset_password_revokes_all_tokens(): void
+    {
+        $token = $this->owner->createToken('device')->plainTextToken;
+
+        $adminService = app(\App\Services\AdminStatsService::class);
+        $adminService->resetUserPassword($this->owner, 'newAdminPass123');
+
+        $this->app['auth']->forgetGuards();
+        $response = $this->withToken($token)->getJson('/api/auth/me');
+        $response->assertStatus(401);
+    }
+
+    /**
+     * Item 4: Toggle merchant inactive revokes tokens
+     */
+    public function test_toggle_merchant_inactive_revokes_tokens(): void
+    {
+        $token = $this->owner->createToken('device')->plainTextToken;
+
+        $adminService = app(\App\Services\AdminStatsService::class);
+        $adminService->toggleUserStatus($this->owner);
+
+        $this->app['auth']->forgetGuards();
+        $response = $this->withToken($token)->getJson('/api/auth/me');
+        $response->assertStatus(401);
+    }
+
+    /**
+     * Item 4: Toggle employee inactive revokes tokens
+     */
+    public function test_toggle_employee_inactive_revokes_tokens(): void
+    {
+        $employee = User::create([
+            'name' => 'موظف تجربة',
+            'phone' => '01055555555',
+            'password' => bcrypt('password123'),
+            'role' => \App\Enums\UserRole::CASHIER->value,
+            'owner_id' => $this->owner->id,
+            'branch_id' => $this->mainBranch->id,
+            'status' => 'ACTIVE',
+        ]);
+        $token = $employee->createToken('pos-device')->plainTextToken;
+
+        $employeeService = app(\App\Services\EmployeeService::class);
+        $employeeService->toggleStatus($employee);
+
+        $this->app['auth']->forgetGuards();
+        $response = $this->withToken($token)->getJson('/api/auth/me');
+        $response->assertStatus(401);
+    }
 }

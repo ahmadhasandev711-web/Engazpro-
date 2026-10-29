@@ -50,6 +50,18 @@ class User extends Authenticatable
         ];
     }
 
+    /**
+     * إلغاء توكنات الدخول القديمة للمستخدم
+     */
+    public function revokeTokens(?int $exceptTokenId = null): void
+    {
+        $query = $this->tokens();
+        if ($exceptTokenId !== null) {
+            $query->where('id', '!=', $exceptTokenId);
+        }
+        $query->delete();
+    }
+
     protected $appends = ['business_name'];
 
     public function getBusinessNameAttribute(): string

@@ -165,8 +165,16 @@ class EmployeeService
      */
     public function toggleStatus(User $employee): User
     {
-        $employee->status = ($employee->status === 'ACTIVE') ? 'INACTIVE' : 'ACTIVE';
+        $currentStatus = $employee->status instanceof \BackedEnum ? $employee->status->value : (string) $employee->status;
+        $isCurrentlyActive = ($currentStatus === 'ACTIVE' || $employee->status === \App\Enums\UserStatus::ACTIVE);
+        $newStatus = $isCurrentlyActive ? \App\Enums\UserStatus::INACTIVE : \App\Enums\UserStatus::ACTIVE;
+
+        $employee->status = $newStatus;
         $employee->save();
+
+        if ($newStatus === \App\Enums\UserStatus::INACTIVE) {
+            $employee->revokeTokens();
+        }
 
         return $employee;
     }
