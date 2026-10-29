@@ -307,4 +307,22 @@ class SecurityHardeningWave1Test extends TestCase
         $sixthResponse = $this->postJson('/api/auth/login', $payload);
         $sixthResponse->assertStatus(429);
     }
+
+    /**
+     * Item 6: AdminUserSeeder throws \RuntimeException when password is short or empty
+     */
+    public function test_admin_seeder_throws_when_password_is_short_or_empty(): void
+    {
+        config([
+            'pos.admin.email' => 'admin@example.com',
+            'pos.admin.phone' => '01012345678',
+            'pos.admin.password' => 'short123',
+        ]);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('كلمة مرور حساب المدير العام غير آمنة');
+
+        $seeder = new \Database\Seeders\AdminUserSeeder();
+        $seeder->run();
+    }
 }

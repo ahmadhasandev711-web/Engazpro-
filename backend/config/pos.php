@@ -22,6 +22,13 @@ return [
         'webhook_per_minute' => (int) env('POS_WEBHOOK_PER_MINUTE', 600),
     ],
 
+    'admin' => [
+        'name' => env('ADMIN_NAME', 'مدير النظام'),
+        'email' => env('ADMIN_EMAIL'),
+        'phone' => env('ADMIN_PHONE'),
+        'password' => env('ADMIN_PASSWORD'),
+    ],
+
     // فارغ افتراضياً. مسار الصيانة يرفض أي طلب ما لم يُضبط هذا السر في البيئة.
     'deploy_sync_secret' => env('DEPLOY_SYNC_SECRET'),
 ];

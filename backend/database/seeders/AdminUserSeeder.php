@@ -12,24 +12,37 @@ class AdminUserSeeder extends Seeder
 {
     public function run(): void
     {
-        $admin = User::where('email', 'ahmadhasandev711@gmail.com')
-            ->orWhere('phone', '01125030642')
+        $name = config('pos.admin.name', 'مدير النظام');
+        $email = config('pos.admin.email');
+        $phone = config('pos.admin.phone');
+        $password = config('pos.admin.password');
+
+        if (empty($email) || empty($phone)) {
+            throw new \RuntimeException('إعدادات حساب المدير العام غير مكتملة (يرجى ضبط ADMIN_EMAIL و ADMIN_PHONE في ملف .env).');
+        }
+
+        if (empty($password) || strlen($password) < 12) {
+            throw new \RuntimeException('كلمة مرور حساب المدير العام غير آمنة أو غير مضبوطة (يجب ألا تقل عن 12 حرفاً، يرجى ضبط ADMIN_PASSWORD في ملف .env).');
+        }
+
+        $admin = User::where('email', $email)
+            ->orWhere('phone', $phone)
             ->first();
 
         if ($admin) {
             $admin->update([
-                'name' => 'أحمد حسن (المدير العام)',
-                'email' => 'ahmadhasandev711@gmail.com',
-                'phone' => '01125030642',
-                'password' => Hash::make('123456'),
+                'name' => $name,
+                'email' => $email,
+                'phone' => $phone,
+                'password' => Hash::make($password),
                 'is_admin' => true,
             ]);
         } else {
             $admin = User::create([
-                'name' => 'أحمد حسن (المدير العام)',
-                'email' => 'ahmadhasandev711@gmail.com',
-                'phone' => '01125030642',
-                'password' => Hash::make('123456'),
+                'name' => $name,
+                'email' => $email,
+                'phone' => $phone,
+                'password' => Hash::make($password),
                 'is_admin' => true,
             ]);
         }
