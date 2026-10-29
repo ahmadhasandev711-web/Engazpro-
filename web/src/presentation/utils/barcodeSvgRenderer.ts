@@ -56,6 +56,18 @@ function encodeCode128B(text: string): number[] {
 }
 
 /**
+ * Safely escapes characters that have special meaning in XML/SVG.
+ */
+export function escapeXml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+/**
  * Renders an SVG string for the given barcode text.
  */
 export function renderBarcodeSvg(text: string, options: BarcodeRenderOptions = {}): string {
@@ -111,7 +123,7 @@ export function renderBarcodeSvg(text: string, options: BarcodeRenderOptions = {
   }
 
   const textElement = includeText
-    ? `<text x="${totalWidth / 2}" y="${barHeight + fontSize + 2}" text-anchor="middle" font-family="monospace, Courier, sans-serif" font-size="${fontSize}px" font-weight="bold" fill="#000000" letter-spacing="1px">${cleanText}</text>`
+    ? `<text x="${totalWidth / 2}" y="${barHeight + fontSize + 2}" text-anchor="middle" font-family="monospace, Courier, sans-serif" font-size="${fontSize}px" font-weight="bold" fill="#000000" letter-spacing="1px">${escapeXml(cleanText)}</text>`
     : '';
 
   return `

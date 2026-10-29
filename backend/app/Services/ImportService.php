@@ -118,6 +118,10 @@ class ImportService
             $code = !empty($row['code']) ? trim((string)$row['code']) : null;
             $barcode = !empty($row['barcode']) ? trim((string)$row['barcode']) : null;
 
+            if ($barcode && (!preg_match('/^[ -~]+$/', $barcode) || preg_match('/[<>"\'`]/', $barcode))) {
+                $errors[] = "الباركود '{$barcode}' يحتوي على رموز غير مسموحة.";
+            }
+
             // 2. إذا وُجدت أخطاء تنسيق أساسية
             if (!empty($errors)) {
                 $status = 'INVALID';

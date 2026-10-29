@@ -32,7 +32,7 @@ class ProductRequest extends FormRequest
             'has_expiry' => ['nullable', 'boolean'],
             'has_variants' => ['nullable', 'boolean'],
             'code' => ['nullable', 'string', 'max:100'],
-            'barcode' => ['nullable', 'string', 'max:100'],
+            'barcode' => ['nullable', 'string', 'max:100', 'regex:/^[ -~]+$/', 'not_regex:/[<>"\'`]/'],
             'category_id' => ['nullable', 'exists:categories,id'],
             'unit' => ['nullable', 'string', 'max:50'],
             'sub_unit' => ['nullable', 'string', 'max:50'],
@@ -50,7 +50,7 @@ class ProductRequest extends FormRequest
             'variants.*.name' => ['required_with:variants', 'string', 'max:255'],
             'variants.*.color' => ['nullable', 'string', 'max:100'],
             'variants.*.size' => ['nullable', 'string', 'max:100'],
-            'variants.*.barcode' => ['nullable', 'string', 'max:100'],
+            'variants.*.barcode' => ['nullable', 'string', 'max:100', 'regex:/^[ -~]+$/', 'not_regex:/[<>"\'`]/'],
             'variants.*.code' => ['nullable', 'string', 'max:100'],
             'variants.*.purchase_price' => ['nullable', 'numeric', 'min:0'],
             'variants.*.regular_price' => ['nullable', 'numeric', 'min:0'],
@@ -77,6 +77,10 @@ class ProductRequest extends FormRequest
             'sale_price.required' => 'سعر البيع مطلوب',
             'sale_price.min' => 'سعر البيع لا يمكن أن يكون سالباً',
             'quantity.min' => 'الكمية لا يمكن أن تكون سالبة',
+            'barcode.regex' => 'الباركود يجب أن يحتوي على حروف وأرقام إنجليزية فقط',
+            'barcode.not_regex' => 'الباركود يحتوي على رموز غير مسموحة',
+            'variants.*.barcode.regex' => 'باركود المتغير يجب أن يحتوي على حروف وأرقام إنجليزية فقط',
+            'variants.*.barcode.not_regex' => 'باركود المتغير يحتوي على رموز غير مسموحة',
         ];
     }
 }
