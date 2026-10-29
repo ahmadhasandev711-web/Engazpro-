@@ -17,8 +17,9 @@ return [
     ],
 
     'security' => [
-        'auth_throttle_attempts' => 30,
-        'auth_throttle_decay_minutes' => 1,
+        'api_per_minute' => (int) env('POS_API_PER_MINUTE', 300),
+        'login_per_minute' => (int) env('POS_LOGIN_PER_MINUTE', 5),
+        'webhook_per_minute' => (int) env('POS_WEBHOOK_PER_MINUTE', 600),
     ],
 
     // فارغ افتراضياً. مسار الصيانة يرفض أي طلب ما لم يُضبط هذا السر في البيئة.

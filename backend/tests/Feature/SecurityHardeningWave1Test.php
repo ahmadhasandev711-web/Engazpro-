@@ -288,4 +288,23 @@ class SecurityHardeningWave1Test extends TestCase
         $response = $this->withToken($token)->getJson('/api/auth/me');
         $response->assertStatus(401);
     }
+
+    /**
+     * Item 5: Login rate limiting triggers 429 on sixth attempt
+     */
+    public function test_login_rate_limiting_triggers_429_on_sixth_attempt(): void
+    {
+        $payload = [
+            'phone' => '01099999999',
+            'password' => 'wrongpassword',
+        ];
+
+        for ($i = 1; $i <= 5; $i++) {
+            $response = $this->postJson('/api/auth/login', $payload);
+            $this->assertNotEquals(429, $response->status(), "Attempt $i should not be rate-limited");
+        }
+
+        $sixthResponse = $this->postJson('/api/auth/login', $payload);
+        $sixthResponse->assertStatus(429);
+    }
 }

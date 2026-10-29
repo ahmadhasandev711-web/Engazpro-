@@ -56,5 +56,23 @@ class AppServiceProvider extends ServiceProvider
         \App\Models\BranchStock::observe(\App\Observers\BranchStockWooCommerceObserver::class);
         \App\Models\Party::observe(\App\Observers\PartyWooCommerceObserver::class);
 
+        \Illuminate\Support\Facades\RateLimiter::for('api', function (\Illuminate\Http\Request $request) {
+            return \Illuminate\Cache\RateLimiting\Limit::perMinute((int) config('pos.security.api_per_minute', 300))
+                ->by($request->user()?->id ?: $request->ip());
+        });
+
+        \Illuminate\Support\Facades\RateLimiter::for('login', function (\Illuminate\Http\Request $request) {
+            $phone = preg_replace('/\D+/', '', (string) $request->input('phone'));
+            $key = !empty($phone) ? $phone : $request->ip();
+            return \Illuminate\Cache\RateLimiting\Limit::perMinute((int) config('pos.security.login_per_minute', 5))
+                ->by($key);
+        });
+
+        \Illuminate\Support\Facades\RateLimiter::for('webhook', function (\Illuminate\Http\Request $request) {
+            $userId = (string) $request->route('userId');
+            $key = !empty($userId) ? 'wh_user_' . $userId : $request->ip();
+            return \Illuminate\Cache\RateLimiting\Limit::perMinute((int) config('pos.security.webhook_per_minute', 600))
+                ->by($key);
+        });
     }
 }

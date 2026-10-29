@@ -27,15 +27,15 @@ use Illuminate\Support\Facades\Route;
 */
 
 // Public Authentication Routes (Protected by Rate Limiter)
-Route::prefix('auth')->middleware('throttle:30,1')->group(function () {
-    Route::post('/register', [AuthController::class, 'register']);
-    Route::post('/login', [AuthController::class, 'login']);
+Route::prefix('auth')->group(function () {
+    Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:30,1');
+    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
 });
 
 // WooCommerce Incoming Webhooks (Public endpoint with HMAC signature verification)
-Route::post('webhooks/woocommerce/{userId}', [\App\Http\Controllers\Api\WooCommerceWebhookController::class, 'handle']);
+Route::post('webhooks/woocommerce/{userId}', [\App\Http\Controllers\Api\WooCommerceWebhookController::class, 'handle'])->middleware('throttle:webhook');
 // WooCommerce 1-Click OAuth Callback (Public endpoint called by WordPress)
-Route::post('woocommerce/auth-callback', [\App\Http\Controllers\Api\WooCommerceAuthController::class, 'authCallback']);
+Route::post('woocommerce/auth-callback', [\App\Http\Controllers\Api\WooCommerceAuthController::class, 'authCallback'])->middleware('throttle:webhook');
 
 // Public Landing Page Store Creation Inquiries
 Route::post('landing/inquiries', [\App\Http\Controllers\Api\StoreInquiryController::class, 'submitPublic'])->middleware('throttle:15,1');
@@ -44,7 +44,7 @@ Route::post('landing/inquiries', [\App\Http\Controllers\Api\StoreInquiryControll
 Route::get('ops/maintenance-sync-7b3e9a', [\App\Http\Controllers\Api\DeployMaintenanceController::class, 'clearCache'])->middleware('throttle:5,1');
 
 // Authenticated Routes
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     // Auth Management
     Route::prefix('auth')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
