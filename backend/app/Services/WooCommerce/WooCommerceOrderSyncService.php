@@ -4,7 +4,6 @@ namespace App\Services\WooCommerce;
 
 use App\Enums\PartyType;
 use App\Enums\PaymentMethod;
-use App\Enums\StockTransferStatus;
 use App\Enums\WcOrderStatus;
 use App\Enums\WcPaymentStatus;
 use App\Exceptions\PosDomainException;
@@ -14,13 +13,11 @@ use App\Models\Invoice;
 use App\Models\Party;
 use App\Models\Product;
 use App\Models\ProductVariant;
-use App\Models\StockTransfer;
 use App\Models\User;
 use App\Models\WcOrder;
 use App\Models\WooCommerceIntegration;
 use App\Services\CourierService;
 use App\Services\InvoiceService;
-use App\Services\StockTransferService;
 use App\Support\Money;
 use Exception;
 use Illuminate\Support\Facades\DB;
@@ -34,7 +31,6 @@ class WooCommerceOrderSyncService
         protected WooCommerceApiClientInterface $apiClient,
         protected WooCommerceCustomerSyncService $customerSyncService,
         protected InvoiceService $invoiceService,
-        protected StockTransferService $stockTransferService,
         protected CourierService $courierService,
         protected WcOrderVanTransferService $vanTransferService
     ) {}
@@ -250,22 +246,6 @@ class WooCommerceOrderSyncService
                 'items_snapshot' => $sanitizedLineItems,
             ]);
         });
-    }
-
-    /**
-     * Build standard transfer note for mandob dispatch
-     */
-    public static function buildTransferNote(int $wcOrderId, string $mandobName): string
-    {
-        return WcOrderVanTransferService::buildTransferNote($wcOrderId, $mandobName);
-    }
-
-    /**
-     * Build exact prefix to search for mandob transfer without ambiguous ID collisions
-     */
-    public static function buildTransferNotePrefix(int $wcOrderId): string
-    {
-        return WcOrderVanTransferService::buildTransferNotePrefix($wcOrderId);
     }
 
     /**
