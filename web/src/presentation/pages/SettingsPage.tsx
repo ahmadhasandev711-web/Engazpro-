@@ -21,6 +21,7 @@ export const SettingsPage: React.FC = () => {
     store_address: '',
     currency: 'ج.م',
     max_discount_percent: '100',
+    allow_negative_branch_stock: false,
   });
   const [loadingStore, setLoadingStore] = useState(false);
   const [savingStore, setSavingStore] = useState(false);
@@ -38,6 +39,7 @@ export const SettingsPage: React.FC = () => {
             store_address: res.data.data.store_address || '',
             currency: res.data.data.currency || 'ج.م',
             max_discount_percent: String(res.data.data.max_discount_percent ?? 100),
+            allow_negative_branch_stock: Boolean(res.data.data.allow_negative_branch_stock),
           });
         }
       } catch (err) {
@@ -323,6 +325,29 @@ export const SettingsPage: React.FC = () => {
               </div>
               <p className="text-[10px] text-slate-400 mt-1">
                 100 يعني بلا سقف. أصغر قيمة تمنع الكاشير والمندوب من تجاوزها (الإدارة والمديرون متجاوزون دائماً)
+              </p>
+            </div>
+
+            <div className="flex flex-col justify-start">
+              <label className="text-xs font-bold text-slate-700 block mb-1.5">
+                البيع على المكشوف
+              </label>
+              <div className="bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5">
+                <label className="inline-flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    disabled={!isOwnerOrAdmin || loadingStore}
+                    checked={storeData.allow_negative_branch_stock}
+                    onChange={(e) => setStoreData({ ...storeData, allow_negative_branch_stock: e.target.checked })}
+                    className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                  />
+                  <span className="text-xs font-bold text-slate-700">
+                    السماح بنزول رصيد الفرع بالسالب
+                  </span>
+                </label>
+              </div>
+              <p className="text-[10px] text-slate-400 mt-1">
+                عند التفعيل، يُسمح بالبيع حتى لو رصيد الفرع غير كافٍ وتُوسم الحركة بـ [بيع على المكشوف].
               </p>
             </div>
           </div>

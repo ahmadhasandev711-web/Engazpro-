@@ -12,6 +12,7 @@ class SettingService
     public const KEY_STORE_ADDRESS = 'store_address';
     public const KEY_CURRENCY = 'currency';
     public const KEY_MAX_DISCOUNT_PERCENT = 'max_discount_percent';
+    public const KEY_ALLOW_NEGATIVE_BRANCH_STOCK = 'allow_negative_branch_stock';
 
     /**
      * Retrieve store identity and currency settings for a user's store account
@@ -34,7 +35,25 @@ class SettingService
             'store_address' => $settings->get(self::KEY_STORE_ADDRESS) ?: '',
             'currency' => $settings->get(self::KEY_CURRENCY) ?: 'ج.م',
             'max_discount_percent' => $this->getMaxDiscountPercent($user),
+            'allow_negative_branch_stock' => $this->allowsNegativeBranchStock($user),
         ];
+    }
+
+    /**
+     * التحقق مما إذا كان المتجر يسمح بالبيع على المكشوف ونزول رصيد الفرع بالسالب
+     * الافتراضي: false (منع البيع عند عدم كفاية رصيد الفرع)
+     */
+    public function allowsNegativeBranchStock(User $user): bool
+    {
+        $value = Setting::where('user_id', $user->getAccountId())
+            ->where('key', self::KEY_ALLOW_NEGATIVE_BRANCH_STOCK)
+            ->value('value');
+
+        if (!is_string($value) || trim($value) === '') {
+            return false;
+        }
+
+        return filter_var($value, FILTER_VALIDATE_BOOLEAN);
     }
 
     /**
@@ -67,6 +86,9 @@ class SettingService
             self::KEY_STORE_ADDRESS => $data['store_address'] ?? null,
             self::KEY_CURRENCY => $data['currency'] ?? 'ج.م',
             self::KEY_MAX_DISCOUNT_PERCENT => $data['max_discount_percent'] ?? '100',
+            self::KEY_ALLOW_NEGATIVE_BRANCH_STOCK => isset($data['allow_negative_branch_stock'])
+                ? ($data['allow_negative_branch_stock'] ? '1' : '0')
+                : null,
         ];
 
         foreach ($allowedKeys as $key => $val) {

@@ -8,6 +8,7 @@ use App\Enums\PaymentMethod;
 use App\Enums\TreasuryType;
 use App\Enums\UserRole;
 use App\Models\Branch;
+use App\Models\BranchStock;
 use App\Models\Category;
 use App\Models\Invoice;
 use App\Models\Product;
@@ -118,6 +119,12 @@ class PayrollAndCommissionTest extends TestCase
             'code' => 'SHIRT-01',
             'sale_price' => 500,
             'purchase_price' => 300,
+            'quantity' => 100,
+        ]);
+
+        BranchStock::create([
+            'branch_id' => $this->branch->id,
+            'product_id' => $this->product->id,
             'quantity' => 100,
         ]);
     }

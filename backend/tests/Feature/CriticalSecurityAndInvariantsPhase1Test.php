@@ -10,6 +10,7 @@ use App\Enums\TreasuryTransactionType;
 use App\Exceptions\PosDomainException;
 use App\Exceptions\StockTransferDomainException;
 use App\Models\Branch;
+use App\Models\BranchStock;
 use App\Models\Invoice;
 use App\Models\Party;
 use App\Models\Payment;
@@ -175,6 +176,12 @@ class CriticalSecurityAndInvariantsPhase1Test extends TestCase
             'name' => 'منتج تجريبي',
             'purchase_price' => 50,
             'sale_price' => 100,
+            'quantity' => 10,
+        ]);
+
+        BranchStock::create([
+            'branch_id' => $this->branchA->id,
+            'product_id' => $product->id,
             'quantity' => 10,
         ]);
 

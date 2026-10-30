@@ -9,11 +9,18 @@ use App\Models\ProductBatch;
 use App\Models\ProductVariant;
 use App\Models\StockMovement;
 use App\Exceptions\PosDomainException;
+use App\Exceptions\InsufficientStockException;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
 class StockService
 {
+    public function __construct(
+        protected ?SettingService $settingService = null
+    ) {
+        $this->settingService ??= app(SettingService::class);
+    }
+
     /**
      * تسجيل حركة مخزون وتحديث رصيد الصنف والمتغير والفرع بشكل متسق
      */
@@ -71,6 +78,7 @@ class StockService
             $lockedBatch->save();
         }
 
+        $isShortSelling = false;
         // تحديث رصيد الفرع (BranchStock) إن وجد فرع محدد مع القفل التشاؤمي
         if ($branchId) {
             $branchStock = BranchStock::where('branch_id', $branchId)
@@ -88,12 +96,39 @@ class StockService
                     'quantity' => 0,
                     'min_quantity' => $variant?->min_quantity ?? $product->min_quantity,
                 ]);
+
+                $branchStock = BranchStock::where('branch_id', $branchId)
+                    ->where('product_id', $product->id)
+                    ->where('product_variant_id', $variant?->id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+            }
+
+            $currentBranchQty = (float) $branchStock->quantity;
+            if ($type === 'OUT' && $currentBranchQty < $quantity) {
+                $allowNegative = $this->settingService->allowsNegativeBranchStock($user);
+                if (!$allowNegative) {
+                    $branch = Branch::find($branchId);
+                    $branchName = $branch?->name ?: "الفرع #{$branchId}";
+                    throw new InsufficientStockException(
+                        productName: $product->name,
+                        available: $currentBranchQty,
+                        requested: $quantity,
+                        errorCode: 'INSUFFICIENT_BRANCH_STOCK',
+                        customMessage: "الرصيد المتاح في فرع '{$branchName}' للصنف '{$product->name}' غير كافٍ لإتمام العملية (الرصيد الحالي: {$currentBranchQty}، المطلوب: {$quantity})."
+                    );
+                }
+                $isShortSelling = true;
             }
 
             $branchStock->quantity = ($type === 'IN')
-                ? (float) $branchStock->quantity + $quantity
-                : (float) $branchStock->quantity - $quantity;
+                ? $currentBranchQty + $quantity
+                : $currentBranchQty - $quantity;
             $branchStock->save();
+        }
+
+        if ($isShortSelling) {
+            $notes = trim(($notes ? $notes . ' ' : '') . '[بيع على المكشوف]');
         }
 
         // إنشاء قيد حركة المخزون

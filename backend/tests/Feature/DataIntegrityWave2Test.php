@@ -222,4 +222,94 @@ class DataIntegrityWave2Test extends TestCase
         $this->assertNotNull($invoice->shift_id, 'الفاتورة يجب أن ترتبط بوردية المندوب المفتوحة');
         $this->assertEquals($shift->id, $invoice->shift_id);
     }
+
+    /**
+     * Item 3: Branch stock out movement rejects negative stock when setting is disabled (Default: false)
+     */
+    public function test_branch_stock_out_movement_rejects_negative_stock_when_setting_disabled(): void
+    {
+        $product = Product::create([
+            'user_id' => $this->owner->id,
+            'name' => 'سكر محلي',
+            'purchase_price' => 20,
+            'sale_price' => 30,
+            'quantity' => 10, // إجمالي الصنف 10
+        ]);
+
+        BranchStock::create([
+            'branch_id' => $this->fromBranch->id,
+            'product_id' => $product->id,
+            'quantity' => 2, // رصيد الفرع 2 فقط
+        ]);
+
+        $stockService = app(\App\Services\StockService::class);
+
+        // محاولة بيع / صرف 3 من الفرع الذي يحتوي على 2 فقط
+        $this->expectException(\App\Exceptions\InsufficientStockException::class);
+
+        try {
+            $stockService->recordMovement(
+                user: $this->owner,
+                product: $product,
+                type: 'OUT',
+                sourceType: 'SALE',
+                sourceId: 101,
+                quantity: 3,
+                branchId: $this->fromBranch->id
+            );
+        } catch (\App\Exceptions\InsufficientStockException $e) {
+            $this->assertEquals('INSUFFICIENT_BRANCH_STOCK', $e->getErrorCode());
+            $this->assertStringContainsString($this->fromBranch->name, $e->getMessage());
+            $this->assertStringContainsString('2', $e->getMessage());
+            throw $e;
+        }
+    }
+
+    /**
+     * Item 3: Branch stock out movement allows negative stock when setting is enabled and tags notes with [بيع على المكشوف]
+     */
+    public function test_branch_stock_out_movement_allows_negative_when_setting_enabled_and_tags_notes(): void
+    {
+        $settingService = app(\App\Services\SettingService::class);
+        $settingService->updateStoreIdentity($this->owner, [
+            'business_name' => 'متجر المكشوف',
+            'currency' => 'ج.م',
+            'allow_negative_branch_stock' => true,
+        ]);
+
+        $product = Product::create([
+            'user_id' => $this->owner->id,
+            'name' => 'زيت طعام',
+            'purchase_price' => 40,
+            'sale_price' => 60,
+            'quantity' => 10,
+        ]);
+
+        BranchStock::create([
+            'branch_id' => $this->fromBranch->id,
+            'product_id' => $product->id,
+            'quantity' => 2,
+        ]);
+
+        $stockService = app(\App\Services\StockService::class);
+
+        $movement = $stockService->recordMovement(
+            user: $this->owner,
+            product: $product,
+            type: 'OUT',
+            sourceType: 'SALE',
+            sourceId: 102,
+            quantity: 3,
+            notes: 'بيعة تجريبية',
+            branchId: $this->fromBranch->id
+        );
+
+        $this->assertNotNull($movement);
+        $this->assertStringContainsString('[بيع على المكشوف]', $movement->notes);
+
+        $branchStock = BranchStock::where('branch_id', $this->fromBranch->id)
+            ->where('product_id', $product->id)
+            ->first();
+        $this->assertEquals(-1, $branchStock->quantity);
+    }
 }

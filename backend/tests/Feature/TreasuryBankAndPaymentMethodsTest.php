@@ -6,6 +6,7 @@ use App\Enums\PaymentMethod;
 use App\Enums\ShiftStatus;
 use App\Enums\TreasuryType;
 use App\Models\Branch;
+use App\Models\BranchStock;
 use App\Models\Category;
 use App\Models\Invoice;
 use App\Models\Party;
@@ -79,6 +80,12 @@ class TreasuryBankAndPaymentMethodsTest extends TestCase
             'code' => 'TEA-01',
             'purchase_price' => 30,
             'sale_price' => 50,
+            'quantity' => 200,
+        ]);
+
+        BranchStock::create([
+            'branch_id' => $this->cairoBranch->id,
+            'product_id' => $this->product->id,
             'quantity' => 200,
         ]);
     }

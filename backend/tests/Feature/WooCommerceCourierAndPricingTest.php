@@ -6,6 +6,7 @@ use App\Enums\PartyType;
 use App\Enums\WcOrderStatus;
 use App\Enums\WcPaymentStatus;
 use App\Models\Branch;
+use App\Models\BranchStock;
 use App\Models\Invoice;
 use App\Models\Party;
 use App\Models\Product;
@@ -171,6 +172,12 @@ class WooCommerceCourierAndPricingTest extends TestCase
             'wc_product_id' => 999,
         ]);
 
+        BranchStock::create([
+            'branch_id' => $this->branch->id,
+            'product_id' => $product->id,
+            'quantity' => 5,
+        ]);
+
         $order = WcOrder::create([
             'user_id' => $this->user->id,
             'wc_order_id' => 8881,
@@ -254,6 +261,12 @@ class WooCommerceCourierAndPricingTest extends TestCase
             'name' => 'سماعة بلوتوث',
             'purchase_price' => 150.00,
             'sale_price' => 300.00,
+            'quantity' => 10,
+        ]);
+
+        BranchStock::create([
+            'branch_id' => $this->branch->id,
+            'product_id' => $product->id,
             'quantity' => 10,
         ]);
 
@@ -380,6 +393,12 @@ class WooCommerceCourierAndPricingTest extends TestCase
             'quantity' => 20,
         ]);
 
+        BranchStock::create([
+            'branch_id' => $this->branch->id,
+            'product_id' => $product->id,
+            'quantity' => 20,
+        ]);
+
         // Create POS invoice with courier assignment and shipping amount
         $response = $this->actingAs($this->user)->postJson('/api/invoices', [
             'type' => 'SALE',
@@ -437,6 +456,12 @@ class WooCommerceCourierAndPricingTest extends TestCase
             'name' => 'سماعات رأس لاسلكية',
             'purchase_price' => 300.00,
             'sale_price' => 600.00,
+            'quantity' => 10,
+        ]);
+
+        BranchStock::create([
+            'branch_id' => $this->branch->id,
+            'product_id' => $product->id,
             'quantity' => 10,
         ]);
 
