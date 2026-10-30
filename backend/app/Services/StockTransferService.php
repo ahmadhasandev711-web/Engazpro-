@@ -149,20 +149,51 @@ class StockTransferService
     }
 
     /**
+     * قفل سجل رصيد الفرع تشاؤمياً بشكل صحيح لمنع تضارب التزامن
+     */
+    private function lockBranchStock(int $branchId, int $productId, ?int $variantId, ?int $minQuantity = null): BranchStock
+    {
+        $stock = BranchStock::where('branch_id', $branchId)
+            ->where('product_id', $productId)
+            ->where('product_variant_id', $variantId)
+            ->lockForUpdate()
+            ->first();
+
+        if ($stock) {
+            return $stock;
+        }
+
+        BranchStock::firstOrCreate([
+            'branch_id' => $branchId,
+            'product_id' => $productId,
+            'product_variant_id' => $variantId,
+        ], [
+            'quantity' => 0,
+            'min_quantity' => $minQuantity,
+        ]);
+
+        return BranchStock::where('branch_id', $branchId)
+            ->where('product_id', $productId)
+            ->where('product_variant_id', $variantId)
+            ->lockForUpdate()
+            ->firstOrFail();
+    }
+
+    /**
      * تأكيد استلام أمر التحويل في فرع الوجهة وتغذية أرصدته
      */
     public function receiveTransfer(User $user, StockTransfer $transfer, array $data = []): StockTransfer
     {
         return DB::transaction(function () use ($user, $transfer, $data) {
-            if ($transfer->status !== StockTransferStatus::IN_TRANSIT) {
+            $lockedTransfer = StockTransfer::where('id', $transfer->id)->lockForUpdate()->firstOrFail();
+            if ($lockedTransfer->status !== StockTransferStatus::IN_TRANSIT) {
                 throw new StockTransferDomainException('لا يمكن تأكيد استلام إذن غير موجود بحالة "في الطريق".', 'INVALID_TRANSFER_STATUS');
             }
 
             $accountId = $user->getAccountId();
-            $toBranchId = $transfer->to_branch_id;
-            $toBranch = $transfer->toBranch;
+            $toBranchId = $lockedTransfer->to_branch_id;
 
-            foreach ($transfer->items as $item) {
+            foreach ($lockedTransfer->items as $item) {
                 $qtyReceived = isset($data['items'][$item->id]['quantity_received'])
                     ? (float) $data['items'][$item->id]['quantity_received']
                     : (float) $item->quantity_sent;
@@ -179,17 +210,14 @@ class StockTransferService
                     'quantity_received' => $qtyReceived,
                 ]);
 
-                // إضافة الرصيد إلى فرع الوجهة
-                $toStock = BranchStock::firstOrCreate([
-                    'branch_id' => $toBranchId,
-                    'product_id' => $item->product_id,
-                    'product_variant_id' => $item->product_variant_id,
-                ], [
-                    'quantity' => 0,
-                    'min_quantity' => $item->variant?->min_quantity ?? $item->product->min_quantity,
-                ]);
+                // إضافة الرصيد إلى فرع الوجهة مع القفل التشاؤمي الفعلي
+                $toStock = $this->lockBranchStock(
+                    $toBranchId,
+                    $item->product_id,
+                    $item->product_variant_id,
+                    $item->variant?->min_quantity ?? $item->product?->min_quantity
+                );
 
-                $toStock->lockForUpdate();
                 $toStock->quantity += $qtyReceived;
                 $toStock->save();
 
@@ -201,20 +229,20 @@ class StockTransferService
                     'product_variant_id' => $item->product_variant_id,
                     'type' => 'IN',
                     'source_type' => 'TRANSFER_IN',
-                    'source_id' => $transfer->id,
+                    'source_id' => $lockedTransfer->id,
                     'quantity' => $qtyReceived,
                     'balance_after' => $toStock->quantity,
-                    'notes' => "استلام تحويل بضاعة من {$transfer->fromBranch->name} بموجب إذن {$transfer->transfer_number}",
+                    'notes' => "استلام تحويل بضاعة من {$lockedTransfer->fromBranch->name} بموجب إذن {$lockedTransfer->transfer_number}",
                 ]);
             }
 
-            $transfer->update([
+            $lockedTransfer->update([
                 'status' => StockTransferStatus::RECEIVED,
                 'received_by' => $user->id,
                 'received_at' => now(),
             ]);
 
-            return $transfer->fresh(['items.product', 'items.variant', 'fromBranch', 'toBranch', 'receiver']);
+            return $lockedTransfer->fresh(['items.product', 'items.variant', 'fromBranch', 'toBranch', 'receiver']);
         });
     }
 
@@ -224,26 +252,24 @@ class StockTransferService
     public function cancelTransfer(User $user, StockTransfer $transfer, ?string $reason = null): StockTransfer
     {
         return DB::transaction(function () use ($user, $transfer, $reason) {
-            if ($transfer->status !== StockTransferStatus::IN_TRANSIT && $transfer->status !== StockTransferStatus::PENDING) {
+            $lockedTransfer = StockTransfer::where('id', $transfer->id)->lockForUpdate()->firstOrFail();
+            if ($lockedTransfer->status !== StockTransferStatus::IN_TRANSIT && $lockedTransfer->status !== StockTransferStatus::PENDING) {
                 throw new StockTransferDomainException('لا يمكن إلغاء إذن تم استلامه بالفعل.', 'TRANSFER_ALREADY_RECEIVED');
             }
 
             $accountId = $user->getAccountId();
-            $fromBranchId = $transfer->from_branch_id;
+            $fromBranchId = $lockedTransfer->from_branch_id;
 
-            // إعادة الكميات المحولة لفرع المصدر
-            foreach ($transfer->items as $item) {
+            // إعادة الكميات المحولة لفرع المصدر مع القفل التشاؤمي الفعلي
+            foreach ($lockedTransfer->items as $item) {
                 $qty = (float) $item->quantity_sent;
 
-                $fromStock = BranchStock::firstOrCreate([
-                    'branch_id' => $fromBranchId,
-                    'product_id' => $item->product_id,
-                    'product_variant_id' => $item->product_variant_id,
-                ], [
-                    'quantity' => 0,
-                ]);
+                $fromStock = $this->lockBranchStock(
+                    $fromBranchId,
+                    $item->product_id,
+                    $item->product_variant_id
+                );
 
-                $fromStock->lockForUpdate();
                 $fromStock->quantity += $qty;
                 $fromStock->save();
 
@@ -254,19 +280,19 @@ class StockTransferService
                     'product_variant_id' => $item->product_variant_id,
                     'type' => 'IN',
                     'source_type' => 'ADJUSTMENT',
-                    'source_id' => $transfer->id,
+                    'source_id' => $lockedTransfer->id,
                     'quantity' => $qty,
                     'balance_after' => $fromStock->quantity,
-                    'notes' => "إلغاء أمر تحويل المخزون رقم {$transfer->transfer_number}: " . ($reason ?? 'إلغاء بواسطة المستخدم'),
+                    'notes' => "إلغاء أمر تحويل المخزون رقم {$lockedTransfer->transfer_number}: " . ($reason ?? 'إلغاء بواسطة المستخدم'),
                 ]);
             }
 
-            $transfer->update([
+            $lockedTransfer->update([
                 'status' => StockTransferStatus::CANCELLED,
-                'notes' => ($transfer->notes ? $transfer->notes . ' | ' : '') . "تم الإلغاء: " . ($reason ?? 'طلب إلغاء'),
+                'notes' => ($lockedTransfer->notes ? $lockedTransfer->notes . ' | ' : '') . "تم الإلغاء: " . ($reason ?? 'طلب إلغاء'),
             ]);
 
-            return $transfer->fresh(['items.product', 'items.variant', 'fromBranch', 'toBranch']);
+            return $lockedTransfer->fresh(['items.product', 'items.variant', 'fromBranch', 'toBranch']);
         });
     }
 }
