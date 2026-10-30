@@ -23,6 +23,7 @@ use Exception;
 use Illuminate\Support\Facades\DB;
 use App\Contracts\WooCommerceApiClientInterface;
 use App\Jobs\SyncOrderStatusToWooCommerceJob;
+use App\Services\ShiftService;
 use Illuminate\Support\Facades\Log;
 
 class WooCommerceOrderSyncService
@@ -32,7 +33,8 @@ class WooCommerceOrderSyncService
         protected WooCommerceCustomerSyncService $customerSyncService,
         protected InvoiceService $invoiceService,
         protected CourierService $courierService,
-        protected WcOrderVanTransferService $vanTransferService
+        protected WcOrderVanTransferService $vanTransferService,
+        protected ShiftService $shiftService
     ) {}
 
     /**
@@ -508,7 +510,7 @@ class WooCommerceOrderSyncService
 
             $mandob = $lockedOrder->mandob;
             $mandobTreasury = $mandob?->assignedTreasury;
-            $mandobShift = $mandob ? \App\Models\Shift::where('user_id', $mandob->id)->where('status', 'OPEN')->first() : null;
+            $mandobShift = $mandob ? $this->shiftService->getActiveShift($mandob) : null;
 
             $invoiceData = [
                 'type' => 'SALE',

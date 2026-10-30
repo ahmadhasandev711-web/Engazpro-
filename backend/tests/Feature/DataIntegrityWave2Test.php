@@ -129,4 +129,97 @@ class DataIntegrityWave2Test extends TestCase
         $this->assertNotNull($fromStock);
         $this->assertEquals(3, $fromStock->quantity);
     }
+
+    /**
+     * Item 2: Mandob active shift is linked to WooCommerce cash delivery invoice
+     */
+    public function test_mandob_active_shift_is_linked_to_woocommerce_cash_delivery_invoice(): void
+    {
+        $mockClient = \Mockery::mock(\App\Contracts\WooCommerceApiClientInterface::class);
+        $mockClient->shouldReceive('updateOrderStatus')->andReturn(true);
+        $this->app->instance(\App\Contracts\WooCommerceApiClientInterface::class, $mockClient);
+
+        // صنف مع رصيد في الفرع
+        $product = Product::create([
+            'user_id' => $this->owner->id,
+            'name' => 'منتج ووكومرس',
+            'wc_product_id' => 888,
+            'price' => 100,
+            'cost_price' => 50,
+            'quantity' => 10,
+        ]);
+        BranchStock::create([
+            'branch_id' => $this->fromBranch->id,
+            'product_id' => $product->id,
+            'quantity' => 10,
+        ]);
+
+        // مندوب تابع للمتجر
+        $mandob = User::create([
+            'name' => 'مندوب كاش',
+            'phone' => '01033334444',
+            'password' => bcrypt('password123'),
+            'role' => \App\Enums\UserRole::MANDOB->value,
+            'owner_id' => $this->owner->id,
+            'status' => 'ACTIVE',
+        ]);
+
+        // فتح وردية للمندوب
+        $shiftService = app(\App\Services\ShiftService::class);
+        $shift = $shiftService->openShift($mandob, 50.0);
+
+        // إنشاء أوردر ووكومرس وتكليف المندوب به
+        $order = \App\Models\WcOrder::create([
+            'user_id' => $this->owner->id,
+            'wc_order_id' => 7771,
+            'branch_id' => $this->fromBranch->id,
+            'mandob_id' => $mandob->id,
+            'status' => \App\Enums\WcOrderStatus::DISPATCHED,
+            'payment_status' => \App\Enums\WcPaymentStatus::PENDING_COD,
+            'wc_payment_method' => 'cod',
+            'shipping_cost' => 10,
+            'subtotal' => 100,
+            'discount_total' => 0,
+            'total' => 110,
+            'customer_name' => 'عميل الدفع كاش',
+            'customer_phone' => '01012345678',
+            'items_snapshot' => [
+                [
+                    'product_id' => 888,
+                    'name' => 'منتج ووكومرس',
+                    'quantity' => 1,
+                    'price' => 100,
+                    'total' => 100,
+                ],
+            ],
+        ]);
+
+        $mockInvoiceService = \Mockery::mock(\App\Services\InvoiceService::class);
+        $dummyInvoice = new \App\Models\Invoice([
+            'id' => 12345,
+            'user_id' => $this->owner->id,
+            'type' => 'SALE',
+            'shift_id' => $shift->id,
+            'total' => 110,
+        ]);
+        $mockInvoiceService->shouldReceive('createInvoice')
+            ->once()
+            ->with(
+                \Mockery::any(),
+                \Mockery::on(function ($invoiceData) use ($shift) {
+                    return isset($invoiceData['shift_id']) && $invoiceData['shift_id'] === $shift->id;
+                })
+            )
+            ->andReturn($dummyInvoice);
+        $this->app->instance(\App\Services\InvoiceService::class, $mockInvoiceService);
+
+        $syncService = app(\App\Services\WooCommerce\WooCommerceOrderSyncService::class);
+        $invoice = $syncService->deliverOrder($this->owner, $order, [
+            'collected_amount' => 110,
+            'payment_method' => 'CASH',
+        ]);
+
+        $this->assertNotNull($invoice->shift_id, 'الفاتورة يجب أن ترتبط بوردية المندوب المفتوحة');
+        $this->assertEquals($shift->id, $invoice->shift_id);
+    }
 }
