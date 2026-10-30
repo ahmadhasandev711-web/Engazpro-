@@ -2,18 +2,25 @@
 
 namespace App\Services;
 
+use App\Enums\BranchType;
+use App\Enums\DocumentType;
+use App\Exceptions\BranchDomainException;
 use App\Models\Branch;
 use App\Models\BranchStock;
 use App\Models\Product;
 use App\Models\User;
-use App\Enums\BranchType;
-use App\Exceptions\BranchDomainException;
+use App\Services\DocumentSequenceService;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 
 class BranchService
 {
+    public function __construct(
+        protected ?DocumentSequenceService $sequenceService = null
+    ) {
+        $this->sequenceService ??= app(DocumentSequenceService::class);
+    }
     /**
      * استرجاع فروع المتجر مع إحصائيات الموظفين والأصناف
      */
@@ -43,8 +50,8 @@ class BranchService
 
             // توليد كود الفرع إن لم يُحدد
             if (empty($data['code'])) {
-                $count = Branch::where('user_id', $accountId)->count() + 1;
-                $data['code'] = 'BR-' . str_pad($count, 2, '0', STR_PAD_LEFT);
+                $seq = $this->sequenceService->next($accountId, DocumentType::BRANCH);
+                $data['code'] = 'BR-' . str_pad((string) $seq, 2, '0', STR_PAD_LEFT);
             }
 
             // فحص تكرار الكود

@@ -312,4 +312,84 @@ class DataIntegrityWave2Test extends TestCase
             ->first();
         $this->assertEquals(-1, $branchStock->quantity);
     }
+
+    /**
+     * Item 4: Red test - DocumentSequenceService prevents duplicate numbering when records are deleted (count+1 vulnerability)
+     */
+    public function test_document_sequence_prevents_duplicate_numbers_after_deletion(): void
+    {
+        $transferService = app(\App\Services\StockTransferService::class);
+
+        $transfer1 = $transferService->createTransfer($this->owner, [
+            'from_branch_id' => $this->fromBranch->id,
+            'to_branch_id' => $this->toBranch->id,
+            'items' => [],
+        ]);
+        $this->assertEquals('TRF-00001', $transfer1->transfer_number);
+
+        $transfer2 = $transferService->createTransfer($this->owner, [
+            'from_branch_id' => $this->fromBranch->id,
+            'to_branch_id' => $this->toBranch->id,
+            'items' => [],
+        ]);
+        $this->assertEquals('TRF-00002', $transfer2->transfer_number);
+
+        // حذف التحويل الثاني (أو أي سيناريو يجعل count() = 1)
+        $transfer2->delete();
+
+        // إنشاء تحويل ثالث: في الترقيم بـ count+1 القديم سينتج TRF-00002 مكرراً!
+        // أما مع DocumentSequenceService فيجب أن ينتج TRF-00003
+        $transfer3 = $transferService->createTransfer($this->owner, [
+            'from_branch_id' => $this->fromBranch->id,
+            'to_branch_id' => $this->toBranch->id,
+            'items' => [],
+        ]);
+
+        $this->assertEquals('TRF-00003', $transfer3->transfer_number);
+    }
+
+    /**
+     * Item 4: Regression guard - Initial invoice in a new store starts with INV-00001
+     */
+    public function test_initial_invoice_in_new_store_starts_with_inv_00001(): void
+    {
+        $customer = \App\Models\Party::create([
+            'user_id' => $this->owner->id,
+            'type' => \App\Enums\PartyType::CUSTOMER->value,
+            'name' => 'عميل أول فاتورة',
+        ]);
+
+        $product = Product::create([
+            'user_id' => $this->owner->id,
+            'name' => 'صنف أولي',
+            'purchase_price' => 10,
+            'sale_price' => 20,
+            'quantity' => 10,
+        ]);
+
+        BranchStock::create([
+            'branch_id' => $this->fromBranch->id,
+            'product_id' => $product->id,
+            'quantity' => 10,
+        ]);
+
+        $invoiceService = app(\App\Services\InvoiceService::class);
+        $invoice = $invoiceService->createInvoice($this->owner, [
+            'type' => 'SALE',
+            'party_id' => $customer->id,
+            'branch_id' => $this->fromBranch->id,
+            'payment_method' => 'CASH',
+            'paid_amount' => 20,
+            'date' => now()->toDateString(),
+            'items' => [
+                [
+                    'product_id' => $product->id,
+                    'quantity' => 1,
+                    'unit_price' => 20,
+                ],
+            ],
+        ]);
+
+        $this->assertEquals('INV-00001', $invoice->invoice_number);
+    }
 }

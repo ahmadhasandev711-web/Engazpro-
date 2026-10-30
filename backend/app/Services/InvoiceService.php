@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\DocumentType;
 use App\Enums\PartyType;
 use App\Models\Branch;
 use App\Models\Invoice;
@@ -10,6 +11,7 @@ use App\Models\Party;
 use App\Models\Payment;
 use App\Models\Product;
 use App\Models\User;
+use App\Services\DocumentSequenceService;
 use App\Support\Money;
 use App\Models\TreasuryTransaction;
 use App\Enums\TreasuryTransactionType;
@@ -28,11 +30,13 @@ class InvoiceService
         protected LedgerService $ledgerService,
         protected ?TreasuryService $treasuryService = null,
         protected ?ShiftService $shiftService = null,
-        protected ?SettingService $settingService = null
+        protected ?SettingService $settingService = null,
+        protected ?DocumentSequenceService $sequenceService = null
     ) {
         $this->treasuryService ??= app(TreasuryService::class);
         $this->shiftService ??= app(ShiftService::class);
         $this->settingService ??= app(SettingService::class);
+        $this->sequenceService ??= app(DocumentSequenceService::class);
     }
 
     /**
@@ -91,18 +95,15 @@ class InvoiceService
             if (!empty($data['invoice_number'])) {
                 $invoiceNumber = (string) $data['invoice_number'];
             } else {
-                // ترقيم دفتري يشمل الفواتير المحذوفة (لمنع إعادة استخدام الرقم) مع اجتياز أي فجوات تاريخية
-                $sequential = (int) Invoice::withTrashed()
-                    ->where('user_id', $user->getAccountId())
-                    ->where('type', $type)
-                    ->count() + 1;
-                do {
-                    $invoiceNumber = $prefix . str_pad((string) $sequential, 5, '0', STR_PAD_LEFT);
-                    $sequential++;
-                } while (Invoice::withTrashed()
-                    ->where('user_id', $user->getAccountId())
-                    ->where('invoice_number', $invoiceNumber)
-                    ->exists());
+                $docType = match ($type) {
+                    'SALE' => DocumentType::SALE,
+                    'PURCHASE' => DocumentType::PURCHASE,
+                    'SALE_RETURN' => DocumentType::SALE_RETURN,
+                    'PURCHASE_RETURN' => DocumentType::PURCHASE_RETURN,
+                    default => DocumentType::SALE,
+                };
+                $seq = $this->sequenceService->next($user->getAccountId(), $docType);
+                $invoiceNumber = $prefix . str_pad((string) $seq, 5, '0', STR_PAD_LEFT);
             }
 
             // حساب الإجماليات باستخدام كائن Money الموحد لمنع أخطاء التقريب

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\DocumentType;
 use App\Enums\InvoiceType;
 use App\Enums\ShiftStatus;
 use App\Enums\TreasuryTransactionType;
@@ -13,6 +14,7 @@ use App\Models\Shift;
 use App\Models\Treasury;
 use App\Models\TreasuryTransaction;
 use App\Models\User;
+use App\Services\DocumentSequenceService;
 use App\Support\Money;
 use Carbon\Carbon;
 use Exception;
@@ -21,8 +23,11 @@ use Illuminate\Support\Facades\DB;
 class ShiftService
 {
     public function __construct(
-        protected TreasuryService $treasuryService
-    ) {}
+        protected TreasuryService $treasuryService,
+        protected ?DocumentSequenceService $sequenceService = null
+    ) {
+        $this->sequenceService ??= app(DocumentSequenceService::class);
+    }
 
     /**
      * استرجاع الوردية المفتوحة حالياً للمستخدم (كاشير أو مندوب)
@@ -50,8 +55,8 @@ class ShiftService
         $treasury = $this->treasuryService->getTreasuryForUser($user);
 
         return DB::transaction(function () use ($user, $accountId, $treasury, $openingBalance, $notes) {
-            $shiftCount = Shift::withoutGlobalScopes()->where('user_id', $accountId)->count() + 1;
-            $shiftNumber = 'SH-' . str_pad((string) $shiftCount, 5, '0', STR_PAD_LEFT);
+            $seq = $this->sequenceService->next($accountId, DocumentType::SHIFT);
+            $shiftNumber = 'SH-' . str_pad((string) $seq, 5, '0', STR_PAD_LEFT);
 
             $openingMoney = Money::of($openingBalance);
 

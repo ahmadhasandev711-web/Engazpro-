@@ -2,21 +2,28 @@
 
 namespace App\Services;
 
+use App\Enums\DocumentType;
+use App\Enums\StockTransferStatus;
+use App\Exceptions\StockTransferDomainException;
 use App\Models\Branch;
 use App\Models\BranchStock;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\StockMovement;
 use App\Models\StockTransfer;
 use App\Models\StockTransferItem;
-use App\Models\StockMovement;
 use App\Models\User;
-use App\Enums\StockTransferStatus;
-use App\Exceptions\StockTransferDomainException;
+use App\Services\DocumentSequenceService;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 
 class StockTransferService
 {
+    public function __construct(
+        protected ?DocumentSequenceService $sequenceService = null
+    ) {
+        $this->sequenceService ??= app(DocumentSequenceService::class);
+    }
     /**
      * استرجاع قائمة أوامر التحويل مع الفلاتر والتصفح
      */
@@ -73,9 +80,9 @@ class StockTransferService
                 throw new StockTransferDomainException('أحد الفروع المحددة غير نشط حالياً.', 'BRANCH_INACTIVE');
             }
 
-            // توليد رقم الإذن
-            $count = StockTransfer::where('user_id', $accountId)->count() + 1;
-            $transferNumber = $data['transfer_number'] ?? ('TRF-' . str_pad($count, 5, '0', STR_PAD_LEFT));
+            // توليد رقم الإذن بتسلسل آمن ضد سباقات التزامن
+            $seq = $this->sequenceService->next($accountId, DocumentType::TRANSFER);
+            $transferNumber = $data['transfer_number'] ?? ('TRF-' . str_pad((string) $seq, 5, '0', STR_PAD_LEFT));
 
             // إنشاء أمر التحويل بحالة في الطريق (IN_TRANSIT)
             $transfer = StockTransfer::create([
