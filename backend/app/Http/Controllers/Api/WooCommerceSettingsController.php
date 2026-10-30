@@ -223,10 +223,9 @@ class WooCommerceSettingsController extends Controller
 
         $importStock = $request->boolean('import_stock', false);
         $accountId = $user->getAccountId();
-        $job = new ImportWooCommerceProductsJob($accountId, $user->id, $importStock);
 
         if (config('queue.default') === 'sync') {
-            $result = $job->handle($this->resolveImportService());
+            $result = $this->resolveImportService()->importProducts($user, $integration, $importStock);
 
             return response()->json([
                 'success' => true,
@@ -235,7 +234,7 @@ class WooCommerceSettingsController extends Controller
             ]);
         }
 
-        ImportWooCommerceProductsJob::dispatch($accountId, $user->id, $importStock);
+        \App\Jobs\ImportWooCommerceProductsPageJob::dispatch($accountId, $user->id, 1, $importStock);
 
         return response()->json([
             'success' => true,
