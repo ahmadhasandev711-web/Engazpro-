@@ -293,7 +293,7 @@ class WooCommerceIntegrationTest extends TestCase
             $rawBody
         );
 
-        $response->assertOk()
+        $response->assertStatus(202)
             ->assertJsonPath('success', true);
 
         // Verify customer created with normalized phone
@@ -324,7 +324,7 @@ class WooCommerceIntegrationTest extends TestCase
             $rawBody
         );
 
-        $dupResponse->assertOk();
+        $dupResponse->assertStatus(202);
         $this->assertEquals(1, WcOrder::where('user_id', $this->owner->id)->where('wc_order_id', 5001)->count());
     }
 

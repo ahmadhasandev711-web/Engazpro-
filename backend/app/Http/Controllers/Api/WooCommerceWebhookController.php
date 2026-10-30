@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\ProcessWooCommerceWebhookJob;
 use App\Models\User;
 use App\Models\WooCommerceIntegration;
 use App\Services\WooCommerce\WooCommerceOrderSyncService;
@@ -74,23 +75,12 @@ class WooCommerceWebhookController extends Controller
             return response()->json(['message' => 'Webhook ping received successfully'], 200);
         }
 
-        // Process order webhook (order.created or order.updated)
-        try {
-            if (!empty($payload['id'])) {
-                $order = $this->orderSyncService->handleIncomingOrder($user, $payload);
-                return response()->json([
-                    'success' => true,
-                    'message' => "Order #{$order->wc_order_id} processed successfully",
-                    'order_id' => $order->id,
-                ], 200);
-            }
-        } catch (Exception $e) {
-            Log::error("Failed to process WooCommerce webhook order for user #{$userId}: " . $e->getMessage(), [
-                'exception' => $e,
-            ]);
-            return response()->json(['message' => 'تعذر معالجة الطلب. يرجى مراجعة سجلات النظام.'], 500);
-        }
+        // Queue order webhook for background processing on woo-realtime
+        ProcessWooCommerceWebhookJob::dispatch($userId, $topic, $payload);
 
-        return response()->json(['message' => 'Webhook received'], 200);
+        return response()->json([
+            'success' => true,
+            'message' => 'Webhook queued for processing',
+        ], 202);
     }
 }
