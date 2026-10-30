@@ -10,19 +10,21 @@ use App\Models\ProductVariant;
 use App\Models\WooCommerceIntegration;
 use App\Services\WooCommerce\WooCommerceApiClient;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 
-class PushStockToWooCommerceJob implements ShouldQueue
+class PushStockToWooCommerceJob implements ShouldQueue, ShouldBeUnique
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries = 3;
     public int $timeout = 25;
     public array $backoff = [10, 60];
+    public int $uniqueFor = 60;
 
     public function __construct(
         public int $userId,
@@ -30,6 +32,11 @@ class PushStockToWooCommerceJob implements ShouldQueue
         public ?int $productVariantId = null
     ) {
         $this->onQueue(QueueName::WOO_REALTIME->value);
+    }
+
+    public function uniqueId(): string
+    {
+        return "{$this->userId}:{$this->productId}:" . ($this->productVariantId ?? 'null');
     }
 
     public function handle(WooCommerceApiClient $apiClient): void

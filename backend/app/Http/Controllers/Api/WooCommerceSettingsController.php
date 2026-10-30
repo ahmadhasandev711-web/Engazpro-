@@ -130,6 +130,8 @@ class WooCommerceSettingsController extends Controller
             }
         }
 
+        \Illuminate\Support\Facades\Cache::forget("wc_stock_sync_active_{$user->getAccountId()}");
+
         $integration->load('onlineBranch');
 
         return response()->json([
