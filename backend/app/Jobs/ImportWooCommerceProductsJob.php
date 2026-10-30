@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Enums\QueueName;
 use App\Models\User;
 use App\Models\WooCommerceIntegration;
 use App\Services\WooCommerce\WooCommerceProductImportService;
@@ -25,7 +26,9 @@ class ImportWooCommerceProductsJob implements ShouldQueue
         public int $accountId,
         public int $actingUserId,
         public bool $importStock = false
-    ) {}
+    ) {
+        $this->onQueue(QueueName::WOO_BULK->value);
+    }
 
     /**
      * @return array{imported: int, updated: int, errors: list<string>}

@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Enums\QueueName;
 use App\Models\User;
 use App\Models\WooCommerceIntegration;
 use App\Services\WooCommerce\WooCommerceBulkStockPushService;
@@ -24,7 +25,9 @@ class PushAllWooCommerceStocksJob implements ShouldQueue
     public function __construct(
         public int $accountId,
         public int $actingUserId
-    ) {}
+    ) {
+        $this->onQueue(QueueName::WOO_BULK->value);
+    }
 
     /**
      * @return array{synced_count: int, total_linked_products: int, errors: list<string>}

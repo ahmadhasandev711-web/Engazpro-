@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Enums\QueueName;
 use App\Models\Branch;
 use App\Models\BranchStock;
 use App\Models\Product;
@@ -27,7 +28,9 @@ class PushStockToWooCommerceJob implements ShouldQueue
         public int $userId,
         public int $productId,
         public ?int $productVariantId = null
-    ) {}
+    ) {
+        $this->onQueue(QueueName::WOO_REALTIME->value);
+    }
 
     public function handle(WooCommerceApiClient $apiClient): void
     {

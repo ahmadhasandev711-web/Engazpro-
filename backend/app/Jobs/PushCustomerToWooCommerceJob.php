@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Enums\QueueName;
 use App\Models\Party;
 use App\Models\User;
 use App\Services\WooCommerce\WooCommerceCustomerSyncService;
@@ -17,7 +18,9 @@ class PushCustomerToWooCommerceJob implements ShouldQueue
 
     public function __construct(
         public int $partyId
-    ) {}
+    ) {
+        $this->onQueue(QueueName::WOO_REALTIME->value);
+    }
 
     public function handle(WooCommerceCustomerSyncService $customerSyncService): void
     {

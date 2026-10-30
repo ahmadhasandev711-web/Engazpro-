@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Contracts\WooCommerceApiClientInterface;
+use App\Enums\QueueName;
 use App\Exceptions\WooCommerceConnectionException;
 use App\Models\WooCommerceIntegration;
 use Illuminate\Bus\Queueable;
@@ -25,7 +26,9 @@ class SyncOrderStatusToWooCommerceJob implements ShouldQueue
         public int $userId,
         public int $wcOrderId,
         public string $status
-    ) {}
+    ) {
+        $this->onQueue(QueueName::WOO_REALTIME->value);
+    }
 
     public function handle(WooCommerceApiClientInterface $apiClient): void
     {

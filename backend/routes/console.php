@@ -9,11 +9,15 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 /**
- * Shared-hosting cron worker. Each run drains the queue for up to 50 seconds.
- * The overlap lock expires after 2 minutes so a killed PHP process cannot
- * block the queue for the default 24 hours. Long jobs stay reserved via
- * retry_after (must stay above the job timeout).
+ * Shared-hosting cron workers.
+ * Realtime queue processes instant stock pushes and order status updates without delay.
+ * Bulk queue processes batch product imports and bulk stock pushes without starving realtime events.
+ * The overlap lock expires after 2 minutes so a killed PHP process cannot block the queue.
  */
-Schedule::command('queue:work --stop-when-empty --max-time=50')
+Schedule::command('queue:work --queue=woo-realtime,default --stop-when-empty --max-time=50')
+    ->everyMinute()
+    ->withoutOverlapping(2);
+
+Schedule::command('queue:work --queue=woo-bulk --stop-when-empty --max-time=50')
     ->everyMinute()
     ->withoutOverlapping(2);

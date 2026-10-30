@@ -22,6 +22,12 @@ return [
         'webhook_per_minute' => (int) env('POS_WEBHOOK_PER_MINUTE', 600),
     ],
 
+    'queues' => [
+        'woo_realtime' => \App\Enums\QueueName::WOO_REALTIME->value,
+        'woo_bulk' => \App\Enums\QueueName::WOO_BULK->value,
+        'default' => \App\Enums\QueueName::DEFAULT->value,
+    ],
+
     'admin' => [
         'name' => env('ADMIN_NAME', 'مدير النظام'),
         'email' => env('ADMIN_EMAIL'),
