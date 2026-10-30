@@ -42,14 +42,6 @@ class SecurityHardeningWave1Test extends TestCase
             'is_main' => true,
             'is_active' => true,
         ]);
-
-        $defaultResolver = new class implements \App\Contracts\HostResolver {
-            public function resolve(string $host): array
-            {
-                return ['93.184.216.34'];
-            }
-        };
-        $this->app->instance(\App\Contracts\HostResolver::class, $defaultResolver);
     }
 
     /**
