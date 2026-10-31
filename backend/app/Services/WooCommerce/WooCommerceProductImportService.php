@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Models\WooCommerceIntegration;
 use App\Services\ProductService;
 use App\Services\StockService;
+use App\Support\Money;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -254,8 +255,8 @@ class WooCommerceProductImportService
         foreach ($variations as $var) {
             $varId = (int) $var['id'];
             $varSku = !empty($var['sku']) ? trim($var['sku']) : null;
-            $varRegularPrice = isset($var['regular_price']) && is_numeric($var['regular_price']) ? (float) $var['regular_price'] : null;
-            $varPrice = $this->resolveSellingPrice($var, (float) $product->sale_price);
+            $varRegularPrice = isset($var['regular_price']) && is_numeric($var['regular_price']) ? Money::of($var['regular_price'])->getAmount() : null;
+            $varPrice = $this->resolveSellingPrice($var, Money::of($product->sale_price)->getAmount());
             $attributes = $this->extractAttributes($var['attributes'] ?? []);
             $varImageUrl = !empty($var['image']['src']) ? (string) $var['image']['src'] : $product->image_url;
 
@@ -344,16 +345,16 @@ class WooCommerceProductImportService
      */
     protected function resolveSellingPrice(array $wcItem, ?float $fallback = 0): float
     {
-        if (isset($wcItem['price']) && is_numeric($wcItem['price']) && (float) $wcItem['price'] > 0) {
-            return (float) $wcItem['price'];
+        if (isset($wcItem['price']) && is_numeric($wcItem['price']) && Money::of($wcItem['price'])->isPositive()) {
+            return Money::of($wcItem['price'])->getAmount();
         }
-        if (isset($wcItem['sale_price']) && is_numeric($wcItem['sale_price']) && (float) $wcItem['sale_price'] > 0) {
-            return (float) $wcItem['sale_price'];
+        if (isset($wcItem['sale_price']) && is_numeric($wcItem['sale_price']) && Money::of($wcItem['sale_price'])->isPositive()) {
+            return Money::of($wcItem['sale_price'])->getAmount();
         }
-        if (isset($wcItem['regular_price']) && is_numeric($wcItem['regular_price']) && (float) $wcItem['regular_price'] > 0) {
-            return (float) $wcItem['regular_price'];
+        if (isset($wcItem['regular_price']) && is_numeric($wcItem['regular_price']) && Money::of($wcItem['regular_price'])->isPositive()) {
+            return Money::of($wcItem['regular_price'])->getAmount();
         }
-        return (float) ($fallback ?? 0);
+        return Money::of($fallback ?? 0)->getAmount();
     }
 
     /**

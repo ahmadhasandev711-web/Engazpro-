@@ -453,7 +453,13 @@ class WooCommerceOrderSyncService
                 $wcProductId = (int) ($item['product_id'] ?? 0);
                 $wcVarId = !empty($item['variation_id']) ? (int) $item['variation_id'] : null;
                 $qty = (float) ($item['quantity'] ?? 1);
-                $unitPrice = (float) ($item['price'] ?? (isset($item['subtotal']) ? ($item['subtotal'] / max(1, $qty)) : ($item['total'] / max(1, $qty))));
+                if (isset($item['price'])) {
+                    $unitPrice = Money::of($item['price'])->getAmount();
+                } elseif (isset($item['subtotal'])) {
+                    $unitPrice = Money::of($item['subtotal'])->divide(max(1, $qty))->getAmount();
+                } else {
+                    $unitPrice = Money::of($item['total'] ?? 0)->divide(max(1, $qty))->getAmount();
+                }
 
                 $product = Product::where('user_id', $accountId)->where('wc_product_id', $wcProductId)->first();
                 if (!$product && !empty($item['product_id'])) {
@@ -473,19 +479,20 @@ class WooCommerceOrderSyncService
             }
 
             $isPaidOnline = $lockedOrder->payment_status === WcPaymentStatus::PAID_ONLINE;
+            $orderTotal = Money::of($lockedOrder->total);
             $rawCollected = isset($deliveryData['collected_amount'])
-                ? (float) $deliveryData['collected_amount']
-                : (float) $lockedOrder->total;
+                ? Money::of($deliveryData['collected_amount'])
+                : $orderTotal;
 
-            if ($rawCollected > (float) $lockedOrder->total) {
-                throw new PosDomainException("المبلغ المحصل ({$rawCollected}) لا يمكن أن يتجاوز إجمالي الطلب ({$lockedOrder->total}).", 'COLLECTED_AMOUNT_EXCEEDS_TOTAL');
+            if ($rawCollected->isGreaterThan($orderTotal)) {
+                throw new PosDomainException("المبلغ المحصل ({$rawCollected->getAmount()}) لا يمكن أن يتجاوز إجمالي الطلب ({$orderTotal->getAmount()}).", 'COLLECTED_AMOUNT_EXCEEDS_TOTAL');
             }
 
             if ($lockedOrder->courier_party_id) {
-                if ($isPaidOnline || $rawCollected <= 0) {
+                if ($isPaidOnline || $rawCollected->isZeroOrNegative()) {
                     $paymentMethod = $deliveryData['payment_method'] ?? 'TRANSFER';
-                    $actualCollected = 0.0;
-                    $paidAmount = (float) $lockedOrder->total;
+                    $actualCollected = Money::zero();
+                    $paidAmount = $orderTotal;
                 } else {
                     $paymentMethod = PaymentMethod::COURIER_COD->value;
                     $actualCollected = $rawCollected;
@@ -520,7 +527,7 @@ class WooCommerceOrderSyncService
                 'items' => $invoiceItems,
                 'discount' => $lockedOrder->discount_total,
                 'shipping_amount' => $lockedOrder->shipping_cost,
-                'paid_amount' => $paidAmount,
+                'paid_amount' => $paidAmount->getAmount(),
                 'payment_method' => $paymentMethod,
                 'wc_order_id' => $lockedOrder->wc_order_id,
                 'notes' => "أوردر ووكومرس #{$lockedOrder->wc_order_id}{$shippingInfo}" . ($lockedOrder->notes ? " | {$lockedOrder->notes}" : ''),
@@ -539,8 +546,8 @@ class WooCommerceOrderSyncService
 
             $invoice = $this->invoiceService->createInvoice($user, $invoiceData);
 
-            if ($lockedOrder->courier_party_id && $actualCollected > 0) {
-                $this->courierService->recordDeliveryCollection($user, $invoice, $lockedOrder, $actualCollected);
+            if ($lockedOrder->courier_party_id && $actualCollected->isPositive()) {
+                $this->courierService->recordDeliveryCollection($user, $invoice, $lockedOrder, $actualCollected->getAmount());
             }
 
             $lockedOrder->update([

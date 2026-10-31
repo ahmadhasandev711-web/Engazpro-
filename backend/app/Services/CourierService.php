@@ -56,32 +56,38 @@ class CourierService
 
             $totalOrdersCount = WcOrder::where('courier_party_id', $courier->id)->count();
 
-            $pendingCodAmount = (float) WcOrder::where('courier_party_id', $courier->id)
+            $pendingCodAmount = Money::of(WcOrder::where('courier_party_id', $courier->id)
                 ->where('status', WcOrderStatus::SHIPPED_VIA_COURIER)
                 ->where('payment_status', '!=', WcPaymentStatus::PAID_ONLINE)
-                ->sum('total');
+                ->sum('total'));
 
             $activeDirectInvoicesCount = Invoice::where('courier_party_id', $courier->id)
                 ->whereNull('wc_order_id')
                 ->where('remaining_amount', '>', 0)
                 ->count();
 
-            $pendingDirectInvoiceAmount = (float) Invoice::where('courier_party_id', $courier->id)
+            $pendingDirectInvoiceAmount = Money::of(Invoice::where('courier_party_id', $courier->id)
                 ->whereNull('wc_order_id')
-                ->sum('remaining_amount');
+                ->sum('remaining_amount'));
 
             $data = (new PartyResource($courier))->resolve();
             $data['active_shipments_count'] = $activeOrdersCount + $activeDirectInvoicesCount;
             $data['delivered_shipments_count'] = $deliveredOrdersCount;
             $data['total_shipments_count'] = $totalOrdersCount + Invoice::where('courier_party_id', $courier->id)->whereNull('wc_order_id')->count();
-            $data['pending_cod_amount'] = Money::of($pendingCodAmount + $pendingDirectInvoiceAmount)->getAmount();
+            $data['pending_cod_amount'] = $pendingCodAmount->add($pendingDirectInvoiceAmount)->getAmount();
 
             return $data;
         });
 
         $globalActiveShipments = (int) $couriersWithStats->sum('active_shipments_count');
-        $globalPendingCod = Money::of($couriersWithStats->sum('pending_cod_amount'))->getAmount();
-        $globalNetBalance = Money::of($couriersWithStats->sum(fn ($c) => (float) $c['balance']))->getAmount();
+        $globalPendingCod = $couriersWithStats->reduce(
+            fn (Money $carry, $c) => $carry->add(Money::of($c['pending_cod_amount'] ?? 0)),
+            Money::zero()
+        )->getAmount();
+        $globalNetBalance = $couriersWithStats->reduce(
+            fn (Money $carry, $c) => $carry->add(Money::of($c['balance'] ?? 0)),
+            Money::zero()
+        )->getAmount();
 
         return [
             'couriers' => $couriersWithStats,
@@ -160,7 +166,7 @@ class CourierService
         }
 
         foreach ($directInvoices as $inv) {
-            $isFullyPaid = (float) $inv->remaining_amount <= 0.001;
+            $isFullyPaid = Money::of($inv->remaining_amount)->isZeroOrNegative();
             $isCourierCod = $inv->payment_method === \App\Enums\PaymentMethod::COURIER_COD;
             $isPrepaid = $isFullyPaid && !$isCourierCod;
 

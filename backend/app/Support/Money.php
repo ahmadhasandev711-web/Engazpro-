@@ -91,29 +91,53 @@ class Money implements JsonSerializable, Stringable
         return $this->cents < 0;
     }
 
+    public function isZeroOrNegative(): bool
+    {
+        return $this->cents <= 0;
+    }
+
+    public function isZeroOrPositive(): bool
+    {
+        return $this->cents >= 0;
+    }
+
     public function equals(Money $other): bool
     {
         return $this->cents === $other->getCents();
     }
 
-    public function greaterThan(Money $other): bool
+    public function greaterThan(Money|float|int $other): bool
     {
-        return $this->cents > $other->getCents();
+        $cents = $other instanceof Money ? $other->getCents() : (int) round(((float) $other) * 100);
+        return $this->cents > $cents;
     }
 
-    public function isGreaterThan(Money $other): bool
+    public function isGreaterThan(Money|float|int $other): bool
     {
         return $this->greaterThan($other);
     }
 
-    public function lessThan(Money $other): bool
+    public function isGreaterThanOrEqualTo(Money|float|int $other): bool
     {
-        return $this->cents < $other->getCents();
+        $cents = $other instanceof Money ? $other->getCents() : (int) round(((float) $other) * 100);
+        return $this->cents >= $cents;
     }
 
-    public function isLessThan(Money $other): bool
+    public function lessThan(Money|float|int $other): bool
+    {
+        $cents = $other instanceof Money ? $other->getCents() : (int) round(((float) $other) * 100);
+        return $this->cents < $cents;
+    }
+
+    public function isLessThan(Money|float|int $other): bool
     {
         return $this->lessThan($other);
+    }
+
+    public function isLessThanOrEqualTo(Money|float|int $other): bool
+    {
+        $cents = $other instanceof Money ? $other->getCents() : (int) round(((float) $other) * 100);
+        return $this->cents <= $cents;
     }
 
     public function format(): string

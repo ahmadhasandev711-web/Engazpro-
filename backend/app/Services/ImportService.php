@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Party;
 use App\Models\Product;
 use App\Models\User;
+use App\Support\Money;
 use Exception;
 use Illuminate\Support\Facades\DB;
 
@@ -91,17 +92,17 @@ class ImportService
             }
 
             $purchasePrice = $row['purchase_price'];
-            if ($purchasePrice === null || $purchasePrice === '' || !is_numeric($purchasePrice) || (float)$purchasePrice < 0) {
+            if ($purchasePrice === null || $purchasePrice === '' || !is_numeric($purchasePrice) || Money::of($purchasePrice)->isNegative()) {
                 $errors[] = 'سعر الشراء غير صالح أو مفقود (يجب أن يكون رقماً أكبر من أو يساوي صفر).';
             }
 
             $salePrice = $row['sale_price'];
-            if ($salePrice === null || $salePrice === '' || !is_numeric($salePrice) || (float)$salePrice < 0) {
+            if ($salePrice === null || $salePrice === '' || !is_numeric($salePrice) || Money::of($salePrice)->isNegative()) {
                 $errors[] = 'سعر البيع غير صالح أو مفقود (يجب أن يكون رقماً أكبر من أو يساوي صفر).';
             }
 
             $minSalePrice = $row['min_sale_price'];
-            if ($minSalePrice !== null && (!is_numeric($minSalePrice) || (float)$minSalePrice < 0)) {
+            if ($minSalePrice !== null && (!is_numeric($minSalePrice) || Money::of($minSalePrice)->isNegative())) {
                 $errors[] = 'أقل سعر بيع يجب أن يكون رقماً غير سالب.';
             }
 
