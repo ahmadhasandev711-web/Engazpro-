@@ -10,14 +10,14 @@ use App\Models\ProductVariant;
 use App\Models\WooCommerceIntegration;
 use App\Services\WooCommerce\WooCommerceApiClient;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldBeUnique;
+use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 
-class PushStockToWooCommerceJob implements ShouldQueue, ShouldBeUnique
+class PushStockToWooCommerceJob implements ShouldQueue, ShouldBeUniqueUntilProcessing
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
