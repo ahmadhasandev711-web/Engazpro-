@@ -1,13 +1,27 @@
 import React from 'react';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Search } from 'lucide-react';
 import { formatCurrency, StockReportData } from '@pos-mandob/shared';
+import { PaginationBar } from '../common/PaginationBar';
 
 interface StockReportTabProps {
   data?: StockReportData;
   isLoading: boolean;
+  page?: number;
+  onPageChange?: (page: number) => void;
+  search?: string;
+  onSearchChange?: (search: string) => void;
+  isFetching?: boolean;
 }
 
-export const StockReportTab: React.FC<StockReportTabProps> = ({ data, isLoading }) => {
+export const StockReportTab: React.FC<StockReportTabProps> = ({
+  data,
+  isLoading,
+  page = 1,
+  onPageChange,
+  search = '',
+  onSearchChange,
+  isFetching = false,
+}) => {
   if (isLoading) {
     return <div className="text-center py-16 text-sm text-slate-400 font-medium">جاري تقييم المخزون...</div>;
   }
@@ -55,8 +69,18 @@ export const StockReportTab: React.FC<StockReportTabProps> = ({ data, isLoading 
 
       {/* Stock Table */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+        <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
           <h3 className="font-bold text-sm text-slate-900">بيان تفصيلي بالمخزون الحالي</h3>
+          <div className="relative w-full sm:w-64">
+            <Search className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="بحث بالاسم أو الكود..."
+              value={search}
+              onChange={(e) => onSearchChange?.(e.target.value)}
+              className="w-full pl-3 pr-9 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary-500"
+            />
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-right text-xs">
@@ -105,6 +129,15 @@ export const StockReportTab: React.FC<StockReportTabProps> = ({ data, isLoading 
             </tbody>
           </table>
         </div>
+        <PaginationBar
+          currentPage={data?.pagination?.current_page || data?.meta?.current_page || page}
+          lastPage={data?.pagination?.last_page || data?.meta?.last_page || 1}
+          total={data?.pagination?.total || data?.meta?.total || data?.products?.length || 0}
+          perPage={data?.pagination?.per_page || data?.meta?.per_page || 50}
+          onPageChange={(p) => onPageChange?.(p)}
+          isFetching={isFetching}
+          itemLabel="صنف"
+        />
       </div>
     </div>
   );

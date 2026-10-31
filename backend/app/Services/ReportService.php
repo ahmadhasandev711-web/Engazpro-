@@ -146,39 +146,53 @@ class ReportService
     /**
      * تقرير تقييم المخزون والنواقص
      */
-    public function getStockReport(User $user): array
+    public function getStockReport(User $user, ?string $search = null, int $perPage = 50): array
     {
-        $products = Product::with('category:id,name')
+        $baseQuery = Product::query();
+
+        // إجماليات التقييم عبر SQL aggregates
+        $rawSummary = (clone $baseQuery)->selectRaw('
+            COUNT(*) as products_count,
+            COALESCE(SUM(quantity), 0) as total_quantity,
+            COALESCE(SUM(quantity * purchase_price), 0) as total_cost_value,
+            COALESCE(SUM(quantity * sale_price), 0) as total_retail_value,
+            COALESCE(SUM(CASE WHEN min_quantity IS NOT NULL AND quantity <= min_quantity THEN 1 ELSE 0 END), 0) as low_stock_count
+        ')->first();
+
+        $totalCost = Money::of($rawSummary->total_cost_value ?? 0);
+        $totalRetail = Money::of($rawSummary->total_retail_value ?? 0);
+        $grossMargin = $totalRetail->subtract($totalCost)->getAmount();
+
+        $maxPerPage = (int) config('pos.pagination.max', 100);
+        $actualPerPage = min(max(1, $perPage), $maxPerPage);
+
+        $listQuery = (clone $baseQuery)->with('category:id,name')
             ->select(['id', 'category_id', 'name', 'code', 'barcode', 'quantity', 'unit', 'purchase_price', 'sale_price', 'min_quantity'])
-            ->orderBy('name')
-            ->get();
+            ->orderBy('name');
+
+        if (!empty($search)) {
+            $trimmed = trim($search);
+            $listQuery->where(function ($q) use ($trimmed) {
+                $q->where('name', 'like', "%{$trimmed}%")
+                    ->orWhere('code', 'like', "%{$trimmed}%")
+                    ->orWhere('barcode', 'like', "%{$trimmed}%");
+            });
+        }
+
+        $paginator = $listQuery->paginate($actualPerPage);
 
         $stockList = [];
-        $totalCost = Money::zero();
-        $totalRetail = Money::zero();
-        $totalQuantity = 0;
-        $lowStockCount = 0;
-
-        foreach ($products as $product) {
-            $qty = $product->quantity + 0;
+        foreach ($paginator->items() as $product) {
+            $qty = (float) $product->quantity;
             $purchasePriceMoney = Money::of($product->purchase_price ?? 0);
             $salePriceMoney = Money::of($product->sale_price ?? 0);
             $purchasePrice = $user->isMandob() ? null : $purchasePriceMoney->getAmount();
             $salePrice = $salePriceMoney->getAmount();
-            $minQty = $product->min_quantity !== null ? ($product->min_quantity + 0) : null;
+            $minQty = $product->min_quantity !== null ? ((float) $product->min_quantity) : null;
 
             $costValMoney = $user->isMandob() ? null : $purchasePriceMoney->multiply($qty);
             $retailValMoney = $salePriceMoney->multiply($qty);
             $isLowStock = $minQty !== null && $qty <= $minQty;
-
-            $totalQuantity += $qty;
-            if (!$user->isMandob() && $costValMoney) {
-                $totalCost = $totalCost->add($costValMoney);
-            }
-            $totalRetail = $totalRetail->add($retailValMoney);
-            if ($isLowStock) {
-                $lowStockCount++;
-            }
 
             $stockList[] = [
                 'id' => $product->id,
@@ -199,14 +213,26 @@ class ReportService
 
         return [
             'summary' => [
-                'products_count' => $products->count(),
-                'total_quantity' => $totalQuantity,
+                'products_count' => (int) ($rawSummary->products_count ?? 0),
+                'total_quantity' => (float) ($rawSummary->total_quantity ?? 0),
                 'total_cost_value' => $user->isMandob() ? null : $totalCost->getAmount(),
                 'total_retail_value' => $totalRetail->getAmount(),
-                'expected_gross_margin' => $user->isMandob() ? null : $totalRetail->subtract($totalCost)->getAmount(),
-                'low_stock_count' => $lowStockCount,
+                'expected_gross_margin' => $user->isMandob() ? null : $grossMargin,
+                'low_stock_count' => (int) ($rawSummary->low_stock_count ?? 0),
             ],
             'products' => $stockList,
+            'pagination' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+            ],
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+            ],
         ];
     }
 

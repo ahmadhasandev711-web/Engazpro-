@@ -40,14 +40,26 @@ export const useSalesReport = (fromDate: string, toDate: string, enabled: boolea
   });
 };
 
-export const useStockReport = (enabled: boolean = true) => {
+export const useStockReport = (
+  paramsOrEnabled?: { page?: number; search?: string } | boolean,
+  enabled: boolean = true
+) => {
+  const isParams = typeof paramsOrEnabled === 'object' && paramsOrEnabled !== null;
+  const params = isParams ? paramsOrEnabled : undefined;
+  const isEnabled = isParams ? enabled : (typeof paramsOrEnabled === 'boolean' ? paramsOrEnabled : true);
+
   return useQuery<StockReportData>({
-    queryKey: ['reports', 'stock'],
+    queryKey: ['reports', 'stock', params?.page, params?.search],
     queryFn: async () => {
-      const res = await apiClient.get('/reports/stock');
+      const res = await apiClient.get('/reports/stock', {
+        params: {
+          page: params?.page || 1,
+          search: params?.search || undefined,
+        },
+      });
       return res.data?.data;
     },
-    enabled,
+    enabled: isEnabled,
   });
 };
 

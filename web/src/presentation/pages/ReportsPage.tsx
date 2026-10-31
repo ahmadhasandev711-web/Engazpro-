@@ -82,9 +82,14 @@ export const ReportsPage: React.FC = () => {
   });
 
   // Dedicated custom hooks
+  const [stockPage, setStockPage] = useState(1);
+  const [stockSearch, setStockSearch] = useState('');
   const { data: profitData, isLoading: isProfitLoading } = useProfitReport(fromDate, toDate, canViewProfitReport && activeTab === 'profit');
   const { data: salesData, isLoading: isSalesLoading } = useSalesReport(fromDate, toDate, activeTab === 'sales');
-  const { data: stockData, isLoading: isStockLoading } = useStockReport(activeTab === 'stock');
+  const { data: stockData, isLoading: isStockLoading, isFetching: isStockFetching } = useStockReport(
+    { page: stockPage, search: stockSearch },
+    activeTab === 'stock'
+  );
   const { data: cashFlowData, isLoading: isCashFlowLoading } = useCashFlowReport(fromDate, toDate, activeTab === 'cash-flow');
 
   const [cashFlowPrintData, setCashFlowPrintData] = useState<CashFlowPrintData | null>(null);
@@ -329,7 +334,20 @@ export const ReportsPage: React.FC = () => {
           onUpdatePrintData={setCashFlowPrintData}
         />
       )}
-      {activeTab === 'stock' && <StockReportTab data={stockData} isLoading={isStockLoading} />}
+      {activeTab === 'stock' && (
+        <StockReportTab
+          data={stockData}
+          isLoading={isStockLoading}
+          page={stockPage}
+          onPageChange={setStockPage}
+          search={stockSearch}
+          onSearchChange={(s) => {
+            setStockSearch(s);
+            setStockPage(1);
+          }}
+          isFetching={isStockFetching}
+        />
+      )}
       </div>
 
       {/* ========================================================================= */}

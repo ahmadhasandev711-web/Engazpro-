@@ -53,7 +53,11 @@ class ReportController extends Controller
     {
         Gate::authorize('view-stock');
 
-        $data = $this->reportService->getStockReport($request->user());
+        $data = $this->reportService->getStockReport(
+            user: $request->user(),
+            search: $request->input('search'),
+            perPage: (int) $request->input('per_page', 50)
+        );
 
         return response()->json(['data' => $data]);
     }

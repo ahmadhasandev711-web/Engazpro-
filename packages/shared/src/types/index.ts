@@ -360,6 +360,18 @@ export interface StockReportData {
     low_stock_count: number;
   };
   products: StockReportItem[];
+  pagination?: {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+  };
+  meta?: {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+  };
 }
 
 export interface TreasuryBreakdown {
