@@ -1,5 +1,5 @@
 import React, { useState, Suspense } from 'react';
-import { NavLink, Outlet, useNavigate, Link } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate, Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   Package,
@@ -34,6 +34,7 @@ import { AppErrorBoundary } from './common/AppErrorBoundary';
 
 export const Layout: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, logout } = useAuthStore();
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
 
@@ -384,7 +385,7 @@ export const Layout: React.FC = () => {
                 </div>
               }
             >
-              <AppErrorBoundary>
+              <AppErrorBoundary key={location.pathname}>
                 <Outlet />
               </AppErrorBoundary>
             </Suspense>
