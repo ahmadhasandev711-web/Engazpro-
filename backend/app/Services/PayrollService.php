@@ -32,7 +32,7 @@ class PayrollService
 
         $date = Carbon::createFromFormat('Y-m', $yearMonth);
         $startDate = $date->copy()->startOfMonth()->toDateString();
-        $endDate = $date->copy()->endOfMonth()->toDateString();
+        $endDate = $date->copy()->endOfMonth()->toDateString() . ' 23:59:59';
         $accountId = $employee->getAccountId();
 
         // 1. حساب مبيعات الشهر المؤهلة للعمولة
