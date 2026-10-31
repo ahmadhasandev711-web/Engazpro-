@@ -56,9 +56,9 @@ class PaginationLimitGuardTest extends TestCase
 
         $resTransfer->assertStatus(200);
         $transferMeta = $resTransfer->json('meta');
-        $this->assertLessThanOrEqual(
+        $this->assertSame(
             100,
-            $transferMeta['per_page'] ?? 0,
+            $transferMeta['per_page'],
             'سقف per_page للتحويلات المخزنية يجب ألا يتجاوز 100'
         );
 
@@ -68,9 +68,9 @@ class PaginationLimitGuardTest extends TestCase
 
         $resInventory->assertStatus(200);
         $inventoryMeta = $resInventory->json('meta');
-        $this->assertLessThanOrEqual(
+        $this->assertSame(
             100,
-            $inventoryMeta['per_page'] ?? 0,
+            $inventoryMeta['per_page'],
             'سقف per_page لجرد الفرع يجب ألا يتجاوز 100'
         );
     }

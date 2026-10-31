@@ -27,6 +27,7 @@ class StockTransferController extends Controller
             'meta' => [
                 'current_page' => $transfers->currentPage(),
                 'last_page' => $transfers->lastPage(),
+                'per_page' => $transfers->perPage(),
                 'total' => $transfers->total(),
             ],
         ]);

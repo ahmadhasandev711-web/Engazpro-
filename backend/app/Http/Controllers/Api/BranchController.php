@@ -83,6 +83,7 @@ class BranchController extends Controller
             'meta' => [
                 'current_page' => $inventory->currentPage(),
                 'last_page' => $inventory->lastPage(),
+                'per_page' => $inventory->perPage(),
                 'total' => $inventory->total(),
             ],
         ]);

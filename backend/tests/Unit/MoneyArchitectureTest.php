@@ -23,7 +23,7 @@ class MoneyArchitectureTest extends TestCase
         ];
 
         $keywords = 'amount|total|price|balance|paid|collected|cost|salary|commission|discount|shipping|remaining';
-        $pattern = '/\(float\)\s*[^;\n]*(\$|->|\[)[a-zA-Z0-9_\'\"]*(' . $keywords . ')[^;\n]*(\+|-|\*|\/|<=|>=|<|>)|(\$|->|\[)[a-zA-Z0-9_\'\"]*(' . $keywords . ')[^;\n]*(\+|-|\*|\/|<=|>=|<|>)[^;\n]*\(float\)/i';
+        $pattern = '/\(float\)\s*[^;\n]*(\$|->|\[)[a-zA-Z0-9_\'\"]*(' . $keywords . ')[^;\n]*(\+|(?<!-)-(?!>)|\*|\/|<=|>=|<|>)|(\$|->|\[)[a-zA-Z0-9_\'\"]*(' . $keywords . ')[^;\n]*(\+|(?<!-)-(?!>)|\*|\/|<=|>=|<|>)[^;\n]*\(float\)/i';
 
         $violations = [];
 
