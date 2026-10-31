@@ -12,7 +12,7 @@
 [![WooCommerce](https://img.shields.io/badge/WooCommerce-REST_API_v3-96588A?style=for-the-badge&logo=woocommerce&logoColor=white)](https://woocommerce.com)
 [![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
 [![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1?style=for-the-badge&logo=mysql&logoColor=white)](https://www.mysql.com)
-[![PWA](https://img.shields.io/badge/PWA-Offline_Ready-5A0FC8?style=for-the-badge&logo=pwa&logoColor=white)](https://web.dev/progressive-web-apps/)
+[![PWA](https://img.shields.io/badge/PWA-Installable-5A0FC8?style=for-the-badge&logo=pwa&logoColor=white)](https://web.dev/progressive-web-apps/)
 
 ---
 
@@ -67,7 +67,7 @@ flowchart TD
     subgraph Frontends ["💻 Modern Frontends & Edge Devices"]
         POS["PWA Full-Screen POS Cashier"]
         Dashboard["React 18 / TypeScript Merchant Dashboard"]
-        Scanner["Hardware Barcode Scanner & Thermal Receipt Engine"]
+        Scanner["Barcode Scanner & Receipt Printing"]
     end
 
     WC_Hooks -->|HTTPS Webhook + HMAC Signature| WebhookController
@@ -87,10 +87,10 @@ flowchart TD
 
 ## 🌟 Core Platform Features
 
-* **⚡ Ultra-Fast Cashier Register (POS)**: Built with React 18, Zustand, and virtualized lists for instant search across 50,000+ items with keyboard shortcuts (`F1` to `F12`) and thermal receipt printing (ESC/POS & Web Bluetooth/USB).
+* **⚡ Cashier Register (POS)**: Built with React 18 and Zustand for product search, barcode scanning, keyboard shortcuts (`F1` to `F12`), held carts, and receipt printing.
 * **🏢 Multi-Branch & Multi-Warehouse Management**: Transfer inventory between physical branches, track transit shipments, and isolate ledger accounting per branch.
-* **📊 Double-Entry Accounting & General Ledger**: Complete tracking of daily cash register shifts, treasuries, expenses, customer credit limits, supplier accounts payable, and profit & loss statements.
-* **📶 Offline-First PWA Capabilities**: Service workers cache product indices, allowing cashiers to continue issuing sales receipts even during network blips or outages.
+* **📊 Financial Ledger & Treasury Management**: Single-entry customer and supplier ledgers, tracking of daily cash register shifts, treasuries, expenses, and financial reports.
+* **📱 Progressive Web App (PWA)**: Service worker caching for static application assets, installable on mobile and desktop devices.
 * **🔒 Granular Role-Based Access Control (RBAC)**: Strict role hierarchy (`OWNER`, `MANAGER`, `SUPERVISOR`, `CASHIER`, `SALES_REP`) guarding operational routes.
 
 ---

@@ -20,8 +20,11 @@ class AuthAndSubscriptionTest extends TestCase
             'password' => 'secret123',
         ]);
 
+        $trialDays = (int) config('pos.subscription.trial_days', 14);
+
         $response->assertStatus(201)
             ->assertJsonPath('success', true)
+            ->assertJsonPath('message', "تم إنشاء الحساب بنجاح وتفعيل الفترة التجريبية ({$trialDays} أيام)")
             ->assertJsonStructure([
                 'success',
                 'message',

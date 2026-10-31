@@ -60,10 +60,11 @@ class AuthController extends Controller
         });
 
         $token = $user->createToken('auth_token')->plainTextToken;
+        $trialDays = (int) config('pos.subscription.trial_days', 14);
 
         return response()->json([
             'success' => true,
-            'message' => 'تم إنشاء الحساب بنجاح وتفعيل الفترة التجريبية (7 أيام)',
+            'message' => "تم إنشاء الحساب بنجاح وتفعيل الفترة التجريبية ({$trialDays} أيام)",
             'data' => [
                 'user' => new UserResource($user->load('subscription')),
                 'token' => $token,
