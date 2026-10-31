@@ -1,6 +1,6 @@
 import React from 'react';
 import { WcOrderMobileCard } from '../mobile/WcOrderMobileCard';
-import { formatCurrency } from '@pos-mandob/shared';
+import { formatCurrency, WcOrderStatus, WcPaymentStatus } from '@pos-mandob/shared';
 import { ShoppingBag, Truck, CheckCircle2, Phone, MapPin, DollarSign, RotateCcw, Package, Copy, Check, Printer, Calendar, Eye } from 'lucide-react';
 import { cleanItemName, formatOrderDate, getStatusBadge } from './helpers';
 import type { WcOrdersViewModel } from './types';
@@ -84,7 +84,7 @@ export const WcOrdersList: React.FC<{ vm: WcOrdersViewModel }> = ({ vm }) => {
                     >
                       <Eye className="w-4 h-4" />
                     </button>
-                    {order.status !== 'CANCELLED' && (
+                    {order.status !== WcOrderStatus.CANCELLED && (
                       <button
                         type="button"
                         onClick={() => setPrintOrder(order)}
@@ -230,7 +230,7 @@ export const WcOrdersList: React.FC<{ vm: WcOrdersViewModel }> = ({ vm }) => {
                 </div>
 
                 {/* Courier info if assigned */}
-                {(order.shipping_type === 'COURIER' || order.status === 'SHIPPED_VIA_COURIER' || order.courier_name) && (
+                {(order.shipping_type === 'COURIER' || order.status === WcOrderStatus.SHIPPED_VIA_COURIER || order.courier_name) && (
                   <div className="p-2.5 bg-purple-50/70 rounded-2xl border border-purple-100 text-xs space-y-1">
                     <div className="flex items-center justify-between">
                       <span className="font-black text-purple-900 flex items-center gap-1.5">
@@ -268,7 +268,7 @@ export const WcOrdersList: React.FC<{ vm: WcOrdersViewModel }> = ({ vm }) => {
 
               {/* Action Buttons based on Status */}
               <div className="pt-2 border-t border-slate-100">
-                {!isMandob && order.status === 'PENDING_CONFIRMATION' && (
+                {!isMandob && order.status === WcOrderStatus.PENDING_CONFIRMATION && (
                   <button
                     onClick={() => {
                       setConfirmModalOrder(order);
@@ -288,7 +288,7 @@ export const WcOrdersList: React.FC<{ vm: WcOrdersViewModel }> = ({ vm }) => {
                   </button>
                 )}
 
-                {!isMandob && order.status === 'CONFIRMED' && (
+                {!isMandob && order.status === WcOrderStatus.CONFIRMED && (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-[11px]">
                       <span className="text-slate-400 font-bold">طريقة الشحن والتوصيل:</span>
@@ -328,14 +328,14 @@ export const WcOrdersList: React.FC<{ vm: WcOrdersViewModel }> = ({ vm }) => {
                   </div>
                 )}
 
-                {order.status === 'DISPATCHED' && (
+                {order.status === WcOrderStatus.DISPATCHED && (
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       onClick={() => openDeliverModal(order)}
                       className="py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-black hover:bg-emerald-700 transition-all flex items-center justify-center gap-1 shadow-xs cursor-pointer"
                     >
                       <DollarSign className="w-4 h-4" />
-                      <span>{order.payment_status === 'PAID_ONLINE' ? 'تأكيد التسليم' : 'تسليم وتحصيل'}</span>
+                      <span>{order.payment_status === WcPaymentStatus.PAID_ONLINE ? 'تأكيد التسليم' : 'تسليم وتحصيل'}</span>
                     </button>
                     <button
                       onClick={() => returnMutation.mutate(order.id)}
@@ -348,14 +348,14 @@ export const WcOrdersList: React.FC<{ vm: WcOrdersViewModel }> = ({ vm }) => {
                   </div>
                 )}
 
-                {order.status === 'SHIPPED_VIA_COURIER' && (
+                {order.status === WcOrderStatus.SHIPPED_VIA_COURIER && (
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       onClick={() => openDeliverModal(order)}
                       className="py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-black hover:bg-emerald-700 transition-all flex items-center justify-center gap-1 shadow-xs cursor-pointer"
                     >
                       <DollarSign className="w-4 h-4" />
-                      <span>{order.payment_status === 'PAID_ONLINE' ? 'تأكيد تسليم الشحنة' : 'تسليم وتحصيل COD'}</span>
+                      <span>{order.payment_status === WcPaymentStatus.PAID_ONLINE ? 'تأكيد تسليم الشحنة' : 'تسليم وتحصيل COD'}</span>
                     </button>
                     <button
                       onClick={() => returnMutation.mutate(order.id)}
@@ -368,7 +368,7 @@ export const WcOrdersList: React.FC<{ vm: WcOrdersViewModel }> = ({ vm }) => {
                   </div>
                 )}
 
-                {order.status === 'DELIVERED' && (
+                {order.status === WcOrderStatus.DELIVERED && (
                   <div className="space-y-2">
                     <div className="text-center py-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 rounded-xl border border-emerald-200">
                       تم التسليم وإصدار الفاتورة بنجاح ✅

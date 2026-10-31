@@ -16,7 +16,7 @@ import {
   Copy,
   Check,
 } from 'lucide-react';
-import { formatCurrency } from '@pos-mandob/shared';
+import { formatCurrency, WcOrderStatus, WcPaymentStatus } from '@pos-mandob/shared';
 import { MobileCard } from './MobileCard';
 import { useHaptic } from '../../hooks/useHaptic';
 
@@ -83,43 +83,42 @@ export const WcOrderMobileCard: React.FC<WcOrderMobileCardProps> = ({
   // Determine status styling
   const getStatusConfig = (status: string) => {
     switch (status) {
-      case 'PENDING_CONFIRMATION':
-      case 'PENDING':
+      case WcOrderStatus.PENDING_CONFIRMATION:
         return {
           label: 'بانتظار التأكيد',
           bg: 'bg-amber-50 text-amber-700 border-amber-200',
           border: 'amber' as const,
           icon: Clock,
         };
-      case 'CONFIRMED':
+      case WcOrderStatus.CONFIRMED:
         return {
           label: 'مؤكد وقيد التجهيز',
           bg: 'bg-indigo-50 text-indigo-700 border-indigo-200',
           border: 'indigo' as const,
           icon: Package,
         };
-      case 'DISPATCHED':
+      case WcOrderStatus.DISPATCHED:
         return {
           label: 'مع المندوب',
           bg: 'bg-blue-50 text-blue-700 border-blue-200',
           border: 'indigo' as const,
           icon: Truck,
         };
-      case 'SHIPPED_VIA_COURIER':
+      case WcOrderStatus.SHIPPED_VIA_COURIER:
         return {
           label: 'مع شركة الشحن',
           bg: 'bg-purple-50 text-purple-700 border-purple-200',
           border: 'purple' as const,
           icon: Truck,
         };
-      case 'DELIVERED':
+      case WcOrderStatus.DELIVERED:
         return {
           label: 'تم التسليم بنجاح',
           bg: 'bg-emerald-50 text-emerald-700 border-emerald-200',
           border: 'emerald' as const,
           icon: CheckCircle2,
         };
-      case 'RETURNED':
+      case WcOrderStatus.RETURNED:
         return {
           label: 'مرتجع',
           bg: 'bg-rose-50 text-rose-700 border-rose-200',
@@ -149,7 +148,7 @@ export const WcOrderMobileCard: React.FC<WcOrderMobileCardProps> = ({
   };
 
   const isPrepaid =
-    order.payment_status === 'PAID_ONLINE' ||
+    order.payment_status === WcPaymentStatus.PAID_ONLINE ||
     (order.wc_payment_method && order.wc_payment_method !== 'cod');
 
   return (
@@ -367,7 +366,7 @@ export const WcOrderMobileCard: React.FC<WcOrderMobileCardProps> = ({
 
       {/* 6. Context-Aware Primary Action Button */}
       <div className="pt-1">
-        {(order.status === 'PENDING_CONFIRMATION' || order.status === 'PENDING') && onConfirm && canConfirm && (
+        {order.status === WcOrderStatus.PENDING_CONFIRMATION && onConfirm && canConfirm && (
           <button
             type="button"
             onClick={() => {
@@ -381,7 +380,7 @@ export const WcOrderMobileCard: React.FC<WcOrderMobileCardProps> = ({
           </button>
         )}
 
-        {order.status === 'CONFIRMED' && (
+        {order.status === WcOrderStatus.CONFIRMED && (
           <div className="grid grid-cols-2 gap-2">
             {onAssignCourier && (
               <button
@@ -413,7 +412,7 @@ export const WcOrderMobileCard: React.FC<WcOrderMobileCardProps> = ({
           </div>
         )}
 
-        {(order.status === 'DISPATCHED' || order.status === 'SHIPPED_VIA_COURIER') && onDeliver && canDeliver && (
+        {(order.status === WcOrderStatus.DISPATCHED || order.status === WcOrderStatus.SHIPPED_VIA_COURIER) && onDeliver && canDeliver && (
           <button
             type="button"
             onClick={() => {

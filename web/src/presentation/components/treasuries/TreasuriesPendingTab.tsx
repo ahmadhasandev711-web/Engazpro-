@@ -1,6 +1,6 @@
 import React from 'react';
 import { MobileFilterChips } from '../mobile/MobileFilterChips';
-import { formatCurrency } from '@pos-mandob/shared';
+import { formatCurrency, UserRole } from '@pos-mandob/shared';
 import { CheckCircle2, Clock, ShieldCheck, TrendingDown, TrendingUp, Printer } from 'lucide-react';
 import type { TreasuriesViewModel } from './types';
 
@@ -56,7 +56,7 @@ export const TreasuriesPendingTab: React.FC<{ vm: TreasuriesViewModel }> = ({ vm
                             {shift.user?.name || shift.created_by_name || 'موظف'}
                           </span>
                           <span className="text-2xs px-2 py-0.5 rounded-full font-bold bg-indigo-50 text-indigo-700">
-                            {(shift.user?.role || shift.created_by_role) === 'MANDOB' ? 'مندوب' : 'كاشير'}
+                            {(shift.user?.role || shift.created_by_role) === UserRole.MANDOB ? 'مندوب' : 'كاشير'}
                           </span>
                         </div>
 

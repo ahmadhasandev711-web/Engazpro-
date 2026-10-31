@@ -1,5 +1,5 @@
 import React from 'react';
-import { formatCurrency } from '@pos-mandob/shared';
+import { formatCurrency, WcOrderStatus, WcPaymentStatus } from '@pos-mandob/shared';
 import { ShoppingBag, Truck, CheckCircle2, X, Phone, MapPin, DollarSign, RotateCcw, Package, Printer, Calendar } from 'lucide-react';
 import { cleanItemName, formatOrderDate, getStatusBadge } from './helpers';
 import type { WcOrdersViewModel } from './types';
@@ -38,7 +38,7 @@ export const WcOrderDetailsModal: React.FC<{ vm: WcOrdersViewModel }> = ({ vm })
                 </div>
               </div>
               <div className="flex items-center gap-1.5">
-                {viewingOrder.status !== 'CANCELLED' && (
+                {viewingOrder.status !== WcOrderStatus.CANCELLED && (
                   <button
                     type="button"
                     onClick={() => setPrintOrder(viewingOrder)}
@@ -231,7 +231,7 @@ export const WcOrderDetailsModal: React.FC<{ vm: WcOrdersViewModel }> = ({ vm })
                 <div className="pt-1 flex items-center justify-between text-[11px] text-slate-500 border-t border-slate-100">
                   <span>طريقة الدفع:</span>
                   <span className="font-bold text-slate-700">
-                    {viewingOrder.payment_status === 'PAID_ONLINE' ? '💳 مدفوع أونلاين' : '💵 الدفع عند الاستلام (COD)'}
+                    {viewingOrder.payment_status === WcPaymentStatus.PAID_ONLINE ? '💳 مدفوع أونلاين' : '💵 الدفع عند الاستلام (COD)'}
                     {viewingOrder.wc_payment_method ? ` (${viewingOrder.wc_payment_method})` : ''}
                   </span>
                 </div>
@@ -268,7 +268,7 @@ export const WcOrderDetailsModal: React.FC<{ vm: WcOrdersViewModel }> = ({ vm })
 
             {/* Modal Actions Footer */}
             <div className="pt-3 border-t border-slate-100 flex items-center gap-2 shrink-0">
-              {!isMandob && viewingOrder.status === 'PENDING_CONFIRMATION' && (
+              {!isMandob && viewingOrder.status === WcOrderStatus.PENDING_CONFIRMATION && (
                 <button
                   onClick={() => {
                     const order = viewingOrder;
@@ -290,7 +290,7 @@ export const WcOrderDetailsModal: React.FC<{ vm: WcOrdersViewModel }> = ({ vm })
                 </button>
               )}
 
-              {!isMandob && viewingOrder.status === 'CONFIRMED' && (
+              {!isMandob && viewingOrder.status === WcOrderStatus.CONFIRMED && (
                 <div className="flex-1 grid grid-cols-2 gap-2">
                   <button
                     onClick={() => {
@@ -323,7 +323,7 @@ export const WcOrderDetailsModal: React.FC<{ vm: WcOrdersViewModel }> = ({ vm })
                 </div>
               )}
 
-              {viewingOrder.status === 'DISPATCHED' && (
+              {viewingOrder.status === WcOrderStatus.DISPATCHED && (
                 <div className="flex-1 grid grid-cols-2 gap-2">
                   <button
                     onClick={() => {
@@ -334,7 +334,7 @@ export const WcOrderDetailsModal: React.FC<{ vm: WcOrdersViewModel }> = ({ vm })
                     className="py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-black hover:bg-emerald-700 transition-all flex items-center justify-center gap-1 shadow-xs cursor-pointer"
                   >
                     <DollarSign className="w-4 h-4" />
-                    <span>{viewingOrder.payment_status === 'PAID_ONLINE' ? 'تأكيد التسليم' : 'تسليم وتحصيل'}</span>
+                    <span>{viewingOrder.payment_status === WcPaymentStatus.PAID_ONLINE ? 'تأكيد التسليم' : 'تسليم وتحصيل'}</span>
                   </button>
                   <button
                     onClick={() => {
@@ -351,7 +351,7 @@ export const WcOrderDetailsModal: React.FC<{ vm: WcOrdersViewModel }> = ({ vm })
                 </div>
               )}
 
-              {viewingOrder.status === 'SHIPPED_VIA_COURIER' && (
+              {viewingOrder.status === WcOrderStatus.SHIPPED_VIA_COURIER && (
                 <div className="flex-1 grid grid-cols-2 gap-2">
                   <button
                     onClick={() => {
@@ -362,7 +362,7 @@ export const WcOrderDetailsModal: React.FC<{ vm: WcOrdersViewModel }> = ({ vm })
                     className="py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-black hover:bg-emerald-700 transition-all flex items-center justify-center gap-1 shadow-xs cursor-pointer"
                   >
                     <DollarSign className="w-4 h-4" />
-                    <span>{viewingOrder.payment_status === 'PAID_ONLINE' ? 'تأكيد تسليم الشحنة' : 'تسليم وتحصيل COD'}</span>
+                    <span>{viewingOrder.payment_status === WcPaymentStatus.PAID_ONLINE ? 'تأكيد تسليم الشحنة' : 'تسليم وتحصيل COD'}</span>
                   </button>
                   <button
                     onClick={() => {

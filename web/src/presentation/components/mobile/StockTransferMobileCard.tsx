@@ -13,11 +13,13 @@ import {
   FileText,
 } from 'lucide-react';
 
+import { StockTransferStatus, StockTransfer } from '@pos-mandob/shared';
+
 interface StockTransferMobileCardProps {
-  transfer: any;
+  transfer: StockTransfer;
   onReceive: (transferId: number) => void;
   onCancel?: (transferId: number) => void;
-  onView: (transfer: any) => void;
+  onView: (transfer: StockTransfer) => void;
   isReceiving?: boolean;
   canCancel?: boolean;
 }
@@ -34,21 +36,21 @@ export const StockTransferMobileCard: React.FC<StockTransferMobileCardProps> = (
 
   const getStatusConfig = (status: string) => {
     switch (status) {
-      case 'IN_TRANSIT':
+      case StockTransferStatus.IN_TRANSIT:
         return {
           label: 'في الطريق',
           badgeClass: 'bg-blue-100 text-blue-800 border-blue-200',
           stripeClass: 'border-r-4 border-r-blue-500',
           icon: <Clock className="w-3.5 h-3.5" />,
         };
-      case 'RECEIVED':
+      case StockTransferStatus.RECEIVED:
         return {
           label: 'تم الاستلام',
           badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-200',
           stripeClass: 'border-r-4 border-r-emerald-500',
           icon: <CheckCircle2 className="w-3.5 h-3.5" />,
         };
-      case 'CANCELLED':
+      case StockTransferStatus.CANCELLED:
         return {
           label: 'ملغي',
           badgeClass: 'bg-rose-100 text-rose-800 border-rose-200',
@@ -197,7 +199,7 @@ export const StockTransferMobileCard: React.FC<StockTransferMobileCardProps> = (
         </button>
 
         <div className="flex items-center gap-2">
-          {transfer.status === 'IN_TRANSIT' && canCancel && onCancel && (
+          {transfer.status === StockTransferStatus.IN_TRANSIT && canCancel && onCancel && (
             <button
               type="button"
               onClick={() => onCancel(transfer.id)}
@@ -207,7 +209,7 @@ export const StockTransferMobileCard: React.FC<StockTransferMobileCardProps> = (
             </button>
           )}
 
-          {transfer.status === 'IN_TRANSIT' && (
+          {transfer.status === StockTransferStatus.IN_TRANSIT && (
             <button
               type="button"
               disabled={isReceiving}

@@ -23,7 +23,7 @@ import {
   Download,
 } from 'lucide-react';
 import { apiClient } from '../../data/api/client';
-import { formatCurrency } from '@pos-mandob/shared';
+import { formatCurrency, PartyType, WcOrderStatus, StockTransferStatus } from '@pos-mandob/shared';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useAuthStore } from '../../data/store/useAuthStore';
 import { useConfirm } from '../context/ConfirmContext';
@@ -165,7 +165,7 @@ export const CouriersPage: React.FC = () => {
   const saveCourierMutation = useMutation({
     mutationFn: async () => {
       const payload = {
-        type: 'COURIER',
+        type: PartyType.COURIER,
         name: courierName.trim(),
         phone: courierPhone.trim() || undefined,
         phone2: courierPhone2.trim() || undefined,
@@ -627,9 +627,9 @@ export const CouriersPage: React.FC = () => {
                   <span className="text-[11px] font-bold text-slate-400 ml-1">الحالة:</span>
                   {[
                     { key: 'ALL', label: 'الكل' },
-                    { key: 'IN_TRANSIT', label: 'قيد التوصيل' },
-                    { key: 'DELIVERED', label: 'تم التسليم' },
-                    { key: 'RETURNED', label: 'مرتجع' },
+                    { key: StockTransferStatus.IN_TRANSIT, label: 'قيد التوصيل' },
+                    { key: WcOrderStatus.DELIVERED, label: 'تم التسليم' },
+                    { key: WcOrderStatus.RETURNED, label: 'مرتجع' },
                   ].map((tab) => (
                     <button
                       key={tab.key}
@@ -803,9 +803,9 @@ export const CouriersPage: React.FC = () => {
                         <td className="py-2.5 px-3 text-center">
                           <span
                             className={`inline-block px-2 py-0.5 rounded text-2xs font-black border ${
-                              s.status === 'DELIVERED'
+                              s.status === WcOrderStatus.DELIVERED
                                 ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                : s.status === 'RETURNED'
+                                : s.status === WcOrderStatus.RETURNED
                                 ? 'bg-rose-50 text-rose-700 border-rose-200'
                                 : 'bg-amber-50 text-amber-700 border-amber-200'
                             }`}

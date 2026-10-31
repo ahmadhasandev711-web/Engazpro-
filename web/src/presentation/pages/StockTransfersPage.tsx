@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { apiClient } from '../../data/api/client';
 import { usePermissions } from '../../hooks/usePermissions';
+import { StockTransferStatus, StockTransfer } from '@pos-mandob/shared';
 import { MobileFilterChips, FilterChipOption } from '../components/mobile/MobileFilterChips';
 import { StockTransferMobileCard } from '../components/mobile/StockTransferMobileCard';
 import { PaginationBar } from '../components/common/PaginationBar';
@@ -209,21 +210,21 @@ export const StockTransfersPage: React.FC = () => {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'IN_TRANSIT':
+      case StockTransferStatus.IN_TRANSIT:
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
             <Clock className="w-3.5 h-3.5" />
             في الطريق
           </span>
         );
-      case 'RECEIVED':
+      case StockTransferStatus.RECEIVED:
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
             <CheckCircle2 className="w-3.5 h-3.5" />
             تم الاستلام
           </span>
         );
-      case 'CANCELLED':
+      case StockTransferStatus.CANCELLED:
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-800">
             <XCircle className="w-3.5 h-3.5" />
@@ -239,10 +240,10 @@ export const StockTransfersPage: React.FC = () => {
     }
   };
 
-  const transfers = transfersData?.items || [];
-  const inTransitCount = transfers.filter((t: any) => t.status === 'IN_TRANSIT').length;
-  const receivedCount = transfers.filter((t: any) => t.status === 'RECEIVED').length;
-  const cancelledCount = transfers.filter((t: any) => t.status === 'CANCELLED').length;
+  const transfers: StockTransfer[] = transfersData?.items || [];
+  const inTransitCount = transfers.filter((t: StockTransfer) => t.status === StockTransferStatus.IN_TRANSIT).length;
+  const receivedCount = transfers.filter((t: StockTransfer) => t.status === StockTransferStatus.RECEIVED).length;
+  const cancelledCount = transfers.filter((t: StockTransfer) => t.status === StockTransferStatus.CANCELLED).length;
 
   // Hardware Back Button integration
   useEffect(() => {
@@ -266,9 +267,9 @@ export const StockTransfersPage: React.FC = () => {
   const statusFilterOptions: FilterChipOption<string>[] = useMemo(
     () => [
       { id: 'ALL', label: 'جميع التحويلات', count: transfersData?.total || 0 },
-      { id: 'IN_TRANSIT', label: 'في الطريق', count: inTransitCount },
-      { id: 'RECEIVED', label: 'مستلم', count: receivedCount },
-      { id: 'CANCELLED', label: 'ملغي', count: cancelledCount },
+      { id: StockTransferStatus.IN_TRANSIT, label: 'في الطريق', count: inTransitCount },
+      { id: StockTransferStatus.RECEIVED, label: 'مستلم', count: receivedCount },
+      { id: StockTransferStatus.CANCELLED, label: 'ملغي', count: cancelledCount },
     ],
     [transfersData?.total, inTransitCount, receivedCount, cancelledCount]
   );
@@ -473,7 +474,7 @@ export const StockTransfersPage: React.FC = () => {
                       </td>
                       <td className="py-3.5 px-4 text-center">
                         <div className="flex items-center justify-center gap-1.5">
-                          {trf.status === 'IN_TRANSIT' && (
+                          {trf.status === StockTransferStatus.IN_TRANSIT && (
                             <>
                               <button
                                 onClick={async () => {
