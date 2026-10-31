@@ -108,24 +108,85 @@ class LedgerService
      */
     public function getStatement(User $user, Party $party, array $filters = []): array
     {
-        $query = LedgerEntry::where('user_id', $user->getAccountId())
+        $accountId = $user->getAccountId();
+        $partyType = $party->type instanceof PartyType ? $party->type : PartyType::tryFrom((string) $party->type);
+        $isCustomerOrCourier = ($partyType === PartyType::CUSTOMER || $partyType === PartyType::COURIER);
+
+        $periodQuery = LedgerEntry::where('user_id', $accountId)
             ->where('party_id', $party->id);
 
-        if (!empty($filters['from_date'])) {
-            $query->where('date', '>=', $filters['from_date']);
+        $fromDate = !empty($filters['from_date']) ? substr($filters['from_date'], 0, 10) : null;
+        $toDate = !empty($filters['to_date']) ? substr($filters['to_date'], 0, 10) : null;
+
+        if ($fromDate) {
+            $periodQuery->where('date', '>=', $fromDate);
         }
 
-        if (!empty($filters['to_date'])) {
-            $query->where('date', '<=', $filters['to_date'] . ' 23:59:59');
+        if ($toDate) {
+            $periodQuery->where('date', '<=', $toDate);
         }
 
-        $entries = $query->orderBy('date', 'asc')
-            ->orderBy('id', 'asc')
-            ->get();
+        // إجمالي المدين والدائن للفترة بـ SQL
+        $totalsRow = (clone $periodQuery)->selectRaw('
+            COALESCE(SUM(debit), 0) as total_debit,
+            COALESCE(SUM(credit), 0) as total_credit,
+            COUNT(*) as total_count
+        ')->first();
 
-        $totalDebit = Money::of($entries->sum('debit') ?? 0)->getAmount();
-        $totalCredit = Money::of($entries->sum('credit') ?? 0)->getAmount();
+        $totalDebit = Money::of($totalsRow->total_debit ?? 0)->getAmount();
+        $totalCredit = Money::of($totalsRow->total_credit ?? 0)->getAmount();
         $currentBalance = Money::of($party->balance ?? 0)->getAmount();
+
+        // 1. حساب الرصيد التراكمي السابق للفترة (كل ما قبل from_date)
+        if ($fromDate) {
+            $beforePeriodRow = LedgerEntry::where('user_id', $accountId)
+                ->where('party_id', $party->id)
+                ->where('date', '<', $fromDate)
+                ->selectRaw('
+                    COALESCE(SUM(debit), 0) as sum_debit,
+                    COALESCE(SUM(credit), 0) as sum_credit
+                ')->first();
+
+            $priorDebit = Money::of($beforePeriodRow->sum_debit ?? 0);
+            $priorCredit = Money::of($beforePeriodRow->sum_credit ?? 0);
+            $beforePeriodBalance = $isCustomerOrCourier
+                ? $priorDebit->subtract($priorCredit)
+                : $priorCredit->subtract($priorDebit);
+        } else {
+            $beforePeriodBalance = Money::zero();
+        }
+
+        // 2. تقسيم الحركات بـ Pagination (100 لكل صفحة)
+        $perPage = 100;
+        $page = max(1, (int) ($filters['page'] ?? request()->input('page', 1)));
+        $offset = ($page - 1) * $perPage;
+
+        // 3. حساب الرصيد التراكمي للحركات السابقة للصفحة الحالية ضمن الفترة
+        if ($offset > 0) {
+            $offsetIds = (clone $periodQuery)->orderBy('date', 'asc')
+                ->orderBy('id', 'asc')
+                ->limit($offset)
+                ->pluck('id');
+
+            $offsetRow = LedgerEntry::whereIn('id', $offsetIds)->selectRaw('
+                COALESCE(SUM(debit), 0) as sum_debit,
+                COALESCE(SUM(credit), 0) as sum_credit
+            ')->first();
+
+            $offsetDebit = Money::of($offsetRow->sum_debit ?? 0);
+            $offsetCredit = Money::of($offsetRow->sum_credit ?? 0);
+            $offsetBalance = $isCustomerOrCourier
+                ? $offsetDebit->subtract($offsetCredit)
+                : $offsetCredit->subtract($offsetDebit);
+        } else {
+            $offsetBalance = Money::zero();
+        }
+
+        $openingBalance = $beforePeriodBalance->add($offsetBalance)->getAmount();
+
+        $paginator = (clone $periodQuery)->orderBy('date', 'asc')
+            ->orderBy('id', 'asc')
+            ->paginate($perPage, ['*'], 'page', $page);
 
         return [
             'party' => [
@@ -139,8 +200,22 @@ class LedgerService
                 'total_debit' => $totalDebit,
                 'total_credit' => $totalCredit,
                 'current_balance' => $currentBalance,
+                'opening_balance' => $openingBalance,
             ],
-            'entries' => $entries,
+            'opening_balance' => $openingBalance,
+            'entries' => $paginator->items(),
+            'pagination' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+            ],
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+            ],
         ];
     }
 }

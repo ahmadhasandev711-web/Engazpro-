@@ -16,6 +16,7 @@ import { apiClient } from '../../data/api/client';
 import { formatCurrency, formatDate } from '@pos-mandob/shared';
 import { exportLedgerToExcel } from '../utils/excelExport';
 import { DateRangeFilter } from '../components/common/DateRangeFilter';
+import { PaginationBar } from '../components/common/PaginationBar';
 import { useAuthStore } from '../../data/store/useAuthStore';
 import { LedgerEntryMobileCard } from '../components/mobile/LedgerEntryMobileCard';
 
@@ -31,24 +32,29 @@ export const LedgerPage: React.FC = () => {
 
   const [fromDate, setFromDate] = useState<string>('');
   const [toDate, setToDate] = useState<string>('');
+  const [page, setPage] = useState<number>(1);
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['ledger', partyId, fromDate, toDate],
+  const { data, isLoading, isFetching } = useQuery({
+    queryKey: ['ledger', partyId, fromDate, toDate, page],
     queryFn: async () => {
       const res = await apiClient.get(`/ledger/${partyId}`, {
         params: {
           from_date: fromDate || undefined,
           to_date: toDate || undefined,
+          page,
         },
       });
       return res.data?.data;
     },
     enabled: !!partyId,
+    placeholderData: (prev) => prev,
   });
 
   const party = data?.party;
   const summary = data?.summary;
   const entries: any[] = data?.entries || [];
+  const pagination = data?.pagination || data?.meta;
+  const openingBalance = data?.summary?.opening_balance ?? data?.opening_balance ?? 0;
 
   const isCustomer = party?.type === 'CUSTOMER';
   const isCourier = party?.type === 'COURIER';
@@ -233,6 +239,7 @@ export const LedgerPage: React.FC = () => {
           onChange={(from, to) => {
             setFromDate(from);
             setToDate(to);
+            setPage(1);
           }}
         />
       </div>
@@ -314,6 +321,20 @@ export const LedgerPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-mono">
+                  {/* سطر رصيد ما قبله في أول الجدول */}
+                  <tr className="bg-slate-50/90 font-bold text-slate-700">
+                    <td className="py-2.5 px-4 font-sans text-slate-500">
+                      {fromDate ? formatDate(fromDate) : '—'}
+                    </td>
+                    <td className="py-2.5 px-4 font-sans text-primary-800">
+                      رصيد ما قبله (افتتاحي الصفحة)
+                    </td>
+                    <td className="py-2.5 px-4 text-slate-400">—</td>
+                    <td className="py-2.5 px-4 text-slate-400">—</td>
+                    <td className="py-2.5 px-4 font-black text-primary-800">
+                      {formatCurrency(openingBalance)}
+                    </td>
+                  </tr>
                   {entries.map((entry) => (
                     <tr key={entry.id} className="hover:bg-slate-50/70 transition-colors">
                       <td className="py-3 px-4 text-slate-600 font-sans">
@@ -339,10 +360,24 @@ export const LedgerPage: React.FC = () => {
 
             {/* Mobile Transaction Cards View (md:hidden) */}
             <div className="md:hidden p-3 space-y-2.5">
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center justify-between text-xs">
+                <span className="font-bold text-slate-700">رصيد ما قبله (افتتاحي الصفحة):</span>
+                <span className="font-black font-mono text-primary-800">{formatCurrency(openingBalance)}</span>
+              </div>
               {entries.map((entry) => (
                 <LedgerEntryMobileCard key={entry.id} entry={entry} />
               ))}
             </div>
+
+            <PaginationBar
+              currentPage={pagination?.current_page || page}
+              lastPage={pagination?.last_page || 1}
+              total={pagination?.total || entries.length}
+              perPage={pagination?.per_page || 100}
+              onPageChange={(newPage) => setPage(newPage)}
+              isFetching={isFetching}
+              itemLabel="حركة"
+            />
           </>
         )}
       </div>
