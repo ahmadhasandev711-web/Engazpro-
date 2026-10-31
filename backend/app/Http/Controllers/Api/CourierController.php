@@ -38,13 +38,15 @@ class CourierController extends Controller
         $user = $request->user();
         $branchId = $request->filled('branch_id') ? (int) $request->input('branch_id') : null;
 
-        $result = $this->courierService->getCourierManifest($user, $id, $branchId);
+        $result = $this->courierService->getCourierManifest($user, $id, $branchId, $request->all());
 
         return response()->json([
             'success' => true,
             'courier' => $result['courier'],
             'shipments' => $result['shipments'],
             'metrics' => $result['metrics'],
+            'pagination' => $result['pagination'] ?? null,
+            'meta' => $result['meta'] ?? null,
         ]);
     }
 

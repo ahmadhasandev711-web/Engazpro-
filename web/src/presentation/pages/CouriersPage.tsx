@@ -28,6 +28,7 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { useAuthStore } from '../../data/store/useAuthStore';
 import { exportManifestToExcel } from '../utils/excelExport';
 import { CourierMobileCard } from '../components/mobile/CourierMobileCard';
+import { PaginationBar } from '../components/common/PaginationBar';
 import { nativeBackButton } from '../../platform/nativeBackButton';
 
 export const CouriersPage: React.FC = () => {
@@ -55,6 +56,7 @@ export const CouriersPage: React.FC = () => {
   const [manifestPaymentFilter, setManifestPaymentFilter] = useState<'ALL' | 'COD' | 'PREPAID'>('ALL');
   const [manifestSourceFilter, setManifestSourceFilter] = useState<'ALL' | 'WOOCOMMERCE' | 'DIRECT_SALE'>('ALL');
   const [manifestSearch, setManifestSearch] = useState<string>('');
+  const [manifestPage, setManifestPage] = useState<number>(1);
 
   const user = useAuthStore((s) => s.user);
   const storeIdentity = user?.store_identity;
@@ -123,49 +125,39 @@ export const CouriersPage: React.FC = () => {
   };
 
   // 2. Fetch Manifest for Selected Courier
-  const { data: manifestData, isLoading: isManifestLoading } = useQuery({
-    queryKey: ['courier-manifest', manifestCourier?.id],
+  const { data: manifestData, isLoading: isManifestLoading, isFetching: isManifestFetching } = useQuery({
+    queryKey: ['courier-manifest', manifestCourier?.id, manifestStatusFilter, manifestPaymentFilter, manifestSourceFilter, manifestSearch, manifestPage],
     queryFn: async () => {
       if (!manifestCourier?.id) return null;
-      const res = await apiClient.get(`/couriers/${manifestCourier.id}/manifest`);
+      const res = await apiClient.get(`/couriers/${manifestCourier.id}/manifest`, {
+        params: {
+          status: manifestStatusFilter !== 'ALL' ? manifestStatusFilter : undefined,
+          payment_status: manifestPaymentFilter !== 'ALL' ? manifestPaymentFilter : undefined,
+          source: manifestSourceFilter !== 'ALL' ? manifestSourceFilter : undefined,
+          search: manifestSearch.trim() || undefined,
+          page: manifestPage,
+        },
+      });
       return res.data;
     },
     enabled: !!manifestCourier?.id,
+    placeholderData: (prev) => prev,
   });
 
   const shipments: any[] = manifestData?.shipments || [];
+  const filteredShipments = shipments;
 
-  const filteredShipments = shipments.filter((s: any) => {
-    if (manifestStatusFilter === 'IN_TRANSIT' && s.status !== 'SHIPPED_VIA_COURIER' && s.status !== 'IN_TRANSIT') return false;
-    if (manifestStatusFilter === 'DELIVERED' && s.status !== 'DELIVERED') return false;
-    if (manifestStatusFilter === 'RETURNED' && s.status !== 'RETURNED') return false;
-
-    if (manifestPaymentFilter === 'COD' && s.is_paid_online) return false;
-    if (manifestPaymentFilter === 'PREPAID' && !s.is_paid_online) return false;
-
-    if (manifestSourceFilter === 'WOOCOMMERCE' && s.source !== 'WOOCOMMERCE') return false;
-    if (manifestSourceFilter === 'DIRECT_SALE' && s.source !== 'DIRECT_SALE') return false;
-
-    if (manifestSearch) {
-      const term = manifestSearch.toLowerCase();
-      const matchRef = s.reference?.toLowerCase().includes(term);
-      const matchCust = s.customer_name?.toLowerCase().includes(term);
-      const matchPhone = s.customer_phone?.includes(term);
-      const matchTrack = s.tracking_number?.toLowerCase().includes(term);
-      if (!matchRef && !matchCust && !matchPhone && !matchTrack) return false;
-    }
-    return true;
-  });
-
-  const filteredMetrics = {
-    total: filteredShipments.length,
-    inTransit: filteredShipments.filter((s: any) => s.status === 'SHIPPED_VIA_COURIER' || s.status === 'IN_TRANSIT').length,
-    delivered: filteredShipments.filter((s: any) => s.status === 'DELIVERED').length,
-    returned: filteredShipments.filter((s: any) => s.status === 'RETURNED').length,
-    totalCod: filteredShipments.reduce((sum: number, s: any) => sum + (s.is_paid_online ? 0 : Number(s.cod_amount ?? s.total)), 0),
-    totalShippingFees: filteredShipments.reduce((sum: number, s: any) => sum + Number(s.shipping_cost || 0), 0),
-    prepaidCount: filteredShipments.filter((s: any) => s.is_paid_online).length,
+  const manifestMetrics = manifestData?.metrics || {
+    total_shipments: 0,
+    in_transit_count: 0,
+    delivered_count: 0,
+    returned_count: 0,
+    total_cod_amount: 0,
+    total_shipping_fees: 0,
+    collected_cod_amount: 0,
+    pending_cod_amount: 0,
   };
+  const manifestPagination = manifestData?.pagination || manifestData?.meta;
 
   // 3. Create / Update Courier Mutation
   const saveCourierMutation = useMutation({
@@ -584,32 +576,34 @@ export const CouriersPage: React.FC = () => {
             {/* Metrics Bar */}
             <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 p-3 bg-slate-50 border-b border-slate-200 text-center">
               <div className="p-2 bg-white rounded-xl border border-slate-200">
-                <span className="text-[10px] text-slate-500 font-bold block">إجمالي المعروض</span>
-                <span className="text-sm font-black text-slate-900">{filteredMetrics.total}</span>
+                <span className="text-[10px] text-slate-500 font-bold block">إجمالي الشحنات</span>
+                <span className="text-sm font-black text-slate-900">{manifestMetrics.total_shipments}</span>
               </div>
               <div className="p-2 bg-white rounded-xl border border-slate-200">
                 <span className="text-[10px] text-amber-600 font-bold block">قيد التوصيل (عهدة)</span>
-                <span className="text-sm font-black text-amber-700">{filteredMetrics.inTransit}</span>
+                <span className="text-sm font-black text-amber-700">{manifestMetrics.in_transit_count}</span>
               </div>
               <div className="p-2 bg-white rounded-xl border border-slate-200">
                 <span className="text-[10px] text-emerald-600 font-bold block">تم التسليم</span>
-                <span className="text-sm font-black text-emerald-700">{filteredMetrics.delivered}</span>
+                <span className="text-sm font-black text-emerald-700">{manifestMetrics.delivered_count}</span>
               </div>
               <div className="p-2 bg-white rounded-xl border border-slate-200">
                 <span className="text-[10px] text-purple-600 font-bold block">مطلوب COD</span>
                 <span className="text-sm font-black text-purple-700 font-mono">
-                  {formatCurrency(filteredMetrics.totalCod)}
+                  {formatCurrency(manifestMetrics.total_cod_amount)}
                 </span>
               </div>
               <div className="p-2 bg-white rounded-xl border border-slate-200">
                 <span className="text-[10px] text-indigo-600 font-bold block">أتعاب الشحن</span>
                 <span className="text-sm font-black text-indigo-700 font-mono">
-                  {formatCurrency(filteredMetrics.totalShippingFees)}
+                  {formatCurrency(manifestMetrics.total_shipping_fees)}
                 </span>
               </div>
               <div className="p-2 bg-white rounded-xl border border-slate-200">
-                <span className="text-[10px] text-teal-600 font-bold block">مدفوع أونلاين</span>
-                <span className="text-sm font-black text-teal-700">{filteredMetrics.prepaidCount}</span>
+                <span className="text-[10px] text-teal-600 font-bold block">تحصيل معلق</span>
+                <span className="text-sm font-black text-teal-700 font-mono">
+                  {formatCurrency(manifestMetrics.pending_cod_amount)}
+                </span>
               </div>
             </div>
 
@@ -627,7 +621,10 @@ export const CouriersPage: React.FC = () => {
                   ].map((tab) => (
                     <button
                       key={tab.key}
-                      onClick={() => setManifestStatusFilter(tab.key)}
+                      onClick={() => {
+                        setManifestStatusFilter(tab.key);
+                        setManifestPage(1);
+                      }}
                       className={`px-2.5 py-1 rounded-lg text-xs font-bold whitespace-nowrap cursor-pointer transition ${
                         manifestStatusFilter === tab.key
                           ? 'bg-purple-600 text-white shadow-2xs'
@@ -649,7 +646,10 @@ export const CouriersPage: React.FC = () => {
                   ].map((tab) => (
                     <button
                       key={tab.key}
-                      onClick={() => setManifestPaymentFilter(tab.key as any)}
+                      onClick={() => {
+                        setManifestPaymentFilter(tab.key as any);
+                        setManifestPage(1);
+                      }}
                       className={`px-2.5 py-1 rounded-lg text-xs font-bold whitespace-nowrap cursor-pointer transition ${
                         manifestPaymentFilter === tab.key
                           ? 'bg-slate-900 text-white shadow-2xs'
@@ -671,7 +671,10 @@ export const CouriersPage: React.FC = () => {
                   ].map((tab) => (
                     <button
                       key={tab.key}
-                      onClick={() => setManifestSourceFilter(tab.key as any)}
+                      onClick={() => {
+                        setManifestSourceFilter(tab.key as any);
+                        setManifestPage(1);
+                      }}
                       className={`px-2.5 py-1 rounded-lg text-xs font-bold whitespace-nowrap cursor-pointer transition ${
                         manifestSourceFilter === tab.key
                           ? 'bg-slate-900 text-white shadow-2xs'
@@ -691,7 +694,10 @@ export const CouriersPage: React.FC = () => {
                   type="text"
                   placeholder="بحث سريع برقم الطلب، اسم العميل، رقم الهاتف، أو رقم البوليصة..."
                   value={manifestSearch}
-                  onChange={(e) => setManifestSearch(e.target.value)}
+                  onChange={(e) => {
+                    setManifestSearch(e.target.value);
+                    setManifestPage(1);
+                  }}
                   className="w-full pl-3 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:bg-white transition"
                 />
               </div>
@@ -803,6 +809,15 @@ export const CouriersPage: React.FC = () => {
                   </tbody>
                 </table>
               )}
+              <PaginationBar
+                currentPage={manifestPagination?.current_page || manifestPage}
+                lastPage={manifestPagination?.last_page || 1}
+                total={manifestPagination?.total || filteredShipments.length}
+                perPage={manifestPagination?.per_page || 50}
+                onPageChange={(p) => setManifestPage(p)}
+                isFetching={isManifestFetching}
+                itemLabel="شحنة"
+              />
             </div>
 
             {/* Modal Footer */}
@@ -871,23 +886,23 @@ export const CouriersPage: React.FC = () => {
             <div className="grid grid-cols-5 gap-2 p-2.5 bg-slate-50 border border-slate-300 rounded mb-4 text-center">
               <div>
                 <span className="text-[10px] text-slate-500 block font-bold">إجمالي الطرود</span>
-                <span className="text-sm font-black text-slate-900">{filteredMetrics.total}</span>
+                <span className="text-sm font-black text-slate-900">{manifestMetrics.total_shipments}</span>
               </div>
               <div>
                 <span className="text-[10px] text-slate-500 block font-bold">قيد التوصيل بالعهدة</span>
-                <span className="text-sm font-black text-amber-700">{filteredMetrics.inTransit}</span>
+                <span className="text-sm font-black text-amber-700">{manifestMetrics.in_transit_count}</span>
               </div>
               <div>
                 <span className="text-[10px] text-slate-500 block font-bold">تم التسليم</span>
-                <span className="text-sm font-black text-emerald-700">{filteredMetrics.delivered}</span>
+                <span className="text-sm font-black text-emerald-700">{manifestMetrics.delivered_count}</span>
               </div>
               <div>
                 <span className="text-[10px] text-slate-500 block font-bold">مطلوب تحصيله (COD)</span>
-                <span className="text-sm font-black text-purple-800 font-mono">{formatCurrency(filteredMetrics.totalCod)}</span>
+                <span className="text-sm font-black text-purple-800 font-mono">{formatCurrency(manifestMetrics.total_cod_amount)}</span>
               </div>
               <div>
                 <span className="text-[10px] text-slate-500 block font-bold">إجمالي أتعاب الشحن</span>
-                <span className="text-sm font-black text-slate-800 font-mono">{formatCurrency(filteredMetrics.totalShippingFees)}</span>
+                <span className="text-sm font-black text-slate-800 font-mono">{formatCurrency(manifestMetrics.total_shipping_fees)}</span>
               </div>
             </div>
 
