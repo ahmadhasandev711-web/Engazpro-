@@ -19,7 +19,7 @@ class ProductService
     /**
      * Create a new product and record initial stock if quantity > 0.
      */
-    public function createProduct(User $user, array $data): Product
+    public function createProduct(User $user, array $data, ?int $branchId = null): Product
     {
         $initialQty = (float) ($data['quantity'] ?? 0);
         $variantsData = $data['variants'] ?? [];
@@ -57,7 +57,7 @@ class ProductService
             }
         }
 
-        return DB::transaction(function () use ($user, $data, $initialQty, $variantsData, $batchesData) {
+        return DB::transaction(function () use ($user, $data, $initialQty, $variantsData, $batchesData, $branchId) {
             $dataToSave = $data;
             $dataToSave['quantity'] = 0;
             $dataToSave['user_id'] = $user->getAccountId();
@@ -93,7 +93,9 @@ class ProductService
                             $varQty,
                             $variant->purchase_price ?? $product->purchase_price,
                             'رصيد افتتاحي للمتغير: ' . $variant->name,
-                            $variant
+                            $variant,
+                            null,
+                            $branchId
                         );
                     }
                 }
@@ -120,7 +122,8 @@ class ProductService
                             $batch->purchase_price ?? $product->purchase_price,
                             'رصيد افتتاحي للتشغيلة: ' . $batch->batch_number,
                             null,
-                            $batch
+                            $batch,
+                            $branchId
                         );
                     }
                 }
@@ -135,7 +138,10 @@ class ProductService
                     $product->id,
                     $initialQty,
                     $product->purchase_price,
-                    'رصيد افتتاحي عند إضافة الصنف'
+                    'رصيد افتتاحي عند إضافة الصنف',
+                    null,
+                    null,
+                    $branchId
                 );
             }
 

@@ -239,7 +239,7 @@ class WooCommerceProductImportService
             $productData['variants'] = $variantsPayload;
         }
 
-        $this->productService->createProduct($user, $productData);
+        $this->productService->createProduct($user, $productData, $integration->online_branch_id);
 
         return 'created';
     }
