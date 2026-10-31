@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\WcOrderResource;
+use App\Jobs\PullWooCommerceOrdersJob;
 use App\Models\WcOrder;
 use App\Services\WooCommerce\WooCommerceOrderSyncService;
 use Illuminate\Http\JsonResponse;
@@ -324,13 +325,12 @@ class WcOrderController extends Controller
             ], 403);
         }
 
-        $result = $this->orderSyncService->pullRecentOrders($user);
+        PullWooCommerceOrdersJob::dispatch($user->getAccountId(), $user->id);
 
         return response()->json([
             'success' => true,
-            'message' => "تم سحب وتحديث الطلبات بنجاح: تم إنشاء {$result['imported']} طلب جديد وتحديث {$result['updated']} طلب.",
-            'data' => $result,
-        ]);
+            'message' => 'جاري سحب الطلبات في الخلفية.',
+        ], 202);
     }
 }
 

@@ -222,9 +222,8 @@ class StoreSettingsAndWooCommerceAuthTest extends TestCase
 
         // Manager pulls orders
         $pullResp = $this->actingAs($manager)->postJson('/api/wc-orders/pull');
-        $pullResp->assertStatus(200)
-            ->assertJsonPath('success', true)
-            ->assertJsonPath('data.imported', 1);
+        $pullResp->assertStatus(202)
+            ->assertJsonPath('success', true);
 
         $this->assertDatabaseHas('wc_orders', [
             'user_id' => $owner->id,

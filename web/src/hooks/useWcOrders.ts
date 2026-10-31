@@ -371,9 +371,13 @@ export function useWcOrders() {
       queryClient.invalidateQueries({ queryKey: ['wc-orders'] });
       setFeedback({
         type: 'success',
-        message: res.data?.message || 'تم سحب وتحديث الطلبات بنجاح ✅',
+        message: res.data?.message || 'جاري سحب وتحديث الطلبات في الخلفية ⏳',
       });
-      setTimeout(() => setFeedback(null), 4500);
+      // استعلام مجدداً بعد 10 ثوانٍ لظهور الطلبات المسحوبة حديثاً في الخلفية
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['wc-orders'] });
+      }, 10000);
+      setTimeout(() => setFeedback(null), 6000);
     },
     onError: (err: any) => {
       setFeedback({
