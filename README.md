@@ -7,7 +7,7 @@
 > **Enterprise Omnichannel Cloud POS & Inventory Management SaaS with Real-Time Bidirectional WooCommerce Integration.**
 
 [![Laravel](https://img.shields.io/badge/Laravel-11.x-FF2D20?style=for-the-badge&logo=laravel&logoColor=white)](https://laravel.com)
-[![React](https://img.shields.io/badge/React-18.x-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://reactjs.org)
+[![React](https://img.shields.io/badge/React-19.x-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://reactjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![WooCommerce](https://img.shields.io/badge/WooCommerce-REST_API_v3-96588A?style=for-the-badge&logo=woocommerce&logoColor=white)](https://woocommerce.com)
 [![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
@@ -66,7 +66,7 @@ flowchart TD
 
     subgraph Frontends ["💻 Modern Frontends & Edge Devices"]
         POS["PWA Full-Screen POS Cashier"]
-        Dashboard["React 18 / TypeScript Merchant Dashboard"]
+        Dashboard["React 19 / TypeScript Merchant Dashboard"]
         Scanner["Barcode Scanner & Receipt Printing"]
     end
 
@@ -87,7 +87,7 @@ flowchart TD
 
 ## 🌟 Core Platform Features
 
-* **⚡ Cashier Register (POS)**: Built with React 18 and Zustand for product search, barcode scanning, keyboard shortcuts (`F1` to `F12`), held carts, and receipt printing.
+* **⚡ Cashier Register (POS)**: Built with React 19 and Zustand for product search, barcode scanning, keyboard shortcuts (`F2`, `F4`, `F8`, `F9`), held carts, and receipt printing.
 * **🏢 Multi-Branch & Multi-Warehouse Management**: Transfer inventory between physical branches, track transit shipments, and isolate ledger accounting per branch.
 * **📊 Financial Ledger & Treasury Management**: Single-entry customer and supplier ledgers, tracking of daily cash register shifts, treasuries, expenses, and financial reports.
 * **📱 Progressive Web App (PWA)**: Service worker caching for static application assets, installable on mobile and desktop devices.
@@ -101,7 +101,7 @@ flowchart TD
 |---|---|---|
 | **Backend API** | PHP 8.2+ / Laravel 11 | Skinny Controllers, Dedicated Service Layer, Custom Form Requests |
 | **Integrations** | WooCommerce REST API v3 | Interface-driven client (`WooCommerceApiClientInterface`), GuzzleHTTP |
-| **Frontend Web** | React 18 / TypeScript 5 | Vite, TailwindCSS, Headless UI, Lucide Icons |
+| **Frontend Web** | React 19 / TypeScript 5 | Vite, TailwindCSS, Headless UI, Lucide Icons |
 | **State & Cache** | TanStack React Query + Zustand | Optimistic mutations, stale-while-revalidate client cache |
 | **Database** | MySQL 8.0 | Strict relational integrity, foreign keys, compound indices |
 | **Async Queues** | Laravel Queues (Database / Redis) | Non-blocking stock synchronization, retry backoff policies |
