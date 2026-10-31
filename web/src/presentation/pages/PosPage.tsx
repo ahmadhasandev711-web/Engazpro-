@@ -541,7 +541,7 @@ export const PosPage: React.FC = () => {
             </div>
             <div>
               <h1 className="font-black text-sm text-slate-900 leading-tight">نقطة البيع (POS)</h1>
-              <p className="text-[10px] text-slate-500 font-medium">البيع السريع وإصدار الفواتير</p>
+              <p className="text-2xs text-slate-500 font-medium">البيع السريع وإصدار الفواتير</p>
             </div>
           </div>
         </div>
@@ -698,7 +698,7 @@ export const PosPage: React.FC = () => {
               </span>
             </div>
             <div>
-              <span className="text-[10px] text-slate-400 font-bold block">إجمالي السلة</span>
+              <span className="text-2xs text-slate-400 font-bold block">إجمالي السلة</span>
               <span className="text-base font-black font-mono text-slate-900 leading-none">
                 {formatCurrency(totalAmount)}
               </span>
@@ -714,7 +714,7 @@ export const PosPage: React.FC = () => {
             className="flex-1 max-w-[200px] py-3 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 active:scale-95 text-white rounded-xl font-black text-xs shadow-md shadow-emerald-600/25 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
           >
             <span>عرض السلة والدفع</span>
-            <span className="font-mono bg-white/20 px-1.5 py-0.5 rounded-md text-[10px]">
+            <span className="font-mono bg-white/20 px-1.5 py-0.5 rounded-md text-2xs">
               ({cartItems.reduce((acc, item) => acc + item.quantity, 0)})
             </span>
           </button>

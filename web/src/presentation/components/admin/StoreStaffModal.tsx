@@ -71,7 +71,7 @@ export const StoreStaffModal: React.FC<StoreStaffModalProps> = ({ userId, onClos
                           <div className="font-bold text-slate-900 text-sm flex items-center gap-2">
                             <span>{b.name}</span>
                             {b.is_main && (
-                              <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md font-bold">
+                              <span className="text-2xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md font-bold">
                                 فرع رئيسي
                               </span>
                             )}

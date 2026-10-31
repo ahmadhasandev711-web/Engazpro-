@@ -496,7 +496,7 @@ export const PosPaymentModal: React.FC<PosPaymentModalProps> = ({
                       <button
                         type="button"
                         onClick={() => setSplitCash(String(splitRemaining + (Number(splitCash) || 0)))}
-                        className="text-[10px] text-primary-600 hover:underline"
+                        className="text-2xs text-primary-600 hover:underline"
                       >
                         المتبقي
                       </button>
@@ -523,7 +523,7 @@ export const PosPaymentModal: React.FC<PosPaymentModalProps> = ({
                       <button
                         type="button"
                         onClick={() => setSplitCard(String(splitRemaining + (Number(splitCard) || 0)))}
-                        className="text-[10px] text-primary-600 hover:underline"
+                        className="text-2xs text-primary-600 hover:underline"
                       >
                         المتبقي
                       </button>
@@ -550,7 +550,7 @@ export const PosPaymentModal: React.FC<PosPaymentModalProps> = ({
                       <button
                         type="button"
                         onClick={() => setSplitInstapay(String(splitRemaining + (Number(splitInstapay) || 0)))}
-                        className="text-[10px] text-primary-600 hover:underline"
+                        className="text-2xs text-primary-600 hover:underline"
                       >
                         المتبقي
                       </button>
@@ -577,7 +577,7 @@ export const PosPaymentModal: React.FC<PosPaymentModalProps> = ({
                       <button
                         type="button"
                         onClick={() => setSplitVodafone(String(splitRemaining + (Number(splitVodafone) || 0)))}
-                        className="text-[10px] text-primary-600 hover:underline"
+                        className="text-2xs text-primary-600 hover:underline"
                       >
                         المتبقي
                       </button>
@@ -645,7 +645,7 @@ export const PosPaymentModal: React.FC<PosPaymentModalProps> = ({
                   <UserCheck className="w-3.5 h-3.5 text-primary-600" />
                   <span>مسؤول المبيعات / السيلز (لحساب العمولة):</span>
                 </span>
-                <span className="text-[10px] text-slate-400 font-normal">اختياري - افتراضياً الكاشير الحالي</span>
+                <span className="text-2xs text-slate-400 font-normal">اختياري - افتراضياً الكاشير الحالي</span>
               </label>
               <select
                 value={salespersonId}

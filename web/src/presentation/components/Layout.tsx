@@ -127,7 +127,7 @@ export const Layout: React.FC = () => {
             <Link to="/dashboard" className="flex items-center gap-1.5 group">
               <span className="font-black text-xl tracking-tighter text-slate-900 font-sans flex items-center">
                 Engaz<span className="text-emerald-500">.</span>
-                <span className="mr-1.5 text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300/80 px-1.5 py-0.5 rounded-md shadow-2xs">
+                <span className="mr-1.5 text-2xs font-black bg-emerald-100 text-emerald-800 border border-emerald-300/80 px-1.5 py-0.5 rounded-md shadow-2xs">
                   PRO
                 </span>
               </span>
@@ -219,7 +219,7 @@ export const Layout: React.FC = () => {
                 <Link to="/dashboard" onClick={() => setIsMobileDrawerOpen(false)} className="flex items-center gap-1.5">
                   <span className="font-black text-lg tracking-tighter text-slate-900 font-sans flex items-center">
                     Engaz<span className="text-emerald-500">.</span>
-                    <span className="mr-1 text-[9px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300/80 px-1.5 py-0.5 rounded-md">
+                    <span className="mr-1 text-2xs font-black bg-emerald-100 text-emerald-800 border border-emerald-300/80 px-1.5 py-0.5 rounded-md">
                       PRO
                     </span>
                   </span>
@@ -270,7 +270,7 @@ export const Layout: React.FC = () => {
                     <p className="text-xs font-bold text-slate-800 truncate max-w-[150px]">
                       {user?.name || 'مستخدم النظام'}
                     </p>
-                    <span className="text-[10px] text-slate-500">{roleTitle}</span>
+                    <span className="text-2xs text-slate-500">{roleTitle}</span>
                   </div>
                   <button
                     onClick={handleLogout}
@@ -321,7 +321,7 @@ export const Layout: React.FC = () => {
               <Link to="/dashboard" className="flex items-center gap-1.5 lg:hidden">
                 <span className="font-black text-base tracking-tighter text-slate-900 font-sans flex items-center">
                   Engaz<span className="text-emerald-500">.</span>
-                  <span className="mr-1 text-[9px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300/80 px-1.5 py-0.5 rounded-md">
+                  <span className="mr-1 text-2xs font-black bg-emerald-100 text-emerald-800 border border-emerald-300/80 px-1.5 py-0.5 rounded-md">
                     PRO
                   </span>
                 </span>

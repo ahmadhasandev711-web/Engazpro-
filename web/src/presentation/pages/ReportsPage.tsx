@@ -376,10 +376,10 @@ export const ReportsPage: React.FC = () => {
                 الفترة: {getPresetLabel(preset)} ({fromDate || 'البداية'} إلى {toDate || 'اليوم'})
               </p>
             )}
-            <p className="text-[10px] text-slate-400 font-mono">
+            <p className="text-2xs text-slate-400 font-mono">
               تاريخ الطباعة: {new Date().toLocaleDateString('ar-EG')} - {new Date().toLocaleTimeString('ar-EG')}
             </p>
-            <p className="text-[10px] text-slate-400">
+            <p className="text-2xs text-slate-400">
               المستخدم: {user?.name}
             </p>
           </div>
@@ -452,15 +452,15 @@ export const ReportsPage: React.FC = () => {
             </h2>
             <div className="grid grid-cols-3 gap-2 text-center mb-3">
               <div className="border border-slate-300 p-2 bg-slate-50">
-                <span className="text-[10px] text-slate-500 block">إجمالي المبيعات:</span>
+                <span className="text-2xs text-slate-500 block">إجمالي المبيعات:</span>
                 <span className="font-mono font-black text-xs">{formatCurrency(salesData.total_sales || 0)}</span>
               </div>
               <div className="border border-slate-300 p-2 bg-slate-50">
-                <span className="text-[10px] text-slate-500 block">المبالغ المحصلة (مدفوعة):</span>
+                <span className="text-2xs text-slate-500 block">المبالغ المحصلة (مدفوعة):</span>
                 <span className="font-mono font-black text-xs text-emerald-700">{formatCurrency(salesData.sales_paid || 0)}</span>
               </div>
               <div className="border border-slate-300 p-2 bg-slate-50">
-                <span className="text-[10px] text-slate-500 block">المتبقي (آجل):</span>
+                <span className="text-2xs text-slate-500 block">المتبقي (آجل):</span>
                 <span className="font-mono font-black text-xs text-rose-700">{formatCurrency(salesData.sales_remaining || 0)}</span>
               </div>
             </div>
@@ -507,7 +507,7 @@ export const ReportsPage: React.FC = () => {
                 <h2 className="text-sm font-black text-slate-900">
                   كشف حركة الحصيلة والخزينة — {cashFlowPrintData?.treasuryName || getTreasuryLabel(selectedTreasury)}
                 </h2>
-                <div className="flex items-center gap-2 text-[10px] text-slate-600 font-medium mt-0.5">
+                <div className="flex items-center gap-2 text-2xs text-slate-600 font-medium mt-0.5">
                   <span>الفترة: {getPresetLabel(preset)} ({fromDate || 'البداية'} إلى {toDate || 'اليوم'})</span>
                   {cashFlowPrintData?.flowFilter && cashFlowPrintData.flowFilter !== 'ALL' && (
                     <span className="font-bold text-slate-800">
@@ -536,7 +536,7 @@ export const ReportsPage: React.FC = () => {
             {/* Summary statistics boxes */}
             <div className="grid grid-cols-3 gap-2 text-center mb-3">
               <div className="border border-slate-300 p-2 bg-slate-50">
-                <span className="text-[10px] text-slate-600 font-bold block">إجمالي المقبوضات (الوارد +):</span>
+                <span className="text-2xs text-slate-600 font-bold block">إجمالي المقبوضات (الوارد +):</span>
                 <span className="font-mono font-black text-xs text-emerald-800">
                   {formatCurrency(
                     cashFlowPrintData?.transactions && cashFlowPrintData.transactions.length > 0
@@ -548,7 +548,7 @@ export const ReportsPage: React.FC = () => {
                 </span>
               </div>
               <div className="border border-slate-300 p-2 bg-slate-50">
-                <span className="text-[10px] text-slate-600 font-bold block">إجمالي المدفوعات (الصادر -):</span>
+                <span className="text-2xs text-slate-600 font-bold block">إجمالي المدفوعات (الصادر -):</span>
                 <span className="font-mono font-black text-xs text-rose-800">
                   {formatCurrency(
                     cashFlowPrintData?.transactions && cashFlowPrintData.transactions.length > 0
@@ -560,7 +560,7 @@ export const ReportsPage: React.FC = () => {
                 </span>
               </div>
               <div className="border border-slate-300 p-2 bg-slate-100">
-                <span className="text-[10px] text-slate-700 font-bold block">صافي رصيد الحركة:</span>
+                <span className="text-2xs text-slate-700 font-bold block">صافي رصيد الحركة:</span>
                 <span className="font-mono font-black text-xs text-slate-900">
                   {formatCurrency(
                     cashFlowPrintData?.transactions && cashFlowPrintData.transactions.length > 0
@@ -576,7 +576,7 @@ export const ReportsPage: React.FC = () => {
 
             {/* Detailed Transactions Log Table */}
             {cashFlowPrintData?.transactions && cashFlowPrintData.transactions.length > 0 ? (
-              <table className="w-full text-right border-collapse border border-slate-300 text-[10px]">
+              <table className="w-full text-right border-collapse border border-slate-300 text-2xs">
                 <thead>
                   <tr className="bg-slate-100 font-bold border-b border-slate-300 text-slate-800">
                     <th className="p-1.5 border border-slate-300 text-center w-7">م</th>
@@ -646,15 +646,15 @@ export const ReportsPage: React.FC = () => {
             </h2>
             <div className="grid grid-cols-3 gap-2 text-center mb-3">
               <div className="border border-slate-300 p-2 bg-slate-50">
-                <span className="text-[10px] text-slate-500 block">إجمالي عدد القطع:</span>
+                <span className="text-2xs text-slate-500 block">إجمالي عدد القطع:</span>
                 <span className="font-mono font-black text-xs">{stockData.summary?.total_quantity || 0}</span>
               </div>
               <div className="border border-slate-300 p-2 bg-slate-50">
-                <span className="text-[10px] text-slate-500 block">تقييم المخزون بسعر الشراء (التكلفة):</span>
+                <span className="text-2xs text-slate-500 block">تقييم المخزون بسعر الشراء (التكلفة):</span>
                 <span className="font-mono font-black text-xs text-slate-800">{formatCurrency(stockData.summary?.total_cost_value || 0)}</span>
               </div>
               <div className="border border-slate-300 p-2 bg-slate-50">
-                <span className="text-[10px] text-slate-500 block">تقييم المخزون بسعر البيع (القطاعي):</span>
+                <span className="text-2xs text-slate-500 block">تقييم المخزون بسعر البيع (القطاعي):</span>
                 <span className="font-mono font-black text-xs text-emerald-800">{formatCurrency(stockData.summary?.total_retail_value || 0)}</span>
               </div>
             </div>

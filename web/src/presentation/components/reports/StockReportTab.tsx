@@ -114,12 +114,12 @@ export const StockReportTab: React.FC<StockReportTabProps> = ({
                   </td>
                   <td className="py-3 px-4 text-center">
                     {p.is_low_stock ? (
-                      <span className="inline-flex items-center gap-1 bg-rose-50 text-rose-700 border border-rose-200 px-2 py-0.5 rounded-full font-bold text-[10px]">
+                      <span className="inline-flex items-center gap-1 bg-rose-50 text-rose-700 border border-rose-200 px-2 py-0.5 rounded-full font-bold text-2xs">
                         <AlertTriangle className="w-3 h-3" />
                         نواقص
                       </span>
                     ) : (
-                      <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-bold text-[10px]">
+                      <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-bold text-2xs">
                         متوفر
                       </span>
                     )}

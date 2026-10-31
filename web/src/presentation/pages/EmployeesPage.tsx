@@ -407,7 +407,7 @@ export const EmployeesPage: React.FC = () => {
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
               <h2 className="text-sm font-black text-slate-900 truncate">فريق العمل</h2>
-              <span className="bg-slate-100 text-slate-700 text-[10px] font-black px-2 py-0.5 rounded-full shrink-0">
+              <span className="bg-slate-100 text-slate-700 text-2xs font-black px-2 py-0.5 rounded-full shrink-0">
                 {totalEmployees}
               </span>
             </div>
@@ -431,13 +431,13 @@ export const EmployeesPage: React.FC = () => {
       {/* Mobile 2-Column Performance Strip (md:hidden) */}
       <div className="md:hidden grid grid-cols-2 gap-2 bg-white p-2.5 rounded-2xl border border-slate-200 shadow-xs text-center">
         <div className="bg-primary-50/70 border border-primary-100/70 p-2.5 rounded-xl">
-          <span className="text-[10px] text-primary-700 font-bold block">مبيعات اليوم</span>
+          <span className="text-2xs text-primary-700 font-bold block">مبيعات اليوم</span>
           <span className="text-sm font-black text-primary-800 font-mono block mt-0.5" dir="ltr">
             {formatCurrency(totalTodaySales)}
           </span>
         </div>
         <div className="bg-teal-50/70 border border-teal-100/70 p-2.5 rounded-xl">
-          <span className="text-[10px] text-teal-700 font-bold block">تحصيلات اليوم</span>
+          <span className="text-2xs text-teal-700 font-bold block">تحصيلات اليوم</span>
           <span className="text-sm font-black text-teal-800 font-mono block mt-0.5" dir="ltr">
             {formatCurrency(totalTodayCollections)}
           </span>
@@ -672,7 +672,7 @@ export const EmployeesPage: React.FC = () => {
                             <div className="flex items-center gap-1.5 text-slate-800 font-bold text-xs">
                               <Building2 className="w-3.5 h-3.5 text-primary-600 flex-shrink-0" />
                               <span>{emp.branch.name}</span>
-                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 font-mono">
+                              <span className="text-2xs px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 font-mono">
                                 {emp.branch.code}
                               </span>
                             </div>
@@ -889,11 +889,11 @@ export const EmployeesPage: React.FC = () => {
                         <div>
                           <div className="flex items-center gap-2">
                             <span className="text-xs font-black text-slate-900">مدير نظام / شريك (ADMIN)</span>
-                            <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">
+                            <span className="text-2xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">
                               كامل الصلاحيات مثل المالك
                             </span>
                           </div>
-                          <p className="text-[10px] text-slate-500 mt-0.5">
+                          <p className="text-2xs text-slate-500 mt-0.5">
                             يرى الأرباح الصافية، أسعار التكلفة، الفروع، الموظفين، وإعدادات المتجر بالكامل.
                           </p>
                         </div>
@@ -918,7 +918,7 @@ export const EmployeesPage: React.FC = () => {
                           <span className="text-xs font-bold text-slate-900">مدير فرع / متجر</span>
                           <Briefcase className="w-4 h-4 text-purple-600" />
                         </div>
-                        <p className="text-[10px] text-slate-500 leading-tight">
+                        <p className="text-2xs text-slate-500 leading-tight">
                           إدارة الفرع ومخزونه ومشترياته وأسعار التكلفة (محجوب عنه فقط صافي الأرباح)
                         </p>
                       </button>
@@ -938,7 +938,7 @@ export const EmployeesPage: React.FC = () => {
                         <span className="text-xs font-bold text-slate-900">مشرف ورديات واستلام</span>
                         <Store className="w-4 h-4 text-blue-600" />
                       </div>
-                      <p className="text-[10px] text-slate-500 leading-tight">
+                      <p className="text-2xs text-slate-500 leading-tight">
                         استلام تحويلات البضاعة، ومراجعة وتصفية أدراج الكاشير
                       </p>
                     </button>
@@ -957,7 +957,7 @@ export const EmployeesPage: React.FC = () => {
                         <span className="text-xs font-bold text-slate-900">كاشير نقطة بيع POS</span>
                         <Receipt className="w-4 h-4 text-amber-600" />
                       </div>
-                      <p className="text-[10px] text-slate-500 leading-tight">
+                      <p className="text-2xs text-slate-500 leading-tight">
                         مبيعات المعرض، درج نقدية، خصم من مخزون الفرع
                       </p>
                     </button>
@@ -976,7 +976,7 @@ export const EmployeesPage: React.FC = () => {
                         <span className="text-xs font-bold text-slate-900">بائع صالة / سيلز</span>
                         <Store className="w-4 h-4 text-teal-600" />
                       </div>
-                      <p className="text-[10px] text-slate-500 leading-tight">
+                      <p className="text-2xs text-slate-500 leading-tight">
                         مساعدة العملاء بالمعرض، تسجيل الفواتير باسمه لاحتساب عمولته
                       </p>
                     </button>
@@ -995,7 +995,7 @@ export const EmployeesPage: React.FC = () => {
                         <span className="text-xs font-bold text-slate-900">مندوب مبيعات</span>
                         <ShieldCheck className="w-4 h-4 text-indigo-600" />
                       </div>
-                      <p className="text-[10px] text-slate-500 leading-tight">
+                      <p className="text-2xs text-slate-500 leading-tight">
                         تطبيق جوال، تحصيل ميداني، عهدة نقدية
                       </p>
                     </button>
@@ -1012,11 +1012,11 @@ export const EmployeesPage: React.FC = () => {
                       <span className="text-xs font-black text-slate-900">نظام الراتب والعمولات</span>
                     </div>
                     {formData.role === 'MANAGER' ? (
-                      <span className="text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-bold">
+                      <span className="text-2xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-bold">
                         عمولة من مبيعات الفرع (باستثناء ووكومرس)
                       </span>
                     ) : (
-                      <span className="text-[10px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full font-medium">
+                      <span className="text-2xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full font-medium">
                         عمولة على الفواتير المنسوبة له
                       </span>
                     )}
@@ -1037,7 +1037,7 @@ export const EmployeesPage: React.FC = () => {
                           onChange={(e) => setFormData({ ...formData, base_salary: e.target.value })}
                           className="w-full pl-8 pr-3 py-2 rounded-xl border border-slate-200 text-xs font-mono font-bold focus:outline-none focus:border-primary-500 bg-white"
                         />
-                        <span className="text-[10px] text-slate-400 absolute left-2.5 top-2.5">ج.م</span>
+                        <span className="text-2xs text-slate-400 absolute left-2.5 top-2.5">ج.م</span>
                       </div>
                     </div>
 
@@ -1073,7 +1073,7 @@ export const EmployeesPage: React.FC = () => {
                           onChange={(e) => setFormData({ ...formData, commission_rate: e.target.value })}
                           className="w-full pl-8 pr-3 py-2 rounded-xl border border-slate-200 text-xs font-mono font-bold focus:outline-none focus:border-primary-500 disabled:bg-slate-100 disabled:opacity-50 bg-white"
                         />
-                        <span className="text-[10px] text-slate-400 absolute left-2.5 top-2.5">
+                        <span className="text-2xs text-slate-400 absolute left-2.5 top-2.5">
                           {formData.commission_type === 'PERCENTAGE_OF_SALES' ? '%' : 'ج.م'}
                         </span>
                       </div>

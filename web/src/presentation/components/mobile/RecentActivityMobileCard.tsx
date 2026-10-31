@@ -85,7 +85,7 @@ export const RecentActivityMobileCard: React.FC<RecentActivityMobileCardProps> =
           <span className="text-slate-700 font-bold truncate">
             {activity.created_by_name || 'المالك'}
           </span>
-          <span className="text-slate-400 text-[10px]">({roleLabel})</span>
+          <span className="text-slate-400 text-2xs">({roleLabel})</span>
         </div>
 
         <div className="flex items-center gap-1 font-mono shrink-0">

@@ -156,10 +156,10 @@ export const StoreInquiryModal: React.FC<StoreInquiryModalProps> = ({ isOpen, on
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] font-black bg-[#B2E7D2] text-[#0E3A2E] px-2 py-0.5 rounded-full">
+                  <span className="text-2xs font-black bg-[#B2E7D2] text-[#0E3A2E] px-2 py-0.5 rounded-full">
                     استشارة مجانية
                   </span>
-                  <span className="text-[10px] font-bold text-slate-400">| تصميم وتطوير</span>
+                  <span className="text-2xs font-bold text-slate-400">| تصميم وتطوير</span>
                 </div>
                 <h3 className="text-lg sm:text-xl font-black text-[#232D3C] mt-0.5">
                   طلب تصميم وبرمجة متجر إلكتروني
@@ -284,7 +284,7 @@ export const StoreInquiryModal: React.FC<StoreInquiryModalProps> = ({ isOpen, on
                     </>
                   )}
                 </button>
-                <div className="flex items-center justify-center gap-4 text-[10px] text-slate-500 font-medium mt-2">
+                <div className="flex items-center justify-center gap-4 text-2xs text-slate-500 font-medium mt-2">
                   <span>🔒 بياناتك محمية تماماً</span>
                   <span>⚡ تواصل فوري خلال ساعات العمل</span>
                 </div>

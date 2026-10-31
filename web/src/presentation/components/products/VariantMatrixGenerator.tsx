@@ -312,7 +312,7 @@ export const VariantMatrixGenerator: React.FC<VariantMatrixGeneratorProps> = ({
             <Palette className="w-4 h-4 text-indigo-600" />
             <h5 className="text-xs font-black text-slate-800">1. اختيار الألوان</h5>
             {selectedColors.length > 0 && (
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800">
+              <span className="text-2xs font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800">
                 {selectedColors.length} محدد
               </span>
             )}
@@ -389,7 +389,7 @@ export const VariantMatrixGenerator: React.FC<VariantMatrixGeneratorProps> = ({
             <Ruler className="w-4 h-4 text-emerald-600" />
             <h5 className="text-xs font-black text-slate-800">2. اختيار المقاسات</h5>
             {selectedSizes.length > 0 && (
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+              <span className="text-2xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
                 {selectedSizes.length} محدد
               </span>
             )}
@@ -509,7 +509,7 @@ export const VariantMatrixGenerator: React.FC<VariantMatrixGeneratorProps> = ({
 
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-2 text-xs">
             <div>
-              <label className="text-[10px] text-slate-500 block mb-0.5">سعر البيع</label>
+              <label className="text-2xs text-slate-500 block mb-0.5">سعر البيع</label>
               <input
                 type="number"
                 min="0"
@@ -523,7 +523,7 @@ export const VariantMatrixGenerator: React.FC<VariantMatrixGeneratorProps> = ({
 
             {canViewPurchasePrice && (
               <div>
-                <label className="text-[10px] text-slate-500 block mb-0.5">سعر التكلفة</label>
+                <label className="text-2xs text-slate-500 block mb-0.5">سعر التكلفة</label>
                 <input
                   type="number"
                   min="0"
@@ -538,7 +538,7 @@ export const VariantMatrixGenerator: React.FC<VariantMatrixGeneratorProps> = ({
 
             {!isEditing && (
               <div>
-                <label className="text-[10px] text-slate-500 block mb-0.5">الرصيد الافتتاحي</label>
+                <label className="text-2xs text-slate-500 block mb-0.5">الرصيد الافتتاحي</label>
                 <input
                   type="number"
                   min="0"
@@ -551,7 +551,7 @@ export const VariantMatrixGenerator: React.FC<VariantMatrixGeneratorProps> = ({
             )}
 
             <div>
-              <label className="text-[10px] text-slate-500 block mb-0.5">الحد الأدنى</label>
+              <label className="text-2xs text-slate-500 block mb-0.5">الحد الأدنى</label>
               <input
                 type="number"
                 min="0"
@@ -583,7 +583,7 @@ export const VariantMatrixGenerator: React.FC<VariantMatrixGeneratorProps> = ({
             <h5 className="text-xs font-black text-slate-800">
               قائمة المتغيرات ({variants.length})
             </h5>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-bold font-mono">
+            <span className="text-2xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-bold font-mono">
               إجمالي المخزون: {totalQuantity} قطعة
             </span>
           </div>

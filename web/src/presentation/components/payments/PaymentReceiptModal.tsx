@@ -131,7 +131,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
               <h3 className="text-sm font-black">
                 {isReceipt ? 'إيصال سند قبض' : 'إيصال سند صرف'}
               </h3>
-              <span className="text-[10px] text-slate-400 font-mono">سند رقم #{payment.id}</span>
+              <span className="text-2xs text-slate-400 font-mono">سند رقم #{payment.id}</span>
             </div>
           </div>
           <button
@@ -154,17 +154,17 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
             <div className="text-center pb-2.5 border-b border-dashed border-slate-300 space-y-0.5">
               <h2 className="text-sm font-black tracking-tight text-slate-900">{storeName}</h2>
               <div
-                className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                className={`inline-block px-2.5 py-0.5 rounded-full text-2xs font-bold ${
                   isReceipt ? 'bg-emerald-100 text-emerald-900' : 'bg-rose-100 text-rose-900'
                 }`}
               >
                 {isReceipt ? 'إيصال استلام نقدية (سند قبض)' : 'إيصال صرف نقدية (سند صرف)'}
               </div>
               {storePhone && (
-                <p className="text-[10px] text-slate-500 font-mono">هاتف: {storePhone}</p>
+                <p className="text-2xs text-slate-500 font-mono">هاتف: {storePhone}</p>
               )}
               {storeAddress && (
-                <p className="text-[9px] text-slate-400 font-sans">{storeAddress}</p>
+                <p className="text-2xs text-slate-400 font-sans">{storeAddress}</p>
               )}
             </div>
 
@@ -216,7 +216,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
 
             {/* Amount Banner */}
             <div className="my-3 p-3 bg-slate-50 rounded-xl border border-slate-200/80 text-center">
-              <span className="text-[10px] text-slate-500 font-sans block mb-0.5">
+              <span className="text-2xs text-slate-500 font-sans block mb-0.5">
                 {isReceipt ? 'المبلغ المستلم نقداً / إلكترونياً' : 'المبلغ المصروف نقداً / إلكترونياً'}
               </span>
               <div
@@ -232,7 +232,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
             {payment.notes && (
               <div className="py-2 border-b border-dashed border-slate-300 text-[11px]">
                 <span className="text-slate-500 font-sans block mb-0.5">البيان / ملاحظات:</span>
-                <p className="font-sans text-slate-800 bg-slate-50 p-2 rounded-lg leading-relaxed text-[10px]">
+                <p className="font-sans text-slate-800 bg-slate-50 p-2 rounded-lg leading-relaxed text-2xs">
                   {payment.notes}
                 </p>
               </div>
@@ -249,7 +249,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
             )}
 
             {/* Signatures */}
-            <div className="pt-4 pb-2 grid grid-cols-2 gap-3 text-center text-[10px] text-slate-600 font-sans">
+            <div className="pt-4 pb-2 grid grid-cols-2 gap-3 text-center text-2xs text-slate-600 font-sans">
               <div className="border-t border-dashed border-slate-300 pt-2">
                 <span>توقيع المسلّم</span>
                 <div className="h-6" />
@@ -262,7 +262,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
 
             {/* Footer */}
             <div className="text-center pt-2 border-t border-dashed border-slate-300 space-y-1">
-              <p className="text-[10px] font-sans text-slate-600 font-bold">شكراً لتعاملكم معنا!</p>
+              <p className="text-2xs font-sans text-slate-600 font-bold">شكراً لتعاملكم معنا!</p>
               <p className="text-[8px] text-slate-400 font-sans">
                 يعتبر هذا الإيصال إثبات سداد رسمي من نظام {storeName}
               </p>

@@ -51,7 +51,7 @@ export const ProductFormModal: React.FC<{ vm: ProductsViewModel }> = ({ vm }) =>
                     >
                       <Tag className="w-4 h-4 mx-auto mb-1 text-primary-600" />
                       <span className="text-xs font-black block">صنف قياسي</span>
-                      <span className="text-[10px] text-slate-400 block">سوبر ماركت / عام</span>
+                      <span className="text-2xs text-slate-400 block">سوبر ماركت / عام</span>
                     </button>
 
                     <button
@@ -65,7 +65,7 @@ export const ProductFormModal: React.FC<{ vm: ProductsViewModel }> = ({ vm }) =>
                     >
                       <Layers className="w-4 h-4 mx-auto mb-1 text-indigo-600" />
                       <span className="text-xs font-black block">متغيرات ومقاسات</span>
-                      <span className="text-[10px] text-slate-400 block">ملابس وأحذية</span>
+                      <span className="text-2xs text-slate-400 block">ملابس وأحذية</span>
                     </button>
 
                     <button
@@ -79,7 +79,7 @@ export const ProductFormModal: React.FC<{ vm: ProductsViewModel }> = ({ vm }) =>
                     >
                       <Calendar className="w-4 h-4 mx-auto mb-1 text-emerald-600" />
                       <span className="text-xs font-black block">تاريخ صلاحية</span>
-                      <span className="text-[10px] text-slate-400 block">أغذية / صيدلية</span>
+                      <span className="text-2xs text-slate-400 block">أغذية / صيدلية</span>
                     </button>
                   </div>
                 </div>

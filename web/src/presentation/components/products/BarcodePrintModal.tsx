@@ -329,7 +329,7 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
                     >
                       <div className="font-bold text-xs">{cfg.name}</div>
                       <div
-                        className={`text-[10px] mt-1 line-clamp-2 ${
+                        className={`text-2xs mt-1 line-clamp-2 ${
                           isSelected ? 'text-indigo-100' : 'text-slate-400'
                         }`}
                       >
@@ -513,7 +513,7 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
                   <Eye className="w-4 h-4 text-indigo-600" />
                   <span>معاينة الملصق المباشرة (Live Preview)</span>
                 </div>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white text-slate-600 border border-slate-200 font-bold">
+                <span className="text-2xs font-mono px-2 py-0.5 rounded-full bg-white text-slate-600 border border-slate-200 font-bold">
                   {currentConfig.widthMm} × {currentConfig.heightMm} مم
                 </span>
               </div>
@@ -539,7 +539,7 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
                       >
                         {/* Store / Brand */}
                         {showStoreName && storeName && (
-                          <div className="text-[10px] font-black uppercase tracking-wider text-slate-900 truncate w-full border-b border-slate-100 pb-0.5 mb-1">
+                          <div className="text-2xs font-black uppercase tracking-wider text-slate-900 truncate w-full border-b border-slate-100 pb-0.5 mb-1">
                             {storeName}
                           </div>
                         )}
@@ -553,7 +553,7 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
 
                         {/* Size & Color Badge */}
                         {showSizeColor && (sample.size || sample.color) && (
-                          <div className="inline-flex items-center gap-1 my-0.5 text-[10px] font-black px-2 py-0.5 rounded-md bg-slate-100 border border-slate-300">
+                          <div className="inline-flex items-center gap-1 my-0.5 text-2xs font-black px-2 py-0.5 rounded-md bg-slate-100 border border-slate-300">
                             {sample.color && <span>{sample.color}</span>}
                             {sample.color && sample.size && <span>•</span>}
                             {sample.size && <span>مقاس: {sample.size}</span>}

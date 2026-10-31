@@ -69,7 +69,7 @@ export const WcOrdersList: React.FC<{ vm: WcOrdersViewModel }> = ({ vm }) => {
                       <span>🛒</span>
                     </button>
                     {(order.order_date || order.created_at) && (
-                      <span className="text-[10px] text-slate-500 font-bold flex items-center gap-1 bg-slate-50 border border-slate-200/60 px-2 py-0.5 rounded-lg font-sans">
+                      <span className="text-2xs text-slate-500 font-bold flex items-center gap-1 bg-slate-50 border border-slate-200/60 px-2 py-0.5 rounded-lg font-sans">
                         <Calendar className="w-3 h-3 text-slate-400" />
                         {formatOrderDate(order)}
                       </span>
@@ -142,7 +142,7 @@ export const WcOrdersList: React.FC<{ vm: WcOrdersViewModel }> = ({ vm }) => {
                         )}
                       </div>
                       {address && (
-                        <p className="text-[10px] text-slate-500 mt-1.5 flex items-center gap-1 truncate font-sans">
+                        <p className="text-2xs text-slate-500 mt-1.5 flex items-center gap-1 truncate font-sans">
                           <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
                           <span className="truncate">{address}</span>
                         </p>
@@ -155,13 +155,13 @@ export const WcOrdersList: React.FC<{ vm: WcOrdersViewModel }> = ({ vm }) => {
               {/* Items List */}
               <div className="space-y-1.5 flex-1">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">
+                  <span className="text-2xs font-black text-slate-400 uppercase tracking-wider block">
                     الأصناف المطلوبة ({order.items_snapshot?.length || 0}):
                   </span>
                   <button
                     type="button"
                     onClick={() => setViewingOrder(order)}
-                    className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-0.5 cursor-pointer"
+                    className="text-2xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-0.5 cursor-pointer"
                   >
                     <Eye className="w-3 h-3" />
                     <span>التفاصيل والصور</span>
@@ -189,7 +189,7 @@ export const WcOrdersList: React.FC<{ vm: WcOrdersViewModel }> = ({ vm }) => {
                         {item.attributes && Array.isArray(item.attributes) && item.attributes.length > 0 && (
                           <div className="flex items-center gap-1 flex-wrap mt-0.5">
                             {item.attributes.map((attr: any, aIdx: number) => (
-                              <span key={aIdx} className="text-[9px] bg-white border border-slate-200 px-1.5 py-0.2 rounded text-slate-600 font-bold">
+                              <span key={aIdx} className="text-2xs bg-white border border-slate-200 px-1.5 py-0.2 rounded text-slate-600 font-bold">
                                 {attr.key}: {attr.value}
                               </span>
                             ))}
@@ -295,11 +295,11 @@ export const WcOrdersList: React.FC<{ vm: WcOrdersViewModel }> = ({ vm }) => {
                       {(() => {
                         const isLocal = /قاهرة|جيزة|cairo|giza/i.test(order.governorate || order.city || '');
                         return isLocal ? (
-                          <span className="text-[10px] bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded-md border border-emerald-200">
+                          <span className="text-2xs bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded-md border border-emerald-200">
                             💡 مقترح: مندوب المتجر
                           </span>
                         ) : (
-                          <span className="text-[10px] bg-purple-50 text-purple-700 font-bold px-2 py-0.5 rounded-md border border-purple-200">
+                          <span className="text-2xs bg-purple-50 text-purple-700 font-bold px-2 py-0.5 rounded-md border border-purple-200">
                             💡 مقترح: شركة شحن
                           </span>
                         );

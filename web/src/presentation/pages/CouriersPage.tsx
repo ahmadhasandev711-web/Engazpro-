@@ -312,7 +312,7 @@ export const CouriersPage: React.FC = () => {
             </div>
           </div>
           <div className="text-xl font-black text-slate-900 mt-2">{summary.total_couriers}</div>
-          <span className="text-[10px] text-slate-400 font-medium">شركة مسجلة بالدفاتر</span>
+          <span className="text-2xs text-slate-400 font-medium">شركة مسجلة بالدفاتر</span>
         </div>
 
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
@@ -323,7 +323,7 @@ export const CouriersPage: React.FC = () => {
             </div>
           </div>
           <div className="text-xl font-black text-amber-700 mt-2">{summary.global_active_shipments}</div>
-          <span className="text-[10px] text-slate-400 font-medium">في عهدة شركات الشحن حالياً</span>
+          <span className="text-2xs text-slate-400 font-medium">في عهدة شركات الشحن حالياً</span>
         </div>
 
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
@@ -334,7 +334,7 @@ export const CouriersPage: React.FC = () => {
             </div>
           </div>
           <div className="text-xl font-black text-blue-700 mt-2 font-mono">{formatCurrency(summary.global_pending_cod)}</div>
-          <span className="text-[10px] text-slate-400 font-medium">مستحقات معلقة جاري تحصيلها</span>
+          <span className="text-2xs text-slate-400 font-medium">مستحقات معلقة جاري تحصيلها</span>
         </div>
 
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
@@ -345,7 +345,7 @@ export const CouriersPage: React.FC = () => {
             </div>
           </div>
           <div className="text-xl font-black text-emerald-700 mt-2 font-mono">{formatCurrency(summary.global_net_balance)}</div>
-          <span className="text-[10px] text-slate-400 font-medium">رصيد شركات الشحن المالي</span>
+          <span className="text-2xs text-slate-400 font-medium">رصيد شركات الشحن المالي</span>
         </div>
       </div>
 
@@ -404,7 +404,7 @@ export const CouriersPage: React.FC = () => {
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-slate-900 text-xs">{c.name}</span>
-                        <span className="px-1.5 py-0.5 bg-purple-50 text-purple-700 text-[10px] font-bold rounded border border-purple-200">
+                        <span className="px-1.5 py-0.5 bg-purple-50 text-purple-700 text-2xs font-bold rounded border border-purple-200">
                           شركة شحن
                         </span>
                       </div>
@@ -421,7 +421,7 @@ export const CouriersPage: React.FC = () => {
                         <span className="text-slate-400 text-[11px]">بدون هاتف</span>
                       )}
                       {c.address && (
-                        <div className="flex items-center gap-1 text-slate-400 text-[10px] mt-0.5">
+                        <div className="flex items-center gap-1 text-slate-400 text-2xs mt-0.5">
                           <MapPin className="w-3 h-3" />
                           <span>{c.address}</span>
                         </div>
@@ -588,31 +588,31 @@ export const CouriersPage: React.FC = () => {
             {/* Metrics Bar */}
             <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 p-3 bg-slate-50 border-b border-slate-200 text-center">
               <div className="p-2 bg-white rounded-xl border border-slate-200">
-                <span className="text-[10px] text-slate-500 font-bold block">إجمالي الشحنات</span>
+                <span className="text-2xs text-slate-500 font-bold block">إجمالي الشحنات</span>
                 <span className="text-sm font-black text-slate-900">{manifestMetrics.total_shipments}</span>
               </div>
               <div className="p-2 bg-white rounded-xl border border-slate-200">
-                <span className="text-[10px] text-amber-600 font-bold block">قيد التوصيل (عهدة)</span>
+                <span className="text-2xs text-amber-600 font-bold block">قيد التوصيل (عهدة)</span>
                 <span className="text-sm font-black text-amber-700">{manifestMetrics.in_transit_count}</span>
               </div>
               <div className="p-2 bg-white rounded-xl border border-slate-200">
-                <span className="text-[10px] text-emerald-600 font-bold block">تم التسليم</span>
+                <span className="text-2xs text-emerald-600 font-bold block">تم التسليم</span>
                 <span className="text-sm font-black text-emerald-700">{manifestMetrics.delivered_count}</span>
               </div>
               <div className="p-2 bg-white rounded-xl border border-slate-200">
-                <span className="text-[10px] text-purple-600 font-bold block">مطلوب COD</span>
+                <span className="text-2xs text-purple-600 font-bold block">مطلوب COD</span>
                 <span className="text-sm font-black text-purple-700 font-mono">
                   {formatCurrency(manifestMetrics.total_cod_amount)}
                 </span>
               </div>
               <div className="p-2 bg-white rounded-xl border border-slate-200">
-                <span className="text-[10px] text-indigo-600 font-bold block">أتعاب الشحن</span>
+                <span className="text-2xs text-indigo-600 font-bold block">أتعاب الشحن</span>
                 <span className="text-sm font-black text-indigo-700 font-mono">
                   {formatCurrency(manifestMetrics.total_shipping_fees)}
                 </span>
               </div>
               <div className="p-2 bg-white rounded-xl border border-slate-200">
-                <span className="text-[10px] text-teal-600 font-bold block">تحصيل معلق</span>
+                <span className="text-2xs text-teal-600 font-bold block">تحصيل معلق</span>
                 <span className="text-sm font-black text-teal-700 font-mono">
                   {formatCurrency(manifestMetrics.pending_cod_amount)}
                 </span>
@@ -744,11 +744,11 @@ export const CouriersPage: React.FC = () => {
 
                         <td className="py-2.5 px-3">
                           <span className="font-bold font-mono text-purple-700 block">{s.reference}</span>
-                          <span className="inline-block px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-100 text-slate-600">
+                          <span className="inline-block px-1.5 py-0.5 rounded text-2xs font-bold bg-slate-100 text-slate-600">
                             {s.source === 'WOOCOMMERCE' ? 'ووكومرس' : 'فاتورة مباشرة'}
                           </span>
                           {s.shipped_at && (
-                            <span className="block text-[9px] text-slate-400 font-mono mt-0.5">{s.shipped_at}</span>
+                            <span className="block text-2xs text-slate-400 font-mono mt-0.5">{s.shipped_at}</span>
                           )}
                         </td>
 
@@ -758,7 +758,7 @@ export const CouriersPage: React.FC = () => {
                             <span className="text-[11px] font-mono text-slate-500 block" dir="ltr">{s.customer_phone}</span>
                           )}
                           {s.customer_address && (
-                            <span className="text-[10px] text-slate-400 block truncate max-w-xs">
+                            <span className="text-2xs text-slate-400 block truncate max-w-xs">
                               {s.city ? `${s.city} - ` : ''}
                               {s.customer_address}
                             </span>
@@ -771,13 +771,13 @@ export const CouriersPage: React.FC = () => {
                               {s.tracking_number}
                             </span>
                           ) : (
-                            <span className="text-slate-400 text-[10px]">بدون بوليصة</span>
+                            <span className="text-slate-400 text-2xs">بدون بوليصة</span>
                           )}
                         </td>
 
                         <td className="py-2.5 px-3 text-center">
                           {s.is_paid_online ? (
-                            <span className="inline-block px-2 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded text-[10px] font-black">
+                            <span className="inline-block px-2 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded text-2xs font-black">
                               مدفوع مسبقاً (تحصيل: 0 ج.م)
                             </span>
                           ) : (
@@ -785,7 +785,7 @@ export const CouriersPage: React.FC = () => {
                               <span className="font-mono font-black text-slate-900 text-sm block">
                                 {formatCurrency(s.cod_amount ?? s.total)}
                               </span>
-                              <span className="text-[9px] text-amber-700 font-bold bg-amber-50 px-1 rounded">
+                              <span className="text-2xs text-amber-700 font-bold bg-amber-50 px-1 rounded">
                                 دفع عند الاستلام (COD)
                               </span>
                             </div>
@@ -802,7 +802,7 @@ export const CouriersPage: React.FC = () => {
 
                         <td className="py-2.5 px-3 text-center">
                           <span
-                            className={`inline-block px-2 py-0.5 rounded text-[10px] font-black border ${
+                            className={`inline-block px-2 py-0.5 rounded text-2xs font-black border ${
                               s.status === 'DELIVERED'
                                 ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                                 : s.status === 'RETURNED'
@@ -812,7 +812,7 @@ export const CouriersPage: React.FC = () => {
                           >
                             {s.status_label}
                           </span>
-                          <span className="block text-[10px] text-slate-400 mt-0.5 font-medium">
+                          <span className="block text-2xs text-slate-400 mt-0.5 font-medium">
                             {s.payment_status_label}
                           </span>
                         </td>
@@ -891,7 +891,7 @@ export const CouriersPage: React.FC = () => {
                     هاتف المندوب/الشركة: {manifestCourier.phone}
                   </p>
                 )}
-                <p className="text-[10px] text-slate-500 font-mono">
+                <p className="text-2xs text-slate-500 font-mono">
                   تاريخ الطباعة: {new Date().toLocaleDateString('ar-EG')} - {new Date().toLocaleTimeString('ar-EG')}
                 </p>
               </div>
@@ -900,29 +900,29 @@ export const CouriersPage: React.FC = () => {
             {/* Manifest Summary Bar in Print */}
             <div className="grid grid-cols-5 gap-2 p-2.5 bg-slate-50 border border-slate-300 rounded mb-4 text-center">
               <div>
-                <span className="text-[10px] text-slate-500 block font-bold">إجمالي الطرود</span>
+                <span className="text-2xs text-slate-500 block font-bold">إجمالي الطرود</span>
                 <span className="text-sm font-black text-slate-900">{manifestMetrics.total_shipments}</span>
               </div>
               <div>
-                <span className="text-[10px] text-slate-500 block font-bold">قيد التوصيل بالعهدة</span>
+                <span className="text-2xs text-slate-500 block font-bold">قيد التوصيل بالعهدة</span>
                 <span className="text-sm font-black text-amber-700">{manifestMetrics.in_transit_count}</span>
               </div>
               <div>
-                <span className="text-[10px] text-slate-500 block font-bold">تم التسليم</span>
+                <span className="text-2xs text-slate-500 block font-bold">تم التسليم</span>
                 <span className="text-sm font-black text-emerald-700">{manifestMetrics.delivered_count}</span>
               </div>
               <div>
-                <span className="text-[10px] text-slate-500 block font-bold">مطلوب تحصيله (COD)</span>
+                <span className="text-2xs text-slate-500 block font-bold">مطلوب تحصيله (COD)</span>
                 <span className="text-sm font-black text-purple-800 font-mono">{formatCurrency(manifestMetrics.total_cod_amount)}</span>
               </div>
               <div>
-                <span className="text-[10px] text-slate-500 block font-bold">إجمالي أتعاب الشحن</span>
+                <span className="text-2xs text-slate-500 block font-bold">إجمالي أتعاب الشحن</span>
                 <span className="text-sm font-black text-slate-800 font-mono">{formatCurrency(manifestMetrics.total_shipping_fees)}</span>
               </div>
             </div>
 
             {/* A4 Manifest Print Table */}
-            <table className="w-full text-right border-collapse border border-slate-300 text-[10px]">
+            <table className="w-full text-right border-collapse border border-slate-300 text-2xs">
               <thead>
                 <tr className="bg-slate-100 text-slate-800 font-black border-b border-slate-300">
                   <th className="p-1.5 border border-slate-300 text-center w-8">م</th>
@@ -943,11 +943,11 @@ export const CouriersPage: React.FC = () => {
                     <td className="p-1.5 border border-slate-300 text-center font-bold font-mono">{idx + 1}</td>
                     <td className="p-1.5 border border-slate-300">
                       <span className="font-bold font-mono block">{s.reference}</span>
-                      <span className="text-[9px] text-slate-500">{s.source === 'WOOCOMMERCE' ? 'ووكومرس' : 'مباشر'}</span>
+                      <span className="text-2xs text-slate-500">{s.source === 'WOOCOMMERCE' ? 'ووكومرس' : 'مباشر'}</span>
                     </td>
                     <td className="p-1.5 border border-slate-300">
                       <span className="font-bold block">{s.customer_name}</span>
-                      <span className="font-mono text-[9px] text-slate-600" dir="ltr">{s.customer_phone || '—'}</span>
+                      <span className="font-mono text-2xs text-slate-600" dir="ltr">{s.customer_phone || '—'}</span>
                     </td>
                     <td className="p-1.5 border border-slate-300">
                       {[s.city, s.customer_address].filter(Boolean).join(' - ') || '—'}
@@ -967,7 +967,7 @@ export const CouriersPage: React.FC = () => {
                     <td className="p-1.5 border border-slate-300 text-center font-bold">
                       {s.status_label || s.status}
                     </td>
-                    <td className="p-1.5 border border-slate-300 text-center text-[9px] text-slate-400">
+                    <td className="p-1.5 border border-slate-300 text-center text-2xs text-slate-400">
                       {/* توقيع أو ملاحظة استلام */}
                     </td>
                   </tr>

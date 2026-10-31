@@ -425,7 +425,7 @@ export const ExcelPage: React.FC = () => {
                                     <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-100 px-2 py-0.5 rounded text-[11px] font-bold">
                                       <AlertTriangle className="w-3.5 h-3.5" /> صنف مكرر
                                     </span>
-                                    <p className="text-[10px] text-amber-800">
+                                    <p className="text-2xs text-amber-800">
                                       {row.duplicate_info?.reason || row.errors[0]}
                                     </p>
                                   </div>
@@ -435,7 +435,7 @@ export const ExcelPage: React.FC = () => {
                                     <span className="inline-flex items-center gap-1 text-rose-700 bg-rose-100 px-2 py-0.5 rounded text-[11px] font-bold">
                                       <XCircle className="w-3.5 h-3.5" /> خطأ
                                     </span>
-                                    <p className="text-[10px] text-rose-700 font-medium">
+                                    <p className="text-2xs text-rose-700 font-medium">
                                       {row.errors.join(' | ')}
                                     </p>
                                   </div>

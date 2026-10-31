@@ -116,7 +116,7 @@ export const CashierDashboard: React.FC<CashierDashboardProps> = ({
           <div className="text-lg sm:text-2xl font-black text-amber-800 tracking-tight font-mono">
             {isLoading ? '...' : formatCurrency(kpis?.today_cash_flow ?? 0)}
           </div>
-          <div className="text-[10px] sm:text-[11px] font-medium text-amber-700 mt-1 truncate">
+          <div className="text-2xs sm:text-[11px] font-medium text-amber-700 mt-1 truncate">
             الكاش الفعلي بالدرج
           </div>
         </div>
@@ -132,7 +132,7 @@ export const CashierDashboard: React.FC<CashierDashboardProps> = ({
           <div className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight font-mono">
             {isLoading ? '...' : formatCurrency(kpis?.today_sales ?? 0)}
           </div>
-          <div className="text-[10px] sm:text-[11px] text-slate-400 mt-1 truncate">
+          <div className="text-2xs sm:text-[11px] text-slate-400 mt-1 truncate">
             مبيعات الكاشير الصافية
           </div>
         </div>
@@ -148,7 +148,7 @@ export const CashierDashboard: React.FC<CashierDashboardProps> = ({
           <div className="text-lg sm:text-2xl font-black text-purple-600 tracking-tight font-mono">
             {isLoading ? '...' : formatCurrency(cashFlow?.inflow.electronic_sales ?? 0)}
           </div>
-          <div className="text-[10px] sm:text-[11px] text-slate-400 mt-1 truncate">
+          <div className="text-2xs sm:text-[11px] text-slate-400 mt-1 truncate">
             خارج الدرج النقدي
           </div>
         </div>
@@ -164,7 +164,7 @@ export const CashierDashboard: React.FC<CashierDashboardProps> = ({
           <div className="text-lg sm:text-2xl font-black text-rose-600 tracking-tight font-mono">
             {isLoading ? '...' : formatCurrency(kpis?.today_expenses ?? 0)}
           </div>
-          <div className="text-[10px] sm:text-[11px] text-slate-400 mt-1 truncate">
+          <div className="text-2xs sm:text-[11px] text-slate-400 mt-1 truncate">
             صُرفت من الدرج
           </div>
         </div>

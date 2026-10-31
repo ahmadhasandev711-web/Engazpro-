@@ -19,7 +19,7 @@ export const ProductsMobileHero: React.FC<{ vm: ProductsViewModel }> = ({ vm }) 
               <h2 className="text-sm font-black text-slate-900 truncate">
                 {isMandob ? 'الأصناف والأسعار' : 'الأصناف والمخزون'}
               </h2>
-              <span className="bg-slate-100 text-slate-700 text-[10px] font-black px-2 py-0.5 rounded-full shrink-0">
+              <span className="bg-slate-100 text-slate-700 text-2xs font-black px-2 py-0.5 rounded-full shrink-0">
                 {totalProducts}
               </span>
             </div>

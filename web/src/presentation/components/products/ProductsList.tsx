@@ -56,12 +56,12 @@ export const ProductsList: React.FC<{ vm: ProductsViewModel }> = ({ vm }) => {
                           <div className="flex items-center gap-2">
                             <span className="font-bold text-slate-900">{p.name}</span>
                             {p.has_variants && (
-                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-bold border border-indigo-200">
+                              <span className="text-2xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-bold border border-indigo-200">
                                 {p.variants?.length ? `${p.variants.length} مقاس/لون` : 'متغيرات'}
                               </span>
                             )}
                             {p.has_expiry && (
-                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
+                              <span className="text-2xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
                                 صلاحية
                               </span>
                             )}
@@ -74,13 +74,13 @@ export const ProductsList: React.FC<{ vm: ProductsViewModel }> = ({ vm }) => {
                               {p.variants.slice(0, 4).map((v: any, vi: number) => (
                                 <span
                                   key={vi}
-                                  className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 border border-slate-200/60"
+                                  className="text-2xs font-mono px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 border border-slate-200/60"
                                 >
                                   {v.size || v.color || v.name}
                                 </span>
                               ))}
                               {p.variants.length > 4 && (
-                                <span className="text-[10px] text-indigo-600 font-bold">
+                                <span className="text-2xs text-indigo-600 font-bold">
                                   +{p.variants.length - 4}
                                 </span>
                               )}
@@ -120,7 +120,7 @@ export const ProductsList: React.FC<{ vm: ProductsViewModel }> = ({ vm }) => {
                             )}
                           </div>
                           {Boolean(p.regular_price && Number(p.regular_price) > Number(p.sale_price)) && (
-                            <span className="inline-block text-[10px] text-rose-600 font-bold bg-rose-50 border border-rose-100 rounded px-1.5 py-0.5 mt-0.5">
+                            <span className="inline-block text-2xs text-rose-600 font-bold bg-rose-50 border border-rose-100 rounded px-1.5 py-0.5 mt-0.5">
                               خصم {Math.round(((Number(p.regular_price) - Number(p.sale_price)) / Number(p.regular_price)) * 100)}%
                             </span>
                           )}
@@ -144,7 +144,7 @@ export const ProductsList: React.FC<{ vm: ProductsViewModel }> = ({ vm }) => {
                               {formatNumber(p.quantity)} {p.unit || 'قطعة'}
                             </span>
                             {p.is_low_stock && (
-                              <span className="text-[10px] font-bold text-amber-600 flex items-center gap-0.5">
+                              <span className="text-2xs font-bold text-amber-600 flex items-center gap-0.5">
                                 <AlertTriangle className="w-3 h-3" />
                                 نواقص
                               </span>

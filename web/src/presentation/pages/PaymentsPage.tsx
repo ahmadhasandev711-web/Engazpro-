@@ -222,14 +222,14 @@ export const PaymentsPage: React.FC = () => {
           </div>
           <div className="flex items-center gap-3 mt-0.5">
             <div>
-              <span className="text-[10px] text-emerald-200 block">المقبوض</span>
+              <span className="text-2xs text-emerald-200 block">المقبوض</span>
               <span className="text-lg font-black tracking-tight">
                 {formatCurrency(totalReceiptsAmount)}
               </span>
             </div>
             {isOwner && (
               <div className="border-r border-white/20 pr-3">
-                <span className="text-[10px] text-rose-200 block">المنصرف</span>
+                <span className="text-2xs text-rose-200 block">المنصرف</span>
                 <span className="text-base font-bold text-rose-100">
                   {formatCurrency(totalPaymentsAmount)}
                 </span>
@@ -433,7 +433,7 @@ export const PaymentsPage: React.FC = () => {
                             {p.created_by_name ? (
                               <div className="flex flex-col">
                                 <span className="font-bold text-slate-800">{p.created_by_name}</span>
-                                <span className="text-[10px] text-slate-500 font-medium">
+                                <span className="text-2xs text-slate-500 font-medium">
                                   {p.created_by_role === 'MANDOB' ? 'مندوب مبيعات' :
                                    p.created_by_role === 'CASHIER' ? 'كاشير' :
                                    p.created_by_role === 'MANAGER' ? 'مدير الفرع' :

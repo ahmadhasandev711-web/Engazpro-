@@ -257,7 +257,7 @@ export const BranchesPage: React.FC = () => {
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
               <h2 className="text-sm font-black text-slate-900 truncate">الفروع والمخازن</h2>
-              <span className="bg-slate-100 text-slate-700 text-[10px] font-black px-2 py-0.5 rounded-full shrink-0">
+              <span className="bg-slate-100 text-slate-700 text-2xs font-black px-2 py-0.5 rounded-full shrink-0">
                 {totalBranches}
               </span>
             </div>

@@ -289,7 +289,7 @@ export const LicenseGeneratorTab: React.FC<LicenseGeneratorTabProps> = ({
 
                     <td className="px-6 py-4 text-xs text-slate-600 max-w-xs truncate">
                       <div>{license.notes || 'لا توجد ملاحظات'}</div>
-                      <div className="text-[10px] text-slate-400 font-mono mt-0.5">{license.batch_reference}</div>
+                      <div className="text-2xs text-slate-400 font-mono mt-0.5">{license.batch_reference}</div>
                     </td>
 
                     <td className="px-6 py-4 text-xs text-slate-500 font-medium">
@@ -305,7 +305,7 @@ export const LicenseGeneratorTab: React.FC<LicenseGeneratorTabProps> = ({
                           <div className="text-slate-500 font-mono">
                             {(license.used_by_user || license.used_by)!.phone}
                           </div>
-                          <div className="text-[10px] text-emerald-600 font-medium mt-0.5">
+                          <div className="text-2xs text-emerald-600 font-medium mt-0.5">
                             {formatDate(license.used_at || '')}
                           </div>
                         </div>

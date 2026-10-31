@@ -104,7 +104,7 @@ export const StoreDesignSection: React.FC<StoreDesignSectionProps> = ({
                   {/* Store Mini Header */}
                   <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                     <div className="flex items-center gap-1.5">
-                      <div className="w-6 h-6 rounded-lg bg-[#2A7A62] text-white flex items-center justify-center font-black text-[10px]">
+                      <div className="w-6 h-6 rounded-lg bg-[#2A7A62] text-white flex items-center justify-center font-black text-2xs">
                         E
                       </div>
                       <span className="font-black text-xs text-slate-800">براند ستور</span>
@@ -121,7 +121,7 @@ export const StoreDesignSection: React.FC<StoreDesignSectionProps> = ({
                   <div className="bg-slate-50 rounded-2xl p-2.5 border border-slate-100 space-y-2">
                     <div className="h-28 rounded-xl bg-gradient-to-tr from-emerald-100 via-teal-50 to-cyan-100 flex items-center justify-center relative overflow-hidden">
                       <span className="text-3xl">👟</span>
-                      <span className="absolute top-2 right-2 text-[9px] font-black bg-rose-500 text-white px-2 py-0.5 rounded-full">
+                      <span className="absolute top-2 right-2 text-2xs font-black bg-rose-500 text-white px-2 py-0.5 rounded-full">
                         خصم 20%
                       </span>
                     </div>
@@ -129,18 +129,18 @@ export const StoreDesignSection: React.FC<StoreDesignSectionProps> = ({
                     <div className="flex items-start justify-between">
                       <div>
                         <div className="font-black text-xs text-slate-900">سنيكرز كاجوال مريح</div>
-                        <div className="text-[10px] text-slate-400 font-medium">كود: SNK-809 | مقاس 42</div>
+                        <div className="text-2xs text-slate-400 font-medium">كود: SNK-809 | مقاس 42</div>
                       </div>
                       <div className="text-left">
                         <div className="text-xs font-black text-[#2A7A62] font-mono">680 ج.م</div>
-                        <div className="text-[9px] text-slate-400 line-through font-mono">850 ج.م</div>
+                        <div className="text-2xs text-slate-400 line-through font-mono">850 ج.م</div>
                       </div>
                     </div>
                   </div>
 
                   {/* Customer Quick Checkout Box */}
                   <div className="bg-emerald-50/70 border border-emerald-200/80 rounded-2xl p-2.5 space-y-1.5">
-                    <div className="flex items-center justify-between text-[10px] font-bold text-emerald-900">
+                    <div className="flex items-center justify-between text-2xs font-bold text-emerald-900">
                       <span>إتمام الشراء السريع:</span>
                       <span className="text-emerald-700 font-mono">0109988****</span>
                     </div>
@@ -168,7 +168,7 @@ export const StoreDesignSection: React.FC<StoreDesignSectionProps> = ({
                   </div>
 
                   {/* Toast notification */}
-                  <div className="flex items-center gap-1.5 p-1.5 rounded-xl bg-slate-900 text-white text-[9px] font-bold">
+                  <div className="flex items-center gap-1.5 p-1.5 rounded-xl bg-slate-900 text-white text-2xs font-bold">
                     <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />
                     <span>تم تأكيد طلبك #8942 بنجاح وجاري التجهيز!</span>
                   </div>
@@ -190,12 +190,12 @@ export const StoreDesignSection: React.FC<StoreDesignSectionProps> = ({
 
               <div className="space-y-1">
                 <span className="text-xs font-black text-[#232D3C] block">ربط فوري 100%</span>
-                <span className="text-[10px] text-slate-500 leading-tight block">
+                <span className="text-2xs text-slate-500 leading-tight block">
                   بدون كتابة يدوية أو انتظار، الطلب يظهر في الكاشير في أقل من ثانية
                 </span>
               </div>
 
-              <div className="hidden lg:flex flex-col gap-1 text-[10px] font-mono text-emerald-800 font-bold bg-[#B2E7D2]/60 px-3 py-1 rounded-full">
+              <div className="hidden lg:flex flex-col gap-1 text-2xs font-mono text-emerald-800 font-bold bg-[#B2E7D2]/60 px-3 py-1 rounded-full">
                 <span>Webhook API ⚡</span>
               </div>
             </div>
@@ -217,7 +217,7 @@ export const StoreDesignSection: React.FC<StoreDesignSectionProps> = ({
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
                     <span className="text-xs font-black text-slate-900">نقطة بيع الفرع الرئيسي</span>
                   </div>
-                  <span className="text-[10px] font-bold bg-blue-50 text-blue-700 px-2 py-0.5 rounded-md border border-blue-200">
+                  <span className="text-2xs font-bold bg-blue-50 text-blue-700 px-2 py-0.5 rounded-md border border-blue-200">
                     أوردر متجر وارد 🔔
                   </span>
                 </div>
@@ -228,11 +228,11 @@ export const StoreDesignSection: React.FC<StoreDesignSectionProps> = ({
                     <div>
                       <div className="text-xs font-black text-slate-900 flex items-center gap-1.5">
                         <span>أوردر أونلاين: #OR-8942</span>
-                        <span className="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded">
+                        <span className="text-2xs bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded">
                           مدفوع إلكترونياً
                         </span>
                       </div>
-                      <div className="text-[10px] text-slate-500 font-medium mt-0.5">
+                      <div className="text-2xs text-slate-500 font-medium mt-0.5">
                         العميل: كريم السعيد (0109988****) - المعادي
                       </div>
                     </div>
@@ -249,14 +249,14 @@ export const StoreDesignSection: React.FC<StoreDesignSectionProps> = ({
 
                 {/* Simulated Auto-Printed Thermal Slip */}
                 <div
-                  className="bg-amber-50/60 border border-dashed border-amber-300 rounded-2xl p-3 space-y-1.5 text-[10px] font-mono"
+                  className="bg-amber-50/60 border border-dashed border-amber-300 rounded-2xl p-3 space-y-1.5 text-2xs font-mono"
                 >
                   <div className="flex items-center justify-between font-bold text-amber-900">
                     <span className="flex items-center gap-1">
                       <Printer className="w-3.5 h-3.5 text-amber-700" />
                       <span>إيصال التجهيز والشحن الحراري:</span>
                     </span>
-                    <span className="text-[9px] text-amber-700">طابعة 80mm</span>
+                    <span className="text-2xs text-amber-700">طابعة 80mm</span>
                   </div>
                   <div className="text-slate-700 border-t border-amber-200 pt-1 leading-relaxed">
                     <div>بوليصة الشحن: <b className="text-slate-900">SHP-2026-8942</b></div>

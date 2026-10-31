@@ -190,7 +190,7 @@ export const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
         <div className="sm:hidden w-full bg-slate-50 border border-slate-200/80 p-2.5 rounded-xl text-xs shadow-sm animate-in fade-in slide-in-from-top-1 duration-150 flex flex-col gap-2">
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-[10px] font-bold text-slate-500 mb-1 block">من تاريخ:</label>
+              <label className="text-2xs font-bold text-slate-500 mb-1 block">من تاريخ:</label>
               <input
                 type="date"
                 value={internalFrom}
@@ -199,7 +199,7 @@ export const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
               />
             </div>
             <div>
-              <label className="text-[10px] font-bold text-slate-500 mb-1 block">إلى تاريخ:</label>
+              <label className="text-2xs font-bold text-slate-500 mb-1 block">إلى تاريخ:</label>
               <input
                 type="date"
                 value={internalTo}

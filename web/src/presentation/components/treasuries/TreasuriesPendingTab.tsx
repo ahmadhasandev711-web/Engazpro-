@@ -55,7 +55,7 @@ export const TreasuriesPendingTab: React.FC<{ vm: TreasuriesViewModel }> = ({ vm
                           <span className="text-xs font-bold text-slate-800">
                             {shift.user?.name || shift.created_by_name || 'موظف'}
                           </span>
-                          <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-indigo-50 text-indigo-700">
+                          <span className="text-2xs px-2 py-0.5 rounded-full font-bold bg-indigo-50 text-indigo-700">
                             {(shift.user?.role || shift.created_by_role) === 'MANDOB' ? 'مندوب' : 'كاشير'}
                           </span>
                         </div>

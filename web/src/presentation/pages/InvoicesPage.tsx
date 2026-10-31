@@ -403,7 +403,7 @@ export const InvoicesPage: React.FC = () => {
                               <span className="font-bold text-slate-800">
                                 {inv.salesperson_name || inv.created_by_name}
                               </span>
-                              <span className="text-[10px] text-slate-500 font-medium">
+                              <span className="text-2xs text-slate-500 font-medium">
                                 {inv.salesperson_role ? (
                                   inv.salesperson_role === 'SALES' ? 'بائع / سيلز' :
                                   inv.salesperson_role === 'MANDOB' ? 'مندوب مبيعات' :
@@ -418,7 +418,7 @@ export const InvoicesPage: React.FC = () => {
                                 )}
                               </span>
                               {inv.salesperson_name && inv.created_by_name && inv.salesperson_name !== inv.created_by_name && (
-                                <span className="text-[9px] text-slate-400">
+                                <span className="text-2xs text-slate-400">
                                   منشئ: {inv.created_by_name}
                                 </span>
                               )}
@@ -604,7 +604,7 @@ export const InvoicesPage: React.FC = () => {
                       <p className="font-bold text-slate-800">
                         {invoiceDetails.created_by_name || 'المالك'}
                         {invoiceDetails.created_by_role && (
-                          <span className="block text-[10px] text-slate-500 font-normal">
+                          <span className="block text-2xs text-slate-500 font-normal">
                             {invoiceDetails.created_by_role === 'MANDOB' ? 'مندوب مبيعات' :
                              invoiceDetails.created_by_role === 'CASHIER' ? 'كاشير' :
                              invoiceDetails.created_by_role === 'MANAGER' ? 'مدير الفرع' :
@@ -632,14 +632,14 @@ export const InvoicesPage: React.FC = () => {
                                 {invoiceDetails.salesperson_name || invoiceDetails.created_by_name || 'المالك / المنشئ'}
                               </span>
                               {invoiceDetails.salesperson_role ? (
-                                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-100 text-indigo-800">
+                                <span className="px-2 py-0.5 rounded-md text-2xs font-bold bg-indigo-100 text-indigo-800">
                                   {invoiceDetails.salesperson_role === 'SALES' ? 'بائع / سيلز' :
                                    invoiceDetails.salesperson_role === 'MANDOB' ? 'مندوب مبيعات' :
                                    invoiceDetails.salesperson_role === 'CASHIER' ? 'كاشير' :
                                    invoiceDetails.salesperson_role === 'MANAGER' ? 'مدير' : invoiceDetails.salesperson_role}
                                 </span>
                               ) : invoiceDetails.created_by_role && (
-                                <span className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-slate-200 text-slate-700">
+                                <span className="px-2 py-0.5 rounded-md text-2xs font-medium bg-slate-200 text-slate-700">
                                   {invoiceDetails.created_by_role === 'MANDOB' ? 'مندوب' :
                                    invoiceDetails.created_by_role === 'CASHIER' ? 'كاشير' :
                                    invoiceDetails.created_by_role === 'SALES' ? 'بائع / سيلز' :
@@ -647,7 +647,7 @@ export const InvoicesPage: React.FC = () => {
                                 </span>
                               )}
                               {!invoiceDetails.salesperson_id && invoiceDetails.created_by_name && (
-                                <span className="text-[10px] text-slate-400 font-normal">
+                                <span className="text-2xs text-slate-400 font-normal">
                                   (تلقائياً حسب منشئ الفاتورة)
                                 </span>
                               )}

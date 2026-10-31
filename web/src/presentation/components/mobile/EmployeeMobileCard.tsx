@@ -177,19 +177,19 @@ export const EmployeeMobileCard: React.FC<EmployeeMobileCardProps> = ({
       {/* Today's Performance Pill Strip */}
       <div className="grid grid-cols-3 gap-1.5 p-2 bg-slate-50 rounded-xl border border-slate-100 text-center text-xs">
         <div>
-          <span className="text-[10px] text-slate-400 block font-medium">مبيعات اليوم</span>
+          <span className="text-2xs text-slate-400 block font-medium">مبيعات اليوم</span>
           <span className="font-mono font-bold text-slate-900 block mt-0.5 text-xs truncate">
             {formatCurrency(employee.today_stats?.sales || 0)}
           </span>
         </div>
         <div>
-          <span className="text-[10px] text-slate-400 block font-medium">تحصيلات اليوم</span>
+          <span className="text-2xs text-slate-400 block font-medium">تحصيلات اليوم</span>
           <span className="font-mono font-bold text-teal-700 block mt-0.5 text-xs truncate">
             {formatCurrency(employee.today_stats?.collections || 0)}
           </span>
         </div>
         <div>
-          <span className="text-[10px] text-slate-400 block font-medium">الفواتير</span>
+          <span className="text-2xs text-slate-400 block font-medium">الفواتير</span>
           <span className="font-mono font-bold text-slate-700 block mt-0.5 text-xs">
             {employee.today_stats?.invoices_count || 0}
           </span>

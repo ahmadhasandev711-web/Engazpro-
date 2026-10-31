@@ -79,7 +79,7 @@ export const PartyMobileCard: React.FC<PartyMobileCardProps> = ({
           >
             {formatCurrency(party.balance)}
           </span>
-          <span className="block text-[10px] text-slate-400 font-medium text-center mt-0.5">
+          <span className="block text-2xs text-slate-400 font-medium text-center mt-0.5">
             {balanceLabel}
           </span>
         </div>

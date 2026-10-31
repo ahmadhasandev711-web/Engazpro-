@@ -60,7 +60,7 @@ export const CourierMobileCard: React.FC<CourierMobileCardProps> = ({
             <h4 className="font-black text-slate-900 text-sm leading-tight break-words">
               {courier.name}
             </h4>
-            <span className="px-2 py-0.5 bg-purple-50 text-purple-700 text-[10px] font-bold rounded-full border border-purple-200 shrink-0">
+            <span className="px-2 py-0.5 bg-purple-50 text-purple-700 text-2xs font-bold rounded-full border border-purple-200 shrink-0">
               شركة شحن
             </span>
           </div>
@@ -109,7 +109,7 @@ export const CourierMobileCard: React.FC<CourierMobileCardProps> = ({
               : 'bg-white border border-slate-100'
           }`}
         >
-          <span className="text-[10px] text-slate-400 font-bold block">الطرود بالعهدة</span>
+          <span className="text-2xs text-slate-400 font-bold block">الطرود بالعهدة</span>
           <span
             className={`text-xs font-black font-mono block mt-0.5 ${
               activeShipments > 0 ? 'text-amber-700' : 'text-slate-500'
@@ -121,7 +121,7 @@ export const CourierMobileCard: React.FC<CourierMobileCardProps> = ({
 
         {/* Pending COD */}
         <div className="p-1.5 bg-white rounded-lg border border-slate-100">
-          <span className="text-[10px] text-slate-400 font-bold block">قيد التحصيل</span>
+          <span className="text-2xs text-slate-400 font-bold block">قيد التحصيل</span>
           <span className="text-xs font-black font-mono text-blue-700 block mt-0.5">
             {formatCurrency(courier.pending_cod_amount || 0)}
           </span>
@@ -129,7 +129,7 @@ export const CourierMobileCard: React.FC<CourierMobileCardProps> = ({
 
         {/* Book Balance */}
         <div className="p-1.5 bg-white rounded-lg border border-slate-100">
-          <span className="text-[10px] text-slate-400 font-bold block">رصيد الدفاتر</span>
+          <span className="text-2xs text-slate-400 font-bold block">رصيد الدفاتر</span>
           <span
             className={`text-xs font-black font-mono block mt-0.5 ${
               balance > 0

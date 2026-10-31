@@ -275,7 +275,7 @@ export const PosCartTicket: React.FC<PosCartTicketProps> = ({
                 type="button"
                 onClick={() => setDiscountMode((m) => (m === 'AMOUNT' ? 'PERCENT' : 'AMOUNT'))}
                 title={discountMode === 'AMOUNT' ? 'التبديل إلى خصم بالنسبة المئوية' : 'التبديل إلى خصم بمبلغ ثابت'}
-                className="w-8 shrink-0 text-[10px] font-black rounded-lg border border-slate-200 bg-white text-rose-600 hover:bg-rose-50 active:scale-95 transition-all py-1"
+                className="w-8 shrink-0 text-2xs font-black rounded-lg border border-slate-200 bg-white text-rose-600 hover:bg-rose-50 active:scale-95 transition-all py-1"
               >
                 {discountMode === 'AMOUNT' ? 'ج.م' : '%'}
               </button>
@@ -316,7 +316,7 @@ export const PosCartTicket: React.FC<PosCartTicketProps> = ({
                     placeholder="0.00"
                     className="w-full text-left font-mono font-bold text-xs px-2 py-1 bg-white border border-slate-200 rounded-lg text-indigo-600 focus:outline-none focus:ring-1 focus:ring-primary-500"
                   />
-                  <span className="text-[10px] text-slate-400 font-bold">ج.م</span>
+                  <span className="text-2xs text-slate-400 font-bold">ج.م</span>
                 </div>
               )}
             </div>
@@ -350,7 +350,7 @@ export const PosCartTicket: React.FC<PosCartTicketProps> = ({
             </span>
           </div>
 
-          <div className="text-left text-[10px] text-slate-400 font-mono">
+          <div className="text-left text-2xs text-slate-400 font-mono">
             <span>شامل الضريبة</span>
           </div>
         </div>

@@ -165,12 +165,12 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
           <div className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight font-mono">
             {isLoading ? '...' : formatCurrency(kpis?.today_sales ?? 0)}
           </div>
-          <div className="text-[10px] sm:text-[11px] text-slate-400 mt-1 flex items-center justify-between gap-1 truncate">
+          <div className="text-2xs sm:text-[11px] text-slate-400 mt-1 flex items-center justify-between gap-1 truncate">
             <span>الشهر:</span>
             <span className="font-bold text-slate-600 font-mono">{formatCurrency(kpis?.month_sales ?? 0)}</span>
           </div>
           {(Number(kpis?.today_courier_pending_sales) > 0 || Number(kpis?.today_electronic_sales) > 0) && (
-            <div className="mt-2 pt-2 border-t border-slate-100 space-y-0.5 text-[9px] sm:text-[10px]">
+            <div className="mt-2 pt-2 border-t border-slate-100 space-y-0.5 text-2xs sm:text-2xs">
               {Number(kpis?.today_cash_sales) > 0 && (
                 <div className="flex justify-between text-slate-500">
                   <span>كاش بالخزينة:</span>
@@ -205,7 +205,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
             <div className="text-lg sm:text-2xl font-black text-emerald-600 tracking-tight font-mono">
               {isLoading ? '...' : formatCurrency(kpis?.today_profit ?? 0)}
             </div>
-            <div className="text-[10px] sm:text-[11px] text-slate-400 mt-1 truncate">
+            <div className="text-2xs sm:text-[11px] text-slate-400 mt-1 truncate">
               بعد التكلفة والمصروفات
             </div>
           </div>
@@ -222,7 +222,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
           <div className="text-lg sm:text-2xl font-black text-amber-800 tracking-tight font-mono">
             {isLoading ? '...' : formatCurrency(kpis?.today_cash_flow ?? 0)}
           </div>
-          <div className="text-[10px] sm:text-[11px] font-medium text-amber-700 mt-1 truncate">
+          <div className="text-2xs sm:text-[11px] font-medium text-amber-700 mt-1 truncate">
             المبلغ الفعلي بالخزينة
           </div>
         </div>
@@ -238,7 +238,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
           <div className="text-lg sm:text-2xl font-black text-rose-600 tracking-tight font-mono">
             {isLoading ? '...' : formatCurrency(kpis?.today_expenses ?? 0)}
           </div>
-          <div className="text-[10px] sm:text-[11px] text-slate-400 mt-1 truncate">
+          <div className="text-2xs sm:text-[11px] text-slate-400 mt-1 truncate">
             إجمالي المنصرف
           </div>
         </div>
@@ -461,7 +461,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                           {act.created_by_name ? (
                             <div className="flex flex-col">
                               <span className="font-bold text-slate-800">{act.created_by_name}</span>
-                              <span className="text-[10px] text-slate-500">
+                              <span className="text-2xs text-slate-500">
                                 {act.created_by_role === 'MANDOB' ? 'مندوب مبيعات' :
                                  act.created_by_role === 'CASHIER' ? 'كاشير' :
                                  act.created_by_role === 'MANAGER' ? 'مدير' :

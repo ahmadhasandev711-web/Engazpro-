@@ -722,7 +722,7 @@ export const ExpensesPage: React.FC = () => {
                           <div className="flex items-center gap-2">
                             <span className="font-bold text-slate-800">{cat.name}</span>
                             {cat.is_default && (
-                              <span className="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-md font-medium">
+                              <span className="text-2xs bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-md font-medium">
                                 أساسي
                               </span>
                             )}

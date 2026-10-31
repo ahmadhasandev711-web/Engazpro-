@@ -22,7 +22,7 @@ export const TreasuriesDetailTab: React.FC<{ vm: TreasuriesViewModel }> = ({ vm 
                   <div>
                     <div className="flex items-center gap-2">
                       <h3 className="text-base font-black text-white">الخزينة المركزية العامة (الإدارة)</h3>
-                      <span className="text-[10px] px-2.5 py-0.5 rounded-full font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                      <span className="text-2xs px-2.5 py-0.5 rounded-full font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                         Master Treasury
                       </span>
                     </div>
@@ -47,7 +47,7 @@ export const TreasuriesDetailTab: React.FC<{ vm: TreasuriesViewModel }> = ({ vm 
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-black text-white">{t.name}</span>
-                      <span className="text-[10px] px-2.5 py-0.5 rounded-full font-bold bg-emerald-950 text-emerald-300 border border-emerald-800">
+                      <span className="text-2xs px-2.5 py-0.5 rounded-full font-bold bg-emerald-950 text-emerald-300 border border-emerald-800">
                         خزينة مركزية
                       </span>
                     </div>
@@ -58,7 +58,7 @@ export const TreasuriesDetailTab: React.FC<{ vm: TreasuriesViewModel }> = ({ vm 
 
                     <div className="text-[11px] text-slate-400 pt-2 border-t border-slate-700/60 flex items-center justify-between">
                       <span>الإدارة المركزية العامة</span>
-                      <span className="font-mono text-[10px] text-slate-500">#{t.id}</span>
+                      <span className="font-mono text-2xs text-slate-500">#{t.id}</span>
                     </div>
                   </div>
                 ))}
@@ -96,7 +96,7 @@ export const TreasuriesDetailTab: React.FC<{ vm: TreasuriesViewModel }> = ({ vm 
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-black text-slate-900">{t.name}</span>
-                      <span className="text-[10px] px-2.5 py-0.5 rounded-full font-bold bg-primary-50 text-primary-700 border border-primary-100">
+                      <span className="text-2xs px-2.5 py-0.5 rounded-full font-bold bg-primary-50 text-primary-700 border border-primary-100">
                         خزينة فرع
                       </span>
                     </div>
@@ -107,7 +107,7 @@ export const TreasuriesDetailTab: React.FC<{ vm: TreasuriesViewModel }> = ({ vm 
 
                     <div className="text-[11px] text-slate-500 pt-2 border-t border-slate-200/60 flex items-center justify-between">
                       <span>{t.branch_name ? `فرع: ${t.branch_name}` : 'فرع تجاري'}</span>
-                      <span className="font-mono text-[10px] text-slate-400">#{t.id}</span>
+                      <span className="font-mono text-2xs text-slate-400">#{t.id}</span>
                     </div>
                   </div>
                 ))}
@@ -163,7 +163,7 @@ export const TreasuriesDetailTab: React.FC<{ vm: TreasuriesViewModel }> = ({ vm 
                             <span className="text-xs font-black text-slate-900">{t.name}</span>
                           </div>
                           <span
-                            className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold ${
+                            className={`text-2xs px-2.5 py-0.5 rounded-full font-bold ${
                               isBank ? 'bg-sky-100 text-sky-800' : 'bg-indigo-100 text-indigo-800'
                             }`}
                           >
@@ -177,7 +177,7 @@ export const TreasuriesDetailTab: React.FC<{ vm: TreasuriesViewModel }> = ({ vm 
 
                         <div className="text-[11px] text-slate-500 pt-2 border-t border-slate-200/60 flex items-center justify-between">
                           <span className="truncate max-w-[160px]">{t.notes || (isBank ? 'تحويلات وفيزا' : 'فودافون كاش / إنستاباي')}</span>
-                          <span className="font-mono text-[10px] text-slate-400">#{t.id}</span>
+                          <span className="font-mono text-2xs text-slate-400">#{t.id}</span>
                         </div>
                       </div>
                     );
@@ -213,7 +213,7 @@ export const TreasuriesDetailTab: React.FC<{ vm: TreasuriesViewModel }> = ({ vm 
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-black text-slate-900">{t.name}</span>
-                      <span className="text-[10px] px-2.5 py-0.5 rounded-full font-bold bg-purple-100 text-purple-800">
+                      <span className="text-2xs px-2.5 py-0.5 rounded-full font-bold bg-purple-100 text-purple-800">
                         جاري المالك
                       </span>
                     </div>
@@ -224,7 +224,7 @@ export const TreasuriesDetailTab: React.FC<{ vm: TreasuriesViewModel }> = ({ vm 
 
                     <div className="text-[11px] text-slate-500 pt-2 border-t border-slate-200/60 flex items-center justify-between">
                       <span>{t.notes || 'مسحوبات أرباح وشخصية'}</span>
-                      <span className="font-mono text-[10px] text-slate-400">#{t.id}</span>
+                      <span className="font-mono text-2xs text-slate-400">#{t.id}</span>
                     </div>
                   </div>
                 ))}
@@ -258,7 +258,7 @@ export const TreasuriesDetailTab: React.FC<{ vm: TreasuriesViewModel }> = ({ vm 
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-black text-slate-800">{t.name}</span>
                         <span
-                          className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                          className={`text-2xs px-2 py-0.5 rounded-full font-bold ${
                             isDrawer ? 'bg-amber-100 text-amber-800' : 'bg-indigo-100 text-indigo-800'
                           }`}
                         >
@@ -272,7 +272,7 @@ export const TreasuriesDetailTab: React.FC<{ vm: TreasuriesViewModel }> = ({ vm 
 
                       <div className="text-[11px] text-slate-500 pt-2 border-t border-slate-200/60 flex items-center justify-between">
                         <span>المسؤول: {t.employee?.name || t.assigned_user_name || 'الكاشير'}</span>
-                        <span className="font-mono text-[10px] text-slate-400">#{t.id}</span>
+                        <span className="font-mono text-2xs text-slate-400">#{t.id}</span>
                       </div>
                     </div>
                   );

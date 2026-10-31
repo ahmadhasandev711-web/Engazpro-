@@ -74,7 +74,7 @@ export const WcOrderDetailsModal: React.FC<{ vm: WcOrdersViewModel }> = ({ vm })
                   <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3.5 space-y-2.5">
                     <div className="flex items-center justify-between flex-wrap gap-2">
                       <div>
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">بيانات العميل:</span>
+                        <span className="text-2xs font-black text-slate-400 uppercase tracking-wider block">بيانات العميل:</span>
                         <h3 className="text-sm font-black text-slate-900 mt-0.5">{viewingOrder.customer_name}</h3>
                       </div>
 
@@ -176,7 +176,7 @@ export const WcOrderDetailsModal: React.FC<{ vm: WcOrdersViewModel }> = ({ vm })
                               {item.attributes.map((attr: any, aIdx: number) => (
                                 <span
                                   key={aIdx}
-                                  className="inline-flex items-center text-[10px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md border border-slate-200"
+                                  className="inline-flex items-center text-2xs font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md border border-slate-200"
                                 >
                                   <span className="text-slate-400 ml-1">{attr.key}:</span>
                                   <span>{attr.value}</span>
@@ -216,7 +216,7 @@ export const WcOrderDetailsModal: React.FC<{ vm: WcOrdersViewModel }> = ({ vm })
                     <span className="flex items-center gap-1">
                       <span>خصم الكوبون:</span>
                       {viewingOrder.wc_coupon_codes && viewingOrder.wc_coupon_codes.length > 0 && (
-                        <span className="bg-emerald-100 text-emerald-800 text-[10px] px-1.5 py-0.2 rounded font-mono font-bold">
+                        <span className="bg-emerald-100 text-emerald-800 text-2xs px-1.5 py-0.2 rounded font-mono font-bold">
                           {viewingOrder.wc_coupon_codes.join(', ')}
                         </span>
                       )}

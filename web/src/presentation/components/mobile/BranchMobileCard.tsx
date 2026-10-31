@@ -64,7 +64,7 @@ export const BranchMobileCard: React.FC<BranchMobileCardProps> = ({
               {branch.name}
             </h3>
             {branch.is_main && (
-              <span className="px-2 py-0.5 rounded-lg text-[10px] font-black bg-amber-50 text-amber-800 border border-amber-200">
+              <span className="px-2 py-0.5 rounded-lg text-2xs font-black bg-amber-50 text-amber-800 border border-amber-200">
                 الفرع الرئيسي
               </span>
             )}

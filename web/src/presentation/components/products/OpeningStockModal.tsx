@@ -450,7 +450,7 @@ export const OpeningStockModal: React.FC<OpeningStockModalProps> = ({
                         <td className="p-2.5 sm:p-3">
                           <div className="font-bold text-slate-900 flex items-center gap-1.5">
                             {item.isVariant ? (
-                              <span className="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 text-[10px] font-black px-1.5 py-0.5 rounded-md">
+                              <span className="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 text-2xs font-black px-1.5 py-0.5 rounded-md">
                                 <Layers className="w-3 h-3" />
                                 {item.variantName}
                               </span>

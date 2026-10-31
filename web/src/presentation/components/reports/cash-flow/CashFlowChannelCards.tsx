@@ -35,13 +35,13 @@ export const CashFlowChannelCards: React.FC<CashFlowChannelCardsProps> = ({
             متحصلات الكاش
           </span>
           {selectedTreasury === 'CASH' && (
-            <span className="text-[9px] font-bold bg-amber-600 text-white px-1.5 py-0.5 rounded-full">نشطة</span>
+            <span className="text-2xs font-bold bg-amber-600 text-white px-1.5 py-0.5 rounded-full">نشطة</span>
           )}
         </div>
         <p className="text-lg font-black text-slate-900 font-mono">
           {formatCurrency(treasuries?.cash?.net_balance ?? data?.net_cash_flow ?? 0)}
         </p>
-        <p className="text-[10px] text-slate-400 mt-1">صافي المقبوض نقداً في الفترة</p>
+        <p className="text-2xs text-slate-400 mt-1">صافي المقبوض نقداً في الفترة</p>
       </button>
 
       {/* Card */}
@@ -60,13 +60,13 @@ export const CashFlowChannelCards: React.FC<CashFlowChannelCardsProps> = ({
             متحصلات البطاقة (POS)
           </span>
           {selectedTreasury === 'CARD' && (
-            <span className="text-[9px] font-bold bg-purple-600 text-white px-1.5 py-0.5 rounded-full">نشطة</span>
+            <span className="text-2xs font-bold bg-purple-600 text-white px-1.5 py-0.5 rounded-full">نشطة</span>
           )}
         </div>
         <p className="text-lg font-black text-slate-900 font-mono">
           {formatCurrency(treasuries?.card?.net_balance ?? 0)}
         </p>
-        <p className="text-[10px] text-slate-400 mt-1">مدفوعات نقاط البيع والفيزا</p>
+        <p className="text-2xs text-slate-400 mt-1">مدفوعات نقاط البيع والفيزا</p>
       </button>
 
       {/* InstaPay */}
@@ -85,13 +85,13 @@ export const CashFlowChannelCards: React.FC<CashFlowChannelCardsProps> = ({
             متحصلات إنستاباي
           </span>
           {selectedTreasury === 'INSTAPAY' && (
-            <span className="text-[9px] font-bold bg-indigo-600 text-white px-1.5 py-0.5 rounded-full">نشطة</span>
+            <span className="text-2xs font-bold bg-indigo-600 text-white px-1.5 py-0.5 rounded-full">نشطة</span>
           )}
         </div>
         <p className="text-lg font-black text-slate-900 font-mono">
           {formatCurrency(treasuries?.instapay?.net_balance ?? 0)}
         </p>
-        <p className="text-[10px] text-slate-400 mt-1">تحويلات InstaPay الفورية</p>
+        <p className="text-2xs text-slate-400 mt-1">تحويلات InstaPay الفورية</p>
       </button>
 
       {/* Vodafone Cash */}
@@ -110,13 +110,13 @@ export const CashFlowChannelCards: React.FC<CashFlowChannelCardsProps> = ({
             فودافون والمحافظ
           </span>
           {selectedTreasury === 'VODAFONE_CASH' && (
-            <span className="text-[9px] font-bold bg-rose-600 text-white px-1.5 py-0.5 rounded-full">نشطة</span>
+            <span className="text-2xs font-bold bg-rose-600 text-white px-1.5 py-0.5 rounded-full">نشطة</span>
           )}
         </div>
         <p className="text-lg font-black text-slate-900 font-mono">
           {formatCurrency(treasuries?.vodafone_cash?.net_balance ?? 0)}
         </p>
-        <p className="text-[10px] text-slate-400 mt-1">محافظ الموبايل الذكية</p>
+        <p className="text-2xs text-slate-400 mt-1">محافظ الموبايل الذكية</p>
       </button>
 
       {/* Bank Transfers */}
@@ -135,13 +135,13 @@ export const CashFlowChannelCards: React.FC<CashFlowChannelCardsProps> = ({
             التحويلات البنكية
           </span>
           {selectedTreasury === 'TRANSFER' && (
-            <span className="text-[9px] font-bold bg-sky-600 text-white px-1.5 py-0.5 rounded-full">نشطة</span>
+            <span className="text-2xs font-bold bg-sky-600 text-white px-1.5 py-0.5 rounded-full">نشطة</span>
           )}
         </div>
         <p className="text-lg font-black text-slate-900 font-mono">
           {formatCurrency(treasuries?.transfer?.net_balance ?? 0)}
         </p>
-        <p className="text-[10px] text-slate-400 mt-1">حسابات بنكية وتحويلات مباشرة</p>
+        <p className="text-2xs text-slate-400 mt-1">حسابات بنكية وتحويلات مباشرة</p>
       </button>
     </div>
   );

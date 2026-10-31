@@ -387,7 +387,7 @@ export const InvoiceFormPage: React.FC = () => {
                   >
                     <span className="font-bold text-sm text-slate-800 truncate w-full">{product.name}</span>
                     {product.variants && product.variants.length > 0 && (
-                      <span className="text-[10px] bg-indigo-50 text-indigo-700 border border-indigo-100 px-2 py-0.5 rounded-full font-bold">
+                      <span className="text-2xs bg-indigo-50 text-indigo-700 border border-indigo-100 px-2 py-0.5 rounded-full font-bold">
                         {product.variants.length} مقاسات / ألوان
                       </span>
                     )}
@@ -396,7 +396,7 @@ export const InvoiceFormPage: React.FC = () => {
                         Number(isPurchase || isPurchaseReturn ? product.purchase_price ?? 0 : product.sale_price)
                       )}
                     </span>
-                    <span className="text-[10px] text-slate-400">المخزون الحالي: {product.quantity}</span>
+                    <span className="text-2xs text-slate-400">المخزون الحالي: {product.quantity}</span>
                   </button>
                 ))}
               </div>
@@ -437,7 +437,7 @@ export const InvoiceFormPage: React.FC = () => {
       {fields.length > 0 && (
         <div className="lg:hidden fixed bottom-[calc(4.2rem+env(safe-area-inset-bottom,0px))] left-3 right-3 z-30 bg-slate-900/95 backdrop-blur-md text-white px-4 py-3 rounded-2xl shadow-2xl border border-slate-700/50 flex items-center justify-between gap-3 animate-in slide-in-from-bottom duration-200">
           <div className="flex flex-col">
-            <span className="text-[10px] text-slate-300 font-medium">
+            <span className="text-2xs text-slate-300 font-medium">
               {fields.length} أصناف • الإجمالي
             </span>
             <span className="text-base font-black text-emerald-400 font-mono">

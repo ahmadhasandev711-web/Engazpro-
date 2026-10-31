@@ -83,12 +83,12 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
             {/* Header Branding */}
             <div className="text-center pb-3 border-b border-dashed border-slate-300 space-y-1">
               <h2 className="text-base font-black tracking-tight text-slate-900">{storeName}</h2>
-              <p className="text-[10px] text-slate-500 font-sans">فاتورة مبيعات</p>
+              <p className="text-2xs text-slate-500 font-sans">فاتورة مبيعات</p>
               {storePhone && (
-                <p className="text-[10px] text-slate-500 font-mono">هاتف: {storePhone}</p>
+                <p className="text-2xs text-slate-500 font-mono">هاتف: {storePhone}</p>
               )}
               {storeAddress && (
-                <p className="text-[9px] text-slate-400 font-sans">{storeAddress}</p>
+                <p className="text-2xs text-slate-400 font-sans">{storeAddress}</p>
               )}
             </div>
 
@@ -127,7 +127,7 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
               {(invoice.party?.address || invoice.customer_address) && (
                 <div className="flex justify-between items-center">
                   <span className="text-slate-500">العنوان:</span>
-                  <span className="text-left text-[10px]">{invoice.party?.address || invoice.customer_address}</span>
+                  <span className="text-left text-2xs">{invoice.party?.address || invoice.customer_address}</span>
                 </div>
               )}
               {invoice.courier_name && (
@@ -153,7 +153,7 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
                     <tr key={idx} className="py-1">
                       <td className="py-1 font-bold">
                         <div className="line-clamp-1">{item.product_name}</div>
-                        <div className="text-[10px] text-slate-400 font-normal">
+                        <div className="text-2xs text-slate-400 font-normal">
                           <span className="font-mono">{formatCurrency(item.unit_price, currencySymbol)}</span> للقطعة
                         </div>
                       </td>
@@ -218,9 +218,9 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
             </div>
 
             {/* Footer QR simulation & Thank you */}
-            <div className="pt-3 text-center space-y-1 text-[10px] text-slate-400">
+            <div className="pt-3 text-center space-y-1 text-2xs text-slate-400">
               <p className="font-sans font-bold text-slate-700">شكراً لزيارتكم ونسعد بخدمتكم دائماً!</p>
-              <p className="font-mono text-[9px]">نظام إنجاز برو لإدارة نقاط البيع والمخازن</p>
+              <p className="font-mono text-2xs">نظام إنجاز برو لإدارة نقاط البيع والمخازن</p>
             </div>
           </div>
         </div>

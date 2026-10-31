@@ -117,7 +117,7 @@ export const MandobDashboard: React.FC<MandobDashboardProps> = ({
           <div className="text-lg sm:text-2xl font-black text-amber-800 tracking-tight font-mono">
             {isLoading ? '...' : formatCurrency(kpis?.today_cash_flow ?? 0)}
           </div>
-          <div className="text-[10px] sm:text-[11px] font-medium text-amber-700 mt-1 truncate">
+          <div className="text-2xs sm:text-[11px] font-medium text-amber-700 mt-1 truncate">
             المطلوب تسليمه
           </div>
         </div>
@@ -133,7 +133,7 @@ export const MandobDashboard: React.FC<MandobDashboardProps> = ({
           <div className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight font-mono">
             {isLoading ? '...' : formatCurrency(kpis?.today_sales ?? 0)}
           </div>
-          <div className="text-[10px] sm:text-[11px] text-slate-400 mt-1 truncate">
+          <div className="text-2xs sm:text-[11px] text-slate-400 mt-1 truncate">
             صافي مبيعات اليوم
           </div>
         </div>
@@ -149,7 +149,7 @@ export const MandobDashboard: React.FC<MandobDashboardProps> = ({
           <div className="text-lg sm:text-2xl font-black text-indigo-600 tracking-tight font-mono">
             {isLoading ? '...' : formatCurrency(kpis?.today_credit_sales ?? 0)}
           </div>
-          <div className="text-[10px] sm:text-[11px] text-slate-400 mt-1 truncate">
+          <div className="text-2xs sm:text-[11px] text-slate-400 mt-1 truncate">
             آجل على العملاء
           </div>
         </div>
@@ -165,7 +165,7 @@ export const MandobDashboard: React.FC<MandobDashboardProps> = ({
           <div className="text-lg sm:text-2xl font-black text-rose-600 tracking-tight font-mono">
             {isLoading ? '...' : formatCurrency(kpis?.today_expenses ?? 0)}
           </div>
-          <div className="text-[10px] sm:text-[11px] text-slate-400 mt-1 truncate">
+          <div className="text-2xs sm:text-[11px] text-slate-400 mt-1 truncate">
             بنزين ونثريات مخصومة
           </div>
         </div>

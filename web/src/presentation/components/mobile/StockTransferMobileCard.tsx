@@ -102,7 +102,7 @@ export const StockTransferMobileCard: React.FC<StockTransferMobileCardProps> = (
           <div className="flex items-center justify-between gap-2 text-xs">
             {/* From branch */}
             <div className="flex-1 min-w-0">
-              <span className="text-[10px] text-slate-400 font-semibold block mb-0.5">فرع المصدر (من)</span>
+              <span className="text-2xs text-slate-400 font-semibold block mb-0.5">فرع المصدر (من)</span>
               <div className="flex items-center gap-1.5 text-slate-800 font-bold truncate">
                 <div className="w-6 h-6 rounded-lg bg-slate-200/80 text-slate-700 flex items-center justify-center shrink-0">
                   <Building2 className="w-3.5 h-3.5" />
@@ -120,7 +120,7 @@ export const StockTransferMobileCard: React.FC<StockTransferMobileCardProps> = (
 
             {/* To branch */}
             <div className="flex-1 min-w-0 text-left">
-              <span className="text-[10px] text-slate-400 font-semibold block mb-0.5">فرع الوجهة (إلى)</span>
+              <span className="text-2xs text-slate-400 font-semibold block mb-0.5">فرع الوجهة (إلى)</span>
               <div className="flex items-center justify-end gap-1.5 text-blue-700 font-bold truncate">
                 <span className="truncate">{transfer.to_branch?.name || '-'}</span>
                 <div className="w-6 h-6 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
@@ -162,7 +162,7 @@ export const StockTransferMobileCard: React.FC<StockTransferMobileCardProps> = (
                   <div className="min-w-0">
                     <p className="font-bold text-slate-800 truncate">{item.product?.name || 'صنف'}</p>
                     {item.variant && (
-                      <p className="text-[10px] text-purple-700 font-medium mt-0.5">
+                      <p className="text-2xs text-purple-700 font-medium mt-0.5">
                         مقاس: {item.variant.size || '-'} | لون: {item.variant.color || '-'}
                       </p>
                     )}

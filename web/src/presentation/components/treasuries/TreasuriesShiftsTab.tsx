@@ -69,7 +69,7 @@ export const TreasuriesShiftsTab: React.FC<{ vm: TreasuriesViewModel }> = ({ vm 
                       <td className="py-3 px-4 font-mono font-bold text-slate-900">{s.shift_number}</td>
                       <td className="py-3 px-4">
                         <div className="font-bold text-slate-800">{s.user?.name || s.created_by_name || '-'}</div>
-                        <div className="text-[10px] text-slate-400">
+                        <div className="text-2xs text-slate-400">
                           {(() => {
                             const role = s.user?.role || s.created_by_role;
                             if (role === 'MANDOB') return 'مندوب مبيعات';
@@ -108,7 +108,7 @@ export const TreasuriesShiftsTab: React.FC<{ vm: TreasuriesViewModel }> = ({ vm 
                       </td>
                       <td className="py-3 px-4">
                         <span
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          className={`px-2 py-0.5 rounded-full text-2xs font-bold ${
                             s.status === 'SETTLED'
                               ? 'bg-emerald-100 text-emerald-800'
                               : s.status === 'CLOSED'
@@ -159,7 +159,7 @@ export const TreasuriesShiftsTab: React.FC<{ vm: TreasuriesViewModel }> = ({ vm 
                       <h4 className="font-bold text-slate-900 text-sm mt-1">
                         {s.user?.name || s.created_by_name || '-'}
                       </h4>
-                      <span className="text-[10px] text-slate-400">
+                      <span className="text-2xs text-slate-400">
                         {(() => {
                           const role = s.user?.role || s.created_by_role;
                           if (role === 'MANDOB') return 'مندوب مبيعات';
@@ -172,7 +172,7 @@ export const TreasuriesShiftsTab: React.FC<{ vm: TreasuriesViewModel }> = ({ vm 
                     </div>
 
                     <span
-                      className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                      className={`px-2.5 py-1 rounded-full text-2xs font-bold ${
                         s.status === 'SETTLED'
                           ? 'bg-emerald-100 text-emerald-800'
                           : s.status === 'CLOSED'

@@ -64,17 +64,17 @@ export const InvoiceMobileCard: React.FC<InvoiceMobileCardProps> = ({
           </span>
 
           {isReturn ? (
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-200 inline-flex items-center gap-1">
+            <span className="px-2 py-0.5 rounded-full text-2xs font-black bg-amber-100 text-amber-800 border border-amber-200 inline-flex items-center gap-1">
               <RotateCcw className="w-2.5 h-2.5" />
               مرتجع
             </span>
           ) : isDue ? (
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-50 text-rose-700 border border-rose-200 inline-flex items-center gap-1">
+            <span className="px-2 py-0.5 rounded-full text-2xs font-black bg-rose-50 text-rose-700 border border-rose-200 inline-flex items-center gap-1">
               <AlertCircle className="w-2.5 h-2.5" />
               متبقي: {formatCurrency(invoice.due_amount)}
             </span>
           ) : (
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1">
+            <span className="px-2 py-0.5 rounded-full text-2xs font-black bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1">
               <CheckCircle2 className="w-2.5 h-2.5" />
               مسدد
             </span>
@@ -97,7 +97,7 @@ export const InvoiceMobileCard: React.FC<InvoiceMobileCardProps> = ({
         </div>
 
         {(isOwnerOrAdmin || isManager) && salesperson && (
-          <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-md shrink-0">
+          <span className="text-2xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-md shrink-0">
             {invoice.salesperson_name ? `سيلز: ${invoice.salesperson_name}` : `المنشئ: ${invoice.created_by_name}`}
           </span>
         )}
@@ -106,7 +106,7 @@ export const InvoiceMobileCard: React.FC<InvoiceMobileCardProps> = ({
       {/* 3. Financial Breakdown Box */}
       <div className="flex items-center justify-between p-2.5 bg-slate-50/80 rounded-xl border border-slate-100 text-xs">
         <div>
-          <span className="text-slate-400 block text-[10px] font-medium">الإجمالي</span>
+          <span className="text-slate-400 block text-2xs font-medium">الإجمالي</span>
           <span
             className={`font-black text-sm font-mono block ${
               isReturn ? 'text-amber-600' : 'text-emerald-600'
@@ -117,7 +117,7 @@ export const InvoiceMobileCard: React.FC<InvoiceMobileCardProps> = ({
         </div>
 
         <div>
-          <span className="text-slate-400 block text-[10px] font-medium">
+          <span className="text-slate-400 block text-2xs font-medium">
             {isReturn ? 'المسترد' : 'المدفوع'}
           </span>
           <span className="font-bold text-slate-700 font-mono text-xs block">
@@ -127,7 +127,7 @@ export const InvoiceMobileCard: React.FC<InvoiceMobileCardProps> = ({
 
         {isDue && (
           <div>
-            <span className="text-rose-500 block text-[10px] font-medium">الباقي</span>
+            <span className="text-rose-500 block text-2xs font-medium">الباقي</span>
             <span className="font-black text-rose-600 font-mono text-xs block">
               {formatCurrency(invoice.due_amount)}
             </span>

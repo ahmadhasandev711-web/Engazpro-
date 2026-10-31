@@ -107,7 +107,7 @@ export const CashFlowTransactionsTable: React.FC<CashFlowTransactionsTableProps>
                 سجل العمليات والحركات التفصيلية ({treasuryName})
               </h4>
               {meta && isTableOpen && (
-                <span className="text-[10px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full font-mono">
+                <span className="text-2xs font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full font-mono">
                   {meta.total} حركة
                 </span>
               )}
@@ -322,7 +322,7 @@ export const CashFlowTransactionsTable: React.FC<CashFlowTransactionsTableProps>
                           {/* Category Badge */}
                           <td className="py-3 px-4 whitespace-nowrap">
                             <span
-                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-bold text-[10px] ${
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-bold text-2xs ${
                                 isInflow
                                   ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
                                   : 'bg-rose-50 text-rose-700 border border-rose-200/60'

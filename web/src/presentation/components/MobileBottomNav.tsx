@@ -33,7 +33,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ onOpenDrawer }
             onClick={handleItemClick}
             className={({ isActive }) =>
               clsx(
-                'flex flex-col items-center justify-center py-1 px-2 rounded-2xl text-[10px] font-bold transition-all min-w-[56px] relative active:scale-95',
+                'flex flex-col items-center justify-center py-1 px-2 rounded-2xl text-2xs font-bold transition-all min-w-[56px] relative active:scale-95',
                 isActive
                   ? 'text-emerald-700 font-black'
                   : 'text-slate-500 hover:text-slate-800'
@@ -69,7 +69,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ onOpenDrawer }
           selection();
           onOpenDrawer();
         }}
-        className="flex flex-col items-center justify-center py-1 px-2 rounded-2xl text-[10px] font-bold text-slate-500 hover:text-slate-800 transition-all min-w-[56px] active:scale-95 cursor-pointer"
+        className="flex flex-col items-center justify-center py-1 px-2 rounded-2xl text-2xs font-bold text-slate-500 hover:text-slate-800 transition-all min-w-[56px] active:scale-95 cursor-pointer"
       >
         <div className="p-1.5 rounded-xl text-slate-500 hover:bg-slate-100">
           <Menu className="w-5 h-5" />

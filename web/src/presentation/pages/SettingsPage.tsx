@@ -241,7 +241,7 @@ export const SettingsPage: React.FC = () => {
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900 text-sm focus:outline-none focus:border-blue-500 disabled:opacity-60"
                 />
               </div>
-              <p className="text-[10px] text-slate-400 mt-1">يظهر بخط بارز في ترويسة الفاتورة والإيصال الحراري</p>
+              <p className="text-2xs text-slate-400 mt-1">يظهر بخط بارز في ترويسة الفاتورة والإيصال الحراري</p>
             </div>
 
             <div>
@@ -274,7 +274,7 @@ export const SettingsPage: React.FC = () => {
                   </button>
                 ))}
               </div>
-              <p className="text-[10px] text-slate-400 mt-1">يُطبع بجوار كافة الأسعار والمجاميع في نقاط البيع والفواتير</p>
+              <p className="text-2xs text-slate-400 mt-1">يُطبع بجوار كافة الأسعار والمجاميع في نقاط البيع والفواتير</p>
             </div>
 
             <div>
@@ -323,7 +323,7 @@ export const SettingsPage: React.FC = () => {
                 />
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">%</span>
               </div>
-              <p className="text-[10px] text-slate-400 mt-1">
+              <p className="text-2xs text-slate-400 mt-1">
                 100 يعني بلا سقف. أصغر قيمة تمنع الكاشير والمندوب من تجاوزها (الإدارة والمديرون متجاوزون دائماً)
               </p>
             </div>
@@ -346,7 +346,7 @@ export const SettingsPage: React.FC = () => {
                   </span>
                 </label>
               </div>
-              <p className="text-[10px] text-slate-400 mt-1">
+              <p className="text-2xs text-slate-400 mt-1">
                 عند التفعيل، يُسمح بالبيع حتى لو رصيد الفرع غير كافٍ وتُوسم الحركة بـ [بيع على المكشوف].
               </p>
             </div>

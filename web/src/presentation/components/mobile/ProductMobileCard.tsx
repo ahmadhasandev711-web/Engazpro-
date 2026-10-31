@@ -73,19 +73,19 @@ export const ProductMobileCard: React.FC<ProductMobileCardProps> = ({
             </h4>
 
             {product.has_variants && (
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-bold border border-indigo-200 shrink-0">
+              <span className="text-2xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-bold border border-indigo-200 shrink-0">
                 {product.variants?.length ? `${product.variants.length} مقاس/لون` : 'متغيرات'}
               </span>
             )}
 
             {product.has_expiry && (
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200 shrink-0">
+              <span className="text-2xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200 shrink-0">
                 صلاحية
               </span>
             )}
 
             {isWcConnected && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-50 text-purple-700 font-bold border border-purple-200 shrink-0 inline-flex items-center gap-0.5">
+              <span className="text-2xs px-1.5 py-0.5 rounded-full bg-purple-50 text-purple-700 font-bold border border-purple-200 shrink-0 inline-flex items-center gap-0.5">
                 <Globe className="w-2.5 h-2.5" />
                 ووكومرس
               </span>
@@ -105,12 +105,12 @@ export const ProductMobileCard: React.FC<ProductMobileCardProps> = ({
             {formatCurrency(product.sale_price)}
           </span>
           {product.sub_unit_price && product.sub_unit && (
-            <span className="text-[10px] text-slate-400 block font-mono mt-0.5">
+            <span className="text-2xs text-slate-400 block font-mono mt-0.5">
               {formatCurrency(product.sub_unit_price)} / {product.sub_unit}
             </span>
           )}
           {canViewPurchasePrice && product.purchase_price !== null && product.purchase_price !== undefined && (
-            <span className="text-[10px] text-slate-500 font-bold block mt-0.5">
+            <span className="text-2xs text-slate-500 font-bold block mt-0.5">
               التكلفة: <span className="font-mono text-slate-700">{formatCurrency(product.purchase_price)}</span>
             </span>
           )}
@@ -134,7 +134,7 @@ export const ProductMobileCard: React.FC<ProductMobileCardProps> = ({
           </span>
 
           {product.is_low_stock && (
-            <span className="text-[10px] font-black text-amber-600 flex items-center gap-0.5 bg-amber-50 px-1.5 py-0.5 rounded-md border border-amber-200">
+            <span className="text-2xs font-black text-amber-600 flex items-center gap-0.5 bg-amber-50 px-1.5 py-0.5 rounded-md border border-amber-200">
               <AlertTriangle className="w-3 h-3" /> نواقص
             </span>
           )}
@@ -226,7 +226,7 @@ export const ProductMobileCard: React.FC<ProductMobileCardProps> = ({
                       {v.size || v.color || v.name}
                     </span>
                     {v.color && v.size && (
-                      <span className="text-[10px] text-slate-400">({v.color})</span>
+                      <span className="text-2xs text-slate-400">({v.color})</span>
                     )}
                   </div>
                   <div className="flex items-center gap-2">

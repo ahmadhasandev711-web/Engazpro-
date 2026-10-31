@@ -28,28 +28,28 @@ export const CashFlowTotalBanner: React.FC<CashFlowTotalBannerProps> = ({ data, 
 
       <div className="flex items-center flex-wrap gap-3 bg-white/10 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/20">
         <div className="text-center px-1.5">
-          <span className="text-[10px] text-teal-100 font-bold block">💵 الكاش</span>
+          <span className="text-2xs text-teal-100 font-bold block">💵 الكاش</span>
           <span className="text-xs font-black font-mono">
             {formatCurrency(treasuries?.cash?.net_balance ?? data?.net_cash_flow ?? 0)}
           </span>
         </div>
         <div className="h-5 w-px bg-white/20" />
         <div className="text-center px-1.5">
-          <span className="text-[10px] text-teal-100 font-bold block">💳 البطاقة</span>
+          <span className="text-2xs text-teal-100 font-bold block">💳 البطاقة</span>
           <span className="text-xs font-black font-mono">
             {formatCurrency(treasuries?.card?.net_balance ?? 0)}
           </span>
         </div>
         <div className="h-5 w-px bg-white/20" />
         <div className="text-center px-1.5">
-          <span className="text-[10px] text-teal-100 font-bold block">⚡ إنستاباي</span>
+          <span className="text-2xs text-teal-100 font-bold block">⚡ إنستاباي</span>
           <span className="text-xs font-black font-mono">
             {formatCurrency(treasuries?.instapay?.net_balance ?? 0)}
           </span>
         </div>
         <div className="h-5 w-px bg-white/20" />
         <div className="text-center px-1.5">
-          <span className="text-[10px] text-teal-100 font-bold block">📱 فودافون</span>
+          <span className="text-2xs text-teal-100 font-bold block">📱 فودافون</span>
           <span className="text-xs font-black font-mono">
             {formatCurrency(treasuries?.vodafone_cash?.net_balance ?? 0)}
           </span>

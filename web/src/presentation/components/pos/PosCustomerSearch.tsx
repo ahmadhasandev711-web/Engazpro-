@@ -99,7 +99,7 @@ export const PosCustomerSearch: React.FC<PosCustomerSearchProps> = ({
                 {selectedCustomer ? selectedCustomer.name : 'عميل نقدي (بدون حساب)'}
               </span>
               {selectedCustomer?.phone && (
-                <span className="text-[10px] text-primary-700 font-mono block truncate">
+                <span className="text-2xs text-primary-700 font-mono block truncate">
                   {selectedCustomer.phone}
                 </span>
               )}
@@ -202,7 +202,7 @@ export const PosCustomerSearch: React.FC<PosCustomerSearchProps> = ({
                   >
                     <div className="min-w-0 flex-1 pl-2">
                       <div className="font-bold truncate">{c.name}</div>
-                      <div className="flex items-center gap-2 text-[10px] text-slate-400 font-mono mt-0.5">
+                      <div className="flex items-center gap-2 text-2xs text-slate-400 font-mono mt-0.5">
                         {c.phone && (
                           <span className="flex items-center gap-0.5">
                             <Phone className="w-2.5 h-2.5" />

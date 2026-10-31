@@ -125,7 +125,7 @@ export const LedgerPage: React.FC = () => {
               <h2 className="text-sm font-black text-slate-900 truncate">
                 {party?.name || 'كشف حساب'}
               </h2>
-              <span className="text-[10px] font-black px-2 py-0.5 bg-slate-100 text-slate-700 rounded-full shrink-0">
+              <span className="text-2xs font-black px-2 py-0.5 bg-slate-100 text-slate-700 rounded-full shrink-0">
                 {partyTypeLabel}
               </span>
             </div>
@@ -139,7 +139,7 @@ export const LedgerPage: React.FC = () => {
         </div>
 
         <div className="text-left shrink-0">
-          <span className="text-[10px] text-slate-400 block font-medium">الرصيد الصافي</span>
+          <span className="text-2xs text-slate-400 block font-medium">الرصيد الصافي</span>
           <span
             className={`text-sm font-black font-mono ${
               (party?.current_balance || 0) > 0
@@ -165,7 +165,7 @@ export const LedgerPage: React.FC = () => {
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-bold text-base text-slate-900">{party.name}</h3>
-                <span className="text-[10px] font-black px-2 py-0.5 bg-slate-100 text-slate-700 rounded-full">
+                <span className="text-2xs font-black px-2 py-0.5 bg-slate-100 text-slate-700 rounded-full">
                   {partyTypeLabel}
                 </span>
               </div>
@@ -215,19 +215,19 @@ export const LedgerPage: React.FC = () => {
       {/* Mobile 3-Column Compact Summary Strip (md:hidden) */}
       <div className="md:hidden grid grid-cols-3 gap-2 bg-white p-2.5 rounded-2xl border border-slate-200 shadow-xs text-center">
         <div className="bg-rose-50/70 p-2 rounded-xl border border-rose-100/80">
-          <span className="text-[10px] font-bold text-rose-700 block">مدين (+)</span>
+          <span className="text-2xs font-bold text-rose-700 block">مدين (+)</span>
           <span className="text-xs font-black text-rose-800 font-mono block mt-0.5" dir="ltr">
             {formatCurrency(summary?.total_debit || 0)}
           </span>
         </div>
         <div className="bg-emerald-50/70 p-2 rounded-xl border border-emerald-100/80">
-          <span className="text-[10px] font-bold text-emerald-700 block">دائن (-)</span>
+          <span className="text-2xs font-bold text-emerald-700 block">دائن (-)</span>
           <span className="text-xs font-black text-emerald-800 font-mono block mt-0.5" dir="ltr">
             {formatCurrency(summary?.total_credit || 0)}
           </span>
         </div>
         <div className="bg-slate-50 p-2 rounded-xl border border-slate-200">
-          <span className="text-[10px] font-bold text-slate-700 block">الختامي</span>
+          <span className="text-2xs font-bold text-slate-700 block">الختامي</span>
           <span className="text-xs font-black text-primary-700 font-mono block mt-0.5" dir="ltr">
             {formatCurrency(summary?.current_balance || 0)}
           </span>
@@ -414,7 +414,7 @@ export const LedgerPage: React.FC = () => {
             <p className="text-[11px] text-slate-600 font-mono">
               الفترة: من {fromDate || 'البداية'} إلى {toDate || 'اليوم'}
             </p>
-            <p className="text-[10px] text-slate-400 font-mono">
+            <p className="text-2xs text-slate-400 font-mono">
               تاريخ الطباعة: {new Date().toLocaleDateString('ar-EG')} - {new Date().toLocaleTimeString('ar-EG')}
             </p>
           </div>
@@ -423,7 +423,7 @@ export const LedgerPage: React.FC = () => {
         {/* Financial Summary Box */}
         <div className="grid grid-cols-4 gap-3 p-3 bg-slate-50 border border-slate-300 rounded mb-5 text-center">
           <div>
-            <span className="text-[10px] text-slate-500 block font-bold">
+            <span className="text-2xs text-slate-500 block font-bold">
               {isCourier ? 'إجمالي التحصيلات (مدين +)' : 'إجمالي المدين (+)'}
             </span>
             <span className="text-sm font-black text-rose-700 font-mono">
@@ -431,7 +431,7 @@ export const LedgerPage: React.FC = () => {
             </span>
           </div>
           <div>
-            <span className="text-[10px] text-slate-500 block font-bold">
+            <span className="text-2xs text-slate-500 block font-bold">
               {isCourier ? 'إجمالي التوريدات والأتعاب (دائن -)' : 'إجمالي الدائن (-)'}
             </span>
             <span className="text-sm font-black text-emerald-700 font-mono">
@@ -439,13 +439,13 @@ export const LedgerPage: React.FC = () => {
             </span>
           </div>
           <div>
-            <span className="text-[10px] text-slate-500 block font-bold">صافي الرصيد الختامي</span>
+            <span className="text-2xs text-slate-500 block font-bold">صافي الرصيد الختامي</span>
             <span className="text-sm font-black text-slate-900 font-mono">
               {formatCurrency(summary?.current_balance || 0)}
             </span>
           </div>
           <div>
-            <span className="text-[10px] text-slate-500 block font-bold">الحالة المالية</span>
+            <span className="text-2xs text-slate-500 block font-bold">الحالة المالية</span>
             <span className="text-xs font-black text-slate-800">
               {isCourier
                 ? ((summary?.current_balance || 0) > 0

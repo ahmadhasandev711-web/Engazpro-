@@ -100,7 +100,7 @@ export const UsersManagementTab: React.FC<UsersManagementTabProps> = ({
                         <div className="font-bold text-slate-900 flex items-center gap-2">
                           <span>{usr.name}</span>
                           {usr.is_admin && (
-                            <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-bold">
+                            <span className="text-2xs bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-bold">
                               مدير عام
                             </span>
                           )}
@@ -157,7 +157,7 @@ export const UsersManagementTab: React.FC<UsersManagementTabProps> = ({
                           <span className={daysLeft > 30 ? 'text-emerald-600' : daysLeft > 0 ? 'text-amber-600' : 'text-rose-600'}>
                             {daysLeft > 0 ? `متبقي ${daysLeft} يوم` : 'منتهي الصلاحية'}
                           </span>
-                          <span className="text-slate-400 text-[10px] mr-1.5">({sub?.plan || 'TRIAL'})</span>
+                          <span className="text-slate-400 text-2xs mr-1.5">({sub?.plan || 'TRIAL'})</span>
                         </div>
                       </td>
 

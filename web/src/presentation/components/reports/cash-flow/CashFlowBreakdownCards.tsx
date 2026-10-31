@@ -51,7 +51,7 @@ export const CashFlowBreakdownCards: React.FC<CashFlowBreakdownCardsProps> = ({
               <div>
                 <div className="flex items-center gap-1.5">
                   <p className="font-bold text-slate-800">مبيعات محصلة</p>
-                  <span className="text-[10px] text-emerald-600 bg-emerald-100/70 px-1.5 py-0.2 rounded font-medium">
+                  <span className="text-2xs text-emerald-600 bg-emerald-100/70 px-1.5 py-0.2 rounded font-medium">
                     تصفية 🔍
                   </span>
                 </div>
@@ -75,7 +75,7 @@ export const CashFlowBreakdownCards: React.FC<CashFlowBreakdownCardsProps> = ({
               <div>
                 <div className="flex items-center gap-1.5">
                   <p className="font-bold text-slate-800">سندات قبض</p>
-                  <span className="text-[10px] text-emerald-600 bg-emerald-100/70 px-1.5 py-0.2 rounded font-medium">
+                  <span className="text-2xs text-emerald-600 bg-emerald-100/70 px-1.5 py-0.2 rounded font-medium">
                     تصفية 🔍
                   </span>
                 </div>
@@ -99,7 +99,7 @@ export const CashFlowBreakdownCards: React.FC<CashFlowBreakdownCardsProps> = ({
               <div>
                 <div className="flex items-center gap-1.5">
                   <p className="font-bold text-slate-800">مرتجعات شراء مستردة</p>
-                  <span className="text-[10px] text-emerald-600 bg-emerald-100/70 px-1.5 py-0.2 rounded font-medium">
+                  <span className="text-2xs text-emerald-600 bg-emerald-100/70 px-1.5 py-0.2 rounded font-medium">
                     تصفية 🔍
                   </span>
                 </div>
@@ -138,7 +138,7 @@ export const CashFlowBreakdownCards: React.FC<CashFlowBreakdownCardsProps> = ({
               <div>
                 <div className="flex items-center gap-1.5">
                   <p className="font-bold text-slate-800">مشتريات مدفوعة</p>
-                  <span className="text-[10px] text-rose-600 bg-rose-100/70 px-1.5 py-0.2 rounded font-medium">
+                  <span className="text-2xs text-rose-600 bg-rose-100/70 px-1.5 py-0.2 rounded font-medium">
                     تصفية 🔍
                   </span>
                 </div>
@@ -162,7 +162,7 @@ export const CashFlowBreakdownCards: React.FC<CashFlowBreakdownCardsProps> = ({
               <div>
                 <div className="flex items-center gap-1.5">
                   <p className="font-bold text-slate-800">سندات صرف</p>
-                  <span className="text-[10px] text-rose-600 bg-rose-100/70 px-1.5 py-0.2 rounded font-medium">
+                  <span className="text-2xs text-rose-600 bg-rose-100/70 px-1.5 py-0.2 rounded font-medium">
                     تصفية 🔍
                   </span>
                 </div>
@@ -186,7 +186,7 @@ export const CashFlowBreakdownCards: React.FC<CashFlowBreakdownCardsProps> = ({
               <div>
                 <div className="flex items-center gap-1.5">
                   <p className="font-bold text-slate-800">مرتجعات بيع مردودة</p>
-                  <span className="text-[10px] text-rose-600 bg-rose-100/70 px-1.5 py-0.2 rounded font-medium">
+                  <span className="text-2xs text-rose-600 bg-rose-100/70 px-1.5 py-0.2 rounded font-medium">
                     تصفية 🔍
                   </span>
                 </div>
@@ -211,7 +211,7 @@ export const CashFlowBreakdownCards: React.FC<CashFlowBreakdownCardsProps> = ({
                 <div>
                   <div className="flex items-center gap-1.5">
                     <p className="font-bold text-slate-800">المصروفات النقدية</p>
-                    <span className="text-[10px] text-rose-600 bg-rose-100/70 px-1.5 py-0.2 rounded font-medium">
+                    <span className="text-2xs text-rose-600 bg-rose-100/70 px-1.5 py-0.2 rounded font-medium">
                       تصفية 🔍
                     </span>
                   </div>

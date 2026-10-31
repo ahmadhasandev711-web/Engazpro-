@@ -167,7 +167,7 @@ export const WcOrderMobileCard: React.FC<WcOrderMobileCardProps> = ({
             </span>
           </div>
           {order.branch && (
-            <span className="text-[10px] text-slate-500 block font-bold">
+            <span className="text-2xs text-slate-500 block font-bold">
               فرع التجهيز: {order.branch.name}
             </span>
           )}
@@ -190,7 +190,7 @@ export const WcOrderMobileCard: React.FC<WcOrderMobileCardProps> = ({
             {order.customer_name || 'عميل بدون اسم'}
           </h4>
           {locationName && (
-            <span className="text-[10px] font-bold text-slate-600 bg-white px-2 py-0.5 rounded-lg border border-slate-200/70 flex items-center gap-1">
+            <span className="text-2xs font-bold text-slate-600 bg-white px-2 py-0.5 rounded-lg border border-slate-200/70 flex items-center gap-1">
               <MapPin className="w-3 h-3 text-slate-400" />
               {locationName}
             </span>
@@ -287,7 +287,7 @@ export const WcOrderMobileCard: React.FC<WcOrderMobileCardProps> = ({
                     {item.attributes.map((attr: any, aIdx: number) => (
                       <span
                         key={aIdx}
-                        className="text-[9px] bg-white border border-slate-200 px-1.5 py-0.2 rounded text-slate-600 font-bold"
+                        className="text-2xs bg-white border border-slate-200 px-1.5 py-0.2 rounded text-slate-600 font-bold"
                       >
                         {attr.key}: {attr.value}
                       </span>
@@ -328,7 +328,7 @@ export const WcOrderMobileCard: React.FC<WcOrderMobileCardProps> = ({
       {/* 5. Financial Summary Row */}
       <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
         <div>
-          <span className="text-[10px] text-slate-400 block font-bold">
+          <span className="text-2xs text-slate-400 block font-bold">
             {isPrepaid ? 'مدفوع مقدماً أونلاين' : 'المطلوب تحصيله (COD)'}
           </span>
           <span className="font-mono text-base font-black text-slate-900">

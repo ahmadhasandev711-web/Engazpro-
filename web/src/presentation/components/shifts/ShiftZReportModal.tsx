@@ -140,7 +140,7 @@ export const ShiftZReportModal: React.FC<ShiftZReportModalProps> = ({
             </span>
             <div>
               <h3 className="text-sm font-black">بون تقفيل الوردية (Z-Report)</h3>
-              <span className="text-[10px] text-slate-400 font-mono">وردية {shift.shift_number}</span>
+              <span className="text-2xs text-slate-400 font-mono">وردية {shift.shift_number}</span>
             </div>
           </div>
           <button
@@ -162,14 +162,14 @@ export const ShiftZReportModal: React.FC<ShiftZReportModalProps> = ({
             {/* Store Branding Header */}
             <div className="text-center pb-2.5 border-b border-dashed border-slate-300 space-y-0.5">
               <h2 className="text-sm font-black tracking-tight text-slate-900">{storeName}</h2>
-              <div className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-900 text-white">
+              <div className="inline-block px-2.5 py-0.5 rounded-full text-2xs font-bold bg-slate-900 text-white">
                 بون إغلاق وتسليم الوردية (Z-Report)
               </div>
               {storePhone && (
-                <p className="text-[10px] text-slate-500 font-mono">هاتف: {storePhone}</p>
+                <p className="text-2xs text-slate-500 font-mono">هاتف: {storePhone}</p>
               )}
               {storeAddress && (
-                <p className="text-[9px] text-slate-400 font-sans">{storeAddress}</p>
+                <p className="text-2xs text-slate-400 font-sans">{storeAddress}</p>
               )}
             </div>
 
@@ -193,13 +193,13 @@ export const ShiftZReportModal: React.FC<ShiftZReportModalProps> = ({
               )}
               <div className="flex justify-between items-center">
                 <span className="text-slate-500 font-sans">وقت الفتح:</span>
-                <span className="font-mono text-[10px]">
+                <span className="font-mono text-2xs">
                   {openedDateStr} {openedTimeStr}
                 </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-slate-500 font-sans">وقت الإغلاق:</span>
-                <span className="font-mono text-[10px]">
+                <span className="font-mono text-2xs">
                   {closedDateStr} {closedTimeStr}
                 </span>
               </div>
@@ -213,7 +213,7 @@ export const ShiftZReportModal: React.FC<ShiftZReportModalProps> = ({
 
             {/* Financial Movements Breakdown */}
             <div className="py-2 border-b border-dashed border-slate-300 space-y-1.5 text-[11px]">
-              <div className="text-[10px] font-bold text-slate-400 font-sans uppercase tracking-wider mb-1">
+              <div className="text-2xs font-bold text-slate-400 font-sans uppercase tracking-wider mb-1">
                 تفاصيل الحركة المالية
               </div>
 
@@ -295,7 +295,7 @@ export const ShiftZReportModal: React.FC<ShiftZReportModalProps> = ({
             {shift.notes && (
               <div className="py-2 border-b border-dashed border-slate-300 text-[11px]">
                 <span className="text-slate-500 font-sans block mb-0.5">ملاحظات الكاشير:</span>
-                <p className="font-sans text-slate-800 bg-slate-50 p-2 rounded-lg leading-relaxed text-[10px]">
+                <p className="font-sans text-slate-800 bg-slate-50 p-2 rounded-lg leading-relaxed text-2xs">
                   {shift.notes}
                 </p>
               </div>
@@ -305,14 +305,14 @@ export const ShiftZReportModal: React.FC<ShiftZReportModalProps> = ({
             {shift.settlement_notes && (
               <div className="py-2 border-b border-dashed border-slate-300 text-[11px]">
                 <span className="text-slate-500 font-sans block mb-0.5">ملاحظات التوريد والاعتماد:</span>
-                <p className="font-sans text-slate-800 bg-slate-50 p-2 rounded-lg leading-relaxed text-[10px]">
+                <p className="font-sans text-slate-800 bg-slate-50 p-2 rounded-lg leading-relaxed text-2xs">
                   {shift.settlement_notes}
                 </p>
               </div>
             )}
 
             {/* Dual Signature Lines */}
-            <div className="pt-3 pb-2 grid grid-cols-2 gap-3 text-center text-[10px] text-slate-600 font-sans">
+            <div className="pt-3 pb-2 grid grid-cols-2 gap-3 text-center text-2xs text-slate-600 font-sans">
               <div className="border-t border-dashed border-slate-300 pt-2">
                 <span className="font-bold">توقيع الكاشير (المسلّم)</span>
                 <div className="h-6" />
@@ -325,7 +325,7 @@ export const ShiftZReportModal: React.FC<ShiftZReportModalProps> = ({
 
             {/* Receipt Footer */}
             <div className="text-center pt-2 border-t border-dashed border-slate-300 space-y-0.5">
-              <p className="text-[9px] font-sans text-slate-500">
+              <p className="text-2xs font-sans text-slate-500">
                 يتم تدبيس هذا البون الحراري بمظروف النقدية المسلم للخزينة
               </p>
               <p className="text-[8px] text-slate-400 font-sans">

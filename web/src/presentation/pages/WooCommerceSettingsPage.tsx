@@ -303,7 +303,7 @@ export const WooCommerceSettingsPage: React.FC = () => {
               <div>
                 <h2 className="text-sm font-black text-white flex items-center gap-2">
                   <span>الربط السريع بضغطة زر واحدة (1-Click Connect)</span>
-                  <span className="text-[10px] bg-amber-400/20 text-amber-300 px-2 py-0.5 rounded-full border border-amber-400/30 font-bold">
+                  <span className="text-2xs bg-amber-400/20 text-amber-300 px-2 py-0.5 rounded-full border border-amber-400/30 font-bold">
                     موصى به
                   </span>
                 </h2>
@@ -481,7 +481,7 @@ export const WooCommerceSettingsPage: React.FC = () => {
                     </div>
                     <div>
                       <span className="text-xs font-black text-white block">استيراد الأصناف من ووكومرس</span>
-                      <span className="text-[10px] text-indigo-100 block">سحب المنتجات والمقاسات والألوان لإنجاز برو</span>
+                      <span className="text-2xs text-indigo-100 block">سحب المنتجات والمقاسات والألوان لإنجاز برو</span>
                     </div>
                   </div>
                 </button>
@@ -510,7 +510,7 @@ export const WooCommerceSettingsPage: React.FC = () => {
                   </div>
                   <div>
                     <span className="text-xs font-black text-emerald-950 block">استيراد عملاء المتجر إلى إنجاز برو</span>
-                    <span className="text-[10px] text-slate-500 block">سحب عملاء ووكومرس لبناء قاعدة بيانات تسويقية</span>
+                    <span className="text-2xs text-slate-500 block">سحب عملاء ووكومرس لبناء قاعدة بيانات تسويقية</span>
                   </div>
                 </div>
               </button>
@@ -526,7 +526,7 @@ export const WooCommerceSettingsPage: React.FC = () => {
                   </div>
                   <div>
                     <span className="text-xs font-black text-purple-950 block">مزامنة أرصدة كافة المنتجات مع المتجر (Bulk Push)</span>
-                    <span className="text-[10px] text-slate-500 block">إرسال وتحديث كميات كافة الأصناف المرتبطة مباشرة في ووردبريس فوراً</span>
+                    <span className="text-2xs text-slate-500 block">إرسال وتحديث كميات كافة الأصناف المرتبطة مباشرة في ووردبريس فوراً</span>
                   </div>
                 </div>
               </button>
@@ -542,7 +542,7 @@ export const WooCommerceSettingsPage: React.FC = () => {
                   </div>
                   <div>
                     <span className="text-xs font-black text-amber-950 block">تفعيل استقبال الطلبات اللحظية (Webhooks)</span>
-                    <span className="text-[10px] text-slate-500 block">تسجيل الـ Webhook في وردبريس تلقائياً بدون تدخل يدوي</span>
+                    <span className="text-2xs text-slate-500 block">تسجيل الـ Webhook في وردبريس تلقائياً بدون تدخل يدوي</span>
                   </div>
                 </div>
               </button>
@@ -564,15 +564,15 @@ export const WooCommerceSettingsPage: React.FC = () => {
                 </span>
               </div>
 
-              <p className="text-[10px] text-slate-400 leading-relaxed pt-1">
+              <p className="text-2xs text-slate-400 leading-relaxed pt-1">
                 البيانات أدناه للمطورين أو للربط اليدوي البديل فقط (اختياري):
               </p>
 
               <div className="space-y-2 pt-1 text-xs">
                 <div>
-                  <span className="text-[10px] text-slate-400 block mb-0.5">Webhook URL:</span>
+                  <span className="text-2xs text-slate-400 block mb-0.5">Webhook URL:</span>
                   <div className="flex items-center gap-1 bg-slate-800/80 p-2 rounded-xl border border-slate-700">
-                    <span className="font-mono text-[10px] text-slate-200 truncate flex-1" dir="ltr">
+                    <span className="font-mono text-2xs text-slate-200 truncate flex-1" dir="ltr">
                       {settingsData.webhook_url}
                     </span>
                     <button
@@ -585,9 +585,9 @@ export const WooCommerceSettingsPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <span className="text-[10px] text-slate-400 block mb-0.5">Secret:</span>
+                  <span className="text-2xs text-slate-400 block mb-0.5">Secret:</span>
                   <div className="flex items-center gap-1 bg-slate-800/80 p-2 rounded-xl border border-slate-700">
-                    <span className="font-mono text-[10px] text-slate-200 truncate flex-1" dir="ltr">
+                    <span className="font-mono text-2xs text-slate-200 truncate flex-1" dir="ltr">
                       {settingsData.webhook_secret}
                     </span>
                     <button
@@ -600,7 +600,7 @@ export const WooCommerceSettingsPage: React.FC = () => {
                 </div>
 
                 <div className="pt-1">
-                  <span className="text-[10px] text-amber-300 block">
+                  <span className="text-2xs text-amber-300 block">
                     ⚡ الحدث في ووكومرس (Topic): <span className="font-mono font-bold">Order created</span> و <span className="font-mono font-bold">Order updated</span>
                   </span>
                 </div>

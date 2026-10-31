@@ -263,12 +263,12 @@ export const ProductVariantModal: React.FC<ProductVariantModalProps> = ({
                               تشغيلة: {b.batch_number}
                             </span>
                             {isExpired && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-rose-100 text-rose-700 font-bold">
+                              <span className="text-2xs px-1.5 py-0.5 rounded-md bg-rose-100 text-rose-700 font-bold">
                                 منتهي
                               </span>
                             )}
                             {isNear && !isExpired && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-700 font-bold">
+                              <span className="text-2xs px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-700 font-bold">
                                 قريب الانتهاء
                               </span>
                             )}

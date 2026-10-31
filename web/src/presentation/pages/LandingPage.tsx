@@ -205,7 +205,7 @@ export const LandingPage: React.FC = () => {
           <Link to="/" className="flex items-center group">
             <span className="font-black text-2xl tracking-tighter text-slate-900 font-sans flex items-center">
               Engaz<span className="text-[#2A7A62]">.</span>
-              <span className="mr-1.5 text-[10px] font-black bg-[#B2E7D2] text-[#0E3A2E] px-2 py-0.5 rounded-full">
+              <span className="mr-1.5 text-2xs font-black bg-[#B2E7D2] text-[#0E3A2E] px-2 py-0.5 rounded-full">
                 PRO
               </span>
             </span>
@@ -555,11 +555,11 @@ export const LandingPage: React.FC = () => {
                   <span className="text-[11px] font-bold text-slate-500 block">مبيعات اليوم المحققة</span>
                   <div className="flex items-baseline justify-between mt-1">
                     <span className="text-2xl font-black font-mono text-[#232D3C]">38,450.00</span>
-                    <span className="text-[10px] font-bold text-[#0E3A2E] bg-[#B2E7D2] px-2 py-0.5 rounded-full">
+                    <span className="text-2xs font-bold text-[#0E3A2E] bg-[#B2E7D2] px-2 py-0.5 rounded-full">
                       +28% اليوم
                     </span>
                   </div>
-                  <span className="text-[10px] text-slate-400 font-medium mt-1 block">من 46 فاتورة مبيعات</span>
+                  <span className="text-2xs text-slate-400 font-medium mt-1 block">من 46 فاتورة مبيعات</span>
                 </div>
 
                 {/* Metric 2 */}
@@ -573,11 +573,11 @@ export const LandingPage: React.FC = () => {
                   <span className="text-[11px] font-bold text-slate-500 block">السيولة النقدية الحية</span>
                   <div className="flex items-baseline justify-between mt-1">
                     <span className="text-2xl font-black font-mono text-[#2A7A62]">52,180.00</span>
-                    <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">
+                    <span className="text-2xs font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">
                       3 خزن موزعة
                     </span>
                   </div>
-                  <span className="text-[10px] text-slate-400 font-medium mt-1 block">خزينة رئيسية + أدراج + بنك</span>
+                  <span className="text-2xs text-slate-400 font-medium mt-1 block">خزينة رئيسية + أدراج + بنك</span>
                 </div>
 
                 {/* Metric 3 */}
@@ -591,11 +591,11 @@ export const LandingPage: React.FC = () => {
                   <span className="text-[11px] font-bold text-slate-500 block">تزامن WooCommerce</span>
                   <div className="flex items-baseline justify-between mt-1">
                     <span className="text-2xl font-black text-amber-600 font-mono">متصل ⚡</span>
-                    <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full">
+                    <span className="text-2xs font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full">
                       Webhook نشط
                     </span>
                   </div>
-                  <span className="text-[10px] text-slate-400 font-medium mt-1 block">آخر طلب مسحوب: منذ دقيقة</span>
+                  <span className="text-2xs text-slate-400 font-medium mt-1 block">آخر طلب مسحوب: منذ دقيقة</span>
                 </div>
               </div>
 
@@ -781,7 +781,7 @@ export const LandingPage: React.FC = () => {
                         <IconComp className="w-5 h-5 text-[#0E3A2E]" />
                       </div>
                       <div>
-                        <span className="text-[10px] font-black text-[#2A7A62] block">{stave.badge}</span>
+                        <span className="text-2xs font-black text-[#2A7A62] block">{stave.badge}</span>
                         <h4 className="text-sm font-black text-[#232D3C]">{stave.shortTitle}</h4>
                       </div>
                     </div>
@@ -931,7 +931,7 @@ export const LandingPage: React.FC = () => {
                   style={{ background: item.dot, boxShadow: '0 2px 4px rgba(35,45,60,0.15)' }}
                 />
                 <span>{item.name}</span>
-                <span className="text-[10px] text-slate-400 font-normal mr-1">({item.desc})</span>
+                <span className="text-2xs text-slate-400 font-normal mr-1">({item.desc})</span>
               </div>
             ))}
           </div>
@@ -1101,7 +1101,7 @@ export const LandingPage: React.FC = () => {
                 }`}
             >
               <span>دفع سنوي</span>
-              <span className="text-[10px] font-black text-[#0E3A2E] bg-[#B2E7D2] px-2.5 py-0.5 rounded-full">
+              <span className="text-2xs font-black text-[#0E3A2E] bg-[#B2E7D2] px-2.5 py-0.5 rounded-full">
                 وفر شهرين مجاناً 🎁
               </span>
             </span>

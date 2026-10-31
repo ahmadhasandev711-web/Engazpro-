@@ -145,7 +145,7 @@ export const WcOrderActionModals: React.FC<{ vm: WcOrdersViewModel }> = ({ vm })
                   <label className="block text-xs font-bold text-slate-700">
                     اختر مندوب التوصيل المكلف:
                   </label>
-                  <span className="text-[10px] bg-indigo-50 text-indigo-700 font-bold px-2 py-0.5 rounded-full border border-indigo-200">
+                  <span className="text-2xs bg-indigo-50 text-indigo-700 font-bold px-2 py-0.5 rounded-full border border-indigo-200">
                     {mandobs.length} {mandobs.length === 1 ? 'مندوب متاح' : 'مناديب متاحين'}
                   </span>
                 </div>
@@ -189,7 +189,7 @@ export const WcOrderActionModals: React.FC<{ vm: WcOrdersViewModel }> = ({ vm })
                             <div className="text-[11px] text-slate-500 font-mono mt-0.5 flex items-center gap-1.5">
                               <span>{m.phone || 'بدون رقم هاتف'}</span>
                               {m.branch?.name && (
-                                <span className="text-[10px] text-slate-400 font-sans">
+                                <span className="text-2xs text-slate-400 font-sans">
                                   • {m.branch.name}
                                 </span>
                               )}

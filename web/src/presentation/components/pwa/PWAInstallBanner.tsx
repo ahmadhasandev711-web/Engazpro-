@@ -62,7 +62,7 @@ export const PWAInstallBanner: React.FC = () => {
                 <h3 className="text-sm sm:text-base font-black text-white">
                   حمّل تطبيق إنجاز برو على جهازك (موبايل أو كمبيوتر)
                 </h3>
-                <span className="text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full flex items-center gap-1">
+                <span className="text-2xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full flex items-center gap-1">
                   <Monitor className="w-3 h-3 hidden sm:inline" />
                   <Smartphone className="w-3 h-3" />
                   <span>تطبيق سريع وخفيف</span>

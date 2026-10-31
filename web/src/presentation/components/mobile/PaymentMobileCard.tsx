@@ -85,7 +85,7 @@ export const PaymentMobileCard: React.FC<PaymentMobileCardProps> = ({
               <User className="w-3 h-3 text-slate-400 shrink-0" />
               <span>المحصّل:</span>
               <span className="font-bold text-slate-700">{payment.created_by_name}</span>
-              <span className="text-[10px] text-slate-400">({roleLabel})</span>
+              <span className="text-2xs text-slate-400">({roleLabel})</span>
             </div>
           )}
         </div>

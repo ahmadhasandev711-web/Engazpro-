@@ -87,7 +87,7 @@ export const TreasuriesHeader: React.FC<{ vm: TreasuriesViewModel }> = ({ vm }) 
             <div className="flex items-center gap-1.5">
               <h2 className="text-sm font-black text-slate-900 truncate">الخزن والورديات</h2>
               {pendingShifts.length > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full text-[9px] font-black bg-rose-500 text-white animate-pulse shrink-0">
+                <span className="px-1.5 py-0.2 rounded-full text-2xs font-black bg-rose-500 text-white animate-pulse shrink-0">
                   {pendingShifts.length} معلق
                 </span>
               )}
@@ -146,13 +146,13 @@ export const TreasuriesHeader: React.FC<{ vm: TreasuriesViewModel }> = ({ vm }) 
       {/* Mobile 2-Column Quick Summary Strip (md:hidden) */}
       <div className="md:hidden grid grid-cols-2 gap-2 bg-white p-2.5 rounded-2xl border border-slate-200 shadow-xs text-center">
         <div className="bg-slate-900 text-white p-2.5 rounded-xl">
-          <span className="text-[10px] text-slate-300 font-bold block">الخزائن النقدية</span>
+          <span className="text-2xs text-slate-300 font-bold block">الخزائن النقدية</span>
           <span className="text-sm font-black text-emerald-400 font-mono block mt-0.5" dir="ltr">
             {formatCurrency(safesTotal)}
           </span>
         </div>
         <div className="bg-blue-50/80 border border-blue-100 p-2.5 rounded-xl">
-          <span className="text-[10px] text-blue-700 font-bold block">البنوك والمحافظ</span>
+          <span className="text-2xs text-blue-700 font-bold block">البنوك والمحافظ</span>
           <span className="text-sm font-black text-blue-800 font-mono block mt-0.5" dir="ltr">
             {formatCurrency(banksAndWalletsTotal)}
           </span>

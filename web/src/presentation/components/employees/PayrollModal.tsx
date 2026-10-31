@@ -165,7 +165,7 @@ export const PayrollModal: React.FC<PayrollModalProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-black text-slate-900">{employee.name}</h3>
-                <span className="text-[10px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full border border-slate-200">
+                <span className="text-2xs font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full border border-slate-200">
                   {employee.role === 'SALES'
                     ? 'بائع صالة / سيلز'
                     : employee.role === 'CASHIER'
@@ -177,7 +177,7 @@ export const PayrollModal: React.FC<PayrollModalProps> = ({
                     : 'مشرف'}
                 </span>
                 {employee.branch && (
-                  <span className="text-[10px] font-bold bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full border border-purple-200">
+                  <span className="text-2xs font-bold bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full border border-purple-200">
                     {employee.branch.name}
                   </span>
                 )}
@@ -271,7 +271,7 @@ export const PayrollModal: React.FC<PayrollModalProps> = ({
                   <span className="text-base font-black text-primary-900 font-mono block mt-0.5">
                     +{formatCurrency(payroll?.commission_amount || 0)}
                   </span>
-                  <span className="text-[9px] text-primary-600/80 block mt-0.5">
+                  <span className="text-2xs text-primary-600/80 block mt-0.5">
                     {payroll?.is_manager_scope ? 'مبيعات الفرع المباشرة' : 'المبيعات الشخصية'}: {formatCurrency(payroll?.total_sales || 0)}
                   </span>
                 </div>
@@ -340,7 +340,7 @@ export const PayrollModal: React.FC<PayrollModalProps> = ({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <h4 className="text-xs font-black text-slate-900">سجل التسويات والبدلات لهذا الشهر</h4>
-                    <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-bold">
+                    <span className="text-2xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-bold">
                       {payroll?.adjustments?.length || 0}
                     </span>
                   </div>
@@ -368,7 +368,7 @@ export const PayrollModal: React.FC<PayrollModalProps> = ({
                         <div className="flex items-center gap-2.5">
                           <span
                             className={clsx(
-                              'px-2 py-0.5 rounded-full text-[10px] font-black',
+                              'px-2 py-0.5 rounded-full text-2xs font-black',
                               adj.type === 'BONUS'
                                 ? 'bg-teal-100 text-teal-800'
                                 : adj.type === 'ADVANCE'
@@ -382,7 +382,7 @@ export const PayrollModal: React.FC<PayrollModalProps> = ({
                             <span className="font-bold text-slate-800 block">
                               {adj.reason || (adj.type === 'BONUS' ? 'إضافي بدون سبب' : 'خصم بدون سبب')}
                             </span>
-                            <span className="text-[10px] text-slate-400 block mt-0.5">
+                            <span className="text-2xs text-slate-400 block mt-0.5">
                               {adj.date} • بواسطة: {adj.created_by_name}
                             </span>
                           </div>
@@ -638,7 +638,7 @@ export const PayrollModal: React.FC<PayrollModalProps> = ({
                       </option>
                     ))}
                 </select>
-                <p className="text-[10px] text-slate-400 mt-1">
+                <p className="text-2xs text-slate-400 mt-1">
                   سيتم تسجيل عملية صرف رسمية وخصم المبلغ فورياً من رصيد الخزينة، وتسجيل قيد مصروف تحت بند "رواتب وأجور".
                 </p>
               </div>

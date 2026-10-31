@@ -25,6 +25,9 @@ export default {
       fontFamily: {
         sans: ['Tajawal', 'system-ui', 'sans-serif'],
       },
+      fontSize: {
+        '2xs': '11px',
+      },
     },
   },
   plugins: [],
