@@ -6,6 +6,7 @@ import { ProtectedRoute } from './presentation/components/ProtectedRoute';
 import { RoleRoute } from './presentation/components/RoleRoute';
 import { AdminRoute } from './presentation/components/AdminRoute';
 import { ConfirmProvider } from './presentation/context/ConfirmContext';
+import { AppErrorBoundary } from './presentation/components/common/AppErrorBoundary';
 import { UserRole } from '@pos-mandob/shared';
 import { useAuthStore } from './data/store/useAuthStore';
 import { AuthHydrationGate } from './presentation/components/AuthHydrationGate';
@@ -142,7 +143,14 @@ export const App: React.FC = () => {
                 </Route>
 
                 {/* Standalone Full-Screen POS Cashier Register */}
-                <Route path="/pos" element={<PosPage />} />
+                <Route
+                  path="/pos"
+                  element={
+                    <AppErrorBoundary fallbackTitle="حدث خطأ في شاشة نقطة البيع (POS)">
+                      <PosPage />
+                    </AppErrorBoundary>
+                  }
+                />
 
                 {/* Standalone Master Super Admin Portal */}
                 <Route element={<AdminRoute />}>

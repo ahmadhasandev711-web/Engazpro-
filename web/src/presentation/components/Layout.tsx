@@ -30,6 +30,7 @@ import { ActiveShiftBanner } from './shifts/ActiveShiftBanner';
 import { OfflineBanner } from './pwa/OfflineBanner';
 import { PWAInstallButton } from './pwa/PWAInstallButton';
 import { MobileBottomNav } from './MobileBottomNav';
+import { AppErrorBoundary } from './common/AppErrorBoundary';
 
 export const Layout: React.FC = () => {
   const navigate = useNavigate();
@@ -383,7 +384,9 @@ export const Layout: React.FC = () => {
                 </div>
               }
             >
-              <Outlet />
+              <AppErrorBoundary>
+                <Outlet />
+              </AppErrorBoundary>
             </Suspense>
           </main>
 

@@ -30,6 +30,7 @@ import { MobileBottomSheet } from '../components/mobile/MobileBottomSheet';
 import { nativeBackButton } from '../../platform/nativeBackButton';
 import { useHaptic } from '../hooks/useHaptic';
 import { useConfirm } from '../context/ConfirmContext';
+import { AppErrorBoundary } from '../components/common/AppErrorBoundary';
 
 export const PosPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -641,25 +642,27 @@ export const PosPage: React.FC = () => {
       <div className="flex-1 p-3 sm:p-4 overflow-hidden flex flex-col lg:flex-row gap-3 sm:gap-4">
         {/* Right Pane (RTL): Product Catalog & Quick Search */}
         <div className="flex-1 h-full min-w-0">
-          <PosProductCatalog
-            products={products}
-            totalCount={catalogTotal}
-            browseTotal={browseTotal}
-            categories={categoryChips}
-            selectedCategoryId={selectedCategoryId}
-            onSelectCategory={setSelectedCategoryId}
-            isLoading={isProductsLoading}
-            isSearching={searchQuery.trim() !== debouncedSearch || (isCatalogFetching && !isFetchingNextPage)}
-            isFetchingMore={isFetchingNextPage}
-            onNearEnd={loadMoreCatalog}
-            listKey={`${selectedBranchId ?? 'all'}-${selectedCategoryId ?? 'all'}-${debouncedSearch}`}
-            searchMs={searchMs}
-            onAddToCart={handleCatalogProductClick}
-            searchInputRef={searchInputRef}
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            onScanBarcode={handleScanOrInputBarcode}
-          />
+          <AppErrorBoundary fallbackTitle="تعذر عرض كتالوج المنتجات">
+            <PosProductCatalog
+              products={products}
+              totalCount={catalogTotal}
+              browseTotal={browseTotal}
+              categories={categoryChips}
+              selectedCategoryId={selectedCategoryId}
+              onSelectCategory={setSelectedCategoryId}
+              isLoading={isProductsLoading}
+              isSearching={searchQuery.trim() !== debouncedSearch || (isCatalogFetching && !isFetchingNextPage)}
+              isFetchingMore={isFetchingNextPage}
+              onNearEnd={loadMoreCatalog}
+              listKey={`${selectedBranchId ?? 'all'}-${selectedCategoryId ?? 'all'}-${debouncedSearch}`}
+              searchMs={searchMs}
+              onAddToCart={handleCatalogProductClick}
+              searchInputRef={searchInputRef}
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              onScanBarcode={handleScanOrInputBarcode}
+            />
+          </AppErrorBoundary>
         </div>
 
         {/* Left Pane (RTL): Order Ticket & Cart (Desktop) */}
