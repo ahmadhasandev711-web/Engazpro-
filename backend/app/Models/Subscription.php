@@ -66,4 +66,15 @@ class Subscription extends Model
         $diff = Carbon::today()->diffInDays($endDate, false);
         return max(0, (int) ceil($diff));
     }
+
+    protected static function booted(): void
+    {
+        static::saved(function (Subscription $subscription) {
+            \App\Services\SubscriptionGate::clear((int) $subscription->user_id);
+        });
+
+        static::deleted(function (Subscription $subscription) {
+            \App\Services\SubscriptionGate::clear((int) $subscription->user_id);
+        });
+    }
 }

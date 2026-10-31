@@ -264,4 +264,13 @@ class User extends Authenticatable
     {
         return $this->hasMany(Setting::class);
     }
+
+    protected static function booted(): void
+    {
+        static::saved(function (User $user) {
+            if ($user->isDirty('status')) {
+                \App\Services\SubscriptionGate::clear((int) ($user->owner_id ?: $user->id));
+            }
+        });
+    }
 }
