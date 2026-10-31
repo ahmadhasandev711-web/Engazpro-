@@ -107,7 +107,7 @@ export const PosCartTicket: React.FC<PosCartTicketProps> = ({
             </div>
             <div>
               <h3 className="text-sm font-black text-slate-900">سلة الفاتورة الحالية</h3>
-              <span className="text-[11px] text-slate-400 font-medium">
+              <span className="text-2xs text-slate-400 font-medium">
                 {totalItemsCount} قطعة ({items.length} صنف)
               </span>
             </div>
@@ -146,7 +146,7 @@ export const PosCartTicket: React.FC<PosCartTicketProps> = ({
               <ShoppingBag className="w-6 h-6" />
             </div>
             <p className="text-xs font-bold text-slate-700">السلة فارغة حالياً</p>
-            <p className="text-[11px] text-slate-400 mt-1 max-w-[200px]">
+            <p className="text-2xs text-slate-400 mt-1 max-w-[200px]">
               انقر على أي منتج من الكتالوج أو استخدم قارئ الباركود للإضافة الفورية.
             </p>
           </div>
@@ -154,80 +154,83 @@ export const PosCartTicket: React.FC<PosCartTicketProps> = ({
           items.map((item, index) => (
             <div
               key={`${item.product_id}_${item.product_variant_id || 0}_${item.product_batch_id || 0}_${item.unit_name || ''}_${index}`}
-              className="p-3 bg-slate-50/70 border border-slate-200/80 rounded-2xl flex items-center justify-between gap-2 hover:bg-slate-50 transition-colors"
+              className="p-3 bg-slate-50/70 border border-slate-200/80 rounded-2xl flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 hover:bg-slate-50 transition-colors"
             >
               {/* Product Info & Badges */}
-              <div className="flex-1 min-w-0">
-                <h4 className="text-xs font-black text-slate-800 truncate leading-tight">
+              <div className="basis-full sm:basis-auto flex-1 min-w-0">
+                <h4 className="text-xs font-black text-slate-800 break-words leading-tight">
                   {item.product_name}
                 </h4>
 
                 {/* Variant & Unit Badges */}
                 <div className="flex flex-wrap items-center gap-1.5 mt-1">
                   {item.variant_name && (
-                    <span className="text-[11px] px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 font-bold border border-indigo-100">
+                    <span className="text-2xs px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 font-bold border border-indigo-100">
                       {item.variant_name}
                     </span>
                   )}
                   {item.unit_name && (
-                    <span className="text-[11px] px-2 py-0.5 rounded-md bg-sky-50 text-sky-700 font-bold border border-sky-100">
+                    <span className="text-2xs px-2 py-0.5 rounded-md bg-sky-50 text-sky-700 font-bold border border-sky-100">
                       {item.unit_name}
                     </span>
                   )}
                   {item.batch_number && (
-                    <span className="text-[11px] px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-bold border border-emerald-100">
+                    <span className="text-2xs px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-bold border border-emerald-100">
                       تشغيلة: {item.batch_number}
                     </span>
                   )}
-                  <span className="text-[11px] text-slate-500 font-mono">
+                  <span className="text-2xs text-slate-500 font-mono">
                     {formatCurrency(item.unit_price)} × {item.quantity}
                   </span>
                 </div>
               </div>
 
-              {/* Quantity Stepper Buttons */}
-              <div className="flex items-center gap-1 bg-white p-1 border border-slate-200 rounded-xl">
-                <button
-                  type="button"
-                  onClick={() => onUpdateQuantity(index, item.quantity - 1)}
-                  className="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition-colors"
-                >
-                  <Minus className="w-3 h-3" />
-                </button>
+              {/* Stepper, Line Total & Remove Container (Row 2 on Mobile, Inline on Desktop) */}
+              <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto pt-1 sm:pt-0 border-t border-slate-200/40 sm:border-0">
+                {/* Quantity Stepper Buttons */}
+                <div className="flex items-center gap-1 bg-white p-1 border border-slate-200 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => onUpdateQuantity(index, item.quantity - 1)}
+                    className="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition-colors"
+                  >
+                    <Minus className="w-3 h-3" />
+                  </button>
 
-                <input
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={item.quantity}
-                  onChange={(e) => {
-                    const val = Number(e.target.value);
-                    if (val > 0) onUpdateQuantity(index, val);
-                  }}
-                  className="w-11 sm:w-10 min-w-[2.75rem] text-center font-mono font-black text-xs text-slate-900 border-none focus:outline-none p-0"
-                />
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={item.quantity}
+                    onChange={(e) => {
+                      const val = Number(e.target.value);
+                      if (val > 0) onUpdateQuantity(index, val);
+                    }}
+                    className="w-11 sm:w-10 min-w-[2.75rem] text-center font-mono font-black text-xs text-slate-900 border-none focus:outline-none p-0"
+                  />
 
-                <button
-                  type="button"
-                  onClick={() => onUpdateQuantity(index, item.quantity + 1)}
-                  className="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition-colors"
-                >
-                  <Plus className="w-3 h-3" />
-                </button>
-              </div>
+                  <button
+                    type="button"
+                    onClick={() => onUpdateQuantity(index, item.quantity + 1)}
+                    className="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition-colors"
+                  >
+                    <Plus className="w-3 h-3" />
+                  </button>
+                </div>
 
-              {/* Line Total & Remove */}
-              <div className="flex items-center gap-2 text-right">
-                <span className="font-mono font-black text-xs text-emerald-700 min-w-[60px]">
-                  {formatCurrency(item.total)}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => onRemoveItem(index)}
-                  className="text-slate-300 hover:text-rose-600 p-1 rounded-lg transition-colors"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+                {/* Line Total & Remove */}
+                <div className="flex items-center gap-2 text-right">
+                  <span className="font-mono font-black text-xs text-emerald-700 min-w-[60px]">
+                    {formatCurrency(item.total)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => onRemoveItem(index)}
+                    className="text-slate-300 hover:text-rose-600 p-1 rounded-lg transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
             </div>
           ))
@@ -323,7 +326,7 @@ export const PosCartTicket: React.FC<PosCartTicketProps> = ({
 
             {(isShippingSelected || Boolean(shippingCost > 0 || courierPartyId)) && (
               <div className="bg-indigo-50/70 p-2.5 rounded-xl border border-indigo-100 space-y-1 animate-in fade-in duration-150">
-                <label className="text-[11px] font-bold text-indigo-950 block">شركة الشحن للتوصيل:</label>
+                <label className="text-2xs font-bold text-indigo-950 block">شركة الشحن للتوصيل:</label>
                 <select
                   value={courierPartyId || ''}
                   onChange={(e) => onUpdateCourierPartyId?.(e.target.value ? Number(e.target.value) : null)}
@@ -344,7 +347,7 @@ export const PosCartTicket: React.FC<PosCartTicketProps> = ({
         {/* Net Total Display */}
         <div className="p-3.5 bg-slate-900 text-white rounded-2xl flex items-center justify-between shadow-sm">
           <div>
-            <span className="text-[11px] text-slate-400 block">المبلغ الإجمالي المطلوب:</span>
+            <span className="text-2xs text-slate-400 block">المبلغ الإجمالي المطلوب:</span>
             <span className="text-xl sm:text-2xl font-black font-mono text-emerald-400 tracking-tight">
               {formatCurrency(total)}
             </span>
