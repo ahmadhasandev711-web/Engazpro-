@@ -21,7 +21,6 @@ import {
 } from 'lucide-react';
 import { apiClient } from '../../data/api/client';
 import { Party, PartySchema, PartyInput, PartyType, formatCurrency } from '@pos-mandob/shared';
-import { exportPartiesToExcel } from '../utils/excelExport';
 import { usePermissions } from '../../hooks/usePermissions';
 import { MobileFilterChips, FilterChipOption } from '../components/mobile/MobileFilterChips';
 import { PartyMobileCard } from '../components/mobile/PartyMobileCard';
@@ -211,7 +210,10 @@ export const PartiesPage: React.FC = () => {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => exportPartiesToExcel(parties, pageTitle)}
+            onClick={async () => {
+              const { exportPartiesToExcel } = await import('../utils/excelExport');
+              exportPartiesToExcel(parties, pageTitle);
+            }}
             disabled={parties.length === 0}
             className="inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3.5 py-2.5 rounded-xl text-xs font-bold shadow-sm transition-colors disabled:opacity-50"
             title={`تصدير قائمة ${pageTitle} إلى Excel`}

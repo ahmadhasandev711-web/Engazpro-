@@ -7,7 +7,7 @@ import {
   Wallet,
   Download,
 } from 'lucide-react';
-import { exportCashFlowToExcel, exportProductsToExcel, exportJsonToExcel } from '../utils/excelExport';
+
 import {
   useProfitReport,
   useSalesReport,
@@ -129,7 +129,8 @@ export const ReportsPage: React.FC = () => {
     window.print();
   };
 
-  const handleExportCurrentTab = () => {
+  const handleExportCurrentTab = async () => {
+    const { exportCashFlowToExcel, exportProductsToExcel, exportJsonToExcel } = await import('../utils/excelExport');
     if (activeTab === 'cash-flow' && cashFlowData) {
       exportCashFlowToExcel(cashFlowData, fromDate || 'البداية', toDate || 'اليوم');
     } else if (activeTab === 'stock' && stockData?.products) {

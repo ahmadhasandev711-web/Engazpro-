@@ -13,10 +13,8 @@ import {
   Save,
   Filter,
 } from 'lucide-react';
-import * as XLSX from 'xlsx';
 import { apiClient } from '../../../data/api/client';
 import { Product } from '@pos-mandob/shared';
-import { downloadOpeningStockTemplate } from '../../utils/excelExport';
 
 interface OpeningStockModalProps {
   isOpen: boolean;
@@ -163,6 +161,7 @@ export const OpeningStockModal: React.FC<OpeningStockModalProps> = ({
     if (!file) return;
 
     try {
+      const XLSX = await import('xlsx');
       const buffer = await file.arrayBuffer();
       const workbook = XLSX.read(buffer, { type: 'array' });
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -350,7 +349,10 @@ export const OpeningStockModal: React.FC<OpeningStockModalProps> = ({
             <div className="sm:col-span-3 flex items-center gap-2 pt-4 sm:pt-0">
               <button
                 type="button"
-                onClick={() => downloadOpeningStockTemplate(products)}
+                onClick={async () => {
+                  const { downloadOpeningStockTemplate } = await import('../../utils/excelExport');
+                  downloadOpeningStockTemplate(products);
+                }}
                 className="flex-1 inline-flex items-center justify-center gap-1 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-2.5 py-2 rounded-xl text-xs font-bold transition-all shadow-xs"
                 title="تحميل نموذج Excel معبأ بالأصناف والمتغيرات لتسهيل الإدخال"
               >

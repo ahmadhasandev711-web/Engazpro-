@@ -5,7 +5,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ExpenseSchema, ExpenseInput, Expense, formatCurrency } from '@pos-mandob/shared';
 import { apiClient } from '../../data/api/client';
-import { exportExpensesToExcel } from '../utils/excelExport';
 import { usePermissions } from '../../hooks/usePermissions';
 import { DateRangeFilter, calculatePresetDates } from '../components/common/DateRangeFilter';
 import { PaginationBar } from '../components/common/PaginationBar';
@@ -209,6 +208,11 @@ export const ExpensesPage: React.FC = () => {
     saveMutation.mutate(data);
   };
 
+  const handleExportExcel = async () => {
+    const { exportExpensesToExcel } = await import('../utils/excelExport');
+    exportExpensesToExcel(expenses);
+  };
+
   return (
     <div className="space-y-6 flex flex-col h-full">
       {/* Desktop Header & Stats Banner (md:flex) */}
@@ -220,7 +224,7 @@ export const ExpensesPage: React.FC = () => {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => exportExpensesToExcel(expenses)}
+              onClick={handleExportExcel}
               disabled={expenses.length === 0}
               className="inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3.5 py-2.5 rounded-xl text-xs font-bold shadow-sm transition-colors disabled:opacity-50"
               title="تصدير سجل المصروفات إلى Excel"
@@ -283,7 +287,7 @@ export const ExpensesPage: React.FC = () => {
         <div className="flex items-center gap-1.5">
           <button
             type="button"
-            onClick={() => exportExpensesToExcel(expenses)}
+            onClick={handleExportExcel}
             disabled={expenses.length === 0}
             className="p-2 bg-white/20 hover:bg-white/30 text-white rounded-xl backdrop-blur-sm transition-colors disabled:opacity-40"
             title="تصدير Excel"

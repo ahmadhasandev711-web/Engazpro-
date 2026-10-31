@@ -1,5 +1,4 @@
 import React from 'react';
-import { exportProductsToExcel } from '../../utils/excelExport';
 import { Plus, Download, Upload, Boxes } from 'lucide-react';
 import type { ProductsViewModel } from './types';
 
@@ -22,7 +21,10 @@ export const ProductsHeader: React.FC<{ vm: ProductsViewModel }> = ({ vm }) => {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => exportProductsToExcel(products)}
+            onClick={async () => {
+              const { exportProductsToExcel } = await import('../../utils/excelExport');
+              exportProductsToExcel(products);
+            }}
             disabled={products.length === 0}
             className="inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3.5 py-2.5 rounded-xl text-xs font-bold shadow-sm transition-colors disabled:opacity-50"
             title="تصدير الأصناف والمخزون الحالي إلى Excel"

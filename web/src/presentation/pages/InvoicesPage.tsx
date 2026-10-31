@@ -4,7 +4,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Receipt, Plus, Search, Trash2, Eye, AlertCircle, RotateCcw, Download, X, Printer, Calendar, User, CreditCard, UserCheck, Edit2, Save, Share2 } from 'lucide-react';
 import { InvoiceType, formatCurrency } from '@pos-mandob/shared';
 import { apiClient } from '../../data/api/client';
-import { exportInvoicesToExcel } from '../utils/excelExport';
 import { usePermissions } from '../../hooks/usePermissions';
 import { DateRangeFilter, calculatePresetDates } from '../components/common/DateRangeFilter';
 import { PaginationBar } from '../components/common/PaginationBar';
@@ -181,6 +180,11 @@ export const InvoicesPage: React.FC = () => {
     window.print();
   };
 
+  const handleExportExcel = async () => {
+    const { exportInvoicesToExcel } = await import('../utils/excelExport');
+    exportInvoicesToExcel(invoices, pageTitle);
+  };
+
   const handleShareWhatsApp = async () => {
     if (!invoiceDetails) return;
     const storeIdentity = user?.store_identity;
@@ -219,7 +223,7 @@ export const InvoicesPage: React.FC = () => {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => exportInvoicesToExcel(invoices, pageTitle)}
+            onClick={handleExportExcel}
             disabled={invoices.length === 0}
             className="inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3.5 py-2.5 rounded-xl text-xs font-bold shadow-sm transition-colors disabled:opacity-50"
             title={`تصدير ${pageTitle} إلى Excel`}
@@ -260,7 +264,7 @@ export const InvoicesPage: React.FC = () => {
         <div className="flex items-center gap-1.5">
           <button
             type="button"
-            onClick={() => exportInvoicesToExcel(invoices, pageTitle)}
+            onClick={handleExportExcel}
             disabled={invoices.length === 0}
             className="p-2 bg-white/20 hover:bg-white/30 text-white rounded-xl backdrop-blur-sm transition-colors disabled:opacity-40"
             title={`تصدير ${pageTitle} إلى Excel`}

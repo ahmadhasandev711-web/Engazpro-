@@ -26,7 +26,7 @@ import { apiClient } from '../../data/api/client';
 import { formatCurrency } from '@pos-mandob/shared';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useAuthStore } from '../../data/store/useAuthStore';
-import { exportManifestToExcel } from '../utils/excelExport';
+
 import { CourierMobileCard } from '../components/mobile/CourierMobileCard';
 import { PaginationBar } from '../components/common/PaginationBar';
 import { nativeBackButton } from '../../platform/nativeBackButton';
@@ -824,7 +824,10 @@ export const CouriersPage: React.FC = () => {
             <div className="p-3 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => exportManifestToExcel(filteredShipments, manifestCourier?.name || 'شركة_الشحن')}
+                  onClick={async () => {
+                    const { exportManifestToExcel } = await import('../utils/excelExport');
+                    exportManifestToExcel(filteredShipments, manifestCourier?.name || 'شركة_الشحن');
+                  }}
                   disabled={filteredShipments.length === 0}
                   className="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100 inline-flex items-center gap-1.5 cursor-pointer shadow-2xs disabled:opacity-50"
                   title="تصدير الشحنات إلى ملف Excel"

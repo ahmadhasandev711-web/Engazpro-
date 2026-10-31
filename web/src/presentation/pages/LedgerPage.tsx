@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { apiClient } from '../../data/api/client';
 import { formatCurrency, formatDate } from '@pos-mandob/shared';
-import { exportLedgerToExcel } from '../utils/excelExport';
+
 import { DateRangeFilter } from '../components/common/DateRangeFilter';
 import { PaginationBar } from '../components/common/PaginationBar';
 import { useAuthStore } from '../../data/store/useAuthStore';
@@ -88,7 +88,11 @@ export const LedgerPage: React.FC = () => {
 
         <div className="flex items-center gap-2">
           <button
-            onClick={() => data && exportLedgerToExcel(data, party?.name || 'كشف_حساب')}
+            onClick={async () => {
+              if (!data) return;
+              const { exportLedgerToExcel } = await import('../utils/excelExport');
+              exportLedgerToExcel(data, party?.name || 'كشف_حساب');
+            }}
             disabled={!data || entries.length === 0}
             className="inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3.5 py-2 rounded-xl text-xs font-bold shadow-sm transition-colors disabled:opacity-50"
             title="تصدير كشف الحساب إلى Excel"
