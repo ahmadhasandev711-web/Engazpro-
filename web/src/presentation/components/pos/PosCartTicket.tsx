@@ -204,7 +204,7 @@ export const PosCartTicket: React.FC<PosCartTicketProps> = ({
                     const val = Number(e.target.value);
                     if (val > 0) onUpdateQuantity(index, val);
                   }}
-                  className="w-10 text-center font-mono font-black text-xs text-slate-900 border-none focus:outline-none p-0"
+                  className="w-11 sm:w-10 min-w-[2.75rem] text-center font-mono font-black text-xs text-slate-900 border-none focus:outline-none p-0"
                 />
 
                 <button
@@ -248,7 +248,7 @@ export const PosCartTicket: React.FC<PosCartTicketProps> = ({
               <Percent className="w-3.5 h-3.5 text-slate-400" />
               <span>خصم الفاتورة:</span>
             </span>
-            <div className="flex items-center gap-1 w-28">
+            <div className="flex items-center gap-1 w-32 sm:w-28">
               <input
                 type="number"
                 min="0"
@@ -306,7 +306,7 @@ export const PosCartTicket: React.FC<PosCartTicketProps> = ({
               </label>
 
               {(isShippingSelected || Boolean(shippingCost > 0 || courierPartyId)) && (
-                <div className="flex items-center gap-1 w-24">
+                <div className="flex items-center gap-1 w-28 sm:w-24">
                   <input
                     type="number"
                     min="0"
