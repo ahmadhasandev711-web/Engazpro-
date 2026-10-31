@@ -16,8 +16,10 @@ Artisan::command('inspire', function () {
  */
 Schedule::command('queue:work --queue=woo-realtime,default --stop-when-empty --max-time=50')
     ->everyMinute()
-    ->withoutOverlapping(2);
+    ->withoutOverlapping(2)
+    ->runInBackground();
 
 Schedule::command('queue:work --queue=woo-bulk --stop-when-empty --max-time=50')
     ->everyMinute()
-    ->withoutOverlapping(2);
+    ->withoutOverlapping(2)
+    ->runInBackground();

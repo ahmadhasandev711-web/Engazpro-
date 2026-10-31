@@ -28,9 +28,11 @@ class QueueWorkerScheduleTest extends TestCase
 
         $this->assertTrue($realtimeEvent->withoutOverlapping);
         $this->assertSame(2, $realtimeEvent->expiresAt);
+        $this->assertTrue($realtimeEvent->runInBackground, 'عامل woo-realtime يجب أن يعمل في الخلفية runInBackground');
 
         $this->assertTrue($bulkEvent->withoutOverlapping);
         $this->assertSame(2, $bulkEvent->expiresAt);
+        $this->assertTrue($bulkEvent->runInBackground, 'عامل woo-bulk يجب أن يعمل في الخلفية runInBackground');
 
         $this->assertGreaterThan(
             900,
