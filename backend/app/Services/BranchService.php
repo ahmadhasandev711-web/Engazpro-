@@ -191,6 +191,8 @@ class BranchService
             $query->whereColumn('quantity', '<=', 'min_quantity');
         }
 
-        return $query->paginate($filters['per_page'] ?? 30);
+        $perPage = min(max(1, (int) ($filters['per_page'] ?? config('pos.pagination.default', 30))), (int) config('pos.pagination.max', 100));
+
+        return $query->paginate($perPage);
     }
 }

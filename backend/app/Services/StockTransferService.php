@@ -51,7 +51,9 @@ class StockTransferService
             $query->where('to_branch_id', $filters['to_branch_id']);
         }
 
-        return $query->orderByDesc('id')->paginate($filters['per_page'] ?? 20);
+        $perPage = min(max(1, (int) ($filters['per_page'] ?? config('pos.pagination.default', 20))), (int) config('pos.pagination.max', 100));
+
+        return $query->orderByDesc('id')->paginate($perPage);
     }
 
     /**
