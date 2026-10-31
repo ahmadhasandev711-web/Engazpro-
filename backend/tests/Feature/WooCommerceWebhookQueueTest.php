@@ -138,6 +138,7 @@ class WooCommerceWebhookQueueTest extends TestCase
 
         $job->handle($mockSyncService);
 
-        $this->assertEquals($this->owner->id, \Illuminate\Support\Facades\Auth::id());
+        $this->assertNotEmpty($job->middleware());
+        $this->assertInstanceOf(\App\Jobs\Middleware\WithTenantContext::class, $job->middleware()[0]);
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Enums\QueueName;
+use App\Jobs\Middleware\WithTenantContext;
 use App\Models\User;
 use App\Services\WooCommerce\WooCommerceOrderSyncService;
 use Illuminate\Bus\Queueable;
@@ -10,7 +11,6 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 class PullWooCommerceOrdersJob implements ShouldQueue
@@ -27,6 +27,11 @@ class PullWooCommerceOrdersJob implements ShouldQueue
         $this->onQueue(QueueName::WOO_BULK->value);
     }
 
+    public function middleware(): array
+    {
+        return [new WithTenantContext($this->actingUserId)];
+    }
+
     /**
      * @return array{imported: int, updated: int, failed: int, errors: list<string>}
      */
@@ -34,8 +39,6 @@ class PullWooCommerceOrdersJob implements ShouldQueue
     {
         $user = User::withoutGlobalScopes()->find($this->actingUserId)
             ?? User::withoutGlobalScopes()->findOrFail($this->accountId);
-
-        Auth::setUser($user);
 
         try {
             return $orderSyncService->pullRecentOrders($user);

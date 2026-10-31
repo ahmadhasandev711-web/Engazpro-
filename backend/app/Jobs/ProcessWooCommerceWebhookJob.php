@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Enums\QueueName;
+use App\Jobs\Middleware\WithTenantContext;
 use App\Models\User;
 use App\Services\WooCommerce\WooCommerceOrderSyncService;
 use Illuminate\Bus\Queueable;
@@ -10,7 +11,6 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 class ProcessWooCommerceWebhookJob implements ShouldQueue
@@ -29,6 +29,11 @@ class ProcessWooCommerceWebhookJob implements ShouldQueue
         $this->onQueue(QueueName::WOO_REALTIME->value);
     }
 
+    public function middleware(): array
+    {
+        return [new WithTenantContext($this->userId)];
+    }
+
     public function handle(WooCommerceOrderSyncService $orderSyncService): void
     {
         $user = User::withoutGlobalScopes()->find($this->userId);
@@ -36,9 +41,6 @@ class ProcessWooCommerceWebhookJob implements ShouldQueue
             Log::warning("ProcessWooCommerceWebhookJob: User #{$this->userId} not found.");
             return;
         }
-
-        // Establish tenant authentication context so multi-tenancy and global scopes work correctly
-        Auth::setUser($user);
 
         if (!empty($this->payload['id'])) {
             $orderSyncService->handleIncomingOrder($user, $this->payload);
