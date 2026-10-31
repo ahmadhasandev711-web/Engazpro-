@@ -9,7 +9,7 @@ export const exportJsonToExcel = (
   sheetName: string = 'البيانات'
 ) => {
   if (!data || data.length === 0) {
-    alert('لا توجد بيانات للتصدير');
+    console.warn('لا توجد بيانات للتصدير');
     return;
   }
 

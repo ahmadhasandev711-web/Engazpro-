@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Download, Smartphone, X, Share, PlusSquare, CheckCircle2 } from 'lucide-react';
 import { usePWAInstall } from '../../../hooks/usePWAInstall';
+import { useToast } from '../../context/ToastContext';
 
 interface PWAInstallButtonProps {
   className?: string;
@@ -11,6 +12,7 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
   className = '',
   variant = 'header',
 }) => {
+  const toast = useToast();
   const { canInstall, isInstalled, isIOS, installApp } = usePWAInstall();
   const [showIOSModal, setShowIOSModal] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -28,7 +30,7 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
       await installApp();
       setLoading(false);
     } else {
-      alert('لتثبيت التطبيق على جهازك: اضغط على أيقونة التثبيت ⊕ في شريط عنوان المتصفح.');
+      toast.info('لتثبيت التطبيق على جهازك: اضغط على أيقونة التثبيت ⊕ في شريط عنوان المتصفح.');
     }
   };
 

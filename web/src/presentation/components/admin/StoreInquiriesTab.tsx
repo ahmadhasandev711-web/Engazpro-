@@ -21,8 +21,12 @@ import {
   useUpdateInquiryStatus,
   useDeleteInquiry,
 } from '../../../hooks/useAdmin';
+import { useToast } from '../../context/ToastContext';
+import { useConfirm } from '../../context/ConfirmContext';
 
 export const StoreInquiriesTab: React.FC = () => {
+  const toast = useToast();
+  const { confirm } = useConfirm();
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [search, setSearch] = useState<string>('');
   const [editingNotesInquiry, setEditingNotesInquiry] = useState<StoreInquiry | null>(null);
@@ -51,7 +55,7 @@ export const StoreInquiriesTab: React.FC = () => {
           // Status updated
         },
         onError: (err: any) => {
-          alert(err.response?.data?.message || 'تعذر تعديل حالة الطلب');
+          toast.error(err.response?.data?.message || 'تعذر تعديل حالة الطلب');
         },
       }
     );
@@ -70,17 +74,22 @@ export const StoreInquiriesTab: React.FC = () => {
           setEditingNotesInquiry(null);
         },
         onError: (err: any) => {
-          alert(err.response?.data?.message || 'تعذر حفظ ملاحظات الإدارة');
+          toast.error(err.response?.data?.message || 'تعذر حفظ ملاحظات الإدارة');
         },
       }
     );
   };
 
-  const handleDelete = (id: number, clientName: string) => {
-    if (confirm(`هل أنت متأكد من حذف طلب العميل "${clientName}" نهائياً؟`)) {
+  const handleDelete = async (id: number, clientName: string) => {
+    const ok = await confirm({
+      title: 'تأكيد الحذف',
+      message: `هل أنت متأكد من حذف طلب العميل "${clientName}" نهائياً؟`,
+      type: 'danger',
+    });
+    if (ok) {
       deleteMutation.mutate(id, {
         onError: (err: any) => {
-          alert(err.response?.data?.message || 'تعذر حذف الطلب');
+          toast.error(err.response?.data?.message || 'تعذر حذف الطلب');
         },
       });
     }

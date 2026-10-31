@@ -30,8 +30,10 @@ import { PayrollModal } from '../components/employees/PayrollModal';
 import { EmployeeMobileCard, EmployeeItem } from '../components/mobile/EmployeeMobileCard';
 import { MobileFilterChips, FilterChipOption } from '../components/mobile/MobileFilterChips';
 import { nativeBackButton } from '../../platform/nativeBackButton';
+import { useConfirm } from '../context/ConfirmContext';
 
 export const EmployeesPage: React.FC = () => {
+  const { confirm } = useConfirm();
   const queryClient = useQueryClient();
   const { user, isOwnerOrAdmin, isManager } = usePermissions();
   const [search, setSearch] = useState('');
@@ -291,12 +293,13 @@ export const EmployeesPage: React.FC = () => {
     saveMutation.mutate(formData);
   };
 
-  const handleDelete = (emp: EmployeeItem) => {
-    if (
-      window.confirm(
-        `هل أنت متأكد من رغبتك في حذف الموظف "${emp.name}"؟\n(ملاحظة: إذا كان للموظف فواتير سابقة سيتم إيقاف حسابه فقط للحفاظ على السجلات)`
-      )
-    ) {
+  const handleDelete = async (emp: EmployeeItem) => {
+    const ok = await confirm({
+      title: 'تأكيد حذف الموظف',
+      message: `هل أنت متأكد من رغبتك في حذف الموظف "${emp.name}"؟\n(ملاحظة: إذا كان للموظف فواتير سابقة سيتم إيقاف حسابه فقط للحفاظ على السجلات)`,
+      type: 'danger',
+    });
+    if (ok) {
       deleteMutation.mutate(emp.id);
     }
   };

@@ -29,8 +29,10 @@ import { StoreInquiriesTab } from '../components/admin/StoreInquiriesTab';
 import { ExtendSubscriptionModal } from '../components/admin/ExtendSubscriptionModal';
 import { StoreStaffModal } from '../components/admin/StoreStaffModal';
 import { ResetPasswordModal } from '../components/admin/ResetPasswordModal';
+import { useToast } from '../context/ToastContext';
 
 export const AdminDashboardPage: React.FC = () => {
+  const toast = useToast();
   const [activeTab, setActiveTab] = useState<'licenses' | 'users' | 'system' | 'inquiries'>('licenses');
   const [licenseSearch, setLicenseSearch] = useState<string>('');
   const [licenseStatusFilter, setLicenseStatusFilter] = useState<'all' | 'unused' | 'used' | 'revoked'>('all');
@@ -60,8 +62,8 @@ export const AdminDashboardPage: React.FC = () => {
 
   const handleGenerate = (payload: { count: number; duration_days: number; notes: string }) => {
     generateMutation.mutate(payload, {
-      onSuccess: () => alert('تم توليد أكواد التفعيل بنجاح! 🔑'),
-      onError: (err: any) => alert(err.response?.data?.message || 'حدث خطأ أثناء توليد الأكواد'),
+      onSuccess: () => toast.success('تم توليد أكواد التفعيل بنجاح! 🔑'),
+      onError: (err: any) => toast.error(err.response?.data?.message || 'حدث خطأ أثناء توليد الأكواد'),
     });
   };
 
@@ -69,9 +71,9 @@ export const AdminDashboardPage: React.FC = () => {
     extendUserMutation.mutate(payload, {
       onSuccess: (data: any) => {
         setSelectedUserForExtend(null);
-        alert(data.message || 'تم تمديد اشتراك المستخدم بنجاح! 🎉');
+        toast.success(data.message || 'تم تمديد اشتراك المستخدم بنجاح! 🎉');
       },
-      onError: (err: any) => alert(err.response?.data?.message || 'تعذر تمديد الاشتراك'),
+      onError: (err: any) => toast.error(err.response?.data?.message || 'تعذر تمديد الاشتراك'),
     });
   };
 
@@ -79,27 +81,27 @@ export const AdminDashboardPage: React.FC = () => {
     resetPasswordMutation.mutate(payload, {
       onSuccess: (data: any) => {
         setSelectedUserForResetPassword(null);
-        alert(data.message || 'تم تغيير كلمة المرور بنجاح! 🔑');
+        toast.success(data.message || 'تم تغيير كلمة المرور بنجاح! 🔑');
       },
-      onError: (err: any) => alert(err.response?.data?.message || 'تعذر تغيير كلمة المرور'),
+      onError: (err: any) => toast.error(err.response?.data?.message || 'تعذر تغيير كلمة المرور'),
     });
   };
 
   const handleRevokeLicense = (licenseId: number) => {
     revokeLicenseMutation.mutate(licenseId, {
       onSuccess: (data: any) => {
-        alert(data.message || 'تم حرق وإلغاء كود التفعيل بنجاح ومنع استخدامه نهائياً! 🚫');
+        toast.success(data.message || 'تم حرق وإلغاء كود التفعيل بنجاح ومنع استخدامه نهائياً! 🚫');
       },
-      onError: (err: any) => alert(err.response?.data?.message || 'تعذر إلغاء الكود'),
+      onError: (err: any) => toast.error(err.response?.data?.message || 'تعذر إلغاء الكود'),
     });
   };
 
   const handleToggleStatus = (user: User) => {
     toggleStatusMutation.mutate(user.id, {
       onSuccess: (data: any) => {
-        alert(data.message || 'تم تعديل حالة حساب المتجر بنجاح.');
+        toast.success(data.message || 'تم تعديل حالة حساب المتجر بنجاح.');
       },
-      onError: (err: any) => alert(err.response?.data?.message || 'تعذر تعديل حالة الحساب'),
+      onError: (err: any) => toast.error(err.response?.data?.message || 'تعذر تعديل حالة الحساب'),
     });
   };
 

@@ -26,6 +26,7 @@ import { apiClient } from '../../data/api/client';
 import { formatCurrency } from '@pos-mandob/shared';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useAuthStore } from '../../data/store/useAuthStore';
+import { useConfirm } from '../context/ConfirmContext';
 
 import { CourierMobileCard } from '../components/mobile/CourierMobileCard';
 import { PaginationBar } from '../components/common/PaginationBar';
@@ -35,6 +36,7 @@ export const CouriersPage: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { canDeleteParty } = usePermissions();
+  const { confirm } = useConfirm();
 
   const [search, setSearch] = useState('');
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -504,11 +506,16 @@ export const CouriersPage: React.FC = () => {
                         {/* Delete Button */}
                         {canDeleteParty && (
                           <button
-                            onClick={() => {
-                              if (confirm(`هل أنت متأكد من حذف شركة الشحن "${c.name}"؟`)) {
-                                deleteCourierMutation.mutate(c.id);
-                              }
-                            }}
+                            onClick={async () => {
+                            const ok = await confirm({
+                              title: 'تأكيد حذف شركة الشحن',
+                              message: `هل أنت متأكد من حذف شركة الشحن "${c.name}"؟`,
+                              type: 'danger',
+                            });
+                            if (ok) {
+                              deleteCourierMutation.mutate(c.id);
+                            }
+                          }}
                             className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"
                             title="حذف"
                           >
@@ -534,8 +541,13 @@ export const CouriersPage: React.FC = () => {
                   onOpenSettle={(cour) => openSettleModal(cour)}
                   onOpenLedger={(id) => navigate(`/ledger/${id}`)}
                   onEditCourier={(cour) => openEditModal(cour)}
-                  onDeleteCourier={(id, name) => {
-                    if (confirm(`هل أنت متأكد من حذف شركة الشحن "${name}"؟`)) {
+                  onDeleteCourier={async (id, name) => {
+                    const ok = await confirm({
+                      title: 'تأكيد حذف شركة الشحن',
+                      message: `هل أنت متأكد من حذف شركة الشحن "${name}"؟`,
+                      type: 'danger',
+                    });
+                    if (ok) {
                       deleteCourierMutation.mutate(id);
                     }
                   }}

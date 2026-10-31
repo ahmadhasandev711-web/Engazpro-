@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { apiClient } from '../../../data/api/client';
 import { Product } from '@pos-mandob/shared';
+import { useToast } from '../../context/ToastContext';
 
 interface OpeningStockModalProps {
   isOpen: boolean;
@@ -43,6 +44,7 @@ export const OpeningStockModal: React.FC<OpeningStockModalProps> = ({
   onSuccess,
   products,
 }) => {
+  const toast = useToast();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -168,7 +170,7 @@ export const OpeningStockModal: React.FC<OpeningStockModalProps> = ({
       const rawRows: any[] = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
 
       if (rawRows.length === 0) {
-        alert('ملف Excel لا يحتوي على صفوف بيانات.');
+        toast.error('ملف Excel لا يحتوي على صفوف بيانات.');
         return;
       }
 

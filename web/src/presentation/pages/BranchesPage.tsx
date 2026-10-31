@@ -22,10 +22,12 @@ import { apiClient } from '../../data/api/client';
 import { usePermissions } from '../../hooks/usePermissions';
 import { BranchMobileCard } from '../components/mobile/BranchMobileCard';
 import { nativeBackButton } from '../../platform/nativeBackButton';
+import { useConfirm } from '../context/ConfirmContext';
 
 export const BranchesPage: React.FC = () => {
   const queryClient = useQueryClient();
   const { isOwner, isManager } = usePermissions();
+  const { confirm } = useConfirm();
 
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editingBranch, setEditingBranch] = useState<any | null>(null);
@@ -366,8 +368,13 @@ export const BranchesPage: React.FC = () => {
                   isOwnerOrManager={isOwner || isManager}
                   onOpenInventory={(b) => setInventoryBranch(b)}
                   onEdit={(b) => handleOpenEdit(b)}
-                  onDelete={(id, name) => {
-                    if (confirm(`هل أنت متأكد من حذف الفرع "${name}"؟`)) {
+                  onDelete={async (id, name) => {
+                    const ok = await confirm({
+                      title: 'تأكيد حذف الفرع',
+                      message: `هل أنت متأكد من حذف الفرع "${name}"؟`,
+                      type: 'danger',
+                    });
+                    if (ok) {
                       deleteMutation.mutate(id);
                     }
                   }}
@@ -448,8 +455,13 @@ export const BranchesPage: React.FC = () => {
 
                         {!branch.is_main && (
                           <button
-                            onClick={() => {
-                              if (confirm(`هل أنت متأكد من حذف الفرع "${branch.name}"؟`)) {
+                            onClick={async () => {
+                              const ok = await confirm({
+                                title: 'تأكيد حذف الفرع',
+                                message: `هل أنت متأكد من حذف الفرع "${branch.name}"؟`,
+                                type: 'danger',
+                              });
+                              if (ok) {
                                 deleteMutation.mutate(branch.id);
                               }
                             }}

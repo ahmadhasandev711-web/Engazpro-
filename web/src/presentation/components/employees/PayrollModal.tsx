@@ -15,6 +15,7 @@ import {
 import clsx from 'clsx';
 import { apiClient } from '../../../data/api/client';
 import { formatCurrency, PaymentMethod } from '@pos-mandob/shared';
+import { useConfirm } from '../../context/ConfirmContext';
 
 interface PayrollModalProps {
   isOpen: boolean;
@@ -29,6 +30,7 @@ export const PayrollModal: React.FC<PayrollModalProps> = ({
   onClose,
   employee,
 }) => {
+  const { confirm } = useConfirm();
   const queryClient = useQueryClient();
   const [selectedMonth, setSelectedMonth] = useState<string>(() => new Date().toISOString().slice(0, 7));
   const [isAddAdjustmentOpen, setIsAddAdjustmentOpen] = useState(false);
@@ -399,8 +401,13 @@ export const PayrollModal: React.FC<PayrollModalProps> = ({
                           {!isPaid && (
                             <button
                               type="button"
-                              onClick={() => {
-                                if (window.confirm('هل أنت متأكد من رغبتك في حذف هذا البند؟')) {
+                              onClick={async () => {
+                                const ok = await confirm({
+                                  title: 'تأكيد الحذف',
+                                  message: 'هل أنت متأكد من رغبتك في حذف هذا البند؟',
+                                  type: 'danger',
+                                });
+                                if (ok) {
                                   deleteAdjustmentMutation.mutate(adj.id);
                                 }
                               }}

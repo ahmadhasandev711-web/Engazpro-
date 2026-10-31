@@ -11,8 +11,10 @@ import { PaginationBar } from '../components/common/PaginationBar';
 import { MobileFilterChips, FilterChipOption } from '../components/mobile/MobileFilterChips';
 import { ExpenseMobileCard } from '../components/mobile/ExpenseMobileCard';
 import { nativeBackButton } from '../../platform/nativeBackButton';
+import { useConfirm } from '../context/ConfirmContext';
 
 export const ExpensesPage: React.FC = () => {
+  const { confirm } = useConfirm();
   const queryClient = useQueryClient();
   const { canDeleteExpense, isOwnerOrAdmin, isCashier, isMandob } = usePermissions();
   const initialDates = calculatePresetDates('today');
@@ -197,8 +199,13 @@ export const ExpensesPage: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id: number, title: string) => {
-    if (window.confirm(`هل أنت متأكد من حذف مصروف "${title}"؟`)) {
+  const handleDelete = async (id: number, title: string) => {
+    const ok = await confirm({
+      title: 'تأكيد حذف المصروف',
+      message: `هل أنت متأكد من حذف مصروف "${title}"؟`,
+      type: 'danger',
+    });
+    if (ok) {
       deleteMutation.mutate(id);
     }
   };
@@ -733,8 +740,13 @@ export const ExpensesPage: React.FC = () => {
                               <Edit2 className="w-3.5 h-3.5" />
                             </button>
                             <button
-                              onClick={() => {
-                                if (window.confirm(`هل أنت متأكد من حذف تصنيف "${cat.name}"؟`)) {
+                              onClick={async () => {
+                                const ok = await confirm({
+                                  title: 'تأكيد حذف التصنيف',
+                                  message: `هل أنت متأكد من حذف تصنيف "${cat.name}"؟`,
+                                  type: 'danger',
+                                });
+                                if (ok) {
                                   deleteCategoryMutation.mutate(cat.id);
                                 }
                               }}

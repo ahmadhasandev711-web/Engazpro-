@@ -8,12 +8,14 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { DateRangeFilter, calculatePresetDates } from '../components/common/DateRangeFilter';
 import { PaginationBar } from '../components/common/PaginationBar';
 import { PosReceiptModal } from '../components/pos/PosReceiptModal';
+import { useConfirm } from '../context/ConfirmContext';
 import { InvoiceMobileCard } from '../components/mobile/InvoiceMobileCard';
 import { nativeBackButton } from '../../platform/nativeBackButton';
 import { useAuthStore } from '../../data/store/useAuthStore';
 import { webShareService, formatInvoiceWhatsAppText } from '../../infrastructure/pwa/webShareService';
 
 export const InvoicesPage: React.FC = () => {
+  const { confirm } = useConfirm();
   const location = useLocation();
   const queryClient = useQueryClient();
 
@@ -170,8 +172,13 @@ export const InvoicesPage: React.FC = () => {
 
   const user = useAuthStore((state) => state.user);
 
-  const handleDelete = (id: number, number: string) => {
-    if (window.confirm(`هل أنت متأكد من إلغاء ${number}؟ هذا الإجراء سيقوم بعكس حركات المخزون والقيود المحاسبية المرتبطة به.`)) {
+  const handleDelete = async (id: number, number: string) => {
+    const ok = await confirm({
+      title: 'تأكيد إلغاء الفاتورة',
+      message: `هل أنت متأكد من إلغاء ${number}؟ هذا الإجراء سيقوم بعكس حركات المخزون والقيود المحاسبية المرتبطة به.`,
+      type: 'danger',
+    });
+    if (ok) {
       deleteMutation.mutate(id);
     }
   };

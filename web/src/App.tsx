@@ -6,6 +6,7 @@ import { ProtectedRoute } from './presentation/components/ProtectedRoute';
 import { RoleRoute } from './presentation/components/RoleRoute';
 import { AdminRoute } from './presentation/components/AdminRoute';
 import { ConfirmProvider } from './presentation/context/ConfirmContext';
+import { ToastProvider } from './presentation/context/ToastContext';
 import { AppErrorBoundary } from './presentation/components/common/AppErrorBoundary';
 import { UserRole } from '@pos-mandob/shared';
 import { useAuthStore } from './data/store/useAuthStore';
@@ -86,6 +87,7 @@ export const App: React.FC = () => {
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <AuthHydrationGate>
           <ConfirmProvider>
+            <ToastProvider>
           <Suspense fallback={<PageLoadingFallback />}>
             <Routes>
               {/* Public Landing & Auth Routes */}
@@ -163,6 +165,7 @@ export const App: React.FC = () => {
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Suspense>
+            </ToastProvider>
         </ConfirmProvider>
           </AuthHydrationGate>
       </BrowserRouter>

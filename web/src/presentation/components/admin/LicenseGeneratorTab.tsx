@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { formatDate, LicenseKey } from '@pos-mandob/shared';
 import clsx from 'clsx';
+import { useConfirm } from '../../context/ConfirmContext';
 
 interface LicenseGeneratorTabProps {
   licenses: LicenseKey[];
@@ -44,6 +45,7 @@ export const LicenseGeneratorTab: React.FC<LicenseGeneratorTabProps> = ({
   onRevokeLicense,
   isGenerating,
 }) => {
+  const { confirm } = useConfirm();
   const [generateCount, setGenerateCount] = useState<number>(1);
   const [durationDays, setDurationDays] = useState<number>(365);
   const [batchNotes, setBatchNotes] = useState<string>('اشتراك سنوي (فودافون كاش / إنستاباي)');
@@ -345,8 +347,13 @@ export const LicenseGeneratorTab: React.FC<LicenseGeneratorTabProps> = ({
 
                             {onRevokeLicense && (
                               <button
-                                onClick={() => {
-                                  if (window.confirm(`هل أنت متأكد من رغبتك في إلغاء وحرق كود التفعيل (${license.code})؟ لن يتمكن أي عميل من استخدامه إطلاقاً.`)) {
+                                onClick={async () => {
+                                  const ok = await confirm({
+                                    title: 'إلغاء وحرق الكود',
+                                    message: `هل أنت متأكد من رغبتك في إلغاء وحرق كود التفعيل (${license.code})؟ لن يتمكن أي عميل من استخدامه إطلاقاً.`,
+                                    type: 'danger',
+                                  });
+                                  if (ok) {
                                     onRevokeLicense(license.id);
                                   }
                                 }}

@@ -25,9 +25,11 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { MobileFilterChips, FilterChipOption } from '../components/mobile/MobileFilterChips';
 import { PartyMobileCard } from '../components/mobile/PartyMobileCard';
 import { PaginationBar } from '../components/common/PaginationBar';
+import { useConfirm } from '../context/ConfirmContext';
 import { nativeBackButton } from '../../platform/nativeBackButton';
 
 export const PartiesPage: React.FC = () => {
+  const { confirm } = useConfirm();
   const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -154,8 +156,13 @@ export const PartiesPage: React.FC = () => {
     saveMutation.mutate(formData);
   };
 
-  const handleDelete = (p: Party) => {
-    if (window.confirm(`هل أنت متأكد من حذف "${p.name}"؟`)) {
+  const handleDelete = async (p: Party) => {
+    const ok = await confirm({
+      title: 'تأكيد الحذف',
+      message: `هل أنت متأكد من حذف "${p.name}"؟`,
+      type: 'danger',
+    });
+    if (ok) {
       deleteMutation.mutate(p.id);
     }
   };

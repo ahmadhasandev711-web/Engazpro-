@@ -23,6 +23,8 @@ import {
   exportInvoicesToExcel,
   exportExpensesToExcel,
 } from '../utils/excelExport';
+import { useToast } from '../context/ToastContext';
+import { useConfirm } from '../context/ConfirmContext';
 
 interface PreviewRow {
   row_number: number;
@@ -60,6 +62,8 @@ interface PreviewResult {
 }
 
 export const ExcelPage: React.FC = () => {
+  const toast = useToast();
+  const { confirm } = useConfirm();
   const [file, setFile] = useState<File | null>(null);
   const [isReading, setIsReading] = useState(false);
   const [isPreviewing, setIsPreviewing] = useState(false);
@@ -94,7 +98,7 @@ export const ExcelPage: React.FC = () => {
       const jsonRows = XLSX.utils.sheet_to_json(worksheet, { defval: null });
 
       if (jsonRows.length === 0) {
-        alert('الملف فارغ أو لا يحتوي على صفوف بيانات صالحة.');
+        toast.error('الملف فارغ أو لا يحتوي على صفوف بيانات صالحة.');
         setIsReading(false);
         return;
       }
@@ -105,7 +109,7 @@ export const ExcelPage: React.FC = () => {
       setPreviewResult(res.data.data);
     } catch (err: any) {
       console.error('Error parsing excel file:', err);
-      alert('حدث خطأ أثناء قراءة الملف. يرجى التأكد من أن الملف بصيغة Excel (.xlsx, .xls) أو CSV صالحة.');
+      toast.error('حدث خطأ أثناء قراءة الملف. يرجى التأكد من أن الملف بصيغة Excel (.xlsx, .xls) أو CSV صالحة.');
     } finally {
       setIsReading(false);
       setIsPreviewing(false);
@@ -121,7 +125,12 @@ export const ExcelPage: React.FC = () => {
         ? `هل أنت متأكد من حفظ الاستيراد مع تحديث الأصناف المكررة؟`
         : `هل أنت متأكد من حفظ الأصناف الجديدة وتخطي الأصناف المكررة؟`;
 
-    if (!window.confirm(confirmMsg)) return;
+    const ok = await confirm({
+      title: 'تأكيد حفظ الاستيراد',
+      message: confirmMsg,
+      type: 'warning',
+    });
+    if (!ok) return;
 
     setIsCommitting(true);
     try {
@@ -136,7 +145,7 @@ export const ExcelPage: React.FC = () => {
       if (fileInputRef.current) fileInputRef.current.value = '';
     } catch (err: any) {
       console.error('Error committing import:', err);
-      alert(err.response?.data?.message || 'حدث خطأ أثناء حفظ البيانات في الخادم.');
+      toast.error(err.response?.data?.message || 'حدث خطأ أثناء حفظ البيانات في الخادم.');
     } finally {
       setIsCommitting(false);
     }
@@ -181,7 +190,7 @@ export const ExcelPage: React.FC = () => {
       }
     } catch (err) {
       console.error('Export error:', err);
-      alert('فشل تصدير البيانات. يرجى التأكد من اتصال الخادم.');
+      toast.error('فشل تصدير البيانات. يرجى التأكد من اتصال الخادم.');
     } finally {
       setExportLoading(null);
     }

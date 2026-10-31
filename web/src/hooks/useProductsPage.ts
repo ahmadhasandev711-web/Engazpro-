@@ -9,10 +9,12 @@ import { AlertTriangle, Layers, Calendar, Clock } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
+import { useConfirm } from '../presentation/context/ConfirmContext';
 
 export const useProductsPage = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { confirm } = useConfirm();
   const {
     isMandob,
     canAddProduct,
@@ -243,8 +245,13 @@ export const useProductsPage = () => {
     saveMutation.mutate(formData);
   };
 
-  const handleDelete = (p: Product) => {
-    if (window.confirm(`هل أنت متأكد من حذف الصنف "${p.name}"؟`)) {
+  const handleDelete = async (p: Product) => {
+    const ok = await confirm({
+      title: 'تأكيد حذف الصنف',
+      message: `هل أنت متأكد من حذف الصنف "${p.name}"؟`,
+      type: 'danger',
+    });
+    if (ok) {
       deleteMutation.mutate(p.id);
     }
   };

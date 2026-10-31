@@ -2,6 +2,7 @@ import React from 'react';
 import { Search, RefreshCw, Clock, Users, Store, ShieldAlert, ShieldCheck, Key } from 'lucide-react';
 import { formatDate, User } from '@pos-mandob/shared';
 import clsx from 'clsx';
+import { useConfirm } from '../../context/ConfirmContext';
 
 interface UsersManagementTabProps {
   users: User[];
@@ -26,6 +27,7 @@ export const UsersManagementTab: React.FC<UsersManagementTabProps> = ({
   onToggleStatus,
   isTogglingStatus = false,
 }) => {
+  const { confirm } = useConfirm();
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -186,11 +188,17 @@ export const UsersManagementTab: React.FC<UsersManagementTabProps> = ({
 
                           {!isRootAdmin && (
                             <button
-                              onClick={() => {
+                              onClick={async () => {
                                 const confirmMsg = isStoreActive
                                   ? `هل أنت متأكد من رغبتك في تجميد حساب المتجر (${usr.name})؟ سيتم منع المالك وجميع موظفيه ومناديبه فورياً من استخدام النظام!`
                                   : `هل ترغب في إعادة تنشيط حساب المتجر (${usr.name})؟`;
-                                if (window.confirm(confirmMsg)) {
+                                const ok = await confirm({
+                                  title: isStoreActive ? 'تجميد حساب المتجر' : 'تنشيط حساب المتجر',
+                                  message: confirmMsg,
+                                  type: isStoreActive ? 'danger' : 'info',
+                                  confirmText: isStoreActive ? 'تأكيد التجميد' : 'تنشيط',
+                                });
+                                if (ok) {
                                   onToggleStatus(usr);
                                 }
                               }}

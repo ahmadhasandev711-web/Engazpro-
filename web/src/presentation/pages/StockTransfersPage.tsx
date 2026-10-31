@@ -22,10 +22,14 @@ import { MobileFilterChips, FilterChipOption } from '../components/mobile/Mobile
 import { StockTransferMobileCard } from '../components/mobile/StockTransferMobileCard';
 import { PaginationBar } from '../components/common/PaginationBar';
 import { nativeBackButton } from '../../platform/nativeBackButton';
+import { useToast } from '../context/ToastContext';
+import { useConfirm } from '../context/ConfirmContext';
 
 export const StockTransfersPage: React.FC = () => {
   const queryClient = useQueryClient();
   const { isOwner, isManager } = usePermissions();
+  const toast = useToast();
+  const { confirm } = useConfirm();
 
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [selectedTransfer, setSelectedTransfer] = useState<any | null>(null);
@@ -174,11 +178,11 @@ export const StockTransfersPage: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.from_branch_id || !formData.to_branch_id) {
-      alert('يرجى تحديد فرع المصدر وفرع الوجهة.');
+      toast.error('يرجى تحديد فرع المصدر وفرع الوجهة.');
       return;
     }
     if (formData.from_branch_id === formData.to_branch_id) {
-      alert('لا يمكن إجراء تحويل لنفس الفرع.');
+      toast.error('لا يمكن إجراء تحويل لنفس الفرع.');
       return;
     }
 
@@ -196,7 +200,7 @@ export const StockTransfersPage: React.FC = () => {
     };
 
     if (payload.items.length === 0) {
-      alert('يرجى اختيار صنف واحد على الأقل مع تحديد كمية صالحة.');
+      toast.error('يرجى اختيار صنف واحد على الأقل مع تحديد كمية صالحة.');
       return;
     }
 
@@ -472,8 +476,14 @@ export const StockTransfersPage: React.FC = () => {
                           {trf.status === 'IN_TRANSIT' && (
                             <>
                               <button
-                                onClick={() => {
-                                  if (confirm(`هل تؤكد استلام كامل بضاعة الإذن رقم "${trf.transfer_number}"؟`)) {
+                                onClick={async () => {
+                                  const ok = await confirm({
+                                    title: 'تأكيد استلام التحويل',
+                                    message: `هل تؤكد استلام كامل بضاعة الإذن رقم "${trf.transfer_number}"؟`,
+                                    type: 'info',
+                                    confirmText: 'تأكيد الاستلام',
+                                  });
+                                  if (ok) {
                                     receiveMutation.mutate(trf.id);
                                   }
                                 }}
@@ -524,8 +534,14 @@ export const StockTransfersPage: React.FC = () => {
                   transfer={trf}
                   canCancel={isOwner || isManager}
                   isReceiving={receiveMutation.isPending && (receiveMutation.variables as any) === trf.id}
-                  onReceive={(id) => {
-                    if (confirm(`هل تؤكد استلام كامل بضاعة الإذن رقم "${trf.transfer_number}"؟`)) {
+                  onReceive={async (id) => {
+                    const ok = await confirm({
+                      title: 'تأكيد استلام التحويل',
+                      message: `هل تؤكد استلام كامل بضاعة الإذن رقم "${trf.transfer_number}"؟`,
+                      type: 'info',
+                      confirmText: 'تأكيد الاستلام',
+                    });
+                    if (ok) {
                       receiveMutation.mutate(id);
                     }
                   }}

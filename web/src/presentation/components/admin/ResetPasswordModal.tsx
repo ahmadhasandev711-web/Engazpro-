@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Key, Eye, EyeOff, Sparkles, Copy, Check } from 'lucide-react';
 import { User } from '@pos-mandob/shared';
+import { useToast } from '../../context/ToastContext';
 
 interface ResetPasswordModalProps {
   user: User;
@@ -15,6 +16,7 @@ export const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({
   onReset,
   isPending,
 }) => {
+  const toast = useToast();
   const [newPassword, setNewPassword] = useState<string>('123456');
   const [showPassword, setShowPassword] = useState<boolean>(true);
   const [copied, setCopied] = useState<boolean>(false);
@@ -33,7 +35,7 @@ export const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (newPassword.trim().length < 6) {
-      alert('كلمة المرور يجب ألا تقل عن 6 أحرف أو أرقام');
+      toast.error('كلمة المرور يجب ألا تقل عن 6 أحرف أو أرقام');
       return;
     }
     onReset({ userId: user.id, password: newPassword.trim() });

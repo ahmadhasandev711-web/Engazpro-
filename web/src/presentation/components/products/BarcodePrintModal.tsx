@@ -14,6 +14,7 @@ import {
 } from '@pos-mandob/shared';
 import { useAuthStore } from '../../../data/store/useAuthStore';
 import { renderBarcodeSvg } from '../../utils/barcodeSvgRenderer';
+import { useToast } from '../../context/ToastContext';
 
 interface BarcodePrintModalProps {
   product: Product | null;
@@ -91,6 +92,7 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
   isOpen,
   onClose,
 }) => {
+  const toast = useToast();
   const { user } = useAuthStore();
 
   // Print Settings
@@ -182,7 +184,7 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
   // Print action
   const handlePrint = () => {
     if (expandedPrintLabels.length === 0) {
-      alert('يرجى تحديد نسخة واحدة على الأقل للطباعة.');
+      toast.error('يرجى تحديد نسخة واحدة على الأقل للطباعة.');
       return;
     }
     window.print();

@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { Download, Smartphone, Monitor, X, Share, PlusSquare, CheckCircle2 } from 'lucide-react';
 import { usePWAInstall } from '../../../hooks/usePWAInstall';
+import { useToast } from '../../context/ToastContext';
 
 export const PWAInstallBanner: React.FC = () => {
+  const toast = useToast();
   const { canInstall, isInstalled, isIOS, installApp } = usePWAInstall();
   const [isDismissed, setIsDismissed] = useState<boolean>(() => {
     return sessionStorage.getItem('cashat_pwa_dismissed') === 'true';
@@ -32,7 +34,7 @@ export const PWAInstallBanner: React.FC = () => {
       setIsInstalling(false);
     } else {
       // For browsers that haven't triggered prompt yet, inform them
-      alert('لتثبيت التطبيق على جهازك: اضغط على أيقونة التثبيت ⊕ في شريط عنوان المتصفح أو اختر "تثبيت تطبيق إنجاز برو" من خيارات المتصفح.');
+      toast.info('لتثبيت التطبيق على جهازك: اضغط على أيقونة التثبيت ⊕ في شريط عنوان المتصفح أو اختر "تثبيت تطبيق إنجاز برو" من خيارات المتصفح.');
     }
   };
 

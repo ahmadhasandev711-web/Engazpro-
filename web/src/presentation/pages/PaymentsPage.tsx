@@ -12,8 +12,10 @@ import { PaymentMobileCard } from '../components/mobile/PaymentMobileCard';
 import { MobileFilterChips, FilterChipOption } from '../components/mobile/MobileFilterChips';
 import { PaymentReceiptModal, PaymentReceiptData } from '../components/payments/PaymentReceiptModal';
 import { nativeBackButton } from '../../platform/nativeBackButton';
+import { useConfirm } from '../context/ConfirmContext';
 
 export const PaymentsPage: React.FC = () => {
+  const { confirm } = useConfirm();
   const queryClient = useQueryClient();
   const { canDeletePayment, isOwner } = usePermissions();
   const initialDates = calculatePresetDates('today');
@@ -139,8 +141,13 @@ export const PaymentsPage: React.FC = () => {
     },
   });
 
-  const handleDelete = (id: number) => {
-    if (window.confirm('هل أنت متأكد من إلغاء هذا السند؟ سيتم عكس القيد المحاسبي المرتبط به في كشف الحساب فورياً.')) {
+  const handleDelete = async (id: number) => {
+    const ok = await confirm({
+      title: 'تأكيد إلغاء السند',
+      message: 'هل أنت متأكد من إلغاء هذا السند؟ سيتم عكس القيد المحاسبي المرتبط به في كشف الحساب فورياً.',
+      type: 'danger',
+    });
+    if (ok) {
       deleteMutation.mutate(id);
     }
   };
