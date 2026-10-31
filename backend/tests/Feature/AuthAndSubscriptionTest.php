@@ -14,17 +14,17 @@ class AuthAndSubscriptionTest extends TestCase
 
     public function test_user_can_register_and_receives_active_subscription(): void
     {
+        config(['pos.trial_days' => 9]);
+
         $response = $this->postJson('/api/auth/register', [
             'name' => 'أحمد المندوب',
             'phone' => '01012345678',
             'password' => 'secret123',
         ]);
 
-        $trialDays = (int) config('pos.subscription.trial_days', 14);
-
         $response->assertStatus(201)
             ->assertJsonPath('success', true)
-            ->assertJsonPath('message', "تم إنشاء الحساب بنجاح وتفعيل الفترة التجريبية ({$trialDays} أيام)")
+            ->assertJsonPath('message', 'تم إنشاء الحساب بنجاح وتفعيل الفترة التجريبية (9 أيام)')
             ->assertJsonStructure([
                 'success',
                 'message',
@@ -35,10 +35,9 @@ class AuthAndSubscriptionTest extends TestCase
             ]);
 
         $this->assertDatabaseHas('users', ['phone' => '01012345678']);
-        $this->assertDatabaseHas('subscriptions', [
-            'status' => 'ACTIVE',
-            'plan' => 'TRIAL',
-        ]);
+        $subscription = Subscription::where('plan', 'TRIAL')->firstOrFail();
+        $this->assertSame('ACTIVE', $subscription->status instanceof \BackedEnum ? $subscription->status->value : $subscription->status);
+        $this->assertSame(Carbon::today()->addDays(9)->toDateString(), $subscription->end_date->toDateString());
     }
 
     public function test_user_can_login_with_valid_credentials(): void

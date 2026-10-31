@@ -29,8 +29,9 @@ class AuthController extends Controller
     public function register(RegisterRequest $request): JsonResponse
     {
         $validated = $request->validated();
+        $trialDays = (int) config('pos.trial_days', 14);
 
-        $user = DB::transaction(function () use ($validated) {
+        $user = DB::transaction(function () use ($validated, $trialDays) {
             $user = User::create([
                 'name' => $validated['name'],
                 'phone' => $validated['phone'],
@@ -42,7 +43,6 @@ class AuthController extends Controller
             $user->save();
 
             // إنشاء فترة تجريبية مجانية بناءً على إعدادات المنصة
-            $trialDays = (int) config('pos.trial_days', 7);
             Subscription::create([
                 'user_id' => $user->id,
                 'start_date' => Carbon::today()->toDateString(),
@@ -60,7 +60,6 @@ class AuthController extends Controller
         });
 
         $token = $user->createToken('auth_token')->plainTextToken;
-        $trialDays = (int) config('pos.subscription.trial_days', 14);
 
         return response()->json([
             'success' => true,
