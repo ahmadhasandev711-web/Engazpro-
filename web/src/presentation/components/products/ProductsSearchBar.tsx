@@ -13,7 +13,7 @@ export const ProductsSearchBar: React.FC<{ vm: ProductsViewModel }> = ({ vm }) =
           <Search className="w-4 h-4 sm:w-5 sm:h-5 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
-            placeholder="البحث بالاسم أو الباركود أو الكود أو المتغير..."
+            placeholder="بحث بالاسم أو الباركود أو الكود"
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);

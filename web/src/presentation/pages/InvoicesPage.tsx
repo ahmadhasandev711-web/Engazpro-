@@ -9,6 +9,7 @@ import { DateRangeFilter, calculatePresetDates } from '../components/common/Date
 import { PaginationBar } from '../components/common/PaginationBar';
 import { PosReceiptModal } from '../components/pos/PosReceiptModal';
 import { useConfirm } from '../context/ConfirmContext';
+import { useToast } from '../context/ToastContext';
 import { InvoiceMobileCard } from '../components/mobile/InvoiceMobileCard';
 import { nativeBackButton } from '../../platform/nativeBackButton';
 import { useAuthStore } from '../../data/store/useAuthStore';
@@ -16,6 +17,7 @@ import { webShareService, formatInvoiceWhatsAppText } from '../../infrastructure
 
 export const InvoicesPage: React.FC = () => {
   const { confirm } = useConfirm();
+  const toast = useToast();
   const location = useLocation();
   const queryClient = useQueryClient();
 
@@ -188,8 +190,13 @@ export const InvoicesPage: React.FC = () => {
   };
 
   const handleExportExcel = async () => {
-    const { exportInvoicesToExcel } = await import('../utils/excelExport');
-    exportInvoicesToExcel(invoices, pageTitle);
+    try {
+      const { exportInvoicesToExcel } = await import('../utils/excelExport');
+      exportInvoicesToExcel(invoices, pageTitle);
+    } catch (err) {
+      console.error('Excel load failed:', err);
+      toast.error('تعذر تحميل أداة Excel، تأكد من الاتصال وحاول مرة أخرى');
+    }
   };
 
   const handleShareWhatsApp = async () => {

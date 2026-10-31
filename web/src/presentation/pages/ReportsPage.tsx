@@ -24,6 +24,7 @@ import { CashFlowTab, CashFlowPrintData } from '../components/reports/CashFlowTa
 import { StockReportTab } from '../components/reports/StockReportTab';
 import { DateRangeFilter, DatePreset, calculatePresetDates } from '../components/common/DateRangeFilter';
 import { MobileFilterChips, FilterChipOption } from '../components/mobile/MobileFilterChips';
+import { useToast } from '../context/ToastContext';
 
 type ActiveTab = 'profit' | 'sales' | 'cash-flow' | 'stock';
 
@@ -64,6 +65,7 @@ const getPresetLabel = (p: DatePreset | string) => {
 };
 
 export const ReportsPage: React.FC = () => {
+  const toast = useToast();
   const user = useAuthStore((state) => state.user);
   const { canViewProfitReport } = usePermissions();
   const storeIdentity = user?.store_identity;
@@ -130,7 +132,8 @@ export const ReportsPage: React.FC = () => {
   };
 
   const handleExportCurrentTab = async () => {
-    const { exportCashFlowToExcel, exportProductsToExcel, exportJsonToExcel } = await import('../utils/excelExport');
+    try {
+      const { exportCashFlowToExcel, exportProductsToExcel, exportJsonToExcel } = await import('../utils/excelExport');
     if (activeTab === 'cash-flow' && cashFlowData) {
       exportCashFlowToExcel(cashFlowData, fromDate || 'البداية', toDate || 'اليوم');
     } else if (activeTab === 'stock' && stockData?.products) {
@@ -156,7 +159,11 @@ export const ReportsPage: React.FC = () => {
       }));
       exportJsonToExcel(rows, `تقرير_المبيعات_${fromDate}_${toDate}`, 'المبيعات');
     }
-  };
+  } catch (err) {
+    console.error('Excel load failed:', err);
+    toast.error('تعذر تحميل أداة Excel، تأكد من الاتصال وحاول مرة أخرى');
+  }
+};
 
   const reportFilterChips: FilterChipOption<ActiveTab>[] = [
     ...(canViewProfitReport

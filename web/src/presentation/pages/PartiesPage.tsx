@@ -26,10 +26,12 @@ import { MobileFilterChips, FilterChipOption } from '../components/mobile/Mobile
 import { PartyMobileCard } from '../components/mobile/PartyMobileCard';
 import { PaginationBar } from '../components/common/PaginationBar';
 import { useConfirm } from '../context/ConfirmContext';
+import { useToast } from '../context/ToastContext';
 import { nativeBackButton } from '../../platform/nativeBackButton';
 
 export const PartiesPage: React.FC = () => {
   const { confirm } = useConfirm();
+  const toast = useToast();
   const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -218,8 +220,13 @@ export const PartiesPage: React.FC = () => {
         <div className="flex items-center gap-2">
           <button
             onClick={async () => {
-              const { exportPartiesToExcel } = await import('../utils/excelExport');
-              exportPartiesToExcel(parties, pageTitle);
+              try {
+                const { exportPartiesToExcel } = await import('../utils/excelExport');
+                exportPartiesToExcel(parties, pageTitle);
+              } catch (err) {
+                console.error('Excel load failed:', err);
+                toast.error('تعذر تحميل أداة Excel، تأكد من الاتصال وحاول مرة أخرى');
+              }
             }}
             disabled={parties.length === 0}
             className="inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3.5 py-2.5 rounded-xl text-xs font-bold shadow-sm transition-colors disabled:opacity-50"

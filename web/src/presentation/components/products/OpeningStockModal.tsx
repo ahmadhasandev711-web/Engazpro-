@@ -220,6 +220,7 @@ export const OpeningStockModal: React.FC<OpeningStockModalProps> = ({
       setErrorMessage(null);
     } catch (err) {
       console.error('Failed to parse excel:', err);
+      toast.error('تعذر تحميل أداة Excel، تأكد من الاتصال وحاول مرة أخرى');
       setErrorMessage('تعذر قراءة ملف Excel، يرجى التأكد من اختيار ملف سليم بصيغة xlsx.');
     } finally {
       if (fileInputRef.current) {
@@ -352,8 +353,13 @@ export const OpeningStockModal: React.FC<OpeningStockModalProps> = ({
               <button
                 type="button"
                 onClick={async () => {
-                  const { downloadOpeningStockTemplate } = await import('../../utils/excelExport');
-                  downloadOpeningStockTemplate(products);
+                  try {
+                    const { downloadOpeningStockTemplate } = await import('../../utils/excelExport');
+                    downloadOpeningStockTemplate(products);
+                  } catch (err) {
+                    console.error('Excel load failed:', err);
+                    toast.error('تعذر تحميل أداة Excel، تأكد من الاتصال وحاول مرة أخرى');
+                  }
                 }}
                 className="flex-1 inline-flex items-center justify-center gap-1 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-2.5 py-2 rounded-xl text-xs font-bold transition-all shadow-xs"
                 title="تحميل نموذج Excel معبأ بالأصناف والمتغيرات لتسهيل الإدخال"

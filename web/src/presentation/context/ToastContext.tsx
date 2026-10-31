@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useCallback, useRef, useMemo } from 'react';
 import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
 
 export type ToastType = 'success' | 'error' | 'info';
@@ -48,14 +48,19 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     [removeToast]
   );
 
-  const toast = {
-    success: useCallback((msg: string) => addToast('success', msg), [addToast]),
-    error: useCallback((msg: string) => addToast('error', msg), [addToast]),
-    info: useCallback((msg: string) => addToast('info', msg), [addToast]),
-  };
+  const toast = useMemo(
+    () => ({
+      success: (msg: string) => addToast('success', msg),
+      error: (msg: string) => addToast('error', msg),
+      info: (msg: string) => addToast('info', msg),
+    }),
+    [addToast]
+  );
+
+  const contextValue = useMemo(() => ({ toast }), [toast]);
 
   return (
-    <ToastContext.Provider value={{ toast }}>
+    <ToastContext.Provider value={contextValue}>
       {children}
 
       {/* Floating Toast Container (RTL, above mobile bottom nav) */}

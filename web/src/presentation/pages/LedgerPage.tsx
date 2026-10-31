@@ -18,11 +18,13 @@ import { formatCurrency, formatDate } from '@pos-mandob/shared';
 import { DateRangeFilter } from '../components/common/DateRangeFilter';
 import { PaginationBar } from '../components/common/PaginationBar';
 import { useAuthStore } from '../../data/store/useAuthStore';
+import { useToast } from '../context/ToastContext';
 import { LedgerEntryMobileCard } from '../components/mobile/LedgerEntryMobileCard';
 
 export const LedgerPage: React.FC = () => {
   const { partyId } = useParams<{ partyId: string }>();
   const navigate = useNavigate();
+  const toast = useToast();
 
   const user = useAuthStore((s) => s.user);
   const storeIdentity = user?.store_identity;
@@ -90,8 +92,13 @@ export const LedgerPage: React.FC = () => {
           <button
             onClick={async () => {
               if (!data) return;
-              const { exportLedgerToExcel } = await import('../utils/excelExport');
-              exportLedgerToExcel(data, party?.name || 'كشف_حساب');
+              try {
+                const { exportLedgerToExcel } = await import('../utils/excelExport');
+                exportLedgerToExcel(data, party?.name || 'كشف_حساب');
+              } catch (err) {
+                console.error('Excel load failed:', err);
+                toast.error('تعذر تحميل أداة Excel، تأكد من الاتصال وحاول مرة أخرى');
+              }
             }}
             disabled={!data || entries.length === 0}
             className="inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3.5 py-2 rounded-xl text-xs font-bold shadow-sm transition-colors disabled:opacity-50"

@@ -27,6 +27,7 @@ import { formatCurrency, PartyType, WcOrderStatus, StockTransferStatus } from '@
 import { usePermissions } from '../../hooks/usePermissions';
 import { useAuthStore } from '../../data/store/useAuthStore';
 import { useConfirm } from '../context/ConfirmContext';
+import { useToast } from '../context/ToastContext';
 
 import { CourierMobileCard } from '../components/mobile/CourierMobileCard';
 import { PaginationBar } from '../components/common/PaginationBar';
@@ -37,6 +38,7 @@ export const CouriersPage: React.FC = () => {
   const queryClient = useQueryClient();
   const { canDeleteParty } = usePermissions();
   const { confirm } = useConfirm();
+  const toast = useToast();
 
   const [search, setSearch] = useState('');
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -837,8 +839,13 @@ export const CouriersPage: React.FC = () => {
               <div className="flex items-center gap-2">
                 <button
                   onClick={async () => {
-                    const { exportManifestToExcel } = await import('../utils/excelExport');
-                    exportManifestToExcel(filteredShipments, manifestCourier?.name || 'شركة_الشحن');
+                    try {
+                      const { exportManifestToExcel } = await import('../utils/excelExport');
+                      exportManifestToExcel(filteredShipments, manifestCourier?.name || 'شركة_الشحن');
+                    } catch (err) {
+                      console.error('Excel load failed:', err);
+                      toast.error('تعذر تحميل أداة Excel، تأكد من الاتصال وحاول مرة أخرى');
+                    }
                   }}
                   disabled={filteredShipments.length === 0}
                   className="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100 inline-flex items-center gap-1.5 cursor-pointer shadow-2xs disabled:opacity-50"

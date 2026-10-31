@@ -384,7 +384,7 @@ export const WcOrdersList: React.FC<{ vm: WcOrdersViewModel }> = ({ vm }) => {
                   </div>
                 )}
 
-                {order.status === 'RETURNED' && (
+                {order.status === WcOrderStatus.RETURNED && (
                   <div className="text-center py-1.5 text-xs font-bold text-rose-700 bg-rose-50 rounded-xl border border-rose-200">
                     تم تسجيل الطلب كمرتجع ↩️
                   </div>

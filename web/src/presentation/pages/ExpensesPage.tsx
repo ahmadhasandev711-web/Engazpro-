@@ -12,9 +12,11 @@ import { MobileFilterChips, FilterChipOption } from '../components/mobile/Mobile
 import { ExpenseMobileCard } from '../components/mobile/ExpenseMobileCard';
 import { nativeBackButton } from '../../platform/nativeBackButton';
 import { useConfirm } from '../context/ConfirmContext';
+import { useToast } from '../context/ToastContext';
 
 export const ExpensesPage: React.FC = () => {
   const { confirm } = useConfirm();
+  const toast = useToast();
   const queryClient = useQueryClient();
   const { canDeleteExpense, isOwnerOrAdmin, isCashier, isMandob } = usePermissions();
   const initialDates = calculatePresetDates('today');
@@ -216,8 +218,13 @@ export const ExpensesPage: React.FC = () => {
   };
 
   const handleExportExcel = async () => {
-    const { exportExpensesToExcel } = await import('../utils/excelExport');
-    exportExpensesToExcel(expenses);
+    try {
+      const { exportExpensesToExcel } = await import('../utils/excelExport');
+      exportExpensesToExcel(expenses);
+    } catch (err) {
+      console.error('Excel load failed:', err);
+      toast.error('تعذر تحميل أداة Excel، تأكد من الاتصال وحاول مرة أخرى');
+    }
   };
 
   return (
