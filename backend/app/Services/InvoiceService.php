@@ -73,7 +73,15 @@ class InvoiceService
     private function doCreateInvoice(User $user, array $data, $idempotencyKey): Invoice
     {
         return DB::transaction(function () use ($user, $data, $idempotencyKey) {
-            $type = $data['type']; // SALE, PURCHASE, SALE_RETURN, PURCHASE_RETURN
+            $type = $data['type'] ?? null; // SALE, PURCHASE, SALE_RETURN, PURCHASE_RETURN
+            $docType = match ($type) {
+                'SALE' => DocumentType::SALE,
+                'PURCHASE' => DocumentType::PURCHASE,
+                'SALE_RETURN' => DocumentType::SALE_RETURN,
+                'PURCHASE_RETURN' => DocumentType::PURCHASE_RETURN,
+                default => throw new PosDomainException("نوع الفاتورة '{$type}' غير صالح.", 'INVALID_INVOICE_TYPE'),
+            };
+
             if (in_array($type, ['PURCHASE', 'PURCHASE_RETURN'], true) && !$user->isOwnerOrAdmin() && !$user->isManager()) {
                 throw new PosDomainException('عذراً، صلاحية إنشاء فواتير المشتريات مقتصرة على المالك والإدارة ومديري الفروع فقط.', 'UNAUTHORIZED_INVOICE_TYPE', 403);
             }
@@ -85,23 +93,15 @@ class InvoiceService
             $paidAmount = (float) ($data['paid_amount'] ?? 0);
 
             // توليد رقم الفاتورة
-            $prefix = match ($type) {
-                'SALE' => 'INV-',
-                'PURCHASE' => 'PUR-',
-                'SALE_RETURN' => 'SRT-',
-                'PURCHASE_RETURN' => 'PRT-',
-                default => 'DOC-',
+            $prefix = match ($docType) {
+                DocumentType::SALE => 'INV-',
+                DocumentType::PURCHASE => 'PUR-',
+                DocumentType::SALE_RETURN => 'SRT-',
+                DocumentType::PURCHASE_RETURN => 'PRT-',
             };
             if (!empty($data['invoice_number'])) {
                 $invoiceNumber = (string) $data['invoice_number'];
             } else {
-                $docType = match ($type) {
-                    'SALE' => DocumentType::SALE,
-                    'PURCHASE' => DocumentType::PURCHASE,
-                    'SALE_RETURN' => DocumentType::SALE_RETURN,
-                    'PURCHASE_RETURN' => DocumentType::PURCHASE_RETURN,
-                    default => DocumentType::SALE,
-                };
                 $seq = $this->sequenceService->next($user->getAccountId(), $docType);
                 $invoiceNumber = $prefix . str_pad((string) $seq, 5, '0', STR_PAD_LEFT);
             }

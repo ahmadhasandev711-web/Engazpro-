@@ -26,11 +26,18 @@ class DocumentSequenceService
 
             if (!$sequence) {
                 $maxExisting = $this->getHighestExistingNumber($accountId, $type);
-                $sequence = DocumentSequence::create([
+                DocumentSequence::insertOrIgnore([
                     'user_id' => $accountId,
                     'type' => $type->value,
                     'last_number' => $maxExisting,
+                    'created_at' => now(),
+                    'updated_at' => now(),
                 ]);
+
+                $sequence = DocumentSequence::where('user_id', $accountId)
+                    ->where('type', $type->value)
+                    ->lockForUpdate()
+                    ->firstOrFail();
             }
 
             $sequence->last_number++;
