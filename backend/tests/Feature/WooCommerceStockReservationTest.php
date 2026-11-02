@@ -429,4 +429,80 @@ class WooCommerceStockReservationTest extends TestCase
         $job = new \App\Jobs\PushStockToWooCommerceJob($this->owner->id, $product->id);
         $job->handle($mockClient, app(\App\Services\WooCommerce\StockReservationService::class));
     }
+
+    /**
+     * Item 5 / Test 7d: confirmOrder calculates stock post-reservation and respects force override.
+     */
+    public function test_confirm_order_calculates_stock_post_reservation_and_respects_force_override(): void
+    {
+        \Illuminate\Support\Facades\Queue::fake([
+            \App\Jobs\PushStockToWooCommerceJob::class,
+        ]);
+
+        $product = Product::create([
+            'user_id' => $this->owner->id,
+            'name' => 'صنف حجز التأكيد',
+            'wc_product_id' => 7701,
+            'price' => 100,
+            'cost_price' => 60,
+            'quantity' => 10,
+        ]);
+
+        BranchStock::create([
+            'branch_id' => $this->mainBranch->id,
+            'product_id' => $product->id,
+            'quantity' => 10,
+        ]);
+
+        // Order A: already confirmed with 6.00 units (reserves 6.00 in branch)
+        $orderA = WcOrder::create([
+            'user_id' => $this->owner->id,
+            'wc_order_id' => 9001,
+            'branch_id' => $this->mainBranch->id,
+            'status' => \App\Enums\WcOrderStatus::CONFIRMED,
+            'payment_status' => \App\Enums\WcPaymentStatus::PENDING_COD,
+            'total' => 600,
+        ]);
+
+        WcOrderItem::create([
+            'user_id' => $this->owner->id,
+            'wc_order_id' => $orderA->id,
+            'product_id' => $product->id,
+            'wc_product_id' => 7701,
+            'quantity' => '6.00',
+        ]);
+
+        // Order B: pending confirmation with 6.00 units
+        $orderB = WcOrder::create([
+            'user_id' => $this->owner->id,
+            'wc_order_id' => 9002,
+            'branch_id' => $this->mainBranch->id,
+            'status' => \App\Enums\WcOrderStatus::PENDING_CONFIRMATION,
+            'payment_status' => \App\Enums\WcPaymentStatus::PENDING_COD,
+            'total' => 600,
+        ]);
+
+        WcOrderItem::create([
+            'user_id' => $this->owner->id,
+            'wc_order_id' => $orderB->id,
+            'product_id' => $product->id,
+            'wc_product_id' => 7701,
+            'quantity' => '6.00',
+        ]);
+
+        // Without force: raw stock is 10, but reserved is 6 -> available is 4.00, required is 6.00 -> must throw
+        try {
+            $this->syncService->confirmOrder($this->owner, $orderB, $this->mainBranch->id, force: false);
+            $this->fail('Expected PosDomainException was not thrown on insufficient available stock.');
+        } catch (\App\Exceptions\PosDomainException $e) {
+            $this->assertSame('INSUFFICIENT_ONLINE_STOCK', $e->getErrorCode());
+            $this->assertStringContainsString('4.00', $e->getMessage());
+            $this->assertStringContainsString('6.00', $e->getMessage());
+        }
+
+        // With force: true -> succeeds and records warning in notes
+        $confirmedOrder = $this->syncService->confirmOrder($this->owner, $orderB, $this->mainBranch->id, force: true);
+        $this->assertSame(\App\Enums\WcOrderStatus::CONFIRMED, $confirmedOrder->status);
+        $this->assertStringContainsString('تأكيد مع نقص مخزون', (string) $confirmedOrder->notes);
+    }
 }
