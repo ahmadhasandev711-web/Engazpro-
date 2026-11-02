@@ -29,6 +29,30 @@ enum WcOrderStatus: string
         };
     }
 
+    public function reservesBranchStock(): bool
+    {
+        return match ($this) {
+            self::PENDING_CONFIRMATION,
+            self::CONFIRMED,
+            self::PREPARING,
+            self::SHIPPED_VIA_COURIER => true,
+            default => false,
+        };
+    }
+
+    /**
+     * @return array<int, self>
+     */
+    public static function reservingCases(): array
+    {
+        return [
+            self::PENDING_CONFIRMATION,
+            self::CONFIRMED,
+            self::PREPARING,
+            self::SHIPPED_VIA_COURIER,
+        ];
+    }
+
     public function canTransitionTo(self $to): bool
     {
         $allowed = match ($this) {
