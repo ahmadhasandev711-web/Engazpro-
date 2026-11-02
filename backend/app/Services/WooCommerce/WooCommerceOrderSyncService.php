@@ -15,11 +15,13 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\User;
 use App\Models\WcOrder;
+use App\Models\WcOrderItem;
 use App\Models\WooCommerceIntegration;
 use App\Services\CourierService;
 use App\Services\InvoiceService;
 use App\Support\Money;
 use Exception;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use App\Contracts\WooCommerceApiClientInterface;
 use App\Jobs\SyncOrderStatusToWooCommerceJob;
@@ -203,7 +205,8 @@ class WooCommerceOrderSyncService
                 || (strtolower($paymentMethod) !== 'cod' && in_array(strtolower($wcOrderData['status'] ?? ''), ['processing', 'completed']))
                 || in_array(strtolower($paymentMethod), ['stripe', 'paymob', 'fawry', 'credit_card', 'visa', 'wallet', 'card', 'accept', 'kashier']);
 
-            $sanitizedLineItems = $this->enrichLineItems($accountId, $wcOrderData['line_items'] ?? []);
+            [$productsByWcId, $variantsByWcId] = $this->getMappedCatalogForLineItems($accountId, $wcOrderData['line_items'] ?? []);
+            $sanitizedLineItems = $this->enrichLineItems($accountId, $wcOrderData['line_items'] ?? [], $productsByWcId, $variantsByWcId);
 
             $trackingNumber = null;
             $courierName = null;
@@ -222,7 +225,7 @@ class WooCommerceOrderSyncService
                 }
             }
 
-            return WcOrder::create([
+            $wcOrder = WcOrder::create([
                 'user_id' => $accountId,
                 'wc_order_id' => $wcOrderId,
                 'order_date' => $orderDate,
@@ -247,6 +250,31 @@ class WooCommerceOrderSyncService
                 'wc_coupon_codes' => $coupons,
                 'items_snapshot' => $sanitizedLineItems,
             ]);
+
+            foreach ($wcOrderData['line_items'] ?? [] as $lineItem) {
+                $wcProductId = (int) ($lineItem['product_id'] ?? 0);
+                $wcVarId = !empty($lineItem['variation_id']) ? (int) $lineItem['variation_id'] : null;
+
+                $productId = ($wcProductId && isset($productsByWcId[$wcProductId]))
+                    ? $productsByWcId[$wcProductId]->id
+                    : null;
+
+                $productVariantId = ($wcVarId && isset($variantsByWcId[$wcVarId]))
+                    ? $variantsByWcId[$wcVarId]->id
+                    : null;
+
+                WcOrderItem::create([
+                    'user_id' => $accountId,
+                    'wc_order_id' => $wcOrder->id,
+                    'product_id' => $productId,
+                    'product_variant_id' => $productVariantId,
+                    'wc_product_id' => $wcProductId,
+                    'wc_variation_id' => $wcVarId,
+                    'quantity' => (string) ($lineItem['quantity'] ?? 1),
+                ]);
+            }
+
+            return $wcOrder;
         });
     }
 
@@ -671,9 +699,11 @@ class WooCommerceOrderSyncService
     }
 
     /**
-     * Enrich order line items with product images, clean names, and structured attribute badges.
+     * Map WooCommerce product and variation IDs to local models in bulk without redundant queries.
+     *
+     * @return array{0: Collection, 1: Collection}
      */
-    protected function enrichLineItems(int $accountId, array $rawLineItems): array
+    protected function getMappedCatalogForLineItems(int $accountId, array $rawLineItems): array
     {
         $wcProductIds = [];
         $wcVarIds = [];
@@ -697,6 +727,18 @@ class WooCommerceOrderSyncService
         $variantsByWcId = !empty($wcVarIds)
             ? ProductVariant::where('user_id', $accountId)->whereIn('wc_variation_id', $wcVarIds)->get()->keyBy('wc_variation_id')
             : collect();
+
+        return [$productsByWcId, $variantsByWcId];
+    }
+
+    /**
+     * Enrich order line items with product images, clean names, and structured attribute badges.
+     */
+    protected function enrichLineItems(int $accountId, array $rawLineItems, ?Collection $productsByWcId = null, ?Collection $variantsByWcId = null): array
+    {
+        if ($productsByWcId === null || $variantsByWcId === null) {
+            [$productsByWcId, $variantsByWcId] = $this->getMappedCatalogForLineItems($accountId, $rawLineItems);
+        }
 
         return array_map(function ($item) use ($productsByWcId, $variantsByWcId) {
             if (isset($item['name']) && is_string($item['name'])) {

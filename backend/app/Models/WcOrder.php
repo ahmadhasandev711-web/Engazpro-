@@ -8,6 +8,7 @@ use App\Models\Concerns\BelongsToStore;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class WcOrder extends Model
 {
@@ -88,5 +89,10 @@ class WcOrder extends Model
     public function invoice(): BelongsTo
     {
         return $this->belongsTo(Invoice::class);
+    }
+
+    public function items(): HasMany
+    {
+        return $this->hasMany(WcOrderItem::class, 'wc_order_id');
     }
 }
