@@ -100,50 +100,48 @@ class PushStockToWooCommerceJob implements ShouldQueue, ShouldBeUniqueUntilProce
         array $targetBranchIds,
         Quantity $reserved
     ): void {
+        $available = $this->calculateAvailableBranchStock($targetBranchIds, $reserved);
+        $this->pushStockToApi($apiClient, $integration, $product, $available);
+    }
+
+    /**
+     * @param array<int, int> $targetBranchIds
+     */
+    private function calculateAvailableBranchStock(array $targetBranchIds, Quantity $reserved): float
+    {
+        $query = BranchStock::whereIn('branch_id', $targetBranchIds)
+            ->where('product_id', $this->productId);
+
+        $this->productVariantId
+            ? $query->where('product_variant_id', $this->productVariantId)
+            : $query->whereNull('product_variant_id');
+
+        $totalStock = $query->sum('quantity') ?? 0;
+
+        return Quantity::of($totalStock)->subtract($reserved)->maxZero()->toFloat();
+    }
+
+    private function pushStockToApi(
+        WooCommerceApiClientInterface $apiClient,
+        WooCommerceIntegration $integration,
+        Product $product,
+        float $available
+    ): void {
         if ($this->productVariantId) {
             $variant = ProductVariant::withoutGlobalScopes()->find($this->productVariantId);
             if (!$variant || !$variant->wc_variation_id) {
                 return;
             }
 
-            $totalStock = BranchStock::whereIn('branch_id', $targetBranchIds)
-                ->where('product_id', $this->productId)
-                ->where('product_variant_id', $this->productVariantId)
-                ->sum('quantity');
-
-            $available = Quantity::of($totalStock ?? 0)->subtract($reserved)->maxZero()->toFloat();
-
-            $success = $apiClient->updateVariationStock(
-                $integration,
-                $product->wc_product_id,
-                $variant->wc_variation_id,
-                $available
-            );
-
-            if (!$success) {
-                throw new WooCommerceConnectionException(
-                    "Failed to update variation stock in WooCommerce for variant {$this->productVariantId}."
-                );
-            }
+            $success = $apiClient->updateVariationStock($integration, $product->wc_product_id, $variant->wc_variation_id, $available);
+            $targetDesc = "variation stock in WooCommerce for variant {$this->productVariantId}";
         } else {
-            $totalStock = BranchStock::whereIn('branch_id', $targetBranchIds)
-                ->where('product_id', $this->productId)
-                ->whereNull('product_variant_id')
-                ->sum('quantity');
+            $success = $apiClient->updateProductStock($integration, $product->wc_product_id, $available);
+            $targetDesc = "product stock in WooCommerce for product {$this->productId}";
+        }
 
-            $available = Quantity::of($totalStock ?? 0)->subtract($reserved)->maxZero()->toFloat();
-
-            $success = $apiClient->updateProductStock(
-                $integration,
-                $product->wc_product_id,
-                $available
-            );
-
-            if (!$success) {
-                throw new WooCommerceConnectionException(
-                    "Failed to update product stock in WooCommerce for product {$this->productId}."
-                );
-            }
+        if (!$success) {
+            throw new WooCommerceConnectionException("Failed to update {$targetDesc}.");
         }
     }
 }
