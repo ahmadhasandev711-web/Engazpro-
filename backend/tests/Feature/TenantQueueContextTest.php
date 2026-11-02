@@ -32,6 +32,7 @@ class TenantQueueContextTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        \Illuminate\Support\Facades\Http::fake();
 
         // المتجر A
         $this->ownerA = User::factory()->create(['role' => 'OWNER']);
@@ -135,6 +136,6 @@ class TenantQueueContextTest extends TestCase
             ->andReturn(true);
 
         $pushJob = new PushStockToWooCommerceJob($this->ownerB->id, $this->productB->id);
-        $pushJob->handle($mockApiClient);
+        $pushJob->handle($mockApiClient, app(\App\Services\WooCommerce\StockReservationService::class));
     }
 }
