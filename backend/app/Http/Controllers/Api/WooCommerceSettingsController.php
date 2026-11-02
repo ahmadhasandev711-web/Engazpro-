@@ -130,7 +130,7 @@ class WooCommerceSettingsController extends Controller
             }
         }
 
-        \Illuminate\Support\Facades\Cache::forget("wc_stock_sync_active_{$user->getAccountId()}");
+        \App\Services\WooCommerce\WooStockSyncGate::forget($user->getAccountId());
 
         $integration->load('onlineBranch');
 

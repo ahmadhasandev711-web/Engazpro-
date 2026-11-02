@@ -116,7 +116,7 @@ class WooCommerceAuthService
 
         $integration->save();
 
-        \Illuminate\Support\Facades\Cache::forget("wc_stock_sync_active_{$targetAccountId}");
+        \App\Services\WooCommerce\WooStockSyncGate::forget($targetAccountId);
 
         // Attempt automatic currency sync
         try {

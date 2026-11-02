@@ -505,4 +505,122 @@ class WooCommerceStockReservationTest extends TestCase
         $this->assertSame(\App\Enums\WcOrderStatus::CONFIRMED, $confirmedOrder->status);
         $this->assertStringContainsString('تأكيد مع نقص مخزون', (string) $confirmedOrder->notes);
     }
+
+    /**
+     * Item 6 / Test 7a (end-to-end):
+     * Branch has 10, online order PENDING for 2, POS sale of 1 -> pushes 7 to WooCommerce (not 9).
+     */
+    public function test_pos_sale_triggers_push_stock_job_sending_stock_minus_online_reservation(): void
+    {
+        $mockClient = $this->createMock(\App\Contracts\WooCommerceApiClientInterface::class);
+        $this->app->instance(\App\Contracts\WooCommerceApiClientInterface::class, $mockClient);
+
+        $product = Product::create([
+            'user_id' => $this->owner->id,
+            'name' => 'صنف نهاية لنهاية',
+            'wc_product_id' => 7702,
+            'price' => 100,
+            'cost_price' => 60,
+            'quantity' => 10,
+        ]);
+
+        // Call 1: initial BranchStock creation pushes 10.0
+        // Call 2: POS sale drops raw stock to 9, minus 2 reserved = pushes 7.0
+        $matcher = $this->exactly(2);
+        $mockClient->expects($matcher)
+            ->method('updateProductStock')
+            ->willReturnCallback(function ($integration, $wcProductId, $stock) use ($matcher) {
+                if ($matcher->numberOfInvocations() === 1) {
+                    $this->assertSame(7702, $wcProductId);
+                    $this->assertSame(10.0, (float) $stock);
+                } elseif ($matcher->numberOfInvocations() === 2) {
+                    $this->assertSame(7702, $wcProductId);
+                    $this->assertSame(7.0, (float) $stock);
+                }
+                return true;
+            });
+
+        $branchStock = BranchStock::create([
+            'branch_id' => $this->mainBranch->id,
+            'product_id' => $product->id,
+            'quantity' => 10,
+        ]);
+
+        // Pending online order of 2 units
+        $order = WcOrder::create([
+            'user_id' => $this->owner->id,
+            'wc_order_id' => 9003,
+            'branch_id' => $this->mainBranch->id,
+            'status' => \App\Enums\WcOrderStatus::PENDING_CONFIRMATION,
+            'payment_status' => \App\Enums\WcPaymentStatus::PENDING_COD,
+            'total' => 200,
+        ]);
+
+        WcOrderItem::create([
+            'user_id' => $this->owner->id,
+            'wc_order_id' => $order->id,
+            'product_id' => $product->id,
+            'wc_product_id' => 7702,
+            'quantity' => '2.00',
+        ]);
+
+        // POS sale occurs -> branch stock decreases from 10 to 9
+        $branchStock->update(['quantity' => 9]);
+    }
+
+    /**
+     * Item 6 / Test 7e:
+     * Cancelling a PENDING order triggers WcOrderStockSyncObserver to push full restored stock (10) to WooCommerce.
+     */
+    public function test_cancelling_pending_order_triggers_observer_and_pushes_restored_stock(): void
+    {
+        $mockClient = $this->createMock(\App\Contracts\WooCommerceApiClientInterface::class);
+        $this->app->instance(\App\Contracts\WooCommerceApiClientInterface::class, $mockClient);
+
+        $product = Product::create([
+            'user_id' => $this->owner->id,
+            'name' => 'صنف إلغاء أوردر',
+            'wc_product_id' => 7703,
+            'price' => 100,
+            'cost_price' => 60,
+            'quantity' => 10,
+        ]);
+
+        // Call 1: BranchStock creation pushes 10.0
+        // Call 2: Order cancelled triggers WcOrderStockSyncObserver which pushes restored stock 10.0
+        $matcher = $this->exactly(2);
+        $mockClient->expects($matcher)
+            ->method('updateProductStock')
+            ->willReturnCallback(function ($integration, $wcProductId, $stock) use ($matcher) {
+                $this->assertSame(7703, $wcProductId);
+                $this->assertSame(10.0, (float) $stock);
+                return true;
+            });
+
+        BranchStock::create([
+            'branch_id' => $this->mainBranch->id,
+            'product_id' => $product->id,
+            'quantity' => 10,
+        ]);
+
+        $order = WcOrder::create([
+            'user_id' => $this->owner->id,
+            'wc_order_id' => 9004,
+            'branch_id' => $this->mainBranch->id,
+            'status' => \App\Enums\WcOrderStatus::PENDING_CONFIRMATION,
+            'payment_status' => \App\Enums\WcPaymentStatus::PENDING_COD,
+            'total' => 200,
+        ]);
+
+        WcOrderItem::create([
+            'user_id' => $this->owner->id,
+            'wc_order_id' => $order->id,
+            'product_id' => $product->id,
+            'wc_product_id' => 7703,
+            'quantity' => '2.00',
+        ]);
+
+        // When status changes to CANCELLED, observer must trigger PushStockToWooCommerceJob
+        $order->update(['status' => \App\Enums\WcOrderStatus::CANCELLED]);
+    }
 }

@@ -59,6 +59,7 @@ class AppServiceProvider extends ServiceProvider
 
         \App\Models\BranchStock::observe(\App\Observers\BranchStockWooCommerceObserver::class);
         \App\Models\Party::observe(\App\Observers\PartyWooCommerceObserver::class);
+        \App\Models\WcOrder::observe(\App\Observers\WcOrderStockSyncObserver::class);
 
         \Illuminate\Support\Facades\RateLimiter::for('api', function (\Illuminate\Http\Request $request) {
             return \Illuminate\Cache\RateLimiting\Limit::perMinute((int) config('pos.security.api_per_minute', 300))
