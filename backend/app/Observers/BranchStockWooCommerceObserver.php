@@ -20,10 +20,14 @@ class BranchStockWooCommerceObserver
             return;
         }
 
-        PushStockToWooCommerceJob::dispatch(
-            $userId,
-            $branchStock->product_id,
-            $branchStock->product_variant_id
-        )->afterCommit();
+        try {
+            PushStockToWooCommerceJob::dispatch(
+                $userId,
+                $branchStock->product_id,
+                $branchStock->product_variant_id
+            )->afterCommit();
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning("WooCommerce stock sync dispatch caught: " . $e->getMessage());
+        }
     }
 }
