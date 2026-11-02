@@ -162,4 +162,110 @@ class WooCommerceStockReservationTest extends TestCase
 
         $this->assertCount(3, $order->items);
     }
+
+    /**
+     * Item 3 / Test 7b: SHIPPED_VIA_COURIER is reserved in branch; DISPATCHED to mandob is NOT reserved in branch.
+     */
+    public function test_shipped_via_courier_is_reserved_while_dispatched_to_mandob_is_not(): void
+    {
+        $product = Product::create([
+            'user_id' => $this->owner->id,
+            'name' => 'منتج حجز',
+            'wc_product_id' => 501,
+            'price' => 100,
+            'cost_price' => 60,
+            'quantity' => 20,
+        ]);
+
+        $orderCourier = WcOrder::create([
+            'user_id' => $this->owner->id,
+            'wc_order_id' => 8001,
+            'branch_id' => $this->mainBranch->id,
+            'status' => \App\Enums\WcOrderStatus::SHIPPED_VIA_COURIER,
+            'payment_status' => \App\Enums\WcPaymentStatus::PENDING_COD,
+            'total' => 300,
+        ]);
+
+        WcOrderItem::create([
+            'user_id' => $this->owner->id,
+            'wc_order_id' => $orderCourier->id,
+            'product_id' => $product->id,
+            'wc_product_id' => 501,
+            'quantity' => '3.00',
+        ]);
+
+        $orderMandob = WcOrder::create([
+            'user_id' => $this->owner->id,
+            'wc_order_id' => 8002,
+            'branch_id' => $this->mainBranch->id,
+            'status' => \App\Enums\WcOrderStatus::DISPATCHED,
+            'payment_status' => \App\Enums\WcPaymentStatus::PENDING_COD,
+            'total' => 400,
+        ]);
+
+        WcOrderItem::create([
+            'user_id' => $this->owner->id,
+            'wc_order_id' => $orderMandob->id,
+            'product_id' => $product->id,
+            'wc_product_id' => 501,
+            'quantity' => '4.00',
+        ]);
+
+        $service = app(\App\Services\WooCommerce\StockReservationService::class);
+        $reserved = $service->reservedQuantity($this->owner->id, $product->id, null, [$this->mainBranch->id]);
+
+        $this->assertInstanceOf(\App\Support\Quantity::class, $reserved);
+        $this->assertSame('3.00', $reserved->toDecimalString());
+    }
+
+    /**
+     * Item 3 / Test 7c: Order reserved on a branch outside target branches does not affect reservation.
+     */
+    public function test_order_reserved_on_branch_outside_target_branches_does_not_affect_reservation(): void
+    {
+        $branch2 = Branch::create([
+            'user_id' => $this->owner->id,
+            'name' => 'فرع الإسكندرية',
+            'code' => 'BR-02',
+            'type' => 'STORE',
+            'is_main' => false,
+            'is_active' => true,
+        ]);
+
+        $product = Product::create([
+            'user_id' => $this->owner->id,
+            'name' => 'منتج فرعي',
+            'wc_product_id' => 502,
+            'price' => 100,
+            'cost_price' => 60,
+            'quantity' => 20,
+        ]);
+
+        $orderBranch2 = WcOrder::create([
+            'user_id' => $this->owner->id,
+            'wc_order_id' => 8003,
+            'branch_id' => $branch2->id,
+            'status' => \App\Enums\WcOrderStatus::CONFIRMED,
+            'payment_status' => \App\Enums\WcPaymentStatus::PENDING_COD,
+            'total' => 500,
+        ]);
+
+        WcOrderItem::create([
+            'user_id' => $this->owner->id,
+            'wc_order_id' => $orderBranch2->id,
+            'product_id' => $product->id,
+            'wc_product_id' => 502,
+            'quantity' => '5.00',
+        ]);
+
+        $service = app(\App\Services\WooCommerce\StockReservationService::class);
+
+        // Targeted only main branch -> should be 0.00
+        $reservedMain = $service->reservedQuantity($this->owner->id, $product->id, null, [$this->mainBranch->id]);
+        $this->assertSame('0.00', $reservedMain->toDecimalString());
+
+        // Targeted both branches -> should be 5.00
+        $reservedBoth = $service->reservedQuantity($this->owner->id, $product->id, null, [$this->mainBranch->id, $branch2->id]);
+        $this->assertSame('5.00', $reservedBoth->toDecimalString());
+    }
 }
