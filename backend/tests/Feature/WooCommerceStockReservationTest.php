@@ -123,12 +123,21 @@ class WooCommerceStockReservationTest extends TestCase
                     'subtotal' => '10.00',
                     'total' => '10.00',
                 ],
+                [
+                    'id' => 4,
+                    'name' => 'صنف متغير بمتغير غير مستورد',
+                    'product_id' => 102,
+                    'variation_id' => 9999,
+                    'quantity' => 1,
+                    'subtotal' => '85.00',
+                    'total' => '85.00',
+                ],
             ],
         ];
 
         $order = $this->syncService->handleIncomingOrder($this->owner, $orderPayload);
 
-        $this->assertDatabaseCount('wc_order_items', 3);
+        $this->assertDatabaseCount('wc_order_items', 4);
 
         $this->assertDatabaseHas('wc_order_items', [
             'wc_order_id' => $order->id,
@@ -160,7 +169,17 @@ class WooCommerceStockReservationTest extends TestCase
             'quantity' => '1.00',
         ]);
 
-        $this->assertCount(3, $order->items);
+        $this->assertDatabaseHas('wc_order_items', [
+            'wc_order_id' => $order->id,
+            'user_id' => $this->owner->id,
+            'product_id' => null,
+            'product_variant_id' => null,
+            'wc_product_id' => 102,
+            'wc_variation_id' => 9999,
+            'quantity' => '1.00',
+        ]);
+
+        $this->assertCount(4, $order->items);
     }
 
     /**

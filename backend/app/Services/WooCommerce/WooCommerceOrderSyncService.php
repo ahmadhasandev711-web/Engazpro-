@@ -266,6 +266,10 @@ class WooCommerceOrderSyncService
                     ? $variantsByWcId[$wcVarId]->id
                     : null;
 
+                if ($wcVarId && !$productVariantId) {
+                    $productId = null;
+                }
+
                 WcOrderItem::create([
                     'user_id' => $accountId,
                     'wc_order_id' => $wcOrder->id,
