@@ -268,4 +268,165 @@ class WooCommerceStockReservationTest extends TestCase
         $reservedBoth = $service->reservedQuantity($this->owner->id, $product->id, null, [$this->mainBranch->id, $branch2->id]);
         $this->assertSame('5.00', $reservedBoth->toDecimalString());
     }
+
+    /**
+     * Item 4 / Test 7f: PushStockToWooCommerceJob throws WooCommerceConnectionException when updateProductStock returns false.
+     */
+    public function test_push_stock_job_throws_when_api_client_returns_false(): void
+    {
+        \Illuminate\Support\Facades\Queue::fake([
+            \App\Jobs\PushStockToWooCommerceJob::class,
+        ]);
+
+        $product = Product::create([
+            'user_id' => $this->owner->id,
+            'name' => 'صنف فشل التحديث',
+            'wc_product_id' => 9991,
+            'price' => 50,
+            'cost_price' => 30,
+            'quantity' => 10,
+        ]);
+
+        BranchStock::create([
+            'branch_id' => $this->mainBranch->id,
+            'product_id' => $product->id,
+            'quantity' => 10,
+        ]);
+
+        $mockClient = $this->createMock(\App\Contracts\WooCommerceApiClientInterface::class);
+        $mockClient->expects($this->once())
+            ->method('updateProductStock')
+            ->willReturn(false);
+
+        $this->expectException(\App\Exceptions\WooCommerceConnectionException::class);
+
+        $job = new \App\Jobs\PushStockToWooCommerceJob($this->owner->id, $product->id);
+        $job->handle($mockClient, app(\App\Services\WooCommerce\StockReservationService::class));
+    }
+
+    /**
+     * Item 4: PushStockToWooCommerceJob sends variation available stock = branch stock minus reservedQuantity.
+     */
+    public function test_push_stock_job_pushes_variation_stock_minus_reserved_quantity(): void
+    {
+        \Illuminate\Support\Facades\Queue::fake([
+            \App\Jobs\PushStockToWooCommerceJob::class,
+        ]);
+
+        $product = Product::create([
+            'user_id' => $this->owner->id,
+            'name' => 'صنف بمتغيرات',
+            'wc_product_id' => 9993,
+            'price' => 50,
+            'cost_price' => 30,
+            'quantity' => 10,
+            'has_variants' => true,
+        ]);
+
+        $variant = ProductVariant::create([
+            'user_id' => $this->owner->id,
+            'product_id' => $product->id,
+            'name' => 'أحمر - L',
+            'wc_variation_id' => 8881,
+            'price' => 50,
+            'cost_price' => 30,
+            'quantity' => 10,
+        ]);
+
+        BranchStock::create([
+            'branch_id' => $this->mainBranch->id,
+            'product_id' => $product->id,
+            'product_variant_id' => $variant->id,
+            'quantity' => 10,
+        ]);
+
+        $order = WcOrder::create([
+            'user_id' => $this->owner->id,
+            'wc_order_id' => 8005,
+            'branch_id' => $this->mainBranch->id,
+            'status' => \App\Enums\WcOrderStatus::CONFIRMED,
+            'payment_status' => \App\Enums\WcPaymentStatus::PENDING_COD,
+            'total' => 150,
+        ]);
+
+        WcOrderItem::create([
+            'user_id' => $this->owner->id,
+            'wc_order_id' => $order->id,
+            'product_id' => $product->id,
+            'product_variant_id' => $variant->id,
+            'wc_product_id' => 9993,
+            'wc_variation_id' => 8881,
+            'quantity' => '3.00',
+        ]);
+
+        $mockClient = $this->createMock(\App\Contracts\WooCommerceApiClientInterface::class);
+        $mockClient->expects($this->once())
+            ->method('updateVariationStock')
+            ->with(
+                $this->anything(),
+                9993,
+                8881,
+                7.0 // 10.00 - 3.00 = 7.00
+            )
+            ->willReturn(true);
+
+        $job = new \App\Jobs\PushStockToWooCommerceJob($this->owner->id, $product->id, $variant->id);
+        $job->handle($mockClient, app(\App\Services\WooCommerce\StockReservationService::class));
+    }
+
+    /**
+     * Item 4: PushStockToWooCommerceJob sends available stock = total stock minus reservedQuantity.
+     */
+    public function test_push_stock_job_pushes_branch_stock_minus_reserved_quantity(): void
+    {
+        \Illuminate\Support\Facades\Queue::fake([
+            \App\Jobs\PushStockToWooCommerceJob::class,
+        ]);
+
+        $product = Product::create([
+            'user_id' => $this->owner->id,
+            'name' => 'صنف المزامنة المحجوز',
+            'wc_product_id' => 9992,
+            'price' => 50,
+            'cost_price' => 30,
+            'quantity' => 10,
+        ]);
+
+        BranchStock::create([
+            'branch_id' => $this->mainBranch->id,
+            'product_id' => $product->id,
+            'quantity' => 10,
+        ]);
+
+        // Create pending order with reserved quantity 2.00
+        $order = WcOrder::create([
+            'user_id' => $this->owner->id,
+            'wc_order_id' => 8004,
+            'branch_id' => $this->mainBranch->id,
+            'status' => \App\Enums\WcOrderStatus::PENDING_CONFIRMATION,
+            'payment_status' => \App\Enums\WcPaymentStatus::PENDING_COD,
+            'total' => 100,
+        ]);
+
+        WcOrderItem::create([
+            'user_id' => $this->owner->id,
+            'wc_order_id' => $order->id,
+            'product_id' => $product->id,
+            'wc_product_id' => 9992,
+            'quantity' => '2.00',
+        ]);
+
+        $mockClient = $this->createMock(\App\Contracts\WooCommerceApiClientInterface::class);
+        $mockClient->expects($this->once())
+            ->method('updateProductStock')
+            ->with(
+                $this->anything(),
+                9992,
+                8.0 // 10.00 - 2.00 = 8.00
+            )
+            ->willReturn(true);
+
+        $job = new \App\Jobs\PushStockToWooCommerceJob($this->owner->id, $product->id);
+        $job->handle($mockClient, app(\App\Services\WooCommerce\StockReservationService::class));
+    }
 }

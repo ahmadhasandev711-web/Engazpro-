@@ -2,20 +2,23 @@
 
 namespace App\Jobs;
 
+use App\Contracts\WooCommerceApiClientInterface;
 use App\Enums\QueueName;
+use App\Exceptions\WooCommerceConnectionException;
 use App\Models\Branch;
 use App\Models\BranchStock;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\WooCommerceIntegration;
-use App\Services\WooCommerce\WooCommerceApiClient;
+use App\Services\WooCommerce\StockReservationService;
+use App\Support\Quantity;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Collection;
 
 class PushStockToWooCommerceJob implements ShouldQueue, ShouldBeUniqueUntilProcessing
 {
@@ -39,7 +42,7 @@ class PushStockToWooCommerceJob implements ShouldQueue, ShouldBeUniqueUntilProce
         return "{$this->userId}:{$this->productId}:" . ($this->productVariantId ?? 'null');
     }
 
-    public function handle(WooCommerceApiClient $apiClient): void
+    public function handle(WooCommerceApiClientInterface $apiClient, StockReservationService $reservationService): void
     {
         $integration = WooCommerceIntegration::where('user_id', $this->userId)
             ->where('is_active', true)
@@ -50,30 +53,62 @@ class PushStockToWooCommerceJob implements ShouldQueue, ShouldBeUniqueUntilProce
             return;
         }
 
-        $product = Product::find($this->productId);
+        $product = Product::withoutGlobalScopes()
+            ->where('user_id', $this->userId)
+            ->find($this->productId);
+
         if (!$product || !$product->wc_product_id) {
             return;
         }
 
-        // Determine branches to sync: dedicated online branch, or all active store/warehouse branches
-        if (!empty($integration->online_branch_id)) {
-            $targetBranchIds = Branch::where('user_id', $this->userId)
-                ->where('id', $integration->online_branch_id)
-                ->where('is_active', true)
-                ->pluck('id');
-        } else {
-            $targetBranchIds = Branch::where('user_id', $this->userId)
-                ->whereIn('type', ['STORE', 'WAREHOUSE'])
-                ->where('is_active', true)
-                ->pluck('id');
-        }
-
+        $targetBranchIds = $this->resolveTargetBranchIds($integration);
         if ($targetBranchIds->isEmpty()) {
             return;
         }
 
+        $branchIds = $targetBranchIds->all();
+        $reserved = $reservationService->reservedQuantity(
+            $this->userId,
+            $this->productId,
+            $this->productVariantId,
+            $branchIds
+        );
+
+        $this->syncStockToWooCommerce($apiClient, $integration, $product, $branchIds, $reserved);
+    }
+
+    /**
+     * @return Collection<int, int>
+     */
+    private function resolveTargetBranchIds(WooCommerceIntegration $integration): Collection
+    {
+        if (!empty($integration->online_branch_id)) {
+            return Branch::withoutGlobalScopes()
+                ->where('user_id', $this->userId)
+                ->where('id', $integration->online_branch_id)
+                ->where('is_active', true)
+                ->pluck('id');
+        }
+
+        return Branch::withoutGlobalScopes()
+            ->where('user_id', $this->userId)
+            ->whereIn('type', ['STORE', 'WAREHOUSE'])
+            ->where('is_active', true)
+            ->pluck('id');
+    }
+
+    /**
+     * @param array<int, int> $targetBranchIds
+     */
+    private function syncStockToWooCommerce(
+        WooCommerceApiClientInterface $apiClient,
+        WooCommerceIntegration $integration,
+        Product $product,
+        array $targetBranchIds,
+        Quantity $reserved
+    ): void {
         if ($this->productVariantId) {
-            $variant = ProductVariant::find($this->productVariantId);
+            $variant = ProductVariant::withoutGlobalScopes()->find($this->productVariantId);
             if (!$variant || !$variant->wc_variation_id) {
                 return;
             }
@@ -83,23 +118,39 @@ class PushStockToWooCommerceJob implements ShouldQueue, ShouldBeUniqueUntilProce
                 ->where('product_variant_id', $this->productVariantId)
                 ->sum('quantity');
 
-            $apiClient->updateVariationStock(
+            $available = Quantity::of($totalStock ?? 0)->subtract($reserved)->maxZero()->toFloat();
+
+            $success = $apiClient->updateVariationStock(
                 $integration,
                 $product->wc_product_id,
                 $variant->wc_variation_id,
-                max(0, (float) $totalStock)
+                $available
             );
+
+            if (!$success) {
+                throw new WooCommerceConnectionException(
+                    "Failed to update variation stock in WooCommerce for variant {$this->productVariantId}."
+                );
+            }
         } else {
             $totalStock = BranchStock::whereIn('branch_id', $targetBranchIds)
                 ->where('product_id', $this->productId)
                 ->whereNull('product_variant_id')
                 ->sum('quantity');
 
-            $apiClient->updateProductStock(
+            $available = Quantity::of($totalStock ?? 0)->subtract($reserved)->maxZero()->toFloat();
+
+            $success = $apiClient->updateProductStock(
                 $integration,
                 $product->wc_product_id,
-                max(0, (float) $totalStock)
+                $available
             );
+
+            if (!$success) {
+                throw new WooCommerceConnectionException(
+                    "Failed to update product stock in WooCommerce for product {$this->productId}."
+                );
+            }
         }
     }
 }
