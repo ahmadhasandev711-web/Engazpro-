@@ -290,130 +290,61 @@ class WooCommerceOrderSyncService
         $branch = Branch::where('user_id', $accountId)->findOrFail($branchId);
 
         return DB::transaction(function () use ($accountId, $order, $branchId, $branch, $force) {
-            $lockedOrder = WcOrder::where('user_id', $accountId)->lockForUpdate()->findOrFail($order->id);
-
-            if (!$lockedOrder->status->canTransitionTo(WcOrderStatus::CONFIRMED)) {
-                throw new PosDomainException(
-                    message: "لا يمكن تأكيد الطلب وهو بحالة '{$lockedOrder->status->label()}'.",
-                    errorCode: 'INVALID_ORDER_STATUS_TRANSITION',
-                    statusCode: 422
-                );
+            $locked = WcOrder::where('user_id', $accountId)->lockForUpdate()->findOrFail($order->id);
+            if (!$locked->status->canTransitionTo(WcOrderStatus::CONFIRMED)) {
+                throw new PosDomainException("لا يمكن تأكيد الطلب وهو بحالة '{$locked->status->label()}'.", 'INVALID_ORDER_STATUS_TRANSITION', 422);
             }
 
-            $missingItems = [];
-            $lockedOrder->loadMissing(['items.product', 'items.variant']);
+            $locked->loadMissing(['items.product', 'items.variant']);
+            $missing = array_values(array_filter($locked->items->map(
+                fn($it) => $this->buildShortageMessage($it, $branchId, $branch->name, $locked->id, $accountId)
+            )->all()));
 
-            if ($lockedOrder->items->isNotEmpty()) {
-                foreach ($lockedOrder->items as $item) {
-                    if (!$item->product_id) {
-                        $missingItems[] = "الصنف غير مسجل بالنظام (يجب استيراد الأصناف أولاً)";
-                        continue;
-                    }
-
-                    $stockQuery = BranchStock::where('branch_id', $branchId)
-                        ->where('product_id', $item->product_id);
-
-                    if ($item->product_variant_id) {
-                        $stockQuery->where('product_variant_id', $item->product_variant_id);
-                    } else {
-                        $stockQuery->whereNull('product_variant_id');
-                    }
-
-                    $rawStock = $stockQuery->value('quantity') ?? 0;
-
-                    $reserved = $this->reservationService->reservedQuantity(
-                        $accountId,
-                        $item->product_id,
-                        $item->product_variant_id,
-                        [$branchId],
-                        excludeWcOrderId: $lockedOrder->id
-                    );
-
-                    $available = Quantity::of($rawStock)->subtract($reserved);
-                    $required = Quantity::of($item->quantity);
-
-                    if ($available->isLessThan($required)) {
-                        $productName = $item->product?->name ?? 'صنف غير معروف';
-                        $variantLabel = $item->variant ? " ({$item->variant->name})" : '';
-                        $availableDisplay = $available->maxZero()->toDecimalString();
-                        $requiredDisplay = $required->toDecimalString();
-                        $missingItems[] = "الصنف \"{$productName}{$variantLabel}\" الرصيد المتاح في {$branch->name}: {$availableDisplay}، والمطلوب: {$requiredDisplay}";
-                    }
-                }
-            } else {
-                $lineItems = $lockedOrder->items_snapshot ?? [];
-
-                foreach ($lineItems as $item) {
-                    $wcProductId = (int) ($item['product_id'] ?? 0);
-                    $wcVarId = !empty($item['variation_id']) ? (int) $item['variation_id'] : null;
-                    $qtyRequired = Quantity::of($item['quantity'] ?? 1);
-
-                    $product = Product::where('user_id', $accountId)
-                        ->where('wc_product_id', $wcProductId)
-                        ->first();
-
-                    $variant = null;
-                    if ($product && $wcVarId) {
-                        $variant = $product->variants()->where('wc_variation_id', $wcVarId)->first();
-                    }
-
-                    if (!$product) {
-                        $missingItems[] = "الصنف \"{$item['name']}\" غير مسجل بالنظام (يجب استيراد الأصناف أولاً)";
-                        continue;
-                    }
-
-                    $stockQuery = BranchStock::where('branch_id', $branchId)
-                        ->where('product_id', $product->id);
-
-                    if ($variant) {
-                        $stockQuery->where('product_variant_id', $variant->id);
-                    } else {
-                        $stockQuery->whereNull('product_variant_id');
-                    }
-
-                    $rawStock = $stockQuery->value('quantity') ?? 0;
-
-                    $reserved = $this->reservationService->reservedQuantity(
-                        $accountId,
-                        $product->id,
-                        $variant?->id,
-                        [$branchId],
-                        excludeWcOrderId: $lockedOrder->id
-                    );
-
-                    $available = Quantity::of($rawStock)->subtract($reserved);
-
-                    if ($available->isLessThan($qtyRequired)) {
-                        $variantLabel = $variant ? " ({$variant->name})" : '';
-                        $availableDisplay = $available->maxZero()->toDecimalString();
-                        $requiredDisplay = $qtyRequired->toDecimalString();
-                        $missingItems[] = "الصنف \"{$product->name}{$variantLabel}\" الرصيد المتاح في {$branch->name}: {$availableDisplay}، والمطلوب: {$requiredDisplay}";
-                    }
-                }
+            if (!empty($missing) && !$force) {
+                throw new PosDomainException("لا يمكن تأكيد الطلب لنقص في المخزون:\n" . implode("\n", $missing), 'INSUFFICIENT_ONLINE_STOCK', 422);
             }
 
-            if (!empty($missingItems) && !$force) {
-                throw new PosDomainException(
-                    message: "لا يمكن تأكيد الطلب لنقص في المخزون:\n" . implode("\n", $missingItems),
-                    errorCode: 'INSUFFICIENT_ONLINE_STOCK',
-                    statusCode: 422
-                );
+            $notes = $locked->notes;
+            if (!empty($missing) && $force) {
+                $tag = '[تأكيد مع نقص مخزون: ' . implode(' | ', $missing) . ']';
+                $notes = $notes ? "{$notes}\n{$tag}" : $tag;
             }
 
-            $orderNotes = $lockedOrder->notes;
-            if (!empty($missingItems) && $force) {
-                $warningTag = "[تأكيد مع نقص مخزون: " . implode(' | ', $missingItems) . "]";
-                $orderNotes = $orderNotes ? "{$orderNotes}\n{$warningTag}" : $warningTag;
-            }
-
-            $lockedOrder->update([
-                'branch_id' => $branchId,
-                'status' => WcOrderStatus::CONFIRMED,
-                'notes' => $orderNotes,
-            ]);
-
-            return $lockedOrder->fresh(['party', 'branch']);
+            $locked->update(['branch_id' => $branchId, 'status' => WcOrderStatus::CONFIRMED, 'notes' => $notes]);
+            return $locked->fresh(['party', 'branch']);
         });
+    }
+
+    private function buildShortageMessage(
+        WcOrderItem $item,
+        int $branchId,
+        string $branchName,
+        int $excludeOrderId,
+        int $accountId
+    ): ?string {
+        if (!$item->product_id) {
+            return 'الصنف غير مسجل بالنظام (يجب استيراد الأصناف أولاً)';
+        }
+
+        $stockQuery = BranchStock::where('branch_id', $branchId)->where('product_id', $item->product_id);
+        $item->product_variant_id ? $stockQuery->where('product_variant_id', $item->product_variant_id) : $stockQuery->whereNull('product_variant_id');
+        $rawStock = $stockQuery->value('quantity') ?? 0;
+
+        $reserved = $this->reservationService->reservedQuantity(
+            $accountId, $item->product_id, $item->product_variant_id, [$branchId], $excludeOrderId
+        );
+
+        $available = Quantity::of($rawStock)->subtract($reserved);
+        $required = Quantity::of($item->quantity);
+
+        if ($available->isLessThan($required)) {
+            $variant = $item->variant ? " ({$item->variant->name})" : '';
+            $name = ($item->product?->name ?? 'صنف غير معروف') . $variant;
+            $avail = $available->maxZero()->toDecimalString();
+            return "الصنف \"{$name}\" الرصيد المتاح في {$branchName}: {$avail}، والمطلوب: {$required->toDecimalString()}";
+        }
+
+        return null;
     }
 
     /**
