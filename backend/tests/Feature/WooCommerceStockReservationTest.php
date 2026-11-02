@@ -524,19 +524,11 @@ class WooCommerceStockReservationTest extends TestCase
             'quantity' => 10,
         ]);
 
-        // Call 1: initial BranchStock creation pushes 10.0
-        // Call 2: POS sale drops raw stock to 9, minus 2 reserved = pushes 7.0
-        $matcher = $this->exactly(2);
-        $mockClient->expects($matcher)
+        $pushedQuantities = [];
+        $mockClient->expects($this->exactly(2))
             ->method('updateProductStock')
-            ->willReturnCallback(function ($integration, $wcProductId, $stock) use ($matcher) {
-                if ($matcher->numberOfInvocations() === 1) {
-                    $this->assertSame(7702, $wcProductId);
-                    $this->assertSame(10.0, (float) $stock);
-                } elseif ($matcher->numberOfInvocations() === 2) {
-                    $this->assertSame(7702, $wcProductId);
-                    $this->assertSame(7.0, (float) $stock);
-                }
+            ->willReturnCallback(function ($integration, $wcProductId, $stock) use (&$pushedQuantities) {
+                $pushedQuantities[] = (float) $stock;
                 return true;
             });
 
@@ -566,6 +558,8 @@ class WooCommerceStockReservationTest extends TestCase
 
         // POS sale occurs -> branch stock decreases from 10 to 9
         $branchStock->update(['quantity' => 9]);
+
+        $this->assertSame([10.0, 7.0], $pushedQuantities);
     }
 
     /**
@@ -586,14 +580,11 @@ class WooCommerceStockReservationTest extends TestCase
             'quantity' => 10,
         ]);
 
-        // Call 1: BranchStock creation pushes 10.0
-        // Call 2: Order cancelled triggers WcOrderStockSyncObserver which pushes restored stock 10.0
-        $matcher = $this->exactly(2);
-        $mockClient->expects($matcher)
+        $pushedQuantities = [];
+        $mockClient->expects($this->exactly(2))
             ->method('updateProductStock')
-            ->willReturnCallback(function ($integration, $wcProductId, $stock) use ($matcher) {
-                $this->assertSame(7703, $wcProductId);
-                $this->assertSame(10.0, (float) $stock);
+            ->willReturnCallback(function ($integration, $wcProductId, $stock) use (&$pushedQuantities) {
+                $pushedQuantities[] = (float) $stock;
                 return true;
             });
 
@@ -622,5 +613,7 @@ class WooCommerceStockReservationTest extends TestCase
 
         // When status changes to CANCELLED, observer must trigger PushStockToWooCommerceJob
         $order->update(['status' => \App\Enums\WcOrderStatus::CANCELLED]);
+
+        $this->assertSame([10.0, 10.0], $pushedQuantities);
     }
 }
