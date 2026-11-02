@@ -25,15 +25,11 @@ class WcOrderStockSyncObserver
                 continue;
             }
 
-            try {
-                PushStockToWooCommerceJob::dispatch(
-                    $order->user_id,
-                    $item->product_id,
-                    $item->product_variant_id
-                )->afterCommit();
-            } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::warning("WooCommerce order stock sync dispatch caught: " . $e->getMessage());
-            }
+            PushStockToWooCommerceJob::dispatch(
+                $order->user_id,
+                $item->product_id,
+                $item->product_variant_id
+            )->afterCommit();
         }
     }
 }

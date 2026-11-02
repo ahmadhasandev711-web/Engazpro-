@@ -56,6 +56,8 @@ class WooCommerceImportStockOnlineBranchTest extends TestCase
     public function test_imported_product_initial_stock_is_recorded_under_online_branch(): void
     {
         $mockClient = Mockery::mock(WooCommerceApiClientInterface::class);
+        $mockClient->shouldReceive('updateProductStock')->andReturn(true)->byDefault();
+        $mockClient->shouldReceive('updateVariationStock')->andReturn(true)->byDefault();
         $mockClient->shouldReceive('getProducts')
             ->once()
             ->andReturn([

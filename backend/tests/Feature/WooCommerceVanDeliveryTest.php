@@ -71,6 +71,8 @@ class WooCommerceVanDeliveryTest extends TestCase
         ]);
 
         $mockClient = Mockery::mock(WooCommerceApiClientInterface::class);
+        $mockClient->shouldReceive('updateProductStock')->andReturn(true)->byDefault();
+        $mockClient->shouldReceive('updateVariationStock')->andReturn(true)->byDefault();
         $mockClient->shouldReceive('updateOrderStatus')->andReturn(true);
         $this->app->instance(WooCommerceApiClientInterface::class, $mockClient);
     }

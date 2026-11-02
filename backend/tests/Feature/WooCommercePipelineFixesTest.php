@@ -72,6 +72,10 @@ class WooCommercePipelineFixesTest extends TestCase
             'online_branch_id' => $this->mainBranch->id,
             'is_active' => true,
         ]);
+
+        \Illuminate\Support\Facades\Http::fake([
+            '*/wp-json/wc/v3/*' => \Illuminate\Support\Facades\Http::response(['id' => 1, 'success' => true], 200),
+        ]);
     }
 
     protected function createTestOrder(array $attributes = []): WcOrder
@@ -147,6 +151,7 @@ class WooCommercePipelineFixesTest extends TestCase
     public function test_sync_job_calls_api_client_with_completed_status(): void
     {
         $mockClient = Mockery::mock(WooCommerceApiClientInterface::class);
+        $mockClient->shouldReceive('updateProductStock')->andReturn(true)->byDefault();
         $mockClient->shouldReceive('updateOrderStatus')
             ->once()
             ->withArgs(function ($integration, $wcOrderId, $status) {
@@ -166,6 +171,7 @@ class WooCommercePipelineFixesTest extends TestCase
     public function test_sync_job_throws_when_api_client_returns_false(): void
     {
         $mockClient = Mockery::mock(WooCommerceApiClientInterface::class);
+        $mockClient->shouldReceive('updateProductStock')->andReturn(true)->byDefault();
         $mockClient->shouldReceive('updateOrderStatus')
             ->once()
             ->withArgs(function ($integration, $wcOrderId, $status) {
@@ -189,6 +195,7 @@ class WooCommercePipelineFixesTest extends TestCase
         $order = $this->createTestOrder();
 
         $mockClient = Mockery::mock(WooCommerceApiClientInterface::class);
+        $mockClient->shouldReceive('updateProductStock')->andReturn(true)->byDefault();
         $mockClient->shouldReceive('updateOrderStatus')
             ->once()
             ->withArgs(function ($integration, $wcOrderId, $status) use ($order) {
@@ -217,6 +224,7 @@ class WooCommercePipelineFixesTest extends TestCase
         $order = $this->createTestOrder();
 
         $mockClient = Mockery::mock(WooCommerceApiClientInterface::class);
+        $mockClient->shouldReceive('updateProductStock')->andReturn(true)->byDefault();
         $mockClient->shouldReceive('updateOrderStatus')
             ->andReturn(false);
         $this->app->instance(WooCommerceApiClientInterface::class, $mockClient);

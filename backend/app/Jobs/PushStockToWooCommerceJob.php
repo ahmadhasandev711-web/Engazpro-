@@ -43,9 +43,8 @@ class PushStockToWooCommerceJob implements ShouldQueue, ShouldBeUniqueUntilProce
         return "{$this->userId}:{$this->productId}:" . ($this->productVariantId ?? 'null');
     }
 
-    public function handle(WooCommerceApiClientInterface $apiClient, ?StockReservationService $reservationService = null): void
+    public function handle(WooCommerceApiClientInterface $apiClient, StockReservationService $reservationService): void
     {
-        $reservationService = $reservationService ?? app(StockReservationService::class);
         $integration = WooCommerceIntegration::where('user_id', $this->userId)
             ->where('is_active', true)
             ->where('auto_sync_stock', true)
@@ -114,23 +113,14 @@ class PushStockToWooCommerceJob implements ShouldQueue, ShouldBeUniqueUntilProce
 
             $available = Quantity::of($totalStock ?? 0)->subtract($reserved)->maxZero()->toFloat();
 
-            try {
-                $success = $apiClient->updateVariationStock(
-                    $integration,
-                    $product->wc_product_id,
-                    $variant->wc_variation_id,
-                    $available
-                );
-            } catch (\BadMethodCallException) {
-                return;
-            }
+            $success = $apiClient->updateVariationStock(
+                $integration,
+                $product->wc_product_id,
+                $variant->wc_variation_id,
+                $available
+            );
 
             if (!$success) {
-                if ($this->job instanceof \Illuminate\Queue\Jobs\SyncJob && app()->environment('testing')) {
-                    Log::warning("Failed to update variation stock in WooCommerce for variant {$this->productVariantId} (sync test queue).");
-                    return;
-                }
-
                 throw new WooCommerceConnectionException(
                     "Failed to update variation stock in WooCommerce for variant {$this->productVariantId}."
                 );
@@ -143,22 +133,13 @@ class PushStockToWooCommerceJob implements ShouldQueue, ShouldBeUniqueUntilProce
 
             $available = Quantity::of($totalStock ?? 0)->subtract($reserved)->maxZero()->toFloat();
 
-            try {
-                $success = $apiClient->updateProductStock(
-                    $integration,
-                    $product->wc_product_id,
-                    $available
-                );
-            } catch (\BadMethodCallException) {
-                return;
-            }
+            $success = $apiClient->updateProductStock(
+                $integration,
+                $product->wc_product_id,
+                $available
+            );
 
             if (!$success) {
-                if ($this->job instanceof \Illuminate\Queue\Jobs\SyncJob && app()->environment('testing')) {
-                    Log::warning("Failed to update product stock in WooCommerce for product {$this->productId} (sync test queue).");
-                    return;
-                }
-
                 throw new WooCommerceConnectionException(
                     "Failed to update product stock in WooCommerce for product {$this->productId}."
                 );

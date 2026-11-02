@@ -44,6 +44,10 @@ class WooCommerceStockSyncDeduplicationTest extends TestCase
             'is_active' => true,
         ]);
 
+        \Illuminate\Support\Facades\Http::fake([
+            '*/wp-json/wc/v3/*' => \Illuminate\Support\Facades\Http::response(['id' => 1, 'success' => true], 200),
+        ]);
+
         $this->product = Product::create([
             'user_id' => $this->owner->id,
             'name' => 'صنف تجريبي للمزامنة',

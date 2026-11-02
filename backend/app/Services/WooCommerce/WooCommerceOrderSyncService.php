@@ -32,8 +32,6 @@ use Illuminate\Support\Facades\Log;
 
 class WooCommerceOrderSyncService
 {
-    protected StockReservationService $reservationService;
-
     public function __construct(
         protected WooCommerceApiClientInterface $apiClient,
         protected WooCommerceCustomerSyncService $customerSyncService,
@@ -41,10 +39,8 @@ class WooCommerceOrderSyncService
         protected CourierService $courierService,
         protected WcOrderVanTransferService $vanTransferService,
         protected ShiftService $shiftService,
-        ?StockReservationService $reservationService = null
-    ) {
-        $this->reservationService = $reservationService ?? app(StockReservationService::class);
-    }
+        protected StockReservationService $reservationService
+    ) {}
 
     /**
      * Handle incoming order from webhook or manual pull
