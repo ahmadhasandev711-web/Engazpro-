@@ -1,0 +1,78 @@
+{
+    "Api/AdminController.php": {
+        "queries": 0,
+        "try": 1
+    },
+    "Api/AuthController.php": {
+        "queries": 5,
+        "try": 0
+    },
+    "Api/CategoryController.php": {
+        "queries": 3,
+        "try": 0
+    },
+    "Api/EmployeeController.php": {
+        "queries": 4,
+        "try": 0
+    },
+    "Api/ExpenseCategoryController.php": {
+        "queries": 2,
+        "try": 0
+    },
+    "Api/ExpenseController.php": {
+        "queries": 3,
+        "try": 0
+    },
+    "Api/InvoiceController.php": {
+        "queries": 6,
+        "try": 0
+    },
+    "Api/LedgerController.php": {
+        "queries": 1,
+        "try": 0
+    },
+    "Api/PartyController.php": {
+        "queries": 2,
+        "try": 0
+    },
+    "Api/PaymentController.php": {
+        "queries": 1,
+        "try": 0
+    },
+    "Api/PayrollController.php": {
+        "queries": 2,
+        "try": 0
+    },
+    "Api/ProductController.php": {
+        "queries": 5,
+        "try": 0
+    },
+    "Api/ShiftController.php": {
+        "queries": 4,
+        "try": 0
+    },
+    "Api/StoreInquiryController.php": {
+        "queries": 10,
+        "try": 0
+    },
+    "Api/TreasuryController.php": {
+        "queries": 8,
+        "try": 0
+    },
+    "Api/WcOrderController.php": {
+        "queries": 30,
+        "try": 0
+    },
+    "Api/WooCommerceAuthController.php": {
+        "queries": 0,
+        "try": 1
+    },
+    "Api/WooCommerceSettingsController.php": {
+        "queries": 17,
+        "try": 2
+    },
+    "Api/WooCommerceWebhookController.php": {
+        "queries": 4,
+        "try": 0
+    }
+}
