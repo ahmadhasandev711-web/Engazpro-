@@ -1,0 +1,37 @@
+{
+  "id": 50004,
+  "status": "cancelled",
+  "date_created": "2026-03-04T11:00:00",
+  "total": "100.00",
+  "shipping_total": "0.00",
+  "discount_total": "0.00",
+  "payment_method": "cod",
+  "customer_id": 1237,
+  "billing": {
+    "first_name": "طارق",
+    "last_name": "سعيد",
+    "phone": "01511112222",
+    "email": "tarek@example.com",
+    "address_1": "شبرا",
+    "city": "القاهرة",
+    "state": "القاهرة"
+  },
+  "shipping": {
+    "first_name": "طارق",
+    "last_name": "سعيد",
+    "phone": "01511112222",
+    "address_1": "شبرا",
+    "city": "القاهرة",
+    "state": "القاهرة"
+  },
+  "line_items": [
+    {
+      "id": 401,
+      "product_id": 901,
+      "name": "قميص قطني",
+      "quantity": 1,
+      "price": 100,
+      "total": "100.00"
+    }
+  ]
+}

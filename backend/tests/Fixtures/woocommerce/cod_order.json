@@ -1,0 +1,67 @@
+{
+  "id": 50001,
+  "status": "processing",
+  "date_created": "2026-03-01T12:00:00",
+  "total": "370.00",
+  "shipping_total": "50.00",
+  "discount_total": "30.00",
+  "payment_method": "cod",
+  "customer_id": 1234,
+  "billing": {
+    "first_name": "أحمد",
+    "last_name": "حسن",
+    "phone": "01011112222",
+    "email": "ahmed.cod@example.com",
+    "address_1": "10 شارع التحرير",
+    "address_2": "شقة 4",
+    "city": "الدقي",
+    "state": "الجيزة"
+  },
+  "shipping": {
+    "first_name": "أحمد",
+    "last_name": "حسن",
+    "phone": "01011112222",
+    "address_1": "10 شارع التحرير",
+    "address_2": "شقة 4",
+    "city": "الدقي",
+    "state": "الجيزة"
+  },
+  "coupon_lines": [
+    {
+      "code": "DISCOUNT30"
+    }
+  ],
+  "meta_data": [
+    {
+      "key": "_bosta_tracking_number",
+      "value": "BOSTA-998877"
+    }
+  ],
+  "line_items": [
+    {
+      "id": 101,
+      "product_id": 901,
+      "name": "قميص قطني",
+      "quantity": 2,
+      "price": 100,
+      "total": "200.00"
+    },
+    {
+      "id": 102,
+      "product_id": 902,
+      "variation_id": 9021,
+      "name": "بنطلون جينز كحلي 32",
+      "quantity": 1,
+      "price": 150,
+      "total": "150.00"
+    },
+    {
+      "id": 103,
+      "product_id": 99999,
+      "name": "حزام جلد خارجي",
+      "quantity": 1,
+      "price": 50,
+      "total": "50.00"
+    }
+  ]
+}

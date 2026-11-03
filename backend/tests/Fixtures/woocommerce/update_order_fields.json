@@ -1,0 +1,37 @@
+{
+  "id": 50003,
+  "status": "processing",
+  "date_created": "2026-03-03T10:00:00",
+  "total": "100.00",
+  "shipping_total": "0.00",
+  "discount_total": "0.00",
+  "payment_method": "cod",
+  "customer_id": 1236,
+  "billing": {
+    "first_name": "كريم",
+    "last_name": "محمود",
+    "phone": "01233334444",
+    "email": "karim@example.com",
+    "address_1": "55 شارع النصر",
+    "city": "مدينة نصر",
+    "state": "القاهرة"
+  },
+  "shipping": {
+    "first_name": "كريم",
+    "last_name": "محمود",
+    "phone": "01233334444",
+    "address_1": "55 شارع النصر",
+    "city": "مدينة نصر",
+    "state": "القاهرة"
+  },
+  "line_items": [
+    {
+      "id": 301,
+      "product_id": 901,
+      "name": "قميص قطني",
+      "quantity": 1,
+      "price": 100,
+      "total": "100.00"
+    }
+  ]
+}

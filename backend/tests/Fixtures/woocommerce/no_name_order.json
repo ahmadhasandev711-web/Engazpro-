@@ -1,0 +1,37 @@
+{
+  "id": 50005,
+  "status": "processing",
+  "date_created": "2026-03-05T09:00:00",
+  "total": "100.00",
+  "shipping_total": "0.00",
+  "discount_total": "0.00",
+  "payment_method": "cod",
+  "customer_id": 1238,
+  "billing": {
+    "first_name": "",
+    "last_name": "",
+    "phone": "01099998888",
+    "email": "noname@example.com",
+    "address_1": "طنطا",
+    "city": "طنطا",
+    "state": "الغربية"
+  },
+  "shipping": {
+    "first_name": "",
+    "last_name": "",
+    "phone": "",
+    "address_1": "",
+    "city": "",
+    "state": ""
+  },
+  "line_items": [
+    {
+      "id": 501,
+      "product_id": 901,
+      "name": "قميص قطني",
+      "quantity": 1,
+      "price": 100,
+      "total": "100.00"
+    }
+  ]
+}
