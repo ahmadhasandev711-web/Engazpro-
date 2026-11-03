@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Unit;
+namespace Tests\Architecture;
 
 use PHPUnit\Framework\TestCase;
 use RecursiveDirectoryIterator;
