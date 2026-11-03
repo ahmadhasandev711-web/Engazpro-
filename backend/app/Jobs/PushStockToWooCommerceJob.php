@@ -47,18 +47,28 @@ class PushStockToWooCommerceJob implements ShouldQueue, ShouldBeUniqueUntilProce
             return;
         }
 
+        if (empty($stockPushService->targetBranchIds($integration))) {
+            return;
+        }
+
         $product = Product::withoutGlobalScopes()->where('user_id', $this->userId)->find($this->productId);
         if (!$product || empty($product->wc_product_id)) {
             return;
         }
 
+        $this->dispatchPush($stockPushService, $integration, $product);
+    }
+
+    private function dispatchPush(
+        WooStockPushService $stockPushService,
+        WooCommerceIntegration $integration,
+        Product $product
+    ): void {
         if ($this->productVariantId !== null) {
             $variant = ProductVariant::withoutGlobalScopes()->find($this->productVariantId);
-            if (!$variant || empty($variant->wc_variation_id)) {
-                return;
+            if ($variant && !empty($variant->wc_variation_id)) {
+                $stockPushService->push($integration, $product, $variant);
             }
-
-            $stockPushService->push($integration, $product, $variant);
             return;
         }
 

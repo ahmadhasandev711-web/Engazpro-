@@ -4,6 +4,7 @@ namespace App\Services\WooCommerce;
 
 use App\Contracts\WooCommerceApiClientInterface;
 use App\Enums\BranchType;
+use App\Exceptions\NoActiveStockBranchesException;
 use App\Exceptions\PosDomainException;
 use App\Exceptions\WooCommerceConnectionException;
 use App\Models\Branch;
@@ -69,6 +70,10 @@ class WooStockPushService
     public function push(WooCommerceIntegration $integration, Product $product, ?ProductVariant $variant = null): Quantity
     {
         $branchIds = $this->targetBranchIds($integration);
+        if (empty($branchIds)) {
+            throw new NoActiveStockBranchesException();
+        }
+
         $available = $this->availableQuantity($integration->user_id, $product->id, $variant?->id, $branchIds);
 
         $success = $variant !== null
@@ -115,6 +120,11 @@ class WooStockPushService
      */
     public function pushProduct(WooCommerceIntegration $integration, Product $product): array
     {
+        $branchIds = $this->targetBranchIds($integration);
+        if (empty($branchIds)) {
+            throw new NoActiveStockBranchesException();
+        }
+
         $variants = $product->relationLoaded('variants') ? $product->variants : $product->variants()->get();
         $linkedVariants = $variants->filter(fn($v) => !empty($v->wc_variation_id));
 

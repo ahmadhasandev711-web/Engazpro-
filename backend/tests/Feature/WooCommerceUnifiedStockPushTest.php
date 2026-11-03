@@ -497,4 +497,45 @@ class WooCommerceUnifiedStockPushTest extends TestCase
 
         $this->assertTrue(true, 'PushStockToWooCommerceJob returned silently without exception');
     }
+
+    /**
+     * Guard against wiping stock to 0 when all target branches are inactive.
+     */
+    public function test_inactive_branches_guards_against_wiping_woocommerce_stock(): void
+    {
+        $this->storeBranch->update(['is_active' => false]);
+
+        $product = Product::create([
+            'user_id' => $this->owner->id,
+            'name' => 'صنف الفرع المعطل',
+            'wc_product_id' => 8888,
+            'price' => 50,
+            'cost_price' => 25,
+            'quantity' => 10,
+        ]);
+
+        $mockClient = $this->createMock(WooCommerceApiClientInterface::class);
+        $mockClient->expects($this->never())->method('updateProductStock');
+        $mockClient->expects($this->never())->method('updateVariationStock');
+        $this->app->instance(WooCommerceApiClientInterface::class, $mockClient);
+
+        // (أ) الـ Job: صفر استدعاءات API وبدون exception
+        $job = new PushStockToWooCommerceJob($this->owner->id, $product->id);
+        $this->app->call([$job, 'handle']);
+
+        // (ب) مزامنة الصنف: 422 برفض المزامنة لعدم وجود فروع نشطة
+        $response = $this->actingAs($this->owner)
+            ->postJson("/api/woocommerce/products/{$product->id}/push-stock");
+        $response->assertStatus(422);
+        $response->assertJson([
+            'message' => 'لا توجد فروع أو مخازن نشطة محددة للمتجر الإلكتروني لسحب الرصيد منها.',
+        ]);
+
+        // (ج) مزامنة الكل: صفر استدعاءات وخطأ واحد
+        $bulkService = $this->app->make(WooCommerceBulkStockPushService::class);
+        $result = $bulkService->pushAll($this->owner, $this->integration);
+
+        $this->assertSame(0, $result['synced_count']);
+        $this->assertSame(['لا توجد فروع أو مخازن نشطة محددة للمتجر الإلكتروني لسحب الرصيد منها.'], $result['errors']);
+    }
 }
