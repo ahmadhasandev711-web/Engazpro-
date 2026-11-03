@@ -7,7 +7,6 @@
     "Http/Controllers/Api/StoreInquiryController.php": 1,
     "Http/Controllers/Api/TreasuryController.php": 2,
     "Http/Controllers/Api/WcOrderController.php": 1,
-    "Http/Controllers/Api/WooCommerceSettingsController.php": 2,
     "Http/Middleware/CheckSubscription.php": 1,
     "Http/Requests/ExpenseRequest.php": 4,
     "Http/Requests/InvoiceRequest.php": 1,
@@ -16,7 +15,6 @@
     "Http/Resources/ProductResource.php": 3,
     "Http/Resources/UserResource.php": 2,
     "Jobs/PushCustomerToWooCommerceJob.php": 1,
-    "Jobs/PushStockToWooCommerceJob.php": 2,
     "Models/Invoice.php": 2,
     "Models/Party.php": 3,
     "Models/Payment.php": 2,
@@ -47,7 +45,6 @@
     "Services/StockTransferService.php": 4,
     "Services/StoreBootstrapService.php": 3,
     "Services/SubscriptionGate.php": 2,
-    "Services/WooCommerce/WooCommerceBulkStockPushService.php": 2,
     "Services/WooCommerce/WooCommerceCustomerSyncService.php": 6,
     "Services/WooCommerce/WooCommerceOrderSyncService.php": 6,
     "Services/WooCommerce/WooCommerceProductImportService.php": 8

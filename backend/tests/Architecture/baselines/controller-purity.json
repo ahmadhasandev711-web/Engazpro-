@@ -68,7 +68,7 @@
         "try": 1
     },
     "Api/WooCommerceSettingsController.php": {
-        "queries": 17,
+        "queries": 7,
         "try": 2
     },
     "Api/WooCommerceWebhookController.php": {
