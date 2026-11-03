@@ -8,6 +8,7 @@ use App\Services\WooCommerce\WooCommerceApiClient;
 use App\Services\WooCommerce\WooCommerceCustomerSyncService;
 use App\Services\WooCommerce\WooCommerceBulkStockPushService;
 use App\Services\WooCommerce\WooCommerceProductImportService;
+use App\Services\WooCommerce\WooStockPushService;
 use App\Jobs\ImportWooCommerceProductsJob;
 use App\Jobs\PushAllWooCommerceStocksJob;
 use App\Models\Product;
@@ -281,92 +282,27 @@ class WooCommerceSettingsController extends Controller
     /**
      * Push current stock quantity for a single product directly to WooCommerce (Synchronous / Direct Sync)
      */
-    public function pushProductStock(Request $request, int $id): JsonResponse
-    {
+    public function pushProductStock(
+        Request $request,
+        Product $product,
+        WooStockPushService $stockPushService
+    ): JsonResponse {
         if ($err = $this->checkOwnerOrAdmin($request)) {
             return $err;
         }
 
-        $user = $request->user();
-        $accountId = $user->getAccountId();
-
-        $integration = WooCommerceIntegration::where('user_id', $accountId)->first();
-        if (!$integration || !$integration->is_active || !$integration->consumer_key || !$integration->consumer_secret) {
-            return response()->json([
-                'success' => false,
-                'message' => 'ربط متجر ووكومرس غير نشط أو غير مهيأ بعد بالمفاتيح.',
-            ], 422);
-        }
-
-        $product = Product::where('user_id', $accountId)->with('variants')->findOrFail($id);
-        if (!$product->wc_product_id) {
-            return response()->json([
-                'success' => false,
-                'message' => "الصنف '{$product->name}' غير مرتبط بمنتج في متجر ووكومرس (ليس لديه معرف ووكومرس).",
-            ], 422);
-        }
-
-        if (!empty($integration->online_branch_id)) {
-            $targetBranchIds = Branch::where('user_id', $accountId)
-                ->where('id', $integration->online_branch_id)
-                ->where('is_active', true)
-                ->pluck('id');
-        } else {
-            $targetBranchIds = Branch::where('user_id', $accountId)
-                ->whereIn('type', ['STORE', 'WAREHOUSE'])
-                ->where('is_active', true)
-                ->pluck('id');
-        }
-
-        if ($targetBranchIds->isEmpty()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'لا توجد فروع أو مخازن نشطة محددة للمتجر الإلكتروني لسحب الرصيد منها.',
-            ], 422);
-        }
-
-        $syncedVariants = 0;
-        if ($product->variants->isNotEmpty()) {
-            foreach ($product->variants as $variant) {
-                if ($variant->wc_variation_id) {
-                    $varStock = BranchStock::whereIn('branch_id', $targetBranchIds)
-                        ->where('product_id', $product->id)
-                        ->where('product_variant_id', $variant->id)
-                        ->sum('quantity');
-
-                    $this->apiClient->updateVariationStock(
-                        $integration,
-                        $product->wc_product_id,
-                        $variant->wc_variation_id,
-                        max(0, (float) $varStock)
-                    );
-                    $syncedVariants++;
-                }
-            }
-        }
-
-        $totalStock = BranchStock::whereIn('branch_id', $targetBranchIds)
-            ->where('product_id', $product->id)
-            ->sum('quantity');
-
-        // Update product stock on WooCommerce
-        $this->apiClient->updateProductStock(
-            $integration,
-            $product->wc_product_id,
-            max(0, (float) $totalStock)
+        $result = $stockPushService->pushProductForAccount(
+            $request->user()->getAccountId(),
+            $product
         );
-
-        $msg = $syncedVariants > 0
-            ? "تم تحديث رصيد الصنف ({$product->name}) ومتبقياته ({$syncedVariants} متغير) في ووكومرس فورياً بإجمالي {$totalStock} قطعة بنجاح 🟢"
-            : "تم تحديث رصيد الصنف ({$product->name}) في ووكومرس فورياً إلى {$totalStock} قطعة بنجاح 🟢";
 
         return response()->json([
             'success' => true,
-            'message' => $msg,
+            'message' => $result['message'],
             'data' => [
                 'product_id' => $product->id,
                 'wc_product_id' => $product->wc_product_id,
-                'stock' => (float) $totalStock,
+                'stock' => $result['total_stock']->toFloat(),
             ],
         ]);
     }

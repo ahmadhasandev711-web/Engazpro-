@@ -169,7 +169,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
             Route::post('import-products', [\App\Http\Controllers\Api\WooCommerceSettingsController::class, 'importProducts']);
             Route::post('sync-customers', [\App\Http\Controllers\Api\WooCommerceSettingsController::class, 'syncCustomers']);
             Route::post('register-webhooks', [\App\Http\Controllers\Api\WooCommerceSettingsController::class, 'autoRegisterWebhooks']);
-            Route::post('products/{id}/push-stock', [\App\Http\Controllers\Api\WooCommerceSettingsController::class, 'pushProductStock']);
+            Route::post('products/{product}/push-stock', [\App\Http\Controllers\Api\WooCommerceSettingsController::class, 'pushProductStock']);
             Route::post('push-all-stocks', [\App\Http\Controllers\Api\WooCommerceSettingsController::class, 'pushAllStocks']);
         });
 
