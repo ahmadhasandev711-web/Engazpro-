@@ -533,8 +533,7 @@ class WooCommerceIntegrationTest extends TestCase
 
         // Verify stock push job uses online_branch_id
         $job = new \App\Jobs\PushStockToWooCommerceJob($this->owner->id, $varProduct->id, $variant->id);
-        $apiClient = app(\App\Services\WooCommerce\WooCommerceApiClient::class);
-        $job->handle($apiClient, app(\App\Services\WooCommerce\StockReservationService::class));
+        $this->app->call([$job, 'handle']);
 
         Http::assertSent(function ($request) {
             return str_contains($request->url(), 'variations/8881') &&

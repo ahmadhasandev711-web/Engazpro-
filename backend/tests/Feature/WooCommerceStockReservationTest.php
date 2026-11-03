@@ -319,8 +319,9 @@ class WooCommerceStockReservationTest extends TestCase
 
         $this->expectException(\App\Exceptions\WooCommerceConnectionException::class);
 
+        $this->app->instance(\App\Contracts\WooCommerceApiClientInterface::class, $mockClient);
         $job = new \App\Jobs\PushStockToWooCommerceJob($this->owner->id, $product->id);
-        $job->handle($mockClient, app(\App\Services\WooCommerce\StockReservationService::class));
+        $this->app->call([$job, 'handle']);
     }
 
     /**
@@ -389,8 +390,9 @@ class WooCommerceStockReservationTest extends TestCase
             )
             ->willReturn(true);
 
+        $this->app->instance(\App\Contracts\WooCommerceApiClientInterface::class, $mockClient);
         $job = new \App\Jobs\PushStockToWooCommerceJob($this->owner->id, $product->id, $variant->id);
-        $job->handle($mockClient, app(\App\Services\WooCommerce\StockReservationService::class));
+        $this->app->call([$job, 'handle']);
     }
 
     /**
@@ -445,8 +447,9 @@ class WooCommerceStockReservationTest extends TestCase
             )
             ->willReturn(true);
 
+        $this->app->instance(\App\Contracts\WooCommerceApiClientInterface::class, $mockClient);
         $job = new \App\Jobs\PushStockToWooCommerceJob($this->owner->id, $product->id);
-        $job->handle($mockClient, app(\App\Services\WooCommerce\StockReservationService::class));
+        $this->app->call([$job, 'handle']);
     }
 
     /**

@@ -125,7 +125,7 @@ class TenantQueueContextTest extends TestCase
         $this->assertNull(Auth::user(), 'Auth context must be forgotten after job completes');
 
         // 2. تنفيذ job تحديث المخزون للمتجر B فوراً في نفس العملية
-        $mockApiClient = Mockery::mock(WooCommerceApiClient::class);
+        $mockApiClient = Mockery::mock(\App\Contracts\WooCommerceApiClientInterface::class);
         $mockApiClient->shouldReceive('updateProductStock')
             ->once()
             ->withArgs(function ($integration, $wcProductId, $stock) {
@@ -135,7 +135,9 @@ class TenantQueueContextTest extends TestCase
             })
             ->andReturn(true);
 
+        $this->app->instance(\App\Contracts\WooCommerceApiClientInterface::class, $mockApiClient);
+
         $pushJob = new PushStockToWooCommerceJob($this->ownerB->id, $this->productB->id);
-        $pushJob->handle($mockApiClient, app(\App\Services\WooCommerce\StockReservationService::class));
+        $this->app->call([$pushJob, 'handle']);
     }
 }
