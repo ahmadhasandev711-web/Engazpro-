@@ -1,5 +1,6 @@
 {
     "Http/Controllers/Api/ShiftController.php": 2,
+    "Http/Controllers/Api/WooCommerceSettingsController.php": 3,
     "Http/Requests/ExpenseRequest.php": 1,
     "Http/Requests/InvoiceRequest.php": 4,
     "Http/Requests/ProductRequest.php": 3,
@@ -31,6 +32,7 @@
     "Services/StockService.php": 6,
     "Services/StockTransferService.php": 6,
     "Services/WooCommerce/WcOrderVanTransferService.php": 1,
+    "Services/WooCommerce/WooCommerceBulkStockPushService.php": 2,
     "Services/WooCommerce/WooCommerceOrderSyncService.php": 1,
     "Services/WooCommerce/WooCommerceProductImportService.php": 14,
     "Support/Money.php": 9

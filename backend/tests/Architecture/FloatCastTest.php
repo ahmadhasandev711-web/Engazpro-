@@ -4,6 +4,7 @@ namespace Tests\Architecture;
 
 use PhpParser\Node;
 use PhpParser\Node\Expr\Cast\Double;
+use PhpParser\Node\Stmt\ClassMethod;
 use PhpParser\NodeVisitorAbstract;
 use PHPUnit\Framework\TestCase;
 use Tests\Architecture\Support\Baseline;
@@ -15,28 +16,14 @@ class FloatCastTest extends TestCase
 
     /**
      * قائمة الاستثناءات الصريحة للـ (float) casts الواقعة على حدود الـ APIs الخارجية:
-     * - كل سطر مذكور مع سبب استثنائه الصريح.
+     * مسجلة بصيغة "RelativeFilePath::methodName" => maxAllowedCasts.
+     * لا تعتمد على أرقام السطور لضمان عدم تأثرها بالتعديلات العادية داخل الملف.
      *
-     * @var array<string, list<int>>
+     * @var array<string, int>
      */
     private const ALLOWLIST = [
-        // كائن القيمة Quantity: دالة toFloat() مخصصة للواجهات الخارجية وتطبيع أرقام القطع لـ APIs و JSON
-        'Support/Quantity.php' => [
-            31, // public function toFloat(): تحويل integer المئات إلى float عند التصدير لـ WooCommerce API أو JSON
-        ],
-
-        // حدود واجهة WooCommerceApiClientInterface: متطلبات باراميترات الـ API لكمية المخزون (float)
-        'Services/WooCommerce/WooCommerceBulkStockPushService.php' => [
-            102, // updateVariationStock: باراميتر المخزون في واجهة API ووكومرس يتطلب float
-            114, // updateProductStock: باراميتر المخزون في واجهة API ووكومرس يتطلب float
-        ],
-
-        // تحكم إعدادات ووكومرس: إرسال رصيد الصنف المتغير والبسيط مباشرة لـ API العميل واستجابة JSON
-        'Http/Controllers/Api/WooCommerceSettingsController.php' => [
-            341, // updateVariationStock: باراميتر كمية مخزون المتغير لـ WooCommerceApiClientInterface
-            356, // updateProductStock: باراميتر كمية مخزون الصنف البسيط لـ WooCommerceApiClientInterface
-            369, // JSON response data payload: عرض رقم المخزون في استجابة المزامنة المباشرة
-        ],
+        // كائن القيمة Quantity: دالة __construct تقبل float|int كـ fallback وتقوم بالتقريب والتحويل إلى مئات
+        'Support/Quantity.php::__construct' => 1,
     ];
 
     public function test_float_casts_must_not_exceed_ratchet_baseline_with_documented_boundary_allowlist(): void
@@ -48,25 +35,54 @@ class FloatCastTest extends TestCase
 
         foreach ($files as $relPath => $stmts) {
             $count = 0;
-            $allowedLines = self::ALLOWLIST[$relPath] ?? [];
 
-            $visitor = new class($count, $allowedLines) extends NodeVisitorAbstract {
+            $visitor = new class($relPath, $count, self::ALLOWLIST) extends NodeVisitorAbstract {
+                private string $relPath;
                 private int $count;
-                /** @var list<int> */
-                private array $allowedLines;
+                /** @var array<string, int> */
+                private array $allowlist;
+                /** @var list<string> */
+                private array $methodStack = [];
+                /** @var array<string, int> */
+                private array $usedAllowed = [];
 
-                public function __construct(int &$count, array $allowedLines)
+                public function __construct(string $relPath, int &$count, array $allowlist)
                 {
+                    $this->relPath = $relPath;
                     $this->count = &$count;
-                    $this->allowedLines = $allowedLines;
+                    $this->allowlist = $allowlist;
                 }
 
                 public function enterNode(Node $node)
                 {
+                    if ($node instanceof ClassMethod) {
+                        $this->methodStack[] = $node->name->toString();
+                    }
+
                     if ($node instanceof Double) {
-                        if (!in_array($node->getStartLine(), $this->allowedLines, true)) {
-                            $this->count++;
+                        $currentMethod = !empty($this->methodStack) ? end($this->methodStack) : null;
+                        $key = $currentMethod !== null
+                            ? "{$this->relPath}::{$currentMethod}"
+                            : null;
+
+                        if ($key !== null && isset($this->allowlist[$key])) {
+                            $used = $this->usedAllowed[$key] ?? 0;
+                            if ($used < $this->allowlist[$key]) {
+                                $this->usedAllowed[$key] = $used + 1;
+                                return null;
+                            }
                         }
+
+                        $this->count++;
+                    }
+
+                    return null;
+                }
+
+                public function leaveNode(Node $node)
+                {
+                    if ($node instanceof ClassMethod) {
+                        array_pop($this->methodStack);
                     }
                     return null;
                 }
