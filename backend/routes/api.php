@@ -171,6 +171,8 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
             Route::post('register-webhooks', [\App\Http\Controllers\Api\WooCommerceSettingsController::class, 'autoRegisterWebhooks']);
             Route::post('products/{product}/push-stock', [\App\Http\Controllers\Api\WooCommerceSettingsController::class, 'pushProductStock']);
             Route::post('push-all-stocks', [\App\Http\Controllers\Api\WooCommerceSettingsController::class, 'pushAllStocks']);
+            Route::post('anoofy/connection-key', [\App\Http\Controllers\Api\AnoofyConnectionController::class, 'generateKey']);
+            Route::delete('anoofy/connection', [\App\Http\Controllers\Api\AnoofyConnectionController::class, 'disconnect']);
         });
 
         // WooCommerce Orders & Dispatch (طلبات المتجر والشحن والتسليم الميداني)

@@ -37,4 +37,9 @@ return [
 
     // فارغ افتراضياً. مسار الصيانة يرفض أي طلب ما لم يُضبط هذا السر في البيئة.
     'deploy_sync_secret' => env('DEPLOY_SYNC_SECRET'),
+
+    'anoofy' => [
+        'inbound_path' => env('ANOOFY_INBOUND_PATH', 'api/integrations/anoofy/events'),
+        'replay_window_seconds' => (int) env('ANOOFY_REPLAY_WINDOW_SECONDS', 300),
+    ],
 ];

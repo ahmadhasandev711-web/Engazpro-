@@ -53,6 +53,8 @@ class WooCommerceSettingsController extends Controller
             'is_active' => $integration->is_active,
             'webhook_url' => url("/api/webhooks/woocommerce/{$integration->user_id}"),
             'webhook_secret' => $integration->webhook_secret,
+            'anoofy_connected' => !empty($integration->anoofy_connected_at),
+            'anoofy_connected_at' => $integration->anoofy_connected_at?->toIso8601String(),
             'last_synced_at' => $integration->last_synced_at?->toIso8601String(),
             'last_error' => $integration->last_error,
         ];
