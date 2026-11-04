@@ -44,43 +44,33 @@ class WcOrderPayloadParser
         'customer_phone',
     ];
 
-    public function parse(array $wcOrderData): ParsedWcOrder
+    public function parse(array $data): ParsedWcOrder
     {
-        $billing = is_array($wcOrderData['billing'] ?? null) ? $wcOrderData['billing'] : [];
-        $shipping = is_array($wcOrderData['shipping'] ?? null) ? $wcOrderData['shipping'] : [];
-        $metaData = is_array($wcOrderData['meta_data'] ?? null) ? $wcOrderData['meta_data'] : [];
+        $billing = (array) ($data['billing'] ?? []);
+        $shipping = (array) ($data['shipping'] ?? []);
+        $meta = (array) ($data['meta_data'] ?? []);
 
-        [$address, $city, $state] = $this->extractAddress($billing, $shipping);
-        [$trackingNumber, $courierName] = $this->extractTracking($metaData);
-        $paymentMethod = (string) ($wcOrderData['payment_method'] ?? 'cod');
-        [$isPaidOnline, $paymentStatus] = $this->determinePayment($wcOrderData, $paymentMethod);
-        [$shippingCost, $total, $discountTotal, $subtotal] = $this->calculateAmounts($wcOrderData);
+        [$addr, $city, $state] = $this->extractAddress($billing, $shipping);
+        [$tracking, $courier] = $this->extractTracking($meta);
+        $method = (string) ($data['payment_method'] ?? 'cod');
+        [$paidOnline, $payStatus] = $this->determinePayment($data, $method);
+        [$shipCost, $total, $discTotal, $subtotal] = $this->calculateAmounts($data);
 
         return new ParsedWcOrder(
-            wcOrderId: (int) ($wcOrderData['id'] ?? 0),
-            orderDate: $this->parseOrderDate($wcOrderData['date_created'] ?? ($wcOrderData['date_created_gmt'] ?? null)),
-            status: strtolower(trim((string) ($wcOrderData['status'] ?? ''))),
-            shippingCost: $shippingCost,
-            total: $total,
-            discountTotal: $discountTotal,
-            subtotal: $subtotal,
-            paymentMethod: $paymentMethod,
-            paymentStatus: $paymentStatus,
-            isPaidOnline: $isPaidOnline,
-            customerName: $this->extractCustomerName($billing, $shipping),
-            customerPhone: $this->extractPhone($billing, $shipping, $metaData),
-            customerEmail: !empty($billing['email']) ? trim((string) $billing['email']) : null,
-            customerAddress: $address,
-            governorate: $state,
-            city: $city,
-            notes: !empty($wcOrderData['customer_note']) ? (string) $wcOrderData['customer_note'] : null,
-            trackingNumber: $trackingNumber,
-            courierName: $courierName,
-            couponCodes: $this->extractCoupons($wcOrderData['coupon_lines'] ?? []),
-            rawLineItems: is_array($wcOrderData['line_items'] ?? null) ? $wcOrderData['line_items'] : [],
-            customerId: !empty($wcOrderData['customer_id']) ? (int) $wcOrderData['customer_id'] : null,
-            billing: $billing,
-            shipping: $shipping,
+            (int) ($data['id'] ?? 0),
+            $this->parseOrderDate($data['date_created'] ?? ($data['date_created_gmt'] ?? null)),
+            strtolower(trim((string) ($data['status'] ?? ''))),
+            $shipCost, $total, $discTotal, $subtotal, $method, $payStatus, $paidOnline,
+            $this->extractCustomerName($billing, $shipping),
+            $this->extractPhone($billing, $shipping, $meta),
+            !empty($billing['email']) ? trim((string) $billing['email']) : null,
+            $addr, $state, $city,
+            !empty($data['customer_note']) ? (string) $data['customer_note'] : null,
+            $tracking, $courier,
+            $this->extractCoupons($data['coupon_lines'] ?? []),
+            (array) ($data['line_items'] ?? []),
+            !empty($data['customer_id']) ? (int) $data['customer_id'] : null,
+            $billing, $shipping
         );
     }
 
