@@ -20,6 +20,10 @@ class WooCommerceIntegration extends Model
         'consumer_secret',
         'webhook_secret',
         'online_branch_id',
+        'anoofy_key_id',
+        'anoofy_secret',
+        'anoofy_callback_url',
+        'anoofy_connected_at',
         'auto_sync_stock',
         'is_active',
         'last_synced_at',
@@ -30,6 +34,8 @@ class WooCommerceIntegration extends Model
         'consumer_key' => 'encrypted',
         'consumer_secret' => 'encrypted',
         'webhook_secret' => 'encrypted',
+        'anoofy_secret' => 'encrypted',
+        'anoofy_connected_at' => 'datetime',
         'auto_sync_stock' => 'boolean',
         'is_active' => 'boolean',
         'last_synced_at' => 'datetime',
@@ -39,6 +45,7 @@ class WooCommerceIntegration extends Model
         'consumer_key',
         'consumer_secret',
         'webhook_secret',
+        'anoofy_secret',
     ];
 
     public function user(): BelongsTo
