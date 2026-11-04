@@ -164,7 +164,7 @@ class WcOrderIngestionService
         ?int $branchId,
         array $itemsSnapshot
     ): array {
-        return [
+        return array_merge([
             'user_id' => $accountId,
             'wc_order_id' => $parsed->wcOrderId,
             'order_date' => $parsed->orderDate,
@@ -175,19 +175,31 @@ class WcOrderIngestionService
             'status' => WcOrderStatus::PENDING_CONFIRMATION,
             'payment_status' => $parsed->paymentStatus,
             'wc_payment_method' => $parsed->paymentMethod,
+            'notes' => $parsed->notes,
+            'wc_coupon_codes' => $parsed->couponCodes,
+            'items_snapshot' => $itemsSnapshot,
+        ], $this->extractFinancialAttributes($parsed), $this->extractCustomerAttributes($parsed, $party));
+    }
+
+    private function extractFinancialAttributes(ParsedWcOrder $parsed): array
+    {
+        return [
             'shipping_cost' => $parsed->shippingCost->getAmount(),
             'subtotal' => $parsed->subtotal->getAmount(),
             'discount_total' => $parsed->discountTotal->getAmount(),
             'total' => $parsed->total->getAmount(),
+        ];
+    }
+
+    private function extractCustomerAttributes(ParsedWcOrder $parsed, ?Party $party): array
+    {
+        return [
             'customer_name' => $parsed->customerName ?: ($party?->name ?? 'عميل أونلاين'),
             'customer_phone' => $parsed->customerPhone ?: ($party?->phone ?? null),
             'customer_email' => $parsed->customerEmail ?? $party?->wc_email,
             'customer_address' => $parsed->customerAddress ?: ($party?->address ?? null),
             'governorate' => $parsed->governorate,
             'city' => $parsed->city,
-            'notes' => $parsed->notes,
-            'wc_coupon_codes' => $parsed->couponCodes,
-            'items_snapshot' => $itemsSnapshot,
         ];
     }
 

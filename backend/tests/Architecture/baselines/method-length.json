@@ -97,8 +97,6 @@
     "Services/WooCommerce/WooCommerceOrderSyncService.php::deliverOrder": 146,
     "Services/WooCommerce/WooCommerceOrderSyncService.php::dispatchToCourier": 53,
     "Services/WooCommerce/WooCommerceOrderSyncService.php::dispatchToMandob": 32,
-    "Services/WooCommerce/WooCommerceOrderSyncService.php::enrichLineItems": 54,
-    "Services/WooCommerce/WooCommerceOrderSyncService.php::handleIncomingOrder": 239,
     "Services/WooCommerce/WooCommerceOrderSyncService.php::pullRecentOrders": 50,
     "Services/WooCommerce/WooCommerceOrderSyncService.php::returnOrder": 43,
     "Services/WooCommerce/WooCommerceProductImportService.php::importPage": 39,
