@@ -36,6 +36,8 @@ Route::prefix('auth')->group(function () {
 Route::post('webhooks/woocommerce/{userId}', [\App\Http\Controllers\Api\WooCommerceWebhookController::class, 'handle'])->middleware('throttle:webhook');
 // WooCommerce 1-Click OAuth Callback (Public endpoint called by WordPress)
 Route::post('woocommerce/auth-callback', [\App\Http\Controllers\Api\WooCommerceAuthController::class, 'authCallback'])->middleware('throttle:webhook');
+// Anoofy Inbound Events (Public endpoint with HMAC-SHA256 signature verification)
+Route::post('webhooks/anoofy/events', \App\Http\Controllers\Api\AnoofyInboundController::class)->middleware('throttle:anoofy_inbound');
 
 // Public Landing Page Store Creation Inquiries
 Route::post('landing/inquiries', [\App\Http\Controllers\Api\StoreInquiryController::class, 'submitPublic'])->middleware('throttle:15,1');

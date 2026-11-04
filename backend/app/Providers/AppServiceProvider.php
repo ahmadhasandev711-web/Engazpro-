@@ -2,43 +2,73 @@
 
 namespace App\Providers;
 
+use App\Contracts\AnoofySignatureVerifierInterface;
+use App\Contracts\HostResolver;
+use App\Contracts\WooCommerceApiClientInterface;
+use App\Models\Branch;
+use App\Models\BranchStock;
 use App\Models\Category;
 use App\Models\Expense;
 use App\Models\Invoice;
 use App\Models\Party;
 use App\Models\Payment;
+use App\Models\PayrollPayout;
 use App\Models\Product;
+use App\Models\StockTransfer;
+use App\Models\Treasury;
+use App\Models\User;
+use App\Models\WcOrder;
+use App\Observers\BranchStockWooCommerceObserver;
+use App\Observers\PartyWooCommerceObserver;
+use App\Observers\WcOrderStockSyncObserver;
+use App\Policies\BranchPolicy;
 use App\Policies\CategoryPolicy;
+use App\Policies\EmployeePolicy;
 use App\Policies\ExpensePolicy;
 use App\Policies\InvoicePolicy;
 use App\Policies\PartyPolicy;
 use App\Policies\PaymentPolicy;
+use App\Policies\PayrollPolicy;
 use App\Policies\ProductPolicy;
 use App\Policies\ReportPolicy;
+use App\Policies\StockTransferPolicy;
+use App\Policies\TreasuryPolicy;
+use App\Services\Anoofy\HmacSha256SignatureVerifier;
+use App\Services\DnsHostResolver;
+use App\Services\WooCommerce\WooCommerceApiClient;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
     public function register(): void
     {
         $this->app->bind(
-            \App\Contracts\WooCommerceApiClientInterface::class,
-            \App\Services\WooCommerce\WooCommerceApiClient::class
+            WooCommerceApiClientInterface::class,
+            WooCommerceApiClient::class
         );
         $this->app->bind(
-            \App\Contracts\HostResolver::class,
-            \App\Services\DnsHostResolver::class
+            HostResolver::class,
+            DnsHostResolver::class
+        );
+        $this->app->bind(
+            AnoofySignatureVerifierInterface::class,
+            HmacSha256SignatureVerifier::class
         );
     }
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
+    {
+        $this->registerPolicies();
+        $this->registerGates();
+        $this->registerObservers();
+        $this->registerRateLimiters();
+    }
+
+    private function registerPolicies(): void
     {
         Gate::policy(Product::class, ProductPolicy::class);
         Gate::policy(Invoice::class, InvoicePolicy::class);
@@ -46,38 +76,51 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Payment::class, PaymentPolicy::class);
         Gate::policy(Expense::class, ExpensePolicy::class);
         Gate::policy(Category::class, CategoryPolicy::class);
-        Gate::policy(\App\Models\User::class, \App\Policies\EmployeePolicy::class);
-        Gate::policy(\App\Models\Branch::class, \App\Policies\BranchPolicy::class);
-        Gate::policy(\App\Models\StockTransfer::class, \App\Policies\StockTransferPolicy::class);
-        Gate::policy(\App\Models\Treasury::class, \App\Policies\TreasuryPolicy::class);
-        Gate::policy(\App\Models\PayrollPayout::class, \App\Policies\PayrollPolicy::class);
+        Gate::policy(User::class, EmployeePolicy::class);
+        Gate::policy(Branch::class, BranchPolicy::class);
+        Gate::policy(StockTransfer::class, StockTransferPolicy::class);
+        Gate::policy(Treasury::class, TreasuryPolicy::class);
+        Gate::policy(PayrollPayout::class, PayrollPolicy::class);
+    }
 
+    private function registerGates(): void
+    {
         Gate::define('view-profit', [ReportPolicy::class, 'viewProfit']);
         Gate::define('view-cash-flow', [ReportPolicy::class, 'viewCashFlow']);
         Gate::define('view-sales', [ReportPolicy::class, 'viewSales']);
         Gate::define('view-stock', [ReportPolicy::class, 'viewStock']);
+    }
 
-        \App\Models\BranchStock::observe(\App\Observers\BranchStockWooCommerceObserver::class);
-        \App\Models\Party::observe(\App\Observers\PartyWooCommerceObserver::class);
-        \App\Models\WcOrder::observe(\App\Observers\WcOrderStockSyncObserver::class);
+    private function registerObservers(): void
+    {
+        BranchStock::observe(BranchStockWooCommerceObserver::class);
+        Party::observe(PartyWooCommerceObserver::class);
+        WcOrder::observe(WcOrderStockSyncObserver::class);
+    }
 
-        \Illuminate\Support\Facades\RateLimiter::for('api', function (\Illuminate\Http\Request $request) {
-            return \Illuminate\Cache\RateLimiting\Limit::perMinute((int) config('pos.security.api_per_minute', 300))
+    private function registerRateLimiters(): void
+    {
+        RateLimiter::for('api', function (Request $request) {
+            return Limit::perMinute((int) config('pos.security.api_per_minute', 300))
                 ->by($request->user()?->id ?: $request->ip());
         });
 
-        \Illuminate\Support\Facades\RateLimiter::for('login', function (\Illuminate\Http\Request $request) {
+        RateLimiter::for('login', function (Request $request) {
             $phone = preg_replace('/\D+/', '', (string) $request->input('phone'));
             $key = !empty($phone) ? $phone : $request->ip();
-            return \Illuminate\Cache\RateLimiting\Limit::perMinute((int) config('pos.security.login_per_minute', 5))
-                ->by($key);
+            return Limit::perMinute((int) config('pos.security.login_per_minute', 5))->by($key);
         });
 
-        \Illuminate\Support\Facades\RateLimiter::for('webhook', function (\Illuminate\Http\Request $request) {
+        RateLimiter::for('webhook', function (Request $request) {
             $userId = (string) $request->route('userId');
             $key = !empty($userId) ? 'wh_user_' . $userId : $request->ip();
-            return \Illuminate\Cache\RateLimiting\Limit::perMinute((int) config('pos.security.webhook_per_minute', 600))
-                ->by($key);
+            return Limit::perMinute((int) config('pos.security.webhook_per_minute', 600))->by($key);
+        });
+
+        RateLimiter::for('anoofy_inbound', function (Request $request) {
+            $kid = (string) $request->header('X-Anoofy-Key-Id');
+            $key = !empty($kid) ? 'anoofy_kid_' . $kid : $request->ip();
+            return Limit::perMinute((int) config('pos.anoofy.rate_limit_per_minute', 120))->by($key);
         });
     }
 }

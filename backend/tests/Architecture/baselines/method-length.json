@@ -25,7 +25,6 @@
     "Http/Resources/InvoiceResource.php::toArray": 31,
     "Http/Resources/ProductResource.php::toArray": 102,
     "Http/Resources/ShiftResource.php::toArray": 41,
-    "Providers/AppServiceProvider.php::boot": 42,
     "Rules/PublicHttpsUrl.php::validate": 56,
     "Services/ActivationCodeService.php::redeemCode": 82,
     "Services/AdminStatsService.php::extendUserSubscription": 33,
