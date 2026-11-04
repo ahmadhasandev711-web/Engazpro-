@@ -48,6 +48,7 @@ CLAUDE.md
 !README.md
 !README_*.md
 !LICENSE.md
+!docs/**/*.md
 
 # ------------------------------------------------------------------------------
 # 5. Dependencies (Node & PHP Composer)
