@@ -336,8 +336,8 @@ class WooCommercePipelineFixesTest extends TestCase
     {
         $order = $this->createTestOrder(['status' => WcOrderStatus::CONFIRMED]);
 
-        $syncService = app(WooCommerceOrderSyncService::class);
-        $updated = $syncService->handleIncomingOrder($this->owner, [
+        $ingestionService = app(\App\Services\WooCommerce\WcOrderIngestionService::class);
+        $updated = $ingestionService->ingest($this->owner, [
             'id' => $order->wc_order_id,
             'status' => 'cancelled',
         ]);
@@ -353,8 +353,8 @@ class WooCommercePipelineFixesTest extends TestCase
     {
         $order = $this->createTestOrder(['status' => WcOrderStatus::DISPATCHED]);
 
-        $syncService = app(WooCommerceOrderSyncService::class);
-        $updated = $syncService->handleIncomingOrder($this->owner, [
+        $ingestionService = app(\App\Services\WooCommerce\WcOrderIngestionService::class);
+        $updated = $ingestionService->ingest($this->owner, [
             'id' => $order->wc_order_id,
             'status' => 'cancelled',
         ]);
@@ -375,7 +375,8 @@ class WooCommercePipelineFixesTest extends TestCase
         $syncService->returnOrder($this->owner, $order, 'العميل رفض الاستلام');
         $this->assertEquals(WcOrderStatus::RETURNED, $order->fresh()->status);
 
-        $updated = $syncService->handleIncomingOrder($this->owner, [
+        $ingestionService = app(\App\Services\WooCommerce\WcOrderIngestionService::class);
+        $updated = $ingestionService->ingest($this->owner, [
             'id' => $order->wc_order_id,
             'status' => 'cancelled',
         ]);

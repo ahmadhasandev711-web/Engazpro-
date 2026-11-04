@@ -10,6 +10,7 @@ use App\Models\Product;
 use App\Models\Subscription;
 use App\Models\User;
 use App\Models\WooCommerceIntegration;
+use App\Services\WooCommerce\WcOrderIngestionService;
 use App\Services\WooCommerce\WooCommerceApiClient;
 use App\Services\WooCommerce\WooCommerceOrderSyncService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -104,8 +105,8 @@ class TenantQueueContextTest extends TestCase
 
     public function test_tenant_auth_context_resets_and_does_not_bleed_across_jobs(): void
     {
-        $mockSyncService = Mockery::mock(WooCommerceOrderSyncService::class);
-        $mockSyncService->shouldReceive('handleIncomingOrder')->once();
+        $mockIngestionService = Mockery::mock(WcOrderIngestionService::class);
+        $mockIngestionService->shouldReceive('ingest')->once();
 
         // 1. تنفيذ job المتجر A
         $webhookJob = new ProcessWooCommerceWebhookJob($this->ownerA->id, 'order.created', ['id' => 101]);
@@ -117,8 +118,8 @@ class TenantQueueContextTest extends TestCase
         $pipeline = app(\Illuminate\Pipeline\Pipeline::class)
             ->send($webhookJob)
             ->through($middleware)
-            ->then(function ($job) use ($mockSyncService) {
-                $job->handle($mockSyncService);
+            ->then(function ($job) use ($mockIngestionService) {
+                $job->handle($mockIngestionService);
             });
 
         // التأكد من مسح الـ Auth context بعد انتهاء الـ Job

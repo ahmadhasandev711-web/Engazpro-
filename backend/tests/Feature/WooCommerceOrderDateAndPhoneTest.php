@@ -9,7 +9,7 @@ use App\Models\Party;
 use App\Models\User;
 use App\Models\WcOrder;
 use App\Models\WooCommerceIntegration;
-use App\Services\WooCommerce\WooCommerceOrderSyncService;
+use App\Services\WooCommerce\WcOrderIngestionService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -43,7 +43,7 @@ class WooCommerceOrderDateAndPhoneTest extends TestCase
             'is_active' => true,
         ]);
 
-        $orderSyncService = app(WooCommerceOrderSyncService::class);
+        $ingestionService = app(WcOrderIngestionService::class);
 
         // WooCommerce payload where shipping phone is empty string, but billing phone has number
         $wcPayload = [
@@ -81,7 +81,7 @@ class WooCommerceOrderDateAndPhoneTest extends TestCase
             ],
         ];
 
-        $order = $orderSyncService->handleIncomingOrder($user, $wcPayload);
+        $order = $ingestionService->ingest($user, $wcPayload);
 
         $this->assertEquals('01012345678', $order->customer_phone);
         $this->assertStringContainsString('Street 10', $order->customer_address);
@@ -145,7 +145,7 @@ class WooCommerceOrderDateAndPhoneTest extends TestCase
             'image_url' => 'https://mystore.test/images/shirt-black-xl.jpg',
         ]);
 
-        $orderSyncService = app(WooCommerceOrderSyncService::class);
+        $ingestionService = app(WcOrderIngestionService::class);
 
         // 1. Initial Order with earlier date
         $payload1 = [
@@ -186,7 +186,7 @@ class WooCommerceOrderDateAndPhoneTest extends TestCase
             ],
         ];
 
-        $order = $orderSyncService->handleIncomingOrder($user, $payload1);
+        $order = $ingestionService->ingest($user, $payload1);
 
         $this->assertEquals('2026-07-10 14:00:00', $order->order_date->format('Y-m-d H:i:s'));
         $snapshot = $order->items_snapshot;
@@ -199,7 +199,7 @@ class WooCommerceOrderDateAndPhoneTest extends TestCase
         // 2. Re-sync with authoritative WC date
         $payload2 = $payload1;
         $payload2['date_created'] = '2026-07-10T15:30:00';
-        $updatedOrder = $orderSyncService->handleIncomingOrder($user, $payload2);
+        $updatedOrder = $ingestionService->ingest($user, $payload2);
 
         $this->assertEquals('2026-07-10 15:30:00', $updatedOrder->order_date->format('Y-m-d H:i:s'));
     }

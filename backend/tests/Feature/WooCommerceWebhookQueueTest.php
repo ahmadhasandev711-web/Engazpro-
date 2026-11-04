@@ -122,8 +122,8 @@ class WooCommerceWebhookQueueTest extends TestCase
 
     public function test_process_webhook_job_executes_incoming_order_sync(): void
     {
-        $mockSyncService = \Mockery::mock(\App\Services\WooCommerce\WooCommerceOrderSyncService::class);
-        $mockSyncService->shouldReceive('handleIncomingOrder')
+        $mockIngestionService = \Mockery::mock(\App\Services\WooCommerce\WcOrderIngestionService::class);
+        $mockIngestionService->shouldReceive('ingest')
             ->once()
             ->withArgs(function ($user, $payload) {
                 return $user->id === $this->owner->id && $payload['id'] === 9002;
@@ -136,7 +136,7 @@ class WooCommerceWebhookQueueTest extends TestCase
             ['id' => 9002, 'status' => 'processing']
         );
 
-        $job->handle($mockSyncService);
+        $job->handle($mockIngestionService);
 
         $this->assertNotEmpty($job->middleware());
         $this->assertInstanceOf(\App\Jobs\Middleware\WithTenantContext::class, $job->middleware()[0]);

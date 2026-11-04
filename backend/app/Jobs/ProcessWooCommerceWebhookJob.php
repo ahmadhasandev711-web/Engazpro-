@@ -5,7 +5,7 @@ namespace App\Jobs;
 use App\Enums\QueueName;
 use App\Jobs\Middleware\WithTenantContext;
 use App\Models\User;
-use App\Services\WooCommerce\WooCommerceOrderSyncService;
+use App\Services\WooCommerce\WcOrderIngestionService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -34,7 +34,7 @@ class ProcessWooCommerceWebhookJob implements ShouldQueue
         return [new WithTenantContext($this->userId)];
     }
 
-    public function handle(WooCommerceOrderSyncService $orderSyncService): void
+    public function handle(WcOrderIngestionService $ingestionService): void
     {
         $user = User::withoutGlobalScopes()->find($this->userId);
         if (!$user) {
@@ -43,7 +43,7 @@ class ProcessWooCommerceWebhookJob implements ShouldQueue
         }
 
         if (!empty($this->payload['id'])) {
-            $orderSyncService->handleIncomingOrder($user, $this->payload);
+            $ingestionService->ingest($user, $this->payload);
         }
     }
 }

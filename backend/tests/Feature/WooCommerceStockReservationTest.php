@@ -135,7 +135,7 @@ class WooCommerceStockReservationTest extends TestCase
             ],
         ];
 
-        $order = $this->syncService->handleIncomingOrder($this->owner, $orderPayload);
+        $order = app(\App\Services\WooCommerce\WcOrderIngestionService::class)->ingest($this->owner, $orderPayload);
 
         $this->assertDatabaseCount('wc_order_items', 4);
 
