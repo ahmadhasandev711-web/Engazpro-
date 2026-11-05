@@ -5,9 +5,12 @@ namespace Tests\Feature;
 use App\Enums\AnoofyEventResult;
 use App\Enums\AnoofyEventType;
 use App\Enums\UserRole;
+use App\Enums\WcOrderStatus;
 use App\Models\AnoofyInboxEvent;
 use App\Models\User;
+use App\Models\WcOrder;
 use App\Models\WooCommerceIntegration;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -33,7 +36,7 @@ class AnoofyInboundReceivingTest extends TestCase
             'is_active' => true,
             'anoofy_key_id' => $this->kid,
             'anoofy_secret' => $this->secret,
-            'anoofy_connected_at' => now(),
+            'anoofy_connected_at' => CarbonImmutable::parse('2026-11-04T10:00:00Z'),
         ]);
     }
 
@@ -137,6 +140,12 @@ class AnoofyInboundReceivingTest extends TestCase
 
     public function test_processes_valid_event_and_records_inbox(): void
     {
+        WcOrder::create([
+            'user_id' => $this->user->id,
+            'wc_order_id' => 5001,
+            'status' => WcOrderStatus::PENDING_CONFIRMATION,
+        ]);
+
         $timestamp = now()->timestamp;
         $fixturePath = dirname(__DIR__, 2) . '/../docs/integrations/fixtures/order.confirmed.json';
         $body = (string) file_get_contents($fixturePath);
