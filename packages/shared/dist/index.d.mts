@@ -672,6 +672,51 @@ interface StockTransfer extends BaseEntity {
     notes?: string | null;
     items: StockTransferItem[];
 }
+interface WcOrderItem {
+    id?: number;
+    wc_order_id: number;
+    product_id?: number | null;
+    product_variant_id?: number | null;
+    wc_product_id?: number | null;
+    wc_variation_id?: number | null;
+    quantity: number;
+}
+interface WcOrder extends BaseEntity {
+    user_id: number;
+    wc_order_id: number;
+    order_date?: string | null;
+    party_id?: number | null;
+    party?: Party | null;
+    branch_id?: number | null;
+    branch?: Branch | null;
+    mandob_id?: number | null;
+    shipping_type?: string | null;
+    courier_party_id?: number | null;
+    courier_name?: string | null;
+    tracking_number?: string | null;
+    shipped_at?: string | null;
+    invoice_id?: number | null;
+    status: string;
+    call_confirmed_at?: string | null;
+    call_confirmed_by?: string | null;
+    anoofy_order_version?: number | null;
+    payment_status?: string | null;
+    wc_payment_method?: string | null;
+    shipping_cost: number;
+    subtotal: number;
+    discount_total: number;
+    total: number;
+    customer_name?: string | null;
+    customer_phone?: string | null;
+    customer_email?: string | null;
+    customer_address?: string | null;
+    governorate?: string | null;
+    city?: string | null;
+    notes?: string | null;
+    wc_coupon_codes?: string[];
+    items_snapshot?: any[];
+    items?: WcOrderItem[];
+}
 
 declare const LoginSchema: z.ZodObject<{
     phone: z.ZodString;
@@ -1485,4 +1530,4 @@ declare class Money {
     toString(): string;
 }
 
-export { type AdminStatsData, type ApiResponse, BarcodeFormat, BarcodeLabelSize, type BarcodePrintItemInput, BarcodePrintItemSchema, type BarcodePrintRequestInput, BarcodePrintRequestSchema, type BaseEntity, type Branch, type BranchInput, BranchSchema, type BranchStock, BranchType, type CalculationItem, type CashFlowReportData, type CashFlowTransaction, type CashFlowTransactionsResponse, type Category, CategorySchema, CommissionType, type DashboardSummary, EmployeeAdjustmentType, type EmployeeInput, EmployeeSchema, type Expense, type ExpenseInput, ExpenseSchema, ExpiryStatus, type Invoice, type InvoiceCalculations, type InvoiceInput, type InvoiceItem, type InvoiceItemInput, InvoiceItemSchema, InvoiceSchema, InvoiceType, type LedgerEntry, LedgerSource, type LicenseKey, type LoginInput, LoginSchema, Money, type PaginatedResponse, type Party, type PartyInput, PartySchema, PartyType, type Payment, type PaymentInput, PaymentMethod, PaymentSchema, type Product, type ProductBatch, type ProductInput, ProductSchema, ProductType, type ProductVariant, type ProductVariantInput, ProductVariantSchema, type ProfitReportData, type RegisterInput, RegisterSchema, type SalesReportData, ShiftStatus, type SplitPaymentItem, type StockMovement, StockMovementSource, StockMovementType, type StockReportData, type StockReportItem, type StockTransfer, type StockTransferInput, type StockTransferItem, type StockTransferItemInput, StockTransferItemSchema, StockTransferSchema, StockTransferStatus, type StoreIdentity, type Subscription, SubscriptionPlan, SubscriptionStatus, type Treasury, type TreasuryBreakdown, TreasuryTransactionSource, TreasuryTransactionType, TreasuryType, type Unit, type User, UserRole, UserStatus, WcOrderStatus, WcPaymentStatus, calculateInvoiceTotals, calculateNetProfit, calculatePartyBalanceImpact, formatCurrency, formatDate, formatDateTime, formatNumber };
+export { type AdminStatsData, type ApiResponse, BarcodeFormat, BarcodeLabelSize, type BarcodePrintItemInput, BarcodePrintItemSchema, type BarcodePrintRequestInput, BarcodePrintRequestSchema, type BaseEntity, type Branch, type BranchInput, BranchSchema, type BranchStock, BranchType, type CalculationItem, type CashFlowReportData, type CashFlowTransaction, type CashFlowTransactionsResponse, type Category, CategorySchema, CommissionType, type DashboardSummary, EmployeeAdjustmentType, type EmployeeInput, EmployeeSchema, type Expense, type ExpenseInput, ExpenseSchema, ExpiryStatus, type Invoice, type InvoiceCalculations, type InvoiceInput, type InvoiceItem, type InvoiceItemInput, InvoiceItemSchema, InvoiceSchema, InvoiceType, type LedgerEntry, LedgerSource, type LicenseKey, type LoginInput, LoginSchema, Money, type PaginatedResponse, type Party, type PartyInput, PartySchema, PartyType, type Payment, type PaymentInput, PaymentMethod, PaymentSchema, type Product, type ProductBatch, type ProductInput, ProductSchema, ProductType, type ProductVariant, type ProductVariantInput, ProductVariantSchema, type ProfitReportData, type RegisterInput, RegisterSchema, type SalesReportData, ShiftStatus, type SplitPaymentItem, type StockMovement, StockMovementSource, StockMovementType, type StockReportData, type StockReportItem, type StockTransfer, type StockTransferInput, type StockTransferItem, type StockTransferItemInput, StockTransferItemSchema, StockTransferSchema, StockTransferStatus, type StoreIdentity, type Subscription, SubscriptionPlan, SubscriptionStatus, type Treasury, type TreasuryBreakdown, TreasuryTransactionSource, TreasuryTransactionType, TreasuryType, type Unit, type User, UserRole, UserStatus, type WcOrder, type WcOrderItem, WcOrderStatus, WcPaymentStatus, calculateInvoiceTotals, calculateNetProfit, calculatePartyBalanceImpact, formatCurrency, formatDate, formatDateTime, formatNumber };

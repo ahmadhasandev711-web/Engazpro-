@@ -15,6 +15,7 @@ import {
   AlertCircle,
   Copy,
   Check,
+  Headphones,
 } from 'lucide-react';
 import { formatCurrency, WcOrderStatus, WcPaymentStatus } from '@pos-mandob/shared';
 import { MobileCard } from './MobileCard';
@@ -172,13 +173,19 @@ export const WcOrderMobileCard: React.FC<WcOrderMobileCardProps> = ({
           )}
         </div>
 
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex flex-col items-end gap-1 shrink-0">
           <span
             className={`inline-flex items-center gap-1 text-[11px] font-black px-2.5 py-1 rounded-xl border ${statusConfig.bg}`}
           >
             <StatusIcon className="w-3.5 h-3.5" />
             <span>{statusConfig.label}</span>
           </span>
+          {order.call_confirmed_at && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-lg border bg-teal-50 text-teal-700 border-teal-200">
+              <Headphones className="w-3 h-3 text-teal-600" />
+              <span>تم التأكيد{order.call_confirmed_by ? ` (${order.call_confirmed_by})` : ''}</span>
+            </span>
+          )}
         </div>
       </div>
 

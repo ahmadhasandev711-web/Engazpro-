@@ -1,5 +1,5 @@
 import React from 'react';
-import { Truck, Package, CheckCircle2 } from 'lucide-react';
+import { Truck, Package, CheckCircle2, Headphones } from 'lucide-react';
 
 export const cleanItemName = (name?: string): string => {
   if (!name) return '';
@@ -21,6 +21,17 @@ export const formatOrderDate = (order: any): string => {
   } catch {
     return String(dateStr);
   }
+};
+
+export const getCallConfirmedBadge = (order: any): React.ReactNode => {
+  if (!order?.call_confirmed_at) return null;
+  const by = order.call_confirmed_by ? ` (${order.call_confirmed_by})` : '';
+  return (
+    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-teal-50 text-teal-700 border border-teal-200">
+      <Headphones className="w-3 h-3 text-teal-600" />
+      <span>تم التأكيد من الكول سنتر{by}</span>
+    </span>
+  );
 };
 
 export const getStatusBadge = (status: string): React.ReactNode => {

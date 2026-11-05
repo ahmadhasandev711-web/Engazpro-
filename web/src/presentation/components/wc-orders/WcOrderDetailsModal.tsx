@@ -1,7 +1,7 @@
 import React from 'react';
 import { formatCurrency, WcOrderStatus, WcPaymentStatus } from '@pos-mandob/shared';
 import { ShoppingBag, Truck, CheckCircle2, X, Phone, MapPin, DollarSign, RotateCcw, Package, Printer, Calendar } from 'lucide-react';
-import { cleanItemName, formatOrderDate, getStatusBadge } from './helpers';
+import { cleanItemName, formatOrderDate, getStatusBadge, getCallConfirmedBadge } from './helpers';
 import type { WcOrdersViewModel } from './types';
 
 export const WcOrderDetailsModal: React.FC<{ vm: WcOrdersViewModel }> = ({ vm }) => {
@@ -27,6 +27,7 @@ export const WcOrderDetailsModal: React.FC<{ vm: WcOrdersViewModel }> = ({ vm })
                     <h2 className="text-sm sm:text-base font-black text-slate-900 font-mono">
                       طلب ووكومرس #{viewingOrder.wc_order_id}
                     </h2>
+                    {getCallConfirmedBadge(viewingOrder)}
                     {getStatusBadge(viewingOrder.status)}
                   </div>
                   {(viewingOrder.order_date || viewingOrder.created_at) && (

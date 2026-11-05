@@ -573,3 +573,50 @@ export interface StockTransfer extends BaseEntity {
 }
 
 
+
+export interface WcOrderItem {
+  id?: number;
+  wc_order_id: number;
+  product_id?: number | null;
+  product_variant_id?: number | null;
+  wc_product_id?: number | null;
+  wc_variation_id?: number | null;
+  quantity: number;
+}
+
+export interface WcOrder extends BaseEntity {
+  user_id: number;
+  wc_order_id: number;
+  order_date?: string | null;
+  party_id?: number | null;
+  party?: Party | null;
+  branch_id?: number | null;
+  branch?: Branch | null;
+  mandob_id?: number | null;
+  shipping_type?: string | null;
+  courier_party_id?: number | null;
+  courier_name?: string | null;
+  tracking_number?: string | null;
+  shipped_at?: string | null;
+  invoice_id?: number | null;
+  status: string;
+  call_confirmed_at?: string | null;
+  call_confirmed_by?: string | null;
+  anoofy_order_version?: number | null;
+  payment_status?: string | null;
+  wc_payment_method?: string | null;
+  shipping_cost: number;
+  subtotal: number;
+  discount_total: number;
+  total: number;
+  customer_name?: string | null;
+  customer_phone?: string | null;
+  customer_email?: string | null;
+  customer_address?: string | null;
+  governorate?: string | null;
+  city?: string | null;
+  notes?: string | null;
+  wc_coupon_codes?: string[];
+  items_snapshot?: any[];
+  items?: WcOrderItem[];
+}

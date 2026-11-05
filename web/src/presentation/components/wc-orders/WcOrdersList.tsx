@@ -2,7 +2,7 @@ import React from 'react';
 import { WcOrderMobileCard } from '../mobile/WcOrderMobileCard';
 import { formatCurrency, WcOrderStatus, WcPaymentStatus } from '@pos-mandob/shared';
 import { ShoppingBag, Truck, CheckCircle2, Phone, MapPin, DollarSign, RotateCcw, Package, Copy, Check, Printer, Calendar, Eye } from 'lucide-react';
-import { cleanItemName, formatOrderDate, getStatusBadge } from './helpers';
+import { cleanItemName, formatOrderDate, getStatusBadge, getCallConfirmedBadge } from './helpers';
 import type { WcOrdersViewModel } from './types';
 
 export const WcOrdersList: React.FC<{ vm: WcOrdersViewModel }> = ({ vm }) => {
@@ -94,6 +94,7 @@ export const WcOrdersList: React.FC<{ vm: WcOrdersViewModel }> = ({ vm }) => {
                         <Printer className="w-4 h-4" />
                       </button>
                     )}
+                    {getCallConfirmedBadge(order)}
                     {getStatusBadge(order.status)}
                   </div>
                 </div>

@@ -12,13 +12,18 @@ import {
   Copy,
   ShieldCheck,
   Zap,
+  Headphones,
+  X,
+  AlertTriangle,
 } from 'lucide-react';
 import { apiClient } from '../../data/api/client';
 import { useHaptic } from '../hooks/useHaptic';
+import { useConfirm } from '../context/ConfirmContext';
 
 export const WooCommerceSettingsPage: React.FC = () => {
   const queryClient = useQueryClient();
   const { success } = useHaptic();
+  const { confirm } = useConfirm();
 
   const [storeUrl, setStoreUrl] = useState('');
   const [consumerKey, setConsumerKey] = useState('');
@@ -30,6 +35,9 @@ export const WooCommerceSettingsPage: React.FC = () => {
   const [isConnectingOneClick, setIsConnectingOneClick] = useState(false);
   const [importStockWithProducts, setImportStockWithProducts] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  const [anoofyModalKey, setAnoofyModalKey] = useState<string | null>(null);
+  const [copiedAnoofyKey, setCopiedAnoofyKey] = useState(false);
 
   // Check URL params for OAuth redirect success
   useEffect(() => {
@@ -217,6 +225,54 @@ export const WooCommerceSettingsPage: React.FC = () => {
     } else {
       setCopiedSecret(true);
       setTimeout(() => setCopiedSecret(false), 2000);
+    }
+  };
+
+  const generateAnoofyKeyMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiClient.post('/woocommerce/anoofy/connection-key');
+      return res.data;
+    },
+    onSuccess: (res) => {
+      if (res.data?.data?.connection_key) {
+        setAnoofyModalKey(res.data.data.connection_key);
+        setFeedback({ type: 'success', message: 'تم توليد مفتاح الربط بنجاح' });
+      }
+    },
+    onError: (err: any) => {
+      setFeedback({
+        type: 'error',
+        message: err.response?.data?.message || 'فشل توليد مفتاح الربط',
+      });
+    },
+  });
+
+  const disconnectAnoofyMutation = useMutation({
+    mutationFn: async () => {
+      return apiClient.delete('/woocommerce/anoofy/connection');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['woocommerce-settings'] });
+      setFeedback({ type: 'success', message: 'تم فصل ربط إضافة Anoofy بنجاح' });
+    },
+    onError: (err: any) => {
+      setFeedback({
+        type: 'error',
+        message: err.response?.data?.message || 'فشل فصل ربط Anoofy',
+      });
+    },
+  });
+
+  const handleDisconnectAnoofy = async () => {
+    const ok = await confirm({
+      title: 'فصل ربط إضافة Anoofy',
+      message: 'هل أنت متأكد من رغبتك في فصل الربط مع إضافة كول سنتر Anoofy؟ لن يتم استقبال أي أحداث من الإضافة حتى يتم الربط بمفتاح جديد.',
+      type: 'danger',
+      confirmText: 'فصل الربط',
+      cancelText: 'إلغاء',
+    });
+    if (ok) {
+      disconnectAnoofyMutation.mutate();
     }
   };
 
@@ -457,6 +513,60 @@ export const WooCommerceSettingsPage: React.FC = () => {
               </button>
             </div>
           </div>
+
+          {/* Anoofy-Woo Call Center Card */}
+          <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-600">
+                  <Headphones className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-black text-slate-900">ربط إضافة كول سنتر Anoofy (Anoofy-Woo)</h2>
+                  <p className="text-2xs text-slate-500">استقبال تأكيدات الكول سنتر وتعديل الأصناف والعناوين مباشرة</p>
+                </div>
+              </div>
+              <div>
+                {settingsData?.anoofy_connected ? (
+                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                    متصل
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                    غير متصل
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed">
+              عند توليد مفتاح الربط، قم بنسخه ولصقه في إعدادات إضافة Anoofy في ووردبريس للتحقق من الاتصال واستقبال أحداث تأكيد الطلبات تلقائياً.
+            </p>
+
+            <div className="flex flex-wrap items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => generateAnoofyKeyMutation.mutate()}
+                disabled={generateAnoofyKeyMutation.isPending}
+                className="px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-black shadow-sm transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                <Key className={`w-4 h-4 ${generateAnoofyKeyMutation.isPending ? 'animate-spin' : ''}`} />
+                <span>{settingsData?.anoofy_connected ? 'توليد مفتاح ربط جديد (إعادة ربط)' : 'توليد مفتاح ربط جديد'}</span>
+              </button>
+
+              {settingsData?.anoofy_connected && (
+                <button
+                  type="button"
+                  onClick={handleDisconnectAnoofy}
+                  disabled={disconnectAnoofyMutation.isPending}
+                  className="px-4 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  <span>{disconnectAnoofyMutation.isPending ? 'جاري الفصل...' : 'فصل الربط'}</span>
+                </button>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Right 1 Col: Quick Actions & Webhook Setup */}
@@ -609,6 +719,73 @@ export const WooCommerceSettingsPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Modal: Anoofy Connection Key Dialog */}
+      {anoofyModalKey && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs animate-in fade-in duration-150" dir="rtl">
+          <div className="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl border border-slate-200/80 space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-600">
+                  <Key className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-900">مفتاح ربط إضافة Anoofy</h3>
+                  <p className="text-2xs text-slate-500">انسخ المفتاح وضعه في إعدادات الإضافة في ووردبريس</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAnoofyModalKey(null)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3.5 flex items-start gap-2.5 text-amber-800 text-xs leading-relaxed">
+              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <span>
+                <strong>تنبيه أمني هام:</strong> احفظ هذا المفتاح الآن في إعدادات إضافة Anoofy في ووردبريس. لن تتمكن من رؤيته مرة أخرى لأسباب أمنية بعد إغلاق هذه النافذة.
+              </span>
+            </div>
+
+            <div className="space-y-1.5">
+              <span className="text-2xs font-bold text-slate-500">مفتاح الربط (Connection Key):</span>
+              <div className="bg-slate-900 text-slate-100 p-3 rounded-2xl border border-slate-800 flex items-center gap-2">
+                <span className="font-mono text-xs break-all flex-1 select-all" dir="ltr">
+                  {anoofyModalKey}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (anoofyModalKey) {
+                      navigator.clipboard.writeText(anoofyModalKey);
+                      setCopiedAnoofyKey(true);
+                      success();
+                      setTimeout(() => setCopiedAnoofyKey(false), 3000);
+                    }
+                  }}
+                  className="p-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl transition-colors cursor-pointer shrink-0"
+                  title="نسخ المفتاح"
+                >
+                  {copiedAnoofyKey ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setAnoofyModalKey(null)}
+                className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-black shadow-md transition-all cursor-pointer"
+              >
+                تم النسخ والحفظ
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
