@@ -20,6 +20,7 @@ use App\Models\User;
 use App\Models\WcOrder;
 use App\Observers\BranchStockWooCommerceObserver;
 use App\Observers\PartyWooCommerceObserver;
+use App\Observers\WcOrderAnoofyStageObserver;
 use App\Observers\WcOrderStockSyncObserver;
 use App\Policies\BranchPolicy;
 use App\Policies\CategoryPolicy;
@@ -106,6 +107,7 @@ class AppServiceProvider extends ServiceProvider
         BranchStock::observe(BranchStockWooCommerceObserver::class);
         Party::observe(PartyWooCommerceObserver::class);
         WcOrder::observe(WcOrderStockSyncObserver::class);
+        WcOrder::observe(WcOrderAnoofyStageObserver::class);
     }
 
     private function registerRateLimiters(): void
