@@ -159,23 +159,50 @@ class AnoofyOutboxStageChangeTest extends TestCase
         Queue::assertNothingPushed();
     }
 
-    public function test_case_c_transaction_rollback_does_not_create_outbox_event_or_job(): void
+    public function test_case_c_transaction_rollback_and_commit_timing_with_real_database_queue(): void
     {
-        Queue::fake([SendAnoofyEventJob::class]);
+        config(['queue.default' => 'database']);
+        Queue::setDefaultDriver('database');
 
-        $order = $this->createPendingOrder(9003);
+        $order1 = $this->createPendingOrder(9003);
 
+        // 1. Rollback scenario: inside transaction status changes, but rollback happens
         try {
-            DB::transaction(function () use ($order) {
-                $order->update(['status' => WcOrderStatus::CONFIRMED]);
+            DB::transaction(function () use ($order1) {
+                $order1->update(['status' => WcOrderStatus::CONFIRMED]);
+                $this->assertDatabaseCount('jobs', 0);
                 throw new \RuntimeException('Intentional rollback');
             });
         } catch (\RuntimeException $e) {
-            // caught
+            if ($e instanceof \PHPUnit\Framework\AssertionFailedError) {
+                throw $e;
+            }
         }
 
-        $this->assertSame(0, AnoofyOutboxEvent::withoutGlobalScopes()->where('wc_order_id', $order->id)->count());
-        Queue::assertNothingPushed();
+        if (app()->bound('db.transactions')) {
+            app('db.transactions')->getCommittedTransactions()->map->executeCallbacks();
+        }
+
+        $this->assertDatabaseCount('jobs', 0);
+        $this->assertDatabaseCount('anoofy_outbox_events', 0);
+
+        // 2. Commit scenario: inside transaction jobs is 0, post-commit jobs is 1
+        $order2 = $this->createPendingOrder(9004);
+        DB::transaction(function () use ($order2) {
+            $order2->update(['status' => WcOrderStatus::CONFIRMED]);
+            $this->assertDatabaseCount('jobs', 0);
+        });
+
+        if (app()->bound('db.transactions')) {
+            app('db.transactions')->getCommittedTransactions()->map->executeCallbacks();
+        }
+
+        $this->assertDatabaseCount('jobs', 1);
+        $this->assertDatabaseCount('anoofy_outbox_events', 1);
+
+        $jobRow = DB::table('jobs')->first();
+        $this->assertNotNull($jobRow);
+        $this->assertStringContainsString('SendAnoofyEventJob', (string) $jobRow->payload);
     }
 
     public function test_case_h_cancellation_via_real_wc_webhook_records_cancelled_stage_in_outbox(): void

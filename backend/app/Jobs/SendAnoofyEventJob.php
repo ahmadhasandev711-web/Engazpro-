@@ -40,17 +40,6 @@ class SendAnoofyEventJob implements ShouldQueue, ShouldBeUnique
         return (string) $this->outboxId;
     }
 
-    public function queue($queue, $command)
-    {
-        if ($this->afterCommit && app()->bound('db.transactions') && app('db.transactions')->getPendingTransactions()->isNotEmpty()) {
-            return app('db.transactions')->addCallback(
-                fn () => $queue->push($command)
-            );
-        }
-
-        return $queue->push($command);
-    }
-
     public function handle(AnoofyOutboundClientInterface $client): void
     {
         $outbox = AnoofyOutboxEvent::withoutGlobalScopes()->find($this->outboxId);
