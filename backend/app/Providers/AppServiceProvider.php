@@ -60,6 +60,10 @@ class AppServiceProvider extends ServiceProvider
             DnsHostResolver::class
         );
         $this->app->bind(
+            \App\Contracts\AnoofyOutboundClientInterface::class,
+            \App\Services\Anoofy\HttpAnoofyOutboundClient::class
+        );
+        $this->app->bind(
             AnoofySignatureVerifierInterface::class,
             HmacSha256SignatureVerifier::class
         );
