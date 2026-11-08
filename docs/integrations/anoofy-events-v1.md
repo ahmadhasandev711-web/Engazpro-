@@ -1,12 +1,12 @@
 # مواصفات تكامل Anoofy-Woo مع EngazPRO (الإصدار v1)
 
-وثيقة العقد الفني لبروتوكول استقبال الأحداث الواردة (Inbound Events) من إضافة Anoofy لووكومرس إلى منصة EngazPRO.
+وثيقة العقد الفني لبروتوكول تبادل الأحداث بين إضافة Anoofy لووكومرس ومنصة EngazPRO (أحداث واردة وأحداث صادرة).
 
 ---
 
 ## 1. الترويسات الأمنية (Request Headers)
 
-يتم توقيع كل طلب وارد من إضافة Anoofy باستخدام HMAC-SHA256 عبر الترويسات التالية:
+يتم توقيع كل طلب (سواء كان وارداً إلى EngazPRO أو صادراً منها إلى الـ Plugin) باستخدام HMAC-SHA256 عبر الترويسات التالية:
 
 | الترويسة | النوع | الوصف |
 | :--- | :--- | :--- |
@@ -16,7 +16,7 @@
 
 ---
 
-## 2. بنية الغلاف (Envelope Schema)
+## 2. بنية الغلاف الموحد (Envelope Schema)
 
 كل حدث يُرسل في جسم الطلب (JSON Payload) داخل غلاف موحد:
 
@@ -24,7 +24,7 @@
 {
   "schema_version": 1,
   "event_id": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
-  "event_type": "order.confirmed",
+  "event_type": "order.stage_changed",
   "occurred_at": "2026-11-04T12:00:00Z",
   "order_version": 1,
   "data": {}
@@ -33,17 +33,17 @@
 
 - `schema_version` (int): رقم إصدار العقد (القيمة الحالية: `1`).
 - `event_id` (string): معرف فريد لكل حدث بنسق UUID v4 لمنع تكرار المعالجة (Idempotency).
-- `event_type` (string): نوع الحدث (`connection.verify` أو `order.confirmed`).
+- `event_type` (string): نوع الحدث (`connection.verify`, `order.confirmed`, `order.stage_changed`).
 - `occurred_at` (string): توقيت وقوع الحدث بصيغة ISO-8601 UTC.
 - `order_version` (int|null): رقم إصدار الطلب لترتيب الأحداث ومنع الأحداث القديمة (Stale).
 - `data` (object): البيانات الخاصة بنوع الحدث.
 
 ---
 
-## 3. أنواع الأحداث (Event Types)
+## 3. الأحداث الواردة (Inbound: Plugin → EngazPRO)
 
 ### أ. حدث تأكيد الاتصال (`connection.verify`)
-يُرسل من الإضافة للتحقق من سلامة الربط والمفاتيح وحفظ رابط الاستدعاء.
+يُرسل من الإضافة للتحقق من سلامة الربط والمفاتيح وحفظ رابط الاستدعاء `anoofy_callback_url`.
 
 **بنية `data`:**
 ```json
@@ -55,7 +55,7 @@
 ```
 
 ### ب. حدث تأكيد الطلب من الكول سنتر (`order.confirmed`)
-يُرسل عند تأكيد مندوب الكول سنتر للطلب مع العميل، وقد يتضمن تعديل بيانات العميل أو الأصناف.
+يُرسل عند تأكيد مندوب الكول سنتر للطلب مع العميل في إضافة ووكومرس، وقد يتضمن تعديل بيانات العميل أو الأصناف.
 
 **بنية `data`:**
 ```json
@@ -86,7 +86,42 @@
 
 ---
 
-## 4. استجابات النظام (Responses)
+## 4. الأحداث الصادرة (Outbound: EngazPRO → Plugin)
+
+### حدث تغيير مرحلة الطلب (`order.stage_changed`)
+يُرسل من منصة EngazPRO إلى إضافة ووكومرس عبر `anoofy_callback_url` كلما تغيرت حالة الطلب إلى أي حالة غير `PENDING_CONFIRMATION` (مثل: `CONFIRMED`, `PREPARING`, `DISPATCHED`, `SHIPPED_VIA_COURIER`, `DELIVERED`, `PARTIALLY_DELIVERED`, `RETURNED`, `CANCELLED`)، بشرط أن يكون المتجر مربوطاً (`anoofy_connected_at` غير فارغ).
+
+**الترويسات:** نفس الترويسات الموقعة (`X-Anoofy-Key-Id`, `X-Anoofy-Timestamp`, `X-Anoofy-Signature`).
+
+**بنية `data`:**
+```json
+{
+  "wc_order_id": 5001,
+  "stage": "CONFIRMED",
+  "previous_stage": "PENDING_CONFIRMATION",
+  "changed_at": "2026-11-04T12:10:00Z",
+  "branch_name": "الفرع الرئيسي",
+  "courier_name": "شركة أرامكس",
+  "tracking_number": "TRK-987654321"
+}
+```
+
+- `wc_order_id` (int): معرف الطلب في ووكومرس.
+- `stage` (string): الحالة الجديدة للطلب (قيمة من `WcOrderStatus`).
+- `previous_stage` (string|null): الحالة السابقة للطلب (قيمة من `WcOrderStatus` أو `null`).
+- `changed_at` (string): توقيت تغيير الحالة بصيغة ISO-8601 UTC.
+- `branch_name` (string|null): اسم الفرع المسند إليه الطلب (من علاقة `branch`).
+- `courier_name` (string|null): اسم شركة الشحن (من عمود `courier_name` أو علاقة `courierParty`).
+- `tracking_number` (string|null): رقم التتبع للشحنة (من عمود `tracking_number`).
+
+**استجابات الـ Plugin المتوقعة للحدث الصادر:**
+- `2xx Success`: نجاح الاستلام والمعالجة من قبل الإضافة (تشمل `processed`, `duplicate`, `stale` جميعها تُعامل كنجاح `200`).
+- `401 Unauthorized` أو `4xx` (غير 429): خلل دائم في الربط أو البيانات (لا تتم إعادة المحاولة، وتتحول حالة الحدث إلى `FAILED`).
+- `5xx`, `timeout`, `429 Too Many Requests`: خطأ مؤقت يستوجب إعادة المحاولة (Retry) مع Exponential Backoff.
+
+---
+
+## 5. استجابات النظام للطلبات الواردة (Inbound Responses)
 
 | كود الحالة | المعنى | بنية الاستجابة |
 | :--- | :--- | :--- |
@@ -97,7 +132,7 @@
 
 ---
 
-## 5. نتائج المعالجة (`result` في رد 200)
+## 6. نتائج المعالجة الواردة (`result` في رد 200)
 
 - `processed`: تم استلام الحدث وتطبيقه بنجاح.
 - `duplicate`: معرف الحدث `event_id` تم استلامه ومعالجته مسبقاً (لن يتكرر التنفيذ).
