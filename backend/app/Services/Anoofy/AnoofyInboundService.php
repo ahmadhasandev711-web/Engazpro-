@@ -34,6 +34,10 @@ class AnoofyInboundService
 
         $envelope = $this->parser->parse($rawBody);
 
+        if ($envelope->eventType !== AnoofyEventType::CONNECTION_VERIFY && $integration->anoofy_connected_at === null) {
+            throw new AnoofyNotConnectedException('متجر أنوفي غير متصل بعد');
+        }
+
         return TenantContext::runAs($integration->user_id, function () use ($integration, $envelope) {
             if ($this->isDuplicate($integration->user_id, $envelope->eventId)) {
                 return ['result' => AnoofyEventResult::DUPLICATE->value, 'reason' => 'already_processed'];

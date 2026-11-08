@@ -227,4 +227,44 @@ class AnoofyInboundReceivingTest extends TestCase
         // Still only 1 row in DB
         $this->assertSame(1, AnoofyInboxEvent::withoutGlobalScopes()->where('event_id', '22222222-2222-4222-8222-222222222222')->count());
     }
+
+    public function test_rejects_non_verify_event_when_not_yet_connected(): void
+    {
+        $this->integration->anoofy_connected_at = null;
+        $this->integration->save();
+
+        WcOrder::create([
+            'user_id' => $this->user->id,
+            'wc_order_id' => 5001,
+            'status' => WcOrderStatus::PENDING_CONFIRMATION,
+        ]);
+
+        $timestamp = now()->timestamp;
+        $fixturePath = dirname(__DIR__, 2) . '/../docs/integrations/fixtures/order.confirmed.json';
+        $body = (string) file_get_contents($fixturePath);
+        $sig = hash_hmac('sha256', "{$timestamp}.{$body}", $this->secret);
+
+        $response = $this->call(
+            'POST',
+            '/api/webhooks/anoofy/events',
+            [],
+            [],
+            [],
+            [
+                'HTTP_X_ANOOFY_KEY_ID' => $this->kid,
+                'HTTP_X_ANOOFY_TIMESTAMP' => (string) $timestamp,
+                'HTTP_X_ANOOFY_SIGNATURE' => $sig,
+                'CONTENT_TYPE' => 'application/json',
+            ],
+            $body
+        );
+
+        $response->assertStatus(401)
+            ->assertJson([
+                'success' => false,
+                'error_code' => 'ANOOFY_NOT_CONNECTED',
+            ]);
+
+        $this->assertSame(0, AnoofyInboxEvent::withoutGlobalScopes()->where('event_id', '22222222-2222-4222-8222-222222222222')->count());
+    }
 }
