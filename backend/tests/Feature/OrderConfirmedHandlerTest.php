@@ -281,4 +281,43 @@ class OrderConfirmedHandlerTest extends TestCase
             return $job->productId === $productNew->id;
         });
     }
+
+    public function test_concurrent_status_change_is_ignored_post_lock(): void
+    {
+        $order = WcOrder::create([
+            'user_id' => $this->user->id,
+            'wc_order_id' => 5005,
+            'status' => WcOrderStatus::PENDING_CONFIRMATION,
+        ]);
+
+        $customHandler = new class($this->app->make(\App\Services\WooCommerce\WcOrderLineItemMapper::class)) extends OrderConfirmedHandler {
+            protected function onBeforeLock(WcOrder $order): void
+            {
+                WcOrder::where('id', $order->id)->update([
+                    'status' => WcOrderStatus::CONFIRMED->value,
+                ]);
+            }
+        };
+
+        $envelope = new AnoofyEnvelope(
+            schemaVersion: 1,
+            eventId: '44444444-4444-4444-8444-444444444444',
+            eventType: AnoofyEventType::ORDER_CONFIRMED,
+            occurredAt: CarbonImmutable::parse('2026-11-04T12:05:00Z'),
+            orderVersion: 1,
+            data: [
+                'wc_order_id' => 5005,
+                'confirmed_at' => '2026-11-04T12:05:00Z',
+                'confirmed_by_name' => 'سارة أحمد',
+            ]
+        );
+
+        $outcome = $customHandler->handle($this->integration, $envelope);
+
+        $this->assertSame(AnoofyEventResult::IGNORED, $outcome->result);
+        $this->assertSame(WcOrderStatus::CONFIRMED->value, $outcome->reason);
+
+        $order->refresh();
+        $this->assertNull($order->call_confirmed_by);
+    }
 }

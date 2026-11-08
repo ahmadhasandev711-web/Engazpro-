@@ -40,7 +40,7 @@ class OrderConfirmedHandler implements AnoofyEventHandlerInterface
             return $earlyOutcome;
         }
 
-        return $this->processConfirmation($integration->user_id, $order, $envelope);
+        return $this->processConfirmation($integration, $order, $envelope);
     }
 
     private function checkEarlyExits(
@@ -66,28 +66,46 @@ class OrderConfirmedHandler implements AnoofyEventHandlerInterface
         return null;
     }
 
-    private function processConfirmation(int $userId, WcOrder $order, AnoofyEnvelope $envelope): HandlerOutcome
+    protected function onBeforeLock(WcOrder $order): void
     {
-        return DB::transaction(function () use ($userId, $order, $envelope) {
+    }
+
+    private function processConfirmation(
+        WooCommerceIntegration $integration,
+        WcOrder $order,
+        AnoofyEnvelope $envelope
+    ): HandlerOutcome {
+        $this->onBeforeLock($order);
+
+        return DB::transaction(function () use ($integration, $order, $envelope) {
             $locked = WcOrder::where('id', $order->id)->lockForUpdate()->firstOrFail();
-            $confirmedAt = CarbonImmutable::parse((string) ($envelope->data['confirmed_at'] ?? $envelope->occurredAt));
 
-            $locked->call_confirmed_at = $confirmedAt;
-            $locked->call_confirmed_by = (string) ($envelope->data['confirmed_by_name'] ?? '');
-            if ($envelope->orderVersion !== null) {
-                $locked->anoofy_order_version = $envelope->orderVersion;
+            $earlyOutcome = $this->checkEarlyExits($integration, $locked, $envelope);
+            if ($earlyOutcome !== null) {
+                return $earlyOutcome;
             }
 
-            $this->updateCustomerDetails($locked, (array) ($envelope->data['customer'] ?? []));
-
-            if (isset($envelope->data['line_items']) && is_array($envelope->data['line_items'])) {
-                $this->syncLineItems($userId, $locked, $envelope->data['line_items']);
-            }
-
+            $this->applyOrderUpdates($integration->user_id, $locked, $envelope);
             $locked->save();
 
             return new HandlerOutcome(AnoofyEventResult::PROCESSED);
         });
+    }
+
+    private function applyOrderUpdates(int $userId, WcOrder $locked, AnoofyEnvelope $envelope): void
+    {
+        $confirmedAt = CarbonImmutable::parse((string) ($envelope->data['confirmed_at'] ?? $envelope->occurredAt));
+        $locked->call_confirmed_at = $confirmedAt;
+        $locked->call_confirmed_by = (string) ($envelope->data['confirmed_by_name'] ?? '');
+        if ($envelope->orderVersion !== null) {
+            $locked->anoofy_order_version = $envelope->orderVersion;
+        }
+
+        $this->updateCustomerDetails($locked, (array) ($envelope->data['customer'] ?? []));
+
+        if (isset($envelope->data['line_items']) && is_array($envelope->data['line_items'])) {
+            $this->syncLineItems($userId, $locked, $envelope->data['line_items']);
+        }
     }
 
     private function updateCustomerDetails(WcOrder $order, array $customer): void
