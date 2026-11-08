@@ -51,13 +51,7 @@ class AnoofyOutboxService
             'attempts' => 0,
         ]);
 
-        $dispatchJob = fn () => SendAnoofyEventJob::dispatch($outbox->id)->afterCommit();
-
-        if (\Illuminate\Support\Facades\DB::transactionLevel() > 0) {
-            \Illuminate\Support\Facades\DB::afterCommit($dispatchJob);
-        } else {
-            $dispatchJob();
-        }
+        SendAnoofyEventJob::dispatch($outbox->id)->afterCommit();
 
         return $outbox;
     }
