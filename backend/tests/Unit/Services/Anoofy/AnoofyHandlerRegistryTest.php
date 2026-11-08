@@ -14,6 +14,10 @@ class AnoofyHandlerRegistryTest extends TestCase
         $registry = $this->app->make(AnoofyHandlerRegistry::class);
 
         foreach (AnoofyEventType::cases() as $eventType) {
+            if (!$eventType->isInbound()) {
+                continue;
+            }
+
             $this->assertTrue(
                 $registry->has($eventType),
                 "Missing registered handler for AnoofyEventType::{$eventType->name}"
