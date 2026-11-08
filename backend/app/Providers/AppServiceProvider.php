@@ -27,12 +27,16 @@ use App\Policies\EmployeePolicy;
 use App\Policies\ExpensePolicy;
 use App\Policies\InvoicePolicy;
 use App\Policies\PartyPolicy;
+use App\Enums\AnoofyEventType;
 use App\Policies\PaymentPolicy;
 use App\Policies\PayrollPolicy;
 use App\Policies\ProductPolicy;
 use App\Policies\ReportPolicy;
 use App\Policies\StockTransferPolicy;
 use App\Policies\TreasuryPolicy;
+use App\Services\Anoofy\AnoofyHandlerRegistry;
+use App\Services\Anoofy\Handlers\ConnectionVerifyHandler;
+use App\Services\Anoofy\Handlers\OrderConfirmedHandler;
 use App\Services\Anoofy\HmacSha256SignatureVerifier;
 use App\Services\DnsHostResolver;
 use App\Services\WooCommerce\WooCommerceApiClient;
@@ -58,6 +62,12 @@ class AppServiceProvider extends ServiceProvider
             AnoofySignatureVerifierInterface::class,
             HmacSha256SignatureVerifier::class
         );
+        $this->app->singleton(AnoofyHandlerRegistry::class, function () {
+            $registry = new AnoofyHandlerRegistry();
+            $registry->register(AnoofyEventType::CONNECTION_VERIFY, ConnectionVerifyHandler::class);
+            $registry->register(AnoofyEventType::ORDER_CONFIRMED, OrderConfirmedHandler::class);
+            return $registry;
+        });
     }
 
     public function boot(): void

@@ -13,8 +13,6 @@ use App\Exceptions\InvalidAnoofyPayloadException;
 use App\Exceptions\InvalidAnoofySignatureException;
 use App\Models\AnoofyInboxEvent;
 use App\Models\WooCommerceIntegration;
-use App\Services\Anoofy\Handlers\ConnectionVerifyHandler;
-use App\Services\Anoofy\Handlers\OrderConfirmedHandler;
 use App\Support\TenantContext;
 use Illuminate\Support\Facades\DB;
 
@@ -23,6 +21,7 @@ class AnoofyInboundService
     public function __construct(
         private readonly AnoofySignatureVerifierInterface $verifier,
         private readonly AnoofyEnvelopeParser $parser,
+        private readonly AnoofyHandlerRegistry $registry,
     ) {
     }
 
@@ -90,7 +89,7 @@ class AnoofyInboundService
 
     private function processAndRecord(WooCommerceIntegration $integration, AnoofyEnvelope $envelope): array
     {
-        $handler = $this->resolveHandler($envelope->eventType);
+        $handler = $this->registry->get($envelope->eventType);
 
         return DB::transaction(function () use ($handler, $integration, $envelope) {
             $outcome = $handler->handle($integration, $envelope);
@@ -110,13 +109,5 @@ class AnoofyInboundService
                 'reason' => $outcome->reason,
             ], fn ($v) => $v !== null);
         });
-    }
-
-    private function resolveHandler(AnoofyEventType $type): AnoofyEventHandlerInterface
-    {
-        return match ($type) {
-            AnoofyEventType::CONNECTION_VERIFY => app(ConnectionVerifyHandler::class),
-            AnoofyEventType::ORDER_CONFIRMED => app(OrderConfirmedHandler::class),
-        };
     }
 }
