@@ -3,6 +3,7 @@
 namespace App\Rules;
 
 use App\Contracts\HostResolver;
+use App\Support\PublicIpPolicy;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 
@@ -54,7 +55,7 @@ class PublicHttpsUrl implements ValidationRule
 
         // If host is direct IP address
         if (filter_var($host, FILTER_VALIDATE_IP)) {
-            if (!$this->isPublicIp($host)) {
+            if (!PublicIpPolicy::isPublic($host)) {
                 $fail('غير مسموح بربط عناوين الآي بي الداخلية أو الخاصة.');
                 return;
             }
@@ -70,7 +71,7 @@ class PublicHttpsUrl implements ValidationRule
         }
 
         foreach ($ips as $ip) {
-            if (!$this->isPublicIp($ip)) {
+            if (!PublicIpPolicy::isPublic($ip)) {
                 $fail('اسم النطاق يشير إلى عناوين آي بي داخلية أو خاصة غير مسموح بها.');
                 return;
             }
@@ -79,20 +80,6 @@ class PublicHttpsUrl implements ValidationRule
 
     protected function isPublicIp(string $ip): bool
     {
-        if (
-            $ip === '127.0.0.1' ||
-            str_starts_with($ip, '127.') ||
-            str_starts_with($ip, '169.254.') ||
-            $ip === '::1' ||
-            $ip === '0.0.0.0'
-        ) {
-            return false;
-        }
-
-        return (bool) filter_var(
-            $ip,
-            FILTER_VALIDATE_IP,
-            FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
-        );
+        return PublicIpPolicy::isPublic($ip);
     }
 }

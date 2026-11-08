@@ -6,6 +6,7 @@ use App\Contracts\AnoofyOutboundClientInterface;
 use App\Contracts\HostResolver;
 use App\Exceptions\Anoofy\AnoofySecurityException;
 use App\Models\WooCommerceIntegration;
+use App\Support\PublicIpPolicy;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
@@ -46,28 +47,9 @@ class HttpAnoofyOutboundClient implements AnoofyOutboundClientInterface
         }
 
         foreach ($ips as $ip) {
-            if (!$this->isPublicIp($ip)) {
+            if (!PublicIpPolicy::isPublic($ip)) {
                 throw new AnoofySecurityException('internal_ip_rejected');
             }
         }
-    }
-
-    private function isPublicIp(string $ip): bool
-    {
-        if (
-            $ip === '127.0.0.1' ||
-            str_starts_with($ip, '127.') ||
-            str_starts_with($ip, '169.254.') ||
-            $ip === '::1' ||
-            $ip === '0.0.0.0'
-        ) {
-            return false;
-        }
-
-        return (bool) filter_var(
-            $ip,
-            FILTER_VALIDATE_IP,
-            FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
-        );
     }
 }
