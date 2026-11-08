@@ -12,11 +12,12 @@ use App\Models\WcOrder;
 use App\Models\WooCommerceIntegration;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\SimulatesHttpContext;
 use Tests\TestCase;
 
 class AnoofyInboundReceivingTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, SimulatesHttpContext;
 
     private User $user;
     private WooCommerceIntegration $integration;
@@ -224,6 +225,6 @@ class AnoofyInboundReceivingTest extends TestCase
             ]);
 
         // Still only 1 row in DB
-        $this->assertSame(1, AnoofyInboxEvent::where('event_id', '22222222-2222-4222-8222-222222222222')->count());
+        $this->assertSame(1, AnoofyInboxEvent::withoutGlobalScopes()->where('event_id', '22222222-2222-4222-8222-222222222222')->count());
     }
 }

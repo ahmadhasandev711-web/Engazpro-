@@ -9,11 +9,12 @@ use App\Models\User;
 use App\Models\WooCommerceIntegration;
 use App\Services\Anoofy\AnoofyConnectionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\SimulatesHttpContext;
 use Tests\TestCase;
 
 class AnoofyConnectionTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, SimulatesHttpContext;
 
     protected User $owner;
     protected User $manager;

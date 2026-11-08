@@ -17,11 +17,12 @@ use App\Models\WooCommerceIntegration;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
+use Tests\Concerns\SimulatesHttpContext;
 use Tests\TestCase;
 
 class AnoofyInboundIntegrationTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, SimulatesHttpContext;
 
     private User $owner;
     private WooCommerceIntegration $integration;

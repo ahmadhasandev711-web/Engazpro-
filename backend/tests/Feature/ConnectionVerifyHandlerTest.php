@@ -13,11 +13,12 @@ use App\Models\WooCommerceIntegration;
 use App\Services\Anoofy\Handlers\ConnectionVerifyHandler;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\SimulatesHttpContext;
 use Tests\TestCase;
 
 class ConnectionVerifyHandlerTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, SimulatesHttpContext;
 
     private User $user;
     private WooCommerceIntegration $integration;

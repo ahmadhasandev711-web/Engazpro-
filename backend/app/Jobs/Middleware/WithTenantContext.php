@@ -2,9 +2,8 @@
 
 namespace App\Jobs\Middleware;
 
-use App\Models\User;
+use App\Support\TenantContext;
 use Closure;
-use Illuminate\Support\Facades\Auth;
 
 class WithTenantContext
 {
@@ -17,15 +16,6 @@ class WithTenantContext
      */
     public function handle(object $job, Closure $next): mixed
     {
-        $user = User::withoutGlobalScopes()->find($this->userId);
-        if ($user) {
-            Auth::setUser($user);
-        }
-
-        try {
-            return $next($job);
-        } finally {
-            Auth::forgetGuards();
-        }
+        return TenantContext::runAs($this->userId, fn () => $next($job));
     }
 }

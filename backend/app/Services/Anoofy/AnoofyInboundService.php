@@ -15,6 +15,7 @@ use App\Models\AnoofyInboxEvent;
 use App\Models\WooCommerceIntegration;
 use App\Services\Anoofy\Handlers\ConnectionVerifyHandler;
 use App\Services\Anoofy\Handlers\OrderConfirmedHandler;
+use App\Support\TenantContext;
 use Illuminate\Support\Facades\DB;
 
 class AnoofyInboundService
@@ -33,11 +34,13 @@ class AnoofyInboundService
 
         $envelope = $this->parser->parse($rawBody);
 
-        if ($this->isDuplicate($integration->user_id, $envelope->eventId)) {
-            return ['result' => AnoofyEventResult::DUPLICATE->value, 'reason' => 'already_processed'];
-        }
+        return TenantContext::runAs($integration->user_id, function () use ($integration, $envelope) {
+            if ($this->isDuplicate($integration->user_id, $envelope->eventId)) {
+                return ['result' => AnoofyEventResult::DUPLICATE->value, 'reason' => 'already_processed'];
+            }
 
-        return $this->processAndRecord($integration, $envelope);
+            return $this->processAndRecord($integration, $envelope);
+        });
     }
 
     private function findIntegration(string $kid): WooCommerceIntegration
@@ -46,7 +49,7 @@ class AnoofyInboundService
             throw new AnoofyNotConnectedException();
         }
 
-        $integration = WooCommerceIntegration::where('anoofy_key_id', $kid)->first();
+        $integration = WooCommerceIntegration::withoutGlobalScopes()->where('anoofy_key_id', $kid)->first();
         if ($integration === null || empty($integration->anoofy_secret)) {
             throw new AnoofyNotConnectedException();
         }
@@ -75,7 +78,8 @@ class AnoofyInboundService
 
     private function isDuplicate(int $userId, string $eventId): bool
     {
-        return AnoofyInboxEvent::where('user_id', $userId)
+        return AnoofyInboxEvent::withoutGlobalScopes()
+            ->where('user_id', $userId)
             ->where('event_id', $eventId)
             ->exists();
     }

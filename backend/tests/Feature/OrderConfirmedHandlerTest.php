@@ -18,11 +18,12 @@ use App\Services\Anoofy\Handlers\OrderConfirmedHandler;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
+use Tests\Concerns\SimulatesHttpContext;
 use Tests\TestCase;
 
 class OrderConfirmedHandlerTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, SimulatesHttpContext;
 
     private User $user;
     private WooCommerceIntegration $integration;
@@ -33,6 +34,7 @@ class OrderConfirmedHandlerTest extends TestCase
         parent::setUp();
 
         $this->user = User::factory()->create(['role' => UserRole::OWNER]);
+        $this->actingAs($this->user);
         $this->integration = WooCommerceIntegration::create([
             'user_id' => $this->user->id,
             'store_url' => 'https://mystore.com',
