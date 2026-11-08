@@ -173,14 +173,8 @@ class AnoofyOutboxStageChangeTest extends TestCase
                 $this->assertDatabaseCount('jobs', 0);
                 throw new \RuntimeException('Intentional rollback');
             });
-        } catch (\RuntimeException $e) {
-            if ($e instanceof \PHPUnit\Framework\AssertionFailedError) {
-                throw $e;
-            }
-        }
-
-        if (app()->bound('db.transactions')) {
-            app('db.transactions')->getCommittedTransactions()->map->executeCallbacks();
+        } catch (\RuntimeException) {
+            // Rollback swallowed intentionally
         }
 
         $this->assertDatabaseCount('jobs', 0);
@@ -192,10 +186,6 @@ class AnoofyOutboxStageChangeTest extends TestCase
             $order2->update(['status' => WcOrderStatus::CONFIRMED]);
             $this->assertDatabaseCount('jobs', 0);
         });
-
-        if (app()->bound('db.transactions')) {
-            app('db.transactions')->getCommittedTransactions()->map->executeCallbacks();
-        }
 
         $this->assertDatabaseCount('jobs', 1);
         $this->assertDatabaseCount('anoofy_outbox_events', 1);
