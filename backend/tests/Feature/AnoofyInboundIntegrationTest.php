@@ -34,11 +34,20 @@ class AnoofyInboundIntegrationTest extends TestCase
         parent::setUp();
 
         $this->owner = User::factory()->create(['role' => UserRole::OWNER]);
+        \App\Models\Subscription::create([
+            'user_id' => $this->owner->id,
+            'start_date' => now()->toDateString(),
+            'end_date' => now()->addYear()->toDateString(),
+            'status' => 'ACTIVE',
+            'plan' => 'ANNUAL',
+            'price' => 1000,
+        ]);
         $this->integration = WooCommerceIntegration::create([
             'user_id' => $this->owner->id,
             'store_url' => 'https://mystore.com',
             'consumer_key' => 'ck_test_key',
             'consumer_secret' => 'cs_test_secret',
+            'webhook_secret' => 'wh_secret_test_123',
             'is_active' => true,
             'anoofy_key_id' => $this->kid,
             'anoofy_secret' => $this->secret,
@@ -447,5 +456,232 @@ class AnoofyInboundIntegrationTest extends TestCase
                 'success' => false,
                 'error_code' => 'INVALID_ANOOFY_PAYLOAD',
             ]);
+    }
+
+    private function sendWooCommerceWebhook(array $payload, string $topic = 'order.created')
+    {
+        $raw = json_encode($payload, JSON_UNESCAPED_UNICODE);
+        $sig = base64_encode(hash_hmac('sha256', $raw, (string) $this->integration->webhook_secret, true));
+
+        return $this->call(
+            'POST',
+            "/api/webhooks/woocommerce/{$this->owner->id}",
+            [],
+            [],
+            [],
+            [
+                'HTTP_X_WC_WEBHOOK_SIGNATURE' => $sig,
+                'HTTP_X_WC_WEBHOOK_TOPIC' => $topic,
+                'CONTENT_TYPE' => 'application/json',
+            ],
+            $raw
+        );
+    }
+
+    public function test_lifecycle_order_not_synced_409_then_wc_webhook_then_order_confirmed_processed(): void
+    {
+        $eventId = '55555555-5555-4555-8555-555555555555';
+        $anoofyBody = json_encode([
+            'schema_version' => 1,
+            'event_id' => $eventId,
+            'event_type' => AnoofyEventType::ORDER_CONFIRMED->value,
+            'occurred_at' => '2026-11-04T12:00:00Z',
+            'order_version' => 1,
+            'data' => [
+                'wc_order_id' => 8888,
+                'confirmed_at' => '2026-11-04T12:00:00Z',
+                'confirmed_by_name' => 'أحمد محمود',
+            ],
+        ]);
+
+        // 1. Initial attempt -> 409 and not recorded in inbox
+        $firstResp = $this->sendAnoofyRequest($anoofyBody);
+        $firstResp->assertStatus(409)
+            ->assertJson([
+                'success' => false,
+                'error_code' => 'ORDER_NOT_YET_SYNCED',
+            ]);
+        $this->assertSame(0, AnoofyInboxEvent::withoutGlobalScopes()->where('event_id', $eventId)->count());
+
+        // 2. Real WooCommerce webhook arrives and ingests the order
+        $wcPayload = [
+            'id' => 8888,
+            'status' => 'processing',
+            'date_created_gmt' => '2026-11-04T12:00:00',
+            'billing' => [
+                'first_name' => 'أحمد',
+                'last_name' => 'علي',
+                'phone' => '01011111111',
+                'address_1' => 'شارع التحرير',
+                'city' => 'القاهرة',
+                'state' => 'القاهرة',
+            ],
+            'shipping' => [
+                'first_name' => 'أحمد',
+                'last_name' => 'علي',
+                'phone' => '01011111111',
+                'address_1' => 'شارع التحرير',
+                'city' => 'القاهرة',
+                'state' => 'القاهرة',
+            ],
+            'line_items' => [],
+            'total' => '100.00',
+            'shipping_total' => '0.00',
+            'discount_total' => '0.00',
+        ];
+        $this->sendWooCommerceWebhook($wcPayload)->assertStatus(202);
+        $this->assertTrue(WcOrder::withoutGlobalScopes()->where('user_id', $this->owner->id)->where('wc_order_id', 8888)->exists());
+
+        // 3. Retry same Anoofy event -> 200 processed
+        $secondResp = $this->sendAnoofyRequest($anoofyBody);
+        $secondResp->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+                'data' => [
+                    'result' => AnoofyEventResult::PROCESSED->value,
+                ],
+            ]);
+        $this->assertSame(1, AnoofyInboxEvent::withoutGlobalScopes()->where('event_id', $eventId)->count());
+    }
+
+    public function test_order_confirmed_snapshot_mutates_only_allowed_columns(): void
+    {
+        $order = WcOrder::create([
+            'user_id' => $this->owner->id,
+            'wc_order_id' => 7001,
+            'order_date' => CarbonImmutable::parse('2026-11-04T10:00:00Z'),
+            'status' => WcOrderStatus::PENDING_CONFIRMATION,
+            'customer_name' => 'محمد سعيد',
+            'customer_phone' => '01000000000',
+            'customer_address' => 'عنوان قديم',
+            'city' => 'الجيزة',
+            'governorate' => 'الجيزة',
+            'shipping_cost' => 50,
+            'subtotal' => 200,
+            'discount_total' => 0,
+            'total' => 250,
+            'notes' => 'ملاحظات ثابتة',
+        ]);
+
+        $before = $order->fresh()->getAttributes();
+
+        $body = json_encode([
+            'schema_version' => 1,
+            'event_id' => '66666666-6666-4666-8666-666666666666',
+            'event_type' => AnoofyEventType::ORDER_CONFIRMED->value,
+            'occurred_at' => '2026-11-04T12:00:00Z',
+            'order_version' => 2,
+            'data' => [
+                'wc_order_id' => 7001,
+                'confirmed_at' => '2026-11-04T12:00:00Z',
+                'confirmed_by_name' => 'سارة',
+                'customer' => [
+                    'phone' => '01099999999',
+                    'address_1' => 'شارع جديد',
+                    'address_2' => 'شقة 1',
+                    'city' => 'الإسكندرية',
+                    'state' => 'الإسكندرية',
+                ],
+            ],
+        ]);
+
+        $this->sendAnoofyRequest($body)->assertStatus(200);
+
+        $after = $order->fresh()->getAttributes();
+
+        $allowedChanges = [
+            'call_confirmed_at',
+            'call_confirmed_by',
+            'anoofy_order_version',
+            'customer_phone',
+            'customer_address',
+            'city',
+            'governorate',
+            'updated_at',
+        ];
+
+        foreach ($before as $key => $val) {
+            if (!in_array($key, $allowedChanges, true)) {
+                $this->assertEquals($val, $after[$key], "Column {$key} should not have mutated.");
+            }
+        }
+
+        $this->assertSame('سارة', $after['call_confirmed_by']);
+        $this->assertSame(2, (int) $after['anoofy_order_version']);
+        $this->assertSame('01099999999', $after['customer_phone']);
+        $this->assertSame('شارع جديد - شقة 1', $after['customer_address']);
+        $this->assertSame('الإسكندرية', $after['city']);
+        $this->assertSame('الإسكندرية', $after['governorate']);
+    }
+
+    public function test_generating_new_connection_key_invalidates_old_key(): void
+    {
+        $oldKid = $this->kid;
+        $oldSecret = $this->secret;
+
+        // Generate new key as owner
+        $this->actingAs($this->owner)
+            ->postJson('/api/woocommerce/anoofy/connection-key')
+            ->assertStatus(200);
+
+        $body = json_encode(['schema_version' => 1]);
+        $ts = now()->timestamp;
+        $sigWithOldSecret = hash_hmac('sha256', "{$ts}.{$body}", $oldSecret);
+
+        $response = $this->sendAnoofyRequest(
+            $body,
+            timestamp: $ts,
+            kid: $oldKid,
+            customSignature: $sigWithOldSecret
+        );
+
+        $response->assertStatus(401);
+    }
+
+    public function test_order_confirmed_maps_merchant_catalog_under_simulates_http_context(): void
+    {
+        $product = Product::create([
+            'user_id' => $this->owner->id,
+            'name' => 'تيشيرت صيفي',
+            'wc_product_id' => 9911,
+            'price' => 120,
+            'cost_price' => 70,
+        ]);
+
+        $order = WcOrder::create([
+            'user_id' => $this->owner->id,
+            'wc_order_id' => 99110,
+            'status' => WcOrderStatus::PENDING_CONFIRMATION,
+            'subtotal' => 120,
+            'total' => 120,
+        ]);
+
+        $body = json_encode([
+            'schema_version' => 1,
+            'event_id' => '77777777-7777-4777-8777-777777777777',
+            'event_type' => AnoofyEventType::ORDER_CONFIRMED->value,
+            'occurred_at' => '2026-11-04T12:00:00Z',
+            'order_version' => 1,
+            'data' => [
+                'wc_order_id' => 99110,
+                'confirmed_at' => '2026-11-04T12:00:00Z',
+                'confirmed_by_name' => 'سامح',
+                'line_items' => [
+                    [
+                        'wc_product_id' => 9911,
+                        'quantity' => 1,
+                        'name' => 'تيشيرت صيفي',
+                        'price' => 120,
+                        'total' => 120,
+                    ],
+                ],
+            ],
+        ]);
+
+        $this->sendAnoofyRequest($body)->assertStatus(200);
+
+        $item = WcOrderItem::withoutGlobalScopes()->where('wc_order_id', $order->id)->first();
+        $this->assertNotNull($item);
+        $this->assertSame($product->id, $item->product_id, 'product_id must resolve to merchant catalog product id, not null');
     }
 }
