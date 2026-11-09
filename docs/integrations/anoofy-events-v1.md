@@ -42,6 +42,18 @@
 
 ## 3. الأحداث الواردة (Inbound: Plugin → EngazPRO)
 
+- **نقطة النهاية (Inbound Endpoint):** `POST /api/webhooks/anoofy/events` (اسم المسار: `anoofy.inbound`).
+- **عنوان API في مفتاح الربط (`connection_key`):** يُضمن الرابط الكامل لنقطة النهاية تلقائياً في حقل `api` داخل مفتاح الربط المشفر base64url:
+  ```json
+  {
+    "v": 1,
+    "api": "https://your-domain.com/api/webhooks/anoofy/events",
+    "kid": "01JCEXAMPLEKID1234567890AB",
+    "secret": "64_chars_hex_secret"
+  }
+  ```
+- **حماية المسار:** محمي بمحدد المعدل `throttle:anoofy_inbound` والتحقق الإلزامي من التوقيع الرقمي HMAC-SHA256 عبر الترويسات الأمنية.
+
 ### أ. حدث تأكيد الاتصال (`connection.verify`)
 يُرسل من الإضافة للتحقق من سلامة الربط والمفاتيح وحفظ رابط الاستدعاء `anoofy_callback_url`.
 

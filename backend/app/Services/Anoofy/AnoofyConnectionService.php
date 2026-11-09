@@ -28,7 +28,7 @@ class AnoofyConnectionService
 
         $payload = [
             'v' => 1,
-            'api' => url((string) config('pos.anoofy.inbound_path', 'api/integrations/anoofy/events')),
+            'api' => route('anoofy.inbound'),
             'kid' => $kid,
             'secret' => $secret,
         ];

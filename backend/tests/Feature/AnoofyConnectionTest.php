@@ -74,7 +74,7 @@ class AnoofyConnectionTest extends TestCase
 
         $this->assertIsArray($payload);
         $this->assertSame(1, $payload['v']);
-        $this->assertStringContainsString('api/integrations/anoofy/events', $payload['api']);
+        $this->assertSame(route('anoofy.inbound'), $payload['api']);
         $this->assertNotEmpty($payload['kid']);
         $this->assertNotEmpty($payload['secret']);
         $this->assertSame(64, strlen($payload['secret'])); // 32 bytes hex = 64 chars
@@ -129,5 +129,55 @@ class AnoofyConnectionTest extends TestCase
         $this->actingAs($this->manager)
             ->deleteJson('/api/woocommerce/anoofy/connection')
             ->assertStatus(403);
+    }
+
+    public function test_connection_key_api_url_is_routed_to_inbound_endpoint_and_verifies(): void
+    {
+        $response = $this->actingAs($this->owner)
+            ->postJson('/api/woocommerce/anoofy/connection-key')
+            ->assertOk();
+
+        $encodedKey = $response->json('data.connection_key');
+        $payload = json_decode(AnoofyConnectionService::base64UrlDecode($encodedKey), true);
+
+        $this->assertIsArray($payload);
+        $this->assertNotEmpty($payload['api']);
+
+        $inboundPath = parse_url($payload['api'], PHP_URL_PATH);
+        $this->assertNotEmpty($inboundPath);
+
+        $body = json_encode([
+            'schema_version' => 1,
+            'event_id' => '11111111-1111-4111-8111-111111111111',
+            'event_type' => \App\Enums\AnoofyEventType::CONNECTION_VERIFY->value,
+            'occurred_at' => '2026-11-04T11:00:00Z',
+            'order_version' => null,
+            'data' => [
+                'site_url' => 'https://mystore.example.com',
+                'callback_url' => 'https://mystore.example.com/wp-json/anoofy/v1/callback',
+                'plugin_version' => '1.0.0',
+            ],
+        ], JSON_THROW_ON_ERROR);
+
+        $ts = now()->timestamp;
+        $sig = hash_hmac('sha256', "{$ts}.{$body}", $payload['secret']);
+
+        $verifyResponse = $this->call(
+            'POST',
+            $inboundPath,
+            [],
+            [],
+            [],
+            [
+                'HTTP_X_ANOOFY_KEY_ID' => $payload['kid'],
+                'HTTP_X_ANOOFY_TIMESTAMP' => (string) $ts,
+                'HTTP_X_ANOOFY_SIGNATURE' => $sig,
+                'CONTENT_TYPE' => 'application/json',
+            ],
+            $body
+        );
+
+        $verifyResponse->assertStatus(200)
+            ->assertJsonPath('success', true);
     }
 }
