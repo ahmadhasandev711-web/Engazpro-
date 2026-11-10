@@ -41,6 +41,61 @@ interface NavItemDef {
   icon: React.ElementType;
 }
 
+export interface SidebarNavGroup {
+  id: string;
+  title: string;
+  items: NavItemDef[];
+  isBottom?: boolean;
+}
+
+interface SidebarNavProps {
+  groups: SidebarNavGroup[];
+  onNavigate?: () => void;
+}
+
+export const SidebarNav: React.FC<SidebarNavProps> = ({ groups, onNavigate }) => {
+  return (
+    <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-4">
+      {groups
+        .filter((group) => group.items.length > 0)
+        .map((group) => (
+          <div
+            key={group.id}
+            className={group.isBottom ? 'pt-2 border-t border-line' : undefined}
+          >
+            <p className="text-[11px] font-bold text-muted/80 px-3 pb-1">
+              {group.title}
+            </p>
+            <div className="space-y-0.5">
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    end={item.to === '/'}
+                    onClick={onNavigate}
+                    className={({ isActive }) =>
+                      cn(
+                        'flex items-center gap-3 px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition-colors select-none',
+                        isActive
+                          ? 'bg-brand-soft text-brand-ink font-bold shadow-2xs'
+                          : 'text-muted hover:bg-surface-2 hover:text-ink'
+                      )
+                    }
+                  >
+                    <Icon className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                    <span className="truncate">{item.label}</span>
+                  </NavLink>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+    </nav>
+  );
+};
+
 export const Layout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -134,32 +189,14 @@ export const Layout: React.FC = () => {
     ? 'مندوب مبيعات'
     : 'كاشير POS';
 
-  const renderNavLinks = (items: NavItemDef[], onClickItem?: () => void) => (
-    <div className="space-y-0.5">
-      {items.map((item) => {
-        const Icon = item.icon;
-        return (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.to === '/'}
-            onClick={onClickItem}
-            className={({ isActive }) =>
-              cn(
-                'flex items-center gap-3 px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition-colors select-none',
-                isActive
-                  ? 'bg-brand-soft text-brand-ink font-bold shadow-2xs'
-                  : 'text-muted hover:bg-surface-2 hover:text-ink'
-              )
-            }
-          >
-            <Icon className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
-            <span className="truncate">{item.label}</span>
-          </NavLink>
-        );
-      })}
-    </div>
-  );
+  const navGroups: SidebarNavGroup[] = [
+    { id: 'sales', title: 'البيع والتشغيل', items: salesGroup },
+    { id: 'inventory', title: 'المخزون والفروع', items: inventoryGroup },
+    { id: 'accounts', title: 'الحسابات والمالية', items: accountsGroup },
+    ...(bottomGroup.length > 0
+      ? [{ id: 'bottom', title: 'الإعدادات والنظام', items: bottomGroup, isBottom: true }]
+      : []),
+  ];
 
   return (
     <div className="flex flex-col h-screen bg-canvas font-sans text-ink antialiased overflow-hidden" dir="rtl">
@@ -185,41 +222,7 @@ export const Layout: React.FC = () => {
           </div>
 
           {/* Navigation Groups */}
-          <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-4">
-            {/* 1. قسم البيع */}
-            <div>
-              <p className="text-[11px] font-bold text-muted/80 uppercase px-3 pb-1 tracking-wider">
-                البيع والتشغيل
-              </p>
-              {renderNavLinks(salesGroup)}
-            </div>
-
-            {/* 2. قسم المخزون */}
-            <div>
-              <p className="text-[11px] font-bold text-muted/80 uppercase px-3 pb-1 tracking-wider">
-                المخزون والفروع
-              </p>
-              {renderNavLinks(inventoryGroup)}
-            </div>
-
-            {/* 3. قسم الحسابات والمالية */}
-            <div>
-              <p className="text-[11px] font-bold text-muted/80 uppercase px-3 pb-1 tracking-wider">
-                الحسابات والمالية
-              </p>
-              {renderNavLinks(accountsGroup)}
-            </div>
-
-            {/* 4. الإعدادات والنظام */}
-            {bottomGroup.length > 0 && (
-              <div className="pt-2 border-t border-line">
-                <p className="text-[11px] font-bold text-muted/80 uppercase px-3 pb-1 tracking-wider">
-                  الإعدادات والنظام
-                </p>
-                {renderNavLinks(bottomGroup)}
-              </div>
-            )}
-          </nav>
+          <SidebarNav groups={navGroups} />
 
           {/* Desktop Sidebar Footer */}
           <div className="p-3 border-t border-line bg-surface-2/40 space-y-2 flex-shrink-0">
@@ -297,37 +300,7 @@ export const Layout: React.FC = () => {
               </div>
 
               {/* Drawer Navigation Links */}
-              <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-4">
-                <div>
-                  <p className="text-[11px] font-bold text-muted/80 uppercase px-3 pb-1 tracking-wider">
-                    البيع والتشغيل
-                  </p>
-                  {renderNavLinks(salesGroup, () => setIsMobileDrawerOpen(false))}
-                </div>
-
-                <div>
-                  <p className="text-[11px] font-bold text-muted/80 uppercase px-3 pb-1 tracking-wider">
-                    المخزون والفروع
-                  </p>
-                  {renderNavLinks(inventoryGroup, () => setIsMobileDrawerOpen(false))}
-                </div>
-
-                <div>
-                  <p className="text-[11px] font-bold text-muted/80 uppercase px-3 pb-1 tracking-wider">
-                    الحسابات والمالية
-                  </p>
-                  {renderNavLinks(accountsGroup, () => setIsMobileDrawerOpen(false))}
-                </div>
-
-                {bottomGroup.length > 0 && (
-                  <div className="pt-2 border-t border-line">
-                    <p className="text-[11px] font-bold text-muted/80 uppercase px-3 pb-1 tracking-wider">
-                      الإعدادات والنظام
-                    </p>
-                    {renderNavLinks(bottomGroup, () => setIsMobileDrawerOpen(false))}
-                  </div>
-                )}
-              </nav>
+              <SidebarNav groups={navGroups} onNavigate={() => setIsMobileDrawerOpen(false)} />
 
               {/* Drawer Footer */}
               <div className="p-4 border-t border-line bg-surface-2/50 space-y-3 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] flex-shrink-0">
