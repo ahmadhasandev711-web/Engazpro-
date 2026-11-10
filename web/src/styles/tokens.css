@@ -1,0 +1,87 @@
+:root {
+  /* Surface & Base */
+  --c-canvas: 245 244 249;
+  --c-panel: 255 255 255;
+  --c-surface-2: 238 235 246;
+
+  /* Borders & Dividers */
+  --c-line: 228 225 238;
+  --c-line-2: 201 196 217;
+
+  /* Typography */
+  --c-ink: 23 20 31;
+  --c-muted: 94 89 112;
+
+  /* Brand (Purple #5B3CC4) */
+  --c-brand: 91 60 196;
+  --c-brand-ink: 74 47 168;
+  --c-brand-soft: 239 234 251;
+  --c-on-brand: 255 255 255;
+
+  /* Feedback Tones */
+  --c-ok: 30 122 70;
+  --c-ok-soft: 229 243 234;
+  --c-warn: 138 82 0;
+  --c-warn-soft: 251 240 220;
+  --c-bad: 180 35 24;
+  --c-bad-soft: 251 233 231;
+  --c-info: 29 95 184;
+  --c-info-soft: 230 240 251;
+
+  /* Primary Scale (50..950 mapped around #5B3CC4) */
+  --c-primary-50: 245 243 255;
+  --c-primary-100: 237 233 254;
+  --c-primary-200: 221 214 254;
+  --c-primary-300: 196 181 253;
+  --c-primary-400: 167 139 250;
+  --c-primary-500: 91 60 196;
+  --c-primary-600: 91 60 196;
+  --c-primary-700: 74 47 168;
+  --c-primary-800: 59 34 138;
+  --c-primary-900: 46 24 111;
+  --c-primary-950: 26 11 70;
+}
+
+.dark {
+  /* Surface & Base */
+  --c-canvas: 14 12 20;
+  --c-panel: 21 18 29;
+  --c-surface-2: 38 33 51;
+
+  /* Borders & Dividers */
+  --c-line: 42 37 54;
+  --c-line-2: 61 55 80;
+
+  /* Typography */
+  --c-ink: 243 241 248;
+  --c-muted: 169 163 184;
+
+  /* Brand (Purple #7C5CE0) */
+  --c-brand: 124 92 224;
+  --c-brand-ink: 196 181 253;
+  --c-brand-soft: 40 31 64;
+  --c-on-brand: 255 255 255;
+
+  /* Feedback Tones */
+  --c-ok: 61 187 114;
+  --c-ok-soft: 27 42 41;
+  --c-warn: 229 163 58;
+  --c-warn-soft: 50 38 33;
+  --c-bad: 240 106 91;
+  --c-bad-soft: 52 30 38;
+  --c-info: 106 168 240;
+  --c-info-soft: 33 39 59;
+
+  /* Primary Scale in Dark Mode */
+  --c-primary-50: 30 25 45;
+  --c-primary-100: 40 31 64;
+  --c-primary-200: 55 42 90;
+  --c-primary-300: 74 54 125;
+  --c-primary-400: 98 72 165;
+  --c-primary-500: 124 92 224;
+  --c-primary-600: 124 92 224;
+  --c-primary-700: 167 139 250;
+  --c-primary-800: 196 181 253;
+  --c-primary-900: 221 214 254;
+  --c-primary-950: 245 243 255;
+}
