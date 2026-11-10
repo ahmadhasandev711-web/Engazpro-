@@ -24,17 +24,17 @@ const PREFIXES = [
 ];
 
 const RAW_PALETTE_REGEX = new RegExp(
-  `(?:^|[\\s"'` + '`' + `])(?:[a-z0-9_-]+:)*(?:${PREFIXES.join('|')})-(?:${RAW_COLOR_NAMES.join('|')})-(?:${COLOR_SHADES.join('|')})(?:\\/[0-9]+)?(?=[\\s"'` + '`' + `]|$|[!?,;:])`,
+  `(?:^|[\\s"'` + '`' + `])!?(?:[a-z0-9_-]+:)*!?(?:${PREFIXES.join('|')})-(?:${RAW_COLOR_NAMES.join('|')})-(?:${COLOR_SHADES.join('|')})(?:\\/[0-9]+)?(?=[\\s"'` + '`' + `]|$|[?,;:])`,
   'g'
 );
 
 const RAW_WHITE_BLACK_REGEX = new RegExp(
-  `(?:^|[\\s"'` + '`' + `])(?:[a-z0-9_-]+:)*(?:${PREFIXES.join('|')})-(?:white|black)(?:\\/[0-9]+)?(?=[\\s"'` + '`' + `]|$|[!?,;:])`,
+  `(?:^|[\\s"'` + '`' + `])!?(?:[a-z0-9_-]+:)*!?(?:${PREFIXES.join('|')})-(?:white|black)(?:\\/[0-9]+)?(?=[\\s"'` + '`' + `]|$|[?,;:])`,
   'g'
 );
 
 const ARBITRARY_COLOR_REGEX = new RegExp(
-  `(?:^|[\\s"'` + '`' + `])(?:[a-z0-9_-]+:)*(?:${PREFIXES.join('|')})-\\[(?:#[0-9a-fA-F]{3,8}|rgba?\\([^)]+\\)|hsla?\\([^)]+\\))\\]`,
+  `(?:^|[\\s"'` + '`' + `])!?(?:[a-z0-9_-]+:)*!?(?:${PREFIXES.join('|')})-\\[(?:#[0-9a-fA-F]{3,8}|rgba?\\([^)]+\\)|hsla?\\([^)]+\\))\\](?=[\\s"'` + '`' + `]|$|[?,;:])`,
   'g'
 );
 
