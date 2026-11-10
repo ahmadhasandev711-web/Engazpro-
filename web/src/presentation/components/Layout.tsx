@@ -436,13 +436,15 @@ export const Layout: React.FC = () => {
               <button
                 type="button"
                 onClick={toggleTheme}
+                aria-label={resolvedTheme === 'dark' ? 'التبديل إلى الوضع الفاتح' : 'التبديل إلى الوضع الداكن'}
+                aria-pressed={resolvedTheme === 'dark'}
                 title={resolvedTheme === 'dark' ? 'التبديل إلى الوضع الفاتح' : 'التبديل إلى الوضع الداكن'}
-                className="p-2 rounded-xl text-muted hover:text-ink hover:bg-surface-2 transition-colors focus:outline-none focus:ring-2 focus:ring-brand cursor-pointer"
+                className="min-w-[44px] min-h-[44px] w-11 h-11 flex items-center justify-center rounded-xl text-muted hover:text-ink hover:bg-surface-2 transition-colors focus:outline-none focus:ring-2 focus:ring-brand cursor-pointer"
               >
                 {resolvedTheme === 'dark' ? (
-                  <Sun className="w-4 h-4 text-warn" />
+                  <Sun className="w-5 h-5 text-warn" />
                 ) : (
-                  <Moon className="w-4 h-4 text-muted" />
+                  <Moon className="w-5 h-5 text-muted" />
                 )}
               </button>
 
