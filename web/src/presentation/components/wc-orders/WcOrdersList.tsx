@@ -190,7 +190,7 @@ export const WcOrdersList: React.FC<{ vm: WcOrdersViewModel }> = ({ vm }) => {
                         {item.attributes && Array.isArray(item.attributes) && item.attributes.length > 0 && (
                           <div className="flex items-center gap-1 flex-wrap mt-0.5">
                             {item.attributes.map((attr: any, aIdx: number) => (
-                              <span key={aIdx} className="text-2xs bg-white border border-slate-200 px-1.5 py-0.2 rounded text-slate-600 font-bold">
+                              <span key={aIdx} className="text-2xs bg-white border border-slate-200 px-1.5 py-0.5 rounded text-slate-600 font-bold">
                                 {attr.key}: {attr.value}
                               </span>
                             ))}

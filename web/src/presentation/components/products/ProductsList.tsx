@@ -74,7 +74,7 @@ export const ProductsList: React.FC<{ vm: ProductsViewModel }> = ({ vm }) => {
                               {p.variants.slice(0, 4).map((v: any, vi: number) => (
                                 <span
                                   key={vi}
-                                  className="text-2xs font-mono px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 border border-slate-200/60"
+                                  className="text-2xs font-mono px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200/60"
                                 >
                                   {v.size || v.color || v.name}
                                 </span>
