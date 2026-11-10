@@ -87,10 +87,6 @@
     "raw": 53,
     "hex": 22
   },
-  "src/presentation/components/Layout.tsx": {
-    "raw": 90,
-    "hex": 0
-  },
   "src/presentation/components/mobile/BranchMobileCard.tsx": {
     "raw": 54,
     "hex": 0
@@ -153,10 +149,6 @@
   },
   "src/presentation/components/mobile/WcOrderMobileCard.tsx": {
     "raw": 90,
-    "hex": 0
-  },
-  "src/presentation/components/MobileBottomNav.tsx": {
-    "raw": 15,
     "hex": 0
   },
   "src/presentation/components/payments/PaymentReceiptModal.tsx": {
