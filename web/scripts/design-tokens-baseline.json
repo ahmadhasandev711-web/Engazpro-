@@ -3,10 +3,6 @@
     "raw": 2,
     "hex": 0
   },
-  "src/index.css": {
-    "raw": 2,
-    "hex": 32
-  },
   "src/presentation/components/admin/AdminKPICards.tsx": {
     "raw": 41,
     "hex": 0

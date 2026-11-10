@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import '../../styles/landing.css';
 import { Link } from 'react-router-dom';
 import {
   Wallet,

@@ -52,7 +52,7 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['Tajawal', 'system-ui', 'sans-serif'],
+        sans: ['IBM Plex Sans Arabic', 'system-ui', 'sans-serif'],
       },
       fontSize: {
         '2xs': '11px',
