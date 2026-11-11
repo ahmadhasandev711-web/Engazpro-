@@ -80,33 +80,33 @@ export const PosCustomerSearch: React.FC<PosCustomerSearchProps> = ({
         <button
           type="button"
           onClick={() => setIsOpen((prev) => !prev)}
-          className={`flex-1 flex items-center justify-between px-3 py-2 border rounded-xl text-xs font-bold transition-all text-right ${
+          className={`flex-1 min-h-[44px] flex items-center justify-between px-3 py-2 border rounded-xl text-xs font-bold transition-all text-right ${
             selectedCustomer
-              ? 'bg-primary-50/80 border-primary-300 text-primary-950 hover:bg-primary-100/80 shadow-xs'
-              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+              ? 'bg-brand-soft border-brand/30 text-brand-ink hover:bg-brand-soft/80 shadow-xs'
+              : 'bg-panel border-line text-ink hover:bg-surface-2'
           }`}
         >
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <div
-              className={`p-1 rounded-lg ${
-                selectedCustomer ? 'bg-primary-200 text-primary-800' : 'bg-slate-100 text-slate-500'
+              className={`p-1.5 rounded-lg ${
+                selectedCustomer ? 'bg-brand text-on-brand' : 'bg-surface-2 text-muted'
               }`}
             >
               <User className="w-3.5 h-3.5" />
             </div>
             <div className="truncate flex-1">
-              <span className="block truncate">
+              <span className="block truncate font-bold">
                 {selectedCustomer ? selectedCustomer.name : 'عميل نقدي (بدون حساب)'}
               </span>
               {selectedCustomer?.phone && (
-                <span className="text-2xs text-primary-700 font-mono block truncate">
+                <span className="text-2xs text-muted block truncate font-medium">
                   {selectedCustomer.phone}
                 </span>
               )}
             </div>
           </div>
 
-          <div className="flex items-center gap-1 mr-1.5 text-slate-400">
+          <div className="flex items-center gap-1 mr-1.5 text-muted">
             {selectedCustomer && (
               <button
                 type="button"
@@ -114,10 +114,10 @@ export const PosCustomerSearch: React.FC<PosCustomerSearchProps> = ({
                   e.stopPropagation();
                   onSelectCustomer(null);
                 }}
-                className="p-1 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors"
+                className="p-1 hover:text-bad hover:bg-bad-soft rounded-md transition-colors"
                 title="إلغاء التحديد والرجوع لعميل نقدي"
               >
-                <X className="w-3.5 h-3.5 text-rose-500" />
+                <X className="w-3.5 h-3.5 text-bad" />
               </button>
             )}
             <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
@@ -129,7 +129,7 @@ export const PosCustomerSearch: React.FC<PosCustomerSearchProps> = ({
           type="button"
           onClick={() => onOpenAddModal()}
           title="إضافة عميل جديد سريعاً"
-          className="p-2 bg-slate-100 hover:bg-primary-50 text-slate-700 hover:text-primary-700 rounded-xl text-xs font-bold transition-colors flex items-center justify-center flex-shrink-0 border border-slate-200/80 shadow-xs"
+          className="min-h-[44px] min-w-[44px] p-2 bg-surface-2 hover:bg-brand-soft text-ink hover:text-brand-ink rounded-xl text-xs font-bold transition-colors flex items-center justify-center shrink-0 border border-line shadow-xs"
         >
           <UserPlus className="w-4 h-4" />
         </button>
@@ -137,22 +137,22 @@ export const PosCustomerSearch: React.FC<PosCustomerSearchProps> = ({
 
       {/* Search Popover Dropdown */}
       {isOpen && (
-        <div className="absolute top-full right-0 left-0 mt-1.5 z-50 bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-100 flex flex-col max-h-80">
+        <div className="absolute top-full right-0 left-0 mt-1.5 z-50 bg-panel border border-line rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-100 flex flex-col max-h-80">
           {/* Search Input Box */}
-          <div className="p-2 border-b border-slate-100 bg-slate-50/70 relative">
-            <Search className="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          <div className="p-2 border-b border-line bg-surface-1/70 relative">
+            <Search className="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
             <input
               ref={searchInputRef}
               type="text"
               placeholder="ابحث بالاسم أو رقم الهاتف..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pr-8 pl-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full pr-8 pl-3 py-1.5 bg-panel border border-line rounded-xl text-xs font-bold text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-brand"
             />
           </div>
 
           {/* Results List */}
-          <div className="overflow-y-auto flex-1 divide-y divide-slate-50 p-1">
+          <div className="overflow-y-auto flex-1 divide-y divide-line/40 p-1">
             {/* Cash Option (Always Available) */}
             <button
               type="button"
@@ -161,19 +161,19 @@ export const PosCustomerSearch: React.FC<PosCustomerSearchProps> = ({
                 setIsOpen(false);
               }}
               className={`w-full text-right p-2 rounded-xl text-xs font-bold flex items-center justify-between transition-colors ${
-                selectedCustomer === null ? 'bg-primary-50 text-primary-900 font-black' : 'hover:bg-slate-50 text-slate-700'
+                selectedCustomer === null ? 'bg-brand-soft text-brand-ink font-black' : 'hover:bg-surface-2 text-ink'
               }`}
             >
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                <div className="w-2 h-2 rounded-full bg-ok" />
                 <span>عميل نقدي (بدون حساب)</span>
               </div>
-              {selectedCustomer === null && <Check className="w-3.5 h-3.5 text-primary-600" />}
+              {selectedCustomer === null && <Check className="w-3.5 h-3.5 text-brand" />}
             </button>
 
             {/* Loading Indicator */}
             {isLoading && (
-              <div className="py-4 text-center text-slate-400 text-xs font-medium">
+              <div className="py-4 text-center text-muted text-xs font-medium">
                 جاري البحث...
               </div>
             )}
@@ -197,12 +197,12 @@ export const PosCustomerSearch: React.FC<PosCustomerSearchProps> = ({
                       setIsOpen(false);
                     }}
                     className={`w-full text-right p-2 rounded-xl text-xs flex items-center justify-between transition-colors ${
-                      isSelected ? 'bg-primary-50 text-primary-900 font-black' : 'hover:bg-slate-50 text-slate-800'
+                      isSelected ? 'bg-brand-soft text-brand-ink font-black' : 'hover:bg-surface-2 text-ink'
                     }`}
                   >
                     <div className="min-w-0 flex-1 pl-2">
                       <div className="font-bold truncate">{c.name}</div>
-                      <div className="flex items-center gap-2 text-2xs text-slate-400 font-mono mt-0.5">
+                      <div className="flex items-center gap-2 text-2xs text-muted mt-0.5">
                         {c.phone && (
                           <span className="flex items-center gap-0.5">
                             <Phone className="w-2.5 h-2.5" />
@@ -210,14 +210,14 @@ export const PosCustomerSearch: React.FC<PosCustomerSearchProps> = ({
                           </span>
                         )}
                         {balance !== 0 && (
-                          <span className={balance > 0 ? 'text-amber-600 font-bold' : 'text-emerald-600 font-bold'}>
+                          <span className={balance > 0 ? 'text-warn font-bold' : 'text-ok font-bold'}>
                             {balance > 0 ? `(عليه: ${formatCurrency(balance)})` : `(له: ${formatCurrency(Math.abs(balance))})`}
                           </span>
                         )}
                       </div>
                     </div>
 
-                    {isSelected && <Check className="w-3.5 h-3.5 text-primary-600 flex-shrink-0" />}
+                    {isSelected && <Check className="w-3.5 h-3.5 text-brand shrink-0" />}
                   </button>
                 );
               })
@@ -226,14 +226,14 @@ export const PosCustomerSearch: React.FC<PosCustomerSearchProps> = ({
             {/* Empty State / Quick Add Action */}
             {!isLoading && customers.length === 0 && searchTerm.trim() && (
               <div className="p-3 text-center space-y-2">
-                <p className="text-xs text-slate-400">لا يوجد عميل مطابق للبحث</p>
+                <p className="text-xs text-muted">لا يوجد عميل مطابق للبحث</p>
                 <button
                   type="button"
                   onClick={() => {
                     onOpenAddModal(searchTerm.trim());
                     setIsOpen(false);
                   }}
-                  className="w-full py-2 px-3 bg-primary-50 hover:bg-primary-100 text-primary-800 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-colors border border-primary-200"
+                  className="w-full py-2 px-3 bg-brand-soft hover:bg-brand-soft/80 text-brand-ink rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-colors border border-brand/30"
                 >
                   <UserPlus className="w-3.5 h-3.5" />
                   <span>إضافة "{searchTerm.trim()}" كعميل جديد</span>

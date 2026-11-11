@@ -15,6 +15,9 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../../../data/api/client';
 import { PosCartItem } from '../../../hooks/useHoldInvoices';
 import { PosCustomerSearch } from './PosCustomerSearch';
+import { Button } from '../ui/Button';
+import { Badge } from '../ui/Badge';
+import { EmptyState } from '../ui/EmptyState';
 
 export interface CustomerParty {
   id: number;
@@ -97,17 +100,17 @@ export const PosCartTicket: React.FC<PosCartTicketProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+    <div className="flex flex-col h-full bg-panel rounded-3xl border border-line shadow-xs overflow-hidden">
       {/* Ticket Header & Customer Selector */}
-      <div className="p-4 border-b border-slate-100 bg-slate-50/70 space-y-2.5">
+      <div className="p-4 border-b border-line bg-surface-1/50 space-y-2.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="p-2 bg-emerald-600 text-white rounded-xl shadow-xs">
+            <div className="p-2 bg-brand text-on-brand rounded-xl shadow-xs">
               <ShoppingBag className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-black text-slate-900">سلة الفاتورة الحالية</h3>
-              <span className="text-2xs text-slate-400 font-medium">
+              <h3 className="text-sm font-black text-ink">سلة الفاتورة الحالية</h3>
+              <span className="text-2xs text-muted font-medium">
                 {totalItemsCount} قطعة ({items.length} صنف)
               </span>
             </div>
@@ -115,12 +118,13 @@ export const PosCartTicket: React.FC<PosCartTicketProps> = ({
 
           {items.length > 0 && (
             <button
+              type="button"
               onClick={onClearCart}
               title="إفراغ السلة"
-              className="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-colors text-xs flex items-center gap-1"
+              className="text-muted hover:text-bad p-2 min-h-[44px] min-w-[44px] rounded-xl hover:bg-bad-soft transition-colors text-xs flex items-center justify-center gap-1"
             >
-              <Trash2 className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">مسح السلة</span>
+              <Trash2 className="w-4 h-4" />
+              <span className="hidden sm:inline font-bold">مسح السلة</span>
             </button>
           )}
         </div>
@@ -141,60 +145,60 @@ export const PosCartTicket: React.FC<PosCartTicketProps> = ({
       {/* Cart Items List */}
       <div className="flex-1 overflow-y-auto p-3 space-y-2">
         {items.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-center p-6">
-            <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mb-3">
-              <ShoppingBag className="w-6 h-6" />
-            </div>
-            <p className="text-xs font-bold text-slate-700">السلة فارغة حالياً</p>
-            <p className="text-2xs text-slate-400 mt-1 max-w-[200px]">
-              انقر على أي منتج من الكتالوج أو استخدم قارئ الباركود للإضافة الفورية.
-            </p>
+          <div className="h-full flex flex-col items-center justify-center p-6">
+            <EmptyState
+              icon={<ShoppingBag className="w-6 h-6 text-muted" />}
+              title="السلة فارغة حالياً"
+              description="انقر على أي منتج من الكتالوج أو استخدم قارئ الباركود للإضافة الفورية."
+              className="bg-transparent border-0 py-8"
+            />
           </div>
         ) : (
           items.map((item, index) => (
             <div
               key={`${item.product_id}_${item.product_variant_id || 0}_${item.product_batch_id || 0}_${item.unit_name || ''}_${index}`}
-              className="p-3 bg-slate-50/70 border border-slate-200/80 rounded-2xl flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 hover:bg-slate-50 transition-colors"
+              className="p-3 bg-surface-1/60 border border-line rounded-2xl flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 hover:bg-surface-2 transition-colors"
             >
               {/* Product Info & Badges */}
               <div className="basis-full sm:basis-auto flex-1 min-w-0">
-                <h4 className="text-xs font-black text-slate-800 break-words leading-tight">
+                <h4 className="text-xs font-black text-ink break-words leading-tight">
                   {item.product_name}
                 </h4>
 
                 {/* Variant & Unit Badges */}
                 <div className="flex flex-wrap items-center gap-1.5 mt-1">
                   {item.variant_name && (
-                    <span className="text-2xs px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 font-bold border border-indigo-100">
+                    <Badge tone="info" className="text-2xs px-2 py-0.5 rounded-md font-bold">
                       {item.variant_name}
-                    </span>
+                    </Badge>
                   )}
                   {item.unit_name && (
-                    <span className="text-2xs px-2 py-0.5 rounded-md bg-sky-50 text-sky-700 font-bold border border-sky-100">
+                    <Badge tone="neutral" className="text-2xs px-2 py-0.5 rounded-md font-bold">
                       {item.unit_name}
-                    </span>
+                    </Badge>
                   )}
                   {item.batch_number && (
-                    <span className="text-2xs px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-bold border border-emerald-100">
+                    <Badge tone="ok" className="text-2xs px-2 py-0.5 rounded-md font-bold">
                       تشغيلة: {item.batch_number}
-                    </span>
+                    </Badge>
                   )}
-                  <span className="text-2xs text-slate-500 font-mono">
+                  <span className="text-2xs text-muted font-medium">
                     {formatCurrency(item.unit_price)} × {item.quantity}
                   </span>
                 </div>
               </div>
 
               {/* Stepper, Line Total & Remove Container (Row 2 on Mobile, Inline on Desktop) */}
-              <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto pt-1 sm:pt-0 border-t border-slate-200/40 sm:border-0">
-                {/* Quantity Stepper Buttons */}
-                <div className="flex items-center gap-1 bg-white p-1 border border-slate-200 rounded-xl">
+              <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto pt-1 sm:pt-0 border-t border-line/40 sm:border-0">
+                {/* Quantity Stepper Buttons with Accessible Touch Targets (>= 44px) */}
+                <div className="flex items-center gap-1 bg-panel p-1 border border-line rounded-xl">
                   <button
                     type="button"
                     onClick={() => onUpdateQuantity(index, item.quantity - 1)}
-                    className="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition-colors"
+                    aria-label="تقليل الكمية"
+                    className="w-11 h-11 sm:w-9 sm:h-9 rounded-lg bg-surface-2 hover:bg-line text-ink flex items-center justify-center transition-colors"
                   >
-                    <Minus className="w-3 h-3" />
+                    <Minus className="w-4 h-4" />
                   </button>
 
                   <input
@@ -206,29 +210,31 @@ export const PosCartTicket: React.FC<PosCartTicketProps> = ({
                       const val = Number(e.target.value);
                       if (val > 0) onUpdateQuantity(index, val);
                     }}
-                    className="w-11 sm:w-10 min-w-[2.75rem] text-center font-mono font-black text-xs text-slate-900 border-none focus:outline-none p-0"
+                    className="w-12 sm:w-10 min-w-[2.75rem] text-center font-black text-xs text-ink bg-transparent border-none focus:outline-none p-0"
                   />
 
                   <button
                     type="button"
                     onClick={() => onUpdateQuantity(index, item.quantity + 1)}
-                    className="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition-colors"
+                    aria-label="زيادة الكمية"
+                    className="w-11 h-11 sm:w-9 sm:h-9 rounded-lg bg-surface-2 hover:bg-line text-ink flex items-center justify-center transition-colors"
                   >
-                    <Plus className="w-3 h-3" />
+                    <Plus className="w-4 h-4" />
                   </button>
                 </div>
 
-                {/* Line Total & Remove */}
+                {/* Line Total & Remove with Accessible Touch Target (>= 44px) */}
                 <div className="flex items-center gap-2 text-right">
-                  <span className="font-mono font-black text-xs text-emerald-700 min-w-[60px]">
+                  <span className="font-black text-xs text-brand min-w-[60px]">
                     {formatCurrency(item.total)}
                   </span>
                   <button
                     type="button"
                     onClick={() => onRemoveItem(index)}
-                    className="text-slate-300 hover:text-rose-600 p-1 rounded-lg transition-colors"
+                    aria-label="حذف الصنف"
+                    className="text-muted hover:text-bad p-2.5 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl hover:bg-bad-soft transition-colors"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
               </div>
@@ -238,24 +244,24 @@ export const PosCartTicket: React.FC<PosCartTicketProps> = ({
       </div>
 
       {/* Ticket Footer (Totals & Actions) */}
-      <div className="p-4 border-t border-slate-200 bg-slate-50/70 space-y-3">
+      <div className="p-4 border-t border-line bg-surface-1/50 space-y-3">
         {/* Subtotal and Discount Row */}
         <div className="space-y-1.5 text-xs">
-          <div className="flex justify-between text-slate-500">
+          <div className="flex justify-between text-muted">
             <span>المجموع الفرعي:</span>
-            <span className="font-mono font-bold text-slate-700">{formatCurrency(subtotal)}</span>
+            <span className="font-bold text-ink">{formatCurrency(subtotal)}</span>
           </div>
 
           <div className="flex items-center justify-between">
-            <span className="text-slate-500 flex items-center gap-1">
-              <Percent className="w-3.5 h-3.5 text-slate-400" />
+            <span className="text-muted flex items-center gap-1">
+              <Percent className="w-3.5 h-3.5 text-muted" />
               <span>خصم الفاتورة:</span>
             </span>
             <div className="flex items-center gap-1 w-32 sm:w-28">
               <input
                 type="number"
                 min="0"
-                step={discountMode === 'PERCENT' ? '1' : '1'}
+                step="1"
                 value={
                   discountMode === 'PERCENT'
                     ? subtotal > 0 && discount > 0
@@ -272,13 +278,13 @@ export const PosCartTicket: React.FC<PosCartTicketProps> = ({
                   }
                 }}
                 placeholder="0.00"
-                className="w-full text-left font-mono font-bold text-xs px-2 py-1 bg-white border border-slate-200 rounded-lg text-rose-600 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                className="w-full text-left font-bold text-xs px-2 py-1 bg-panel border border-line rounded-lg text-bad focus:outline-none focus:ring-1 focus:ring-brand"
               />
               <button
                 type="button"
                 onClick={() => setDiscountMode((m) => (m === 'AMOUNT' ? 'PERCENT' : 'AMOUNT'))}
                 title={discountMode === 'AMOUNT' ? 'التبديل إلى خصم بالنسبة المئوية' : 'التبديل إلى خصم بمبلغ ثابت'}
-                className="w-8 shrink-0 text-2xs font-black rounded-lg border border-slate-200 bg-white text-rose-600 hover:bg-rose-50 active:scale-95 transition-all py-1"
+                className="w-8 shrink-0 text-2xs font-black rounded-lg border border-line bg-panel text-bad hover:bg-bad-soft active:scale-95 transition-all py-1"
               >
                 {discountMode === 'AMOUNT' ? 'ج.م' : '%'}
               </button>
@@ -286,9 +292,9 @@ export const PosCartTicket: React.FC<PosCartTicketProps> = ({
           </div>
 
           {/* Courier & Shipping Section */}
-          <div className="pt-1.5 space-y-2 border-t border-slate-200/60">
+          <div className="pt-1.5 space-y-2 border-t border-line/40">
             <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 cursor-pointer text-slate-700 select-none">
+              <label className="flex items-center gap-2 cursor-pointer text-ink select-none">
                 <input
                   type="checkbox"
                   checked={isShippingSelected || Boolean(shippingCost > 0 || courierPartyId)}
@@ -300,10 +306,10 @@ export const PosCartTicket: React.FC<PosCartTicketProps> = ({
                       onUpdateCourierPartyId?.(null);
                     }
                   }}
-                  className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                  className="w-4 h-4 rounded border-line text-brand focus:ring-brand cursor-pointer"
                 />
                 <span className="font-bold text-xs flex items-center gap-1">
-                  <Truck className="w-3.5 h-3.5 text-slate-400" />
+                  <Truck className="w-3.5 h-3.5 text-muted" />
                   <span>شحن عبر شركة شحن</span>
                 </span>
               </label>
@@ -317,20 +323,20 @@ export const PosCartTicket: React.FC<PosCartTicketProps> = ({
                     value={shippingCost || ''}
                     onChange={(e) => onUpdateShippingCost?.(Number(e.target.value) || 0)}
                     placeholder="0.00"
-                    className="w-full text-left font-mono font-bold text-xs px-2 py-1 bg-white border border-slate-200 rounded-lg text-indigo-600 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                    className="w-full text-left font-bold text-xs px-2 py-1 bg-panel border border-line rounded-lg text-brand focus:outline-none focus:ring-1 focus:ring-brand"
                   />
-                  <span className="text-2xs text-slate-400 font-bold">ج.م</span>
+                  <span className="text-2xs text-muted font-bold">ج.م</span>
                 </div>
               )}
             </div>
 
             {(isShippingSelected || Boolean(shippingCost > 0 || courierPartyId)) && (
-              <div className="bg-indigo-50/70 p-2.5 rounded-xl border border-indigo-100 space-y-1 animate-in fade-in duration-150">
-                <label className="text-2xs font-bold text-indigo-950 block">شركة الشحن للتوصيل:</label>
+              <div className="bg-brand-soft/40 p-2.5 rounded-xl border border-brand/20 space-y-1 animate-in fade-in duration-150">
+                <label className="text-2xs font-bold text-brand-ink block">شركة الشحن للتوصيل:</label>
                 <select
                   value={courierPartyId || ''}
                   onChange={(e) => onUpdateCourierPartyId?.(e.target.value ? Number(e.target.value) : null)}
-                  className="w-full px-2.5 py-1.5 bg-white border border-indigo-200 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="w-full px-2.5 py-1.5 bg-panel border border-line rounded-lg text-xs font-bold text-ink focus:outline-none focus:ring-1 focus:ring-brand"
                 >
                   <option value="">-- اختر شركة الشحن --</option>
                   {couriers.map((c: any) => (
@@ -345,53 +351,61 @@ export const PosCartTicket: React.FC<PosCartTicketProps> = ({
         </div>
 
         {/* Net Total Display */}
-        <div className="p-3.5 bg-slate-900 text-white rounded-2xl flex items-center justify-between shadow-sm">
+        <div className="p-3.5 bg-ink text-canvas rounded-2xl flex items-center justify-between shadow-xs">
           <div>
-            <span className="text-2xs text-slate-400 block">المبلغ الإجمالي المطلوب:</span>
-            <span className="text-xl sm:text-2xl font-black font-mono text-emerald-400 tracking-tight">
+            <span className="text-2xs text-muted block">المبلغ الإجمالي المطلوب:</span>
+            <span className="text-xl sm:text-2xl font-black text-canvas tracking-tight">
               {formatCurrency(total)}
             </span>
           </div>
 
-          <div className="text-left text-2xs text-slate-400 font-mono">
+          <div className="text-left text-2xs text-muted">
             <span>شامل الضريبة</span>
           </div>
         </div>
 
-        {/* Action Buttons */}
+        {/* Action Buttons: 56px Checkout Trigger and Accessible Hold Button */}
         <div className="flex items-center gap-2 pt-1">
-          <button
+          <Button
             type="button"
+            variant="secondary"
             disabled={items.length === 0}
             onClick={onHoldCart}
-            className="p-3 bg-white border border-slate-200 hover:bg-slate-100 disabled:opacity-50 text-slate-700 rounded-2xl text-xs font-bold transition-colors flex items-center gap-1.5 flex-shrink-0 shadow-xs"
+            className="h-14 min-h-[56px] px-4 rounded-2xl flex items-center gap-1.5 shrink-0"
             title="تعليق الفاتورة مؤقتاً لخدمة عميل آخر"
           >
-            <PauseCircle className="w-4 h-4 text-amber-600" />
-            <span className="hidden sm:inline">تعليق (F4)</span>
-          </button>
+            <PauseCircle className="w-5 h-5 text-warn" />
+            <span className="hidden sm:inline font-bold">تعليق (F4)</span>
+          </Button>
 
-          <button
+          <Button
             type="button"
+            variant="primary"
             disabled={items.length === 0}
             onClick={onCheckout}
-            className="flex-1 bg-emerald-600 hover:bg-emerald-700 active:scale-98 disabled:opacity-50 text-white py-3.5 rounded-2xl text-sm font-black shadow-md shadow-emerald-700/20 transition-all flex items-center justify-center gap-2"
+            className="flex-1 h-14 min-h-[56px] rounded-2xl text-sm sm:text-base font-black flex items-center justify-between px-5 shadow-md"
           >
-            <CreditCard className="w-4 h-4" />
-            <span>إتمام الدفع (F9)</span>
-          </button>
+            <div className="flex items-center gap-2">
+              <CreditCard className="w-5 h-5" />
+              <span>إتمام الدفع (F9)</span>
+            </div>
+            <span className="text-base font-black">
+              {formatCurrency(total)}
+            </span>
+          </Button>
         </div>
       </div>
 
       {/* Quick Add Customer Modal */}
       {showAddCustomerModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-6 border border-slate-200">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h4 className="text-sm font-black text-slate-900">إضافة عميل سريع</h4>
+        <div className="fixed inset-0 z-50 bg-ink/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-panel rounded-3xl shadow-2xl max-w-sm w-full p-6 border border-line text-ink">
+            <div className="flex items-center justify-between pb-3 border-b border-line">
+              <h4 className="text-sm font-black text-ink">إضافة عميل سريع</h4>
               <button
+                type="button"
                 onClick={() => setShowAddCustomerModal(false)}
-                className="p-1 text-slate-400 hover:text-slate-600"
+                className="p-1 text-muted hover:text-ink rounded-lg"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -399,43 +413,45 @@ export const PosCartTicket: React.FC<PosCartTicketProps> = ({
 
             <form onSubmit={handleCreateCustomer} className="py-4 space-y-3">
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700">اسم العميل:</label>
+                <label className="text-xs font-bold text-ink">اسم العميل:</label>
                 <input
                   type="text"
                   required
                   value={newCustName}
                   onChange={(e) => setNewCustName(e.target.value)}
                   placeholder="الاسم الثلاثي أو اسم المحل..."
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-3 py-2 bg-panel border border-line rounded-xl text-xs text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-brand"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700">رقم الهاتف (اختياري):</label>
+                <label className="text-xs font-bold text-ink">رقم الهاتف (اختياري):</label>
                 <input
                   type="tel"
                   value={newCustPhone}
                   onChange={(e) => setNewCustPhone(e.target.value)}
                   placeholder="01xxxxxxxxx"
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono"
+                  className="w-full px-3 py-2 bg-panel border border-line rounded-xl text-xs text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-brand"
                 />
               </div>
 
               <div className="pt-2 flex items-center gap-2">
-                <button
+                <Button
                   type="submit"
-                  disabled={isAddingCust}
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl text-xs font-black transition-colors"
+                  variant="primary"
+                  isLoading={isAddingCust}
+                  className="flex-1 rounded-xl text-xs font-black"
                 >
                   {isAddingCust ? 'جاري الحفظ...' : 'حفظ واختيار العميل'}
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
+                  variant="secondary"
                   onClick={() => setShowAddCustomerModal(false)}
-                  className="px-4 py-2.5 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold"
+                  className="px-4 rounded-xl text-xs font-bold"
                 >
                   إلغاء
-                </button>
+                </Button>
               </div>
             </form>
           </div>

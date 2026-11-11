@@ -159,14 +159,6 @@
     "raw": 39,
     "hex": 0
   },
-  "src/presentation/components/pos/PosCartTicket.tsx": {
-    "raw": 104,
-    "hex": 0
-  },
-  "src/presentation/components/pos/PosCustomerSearch.tsx": {
-    "raw": 31,
-    "hex": 0
-  },
   "src/presentation/components/pos/PosPaymentModal.tsx": {
     "raw": 170,
     "hex": 0
