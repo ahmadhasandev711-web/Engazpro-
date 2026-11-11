@@ -2,6 +2,8 @@ import React from 'react';
 import { X, Play, Trash2, Clock, User, ShoppingBag } from 'lucide-react';
 import { formatCurrency } from '@pos-mandob/shared';
 import { HeldCart } from '../../../hooks/useHoldInvoices';
+import { Button } from '../ui/Button';
+import { EmptyState } from '../ui/EmptyState';
 
 interface HeldCartsModalProps {
   isOpen: boolean;
@@ -21,24 +23,25 @@ export const HeldCartsModal: React.FC<HeldCartsModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
-      <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200 flex flex-col max-h-[85vh]">
+    <div className="fixed inset-0 z-50 bg-ink/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
+      <div className="bg-panel rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-line animate-in zoom-in-95 duration-200 flex flex-col max-h-[85vh] text-ink">
         {/* Header */}
-        <div className="p-5 bg-slate-900 text-white flex items-center justify-between">
+        <div className="p-5 bg-surface-1 border-b border-line text-ink flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-amber-500/20 text-amber-400 rounded-xl border border-amber-500/30">
+            <div className="p-2 bg-warn-soft text-warn rounded-xl border border-warn/20">
               <Clock className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm font-black">الفواتير المعلقة مؤقتاً</h3>
-              <p className="text-[11px] text-slate-400">
+              <h3 className="text-sm font-black text-ink">الفواتير المعلقة مؤقتاً</h3>
+              <p className="text-[11px] text-muted">
                 {heldCarts.length} فاتورة في الانتظار
               </p>
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-white rounded-lg"
+            className="p-1.5 text-muted hover:text-ink rounded-lg transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -47,52 +50,52 @@ export const HeldCartsModal: React.FC<HeldCartsModalProps> = ({
         {/* Content */}
         <div className="p-4 overflow-y-auto flex-1 space-y-3">
           {heldCarts.length === 0 ? (
-            <div className="py-12 text-center text-slate-400 text-xs">
-              <ShoppingBag className="w-10 h-10 mx-auto text-slate-300 mb-2" />
-              <p className="font-bold text-slate-600">لا توجد فواتير معلقة حالياً</p>
-              <p className="text-[11px] mt-1">
-                يمكنك تعليق أي فاتورة جارية بالضغط على زر "تعليق" في شاشة البيع.
-              </p>
-            </div>
+            <EmptyState
+              icon={<ShoppingBag className="w-8 h-8 text-muted" />}
+              title="لا توجد فواتير معلقة حالياً"
+              description="يمكنك تعليق أي فاتورة جارية بالضغط على زر تعليق في شاشة البيع."
+              className="bg-transparent border-0 py-8"
+            />
           ) : (
             heldCarts.map((cart) => (
               <div
                 key={cart.id}
-                className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col gap-3 hover:border-slate-300 transition-all shadow-xs"
+                className="p-4 bg-surface-1/60 border border-line rounded-2xl flex flex-col gap-3 hover:border-brand/40 transition-all shadow-xs"
               >
-                <div className="flex items-center justify-between pb-2 border-b border-slate-200/60 text-xs">
+                <div className="flex items-center justify-between pb-2 border-b border-line/50 text-xs">
                   <div className="flex items-center gap-2">
-                    <span className="font-mono font-bold text-slate-700 bg-white px-2 py-0.5 rounded-md border border-slate-200">
+                    <span className="font-bold text-muted bg-surface-2 px-2 py-0.5 rounded-md border border-line">
                       {cart.createdAt}
                     </span>
-                    <span className="font-bold text-slate-800 flex items-center gap-1">
-                      <User className="w-3.5 h-3.5 text-slate-400" />
+                    <span className="font-bold text-ink flex items-center gap-1">
+                      <User className="w-3.5 h-3.5 text-muted" />
                       {cart.customer.name}
                     </span>
                   </div>
-                  <span className="font-mono font-black text-emerald-600">
+                  <span className="font-black text-brand">
                     {formatCurrency(cart.subtotal - cart.discount)}
                   </span>
                 </div>
 
-                <div className="text-[11px] text-slate-500">
-                  <span className="font-bold text-slate-700">محتويات السلة:</span>{' '}
+                <div className="text-[11px] text-muted">
+                  <span className="font-bold text-ink">محتويات السلة:</span>{' '}
                   {cart.items.map((i) => `${i.product_name} (${i.quantity})`).join('، ')}
                 </div>
 
                 <div className="flex items-center gap-2 pt-1">
-                  <button
+                  <Button
                     type="button"
+                    variant="primary"
                     onClick={() => onResumeCart(cart)}
-                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-xl text-xs font-black transition-colors flex items-center justify-center gap-1.5 shadow-xs"
+                    className="flex-1 rounded-xl text-xs font-black min-h-[40px] flex items-center justify-center gap-1.5 shadow-xs"
                   >
                     <Play className="w-3.5 h-3.5 fill-current" />
                     <span>استرجاع الفاتورة للسلة</span>
-                  </button>
+                  </Button>
                   <button
                     type="button"
                     onClick={() => onDeleteCart(cart.id)}
-                    className="p-2 text-slate-400 hover:text-rose-600 bg-white border border-slate-200 hover:bg-rose-50 rounded-xl transition-colors"
+                    className="p-2.5 min-h-[40px] min-w-[40px] text-muted hover:text-bad bg-panel border border-line hover:bg-bad-soft rounded-xl transition-colors flex items-center justify-center"
                     title="حذف الفاتورة المعلقة"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -104,13 +107,15 @@ export const HeldCartsModal: React.FC<HeldCartsModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-3 bg-slate-50 border-t border-slate-100">
-          <button
+        <div className="p-3 bg-surface-1 border-t border-line">
+          <Button
+            type="button"
+            variant="secondary"
             onClick={onClose}
-            className="w-full py-2.5 border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-bold transition-colors"
+            className="w-full rounded-xl text-xs font-bold min-h-[40px]"
           >
             إغلاق
-          </button>
+          </Button>
         </div>
       </div>
     </div>

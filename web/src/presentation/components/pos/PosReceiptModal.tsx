@@ -3,6 +3,7 @@ import { Printer, X, CheckCircle2, RotateCcw, Share2 } from 'lucide-react';
 import { formatCurrency } from '@pos-mandob/shared';
 import { useAuthStore } from '../../../data/store/useAuthStore';
 import { webShareService, formatInvoiceWhatsAppText } from '../../../infrastructure/pwa/webShareService';
+import { Button } from '../ui/Button';
 
 interface PosReceiptModalProps {
   isOpen: boolean;
@@ -56,24 +57,25 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
   const items = invoice.items || [];
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
-      <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200 flex flex-col max-h-[95vh]">
+    <div className="fixed inset-0 z-50 bg-ink/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
+      <div className="bg-panel rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden border border-line animate-in zoom-in-95 duration-200 flex flex-col max-h-[95vh] text-ink">
         {/* Modal Top Bar */}
-        <div className="p-4 bg-slate-900 text-white flex items-center justify-between no-print">
+        <div className="p-4 bg-surface-1 border-b border-line text-ink flex items-center justify-between no-print">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+            <CheckCircle2 className="w-5 h-5 text-ok" />
             <h3 className="text-sm font-black">{onStartNewInvoice ? 'تم تسجيل الفاتورة بنجاح' : 'معاينة وإيصال الفاتورة'}</h3>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-white rounded-lg transition-colors"
+            className="p-1.5 text-muted hover:text-ink rounded-lg transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Printable Receipt Paper Container */}
-        <div className="p-4 overflow-y-auto flex-1 bg-slate-100/50 flex justify-center">
+        <div className="p-4 overflow-y-auto flex-1 bg-surface-2/50 flex justify-center">
           <div
             ref={printRef}
             id="pos-thermal-receipt"
@@ -226,44 +228,48 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
         </div>
 
         {/* Modal Buttons */}
-        <div className="p-4 bg-white border-t border-slate-200 space-y-2 no-print">
+        <div className="p-4 bg-panel border-t border-line space-y-2 no-print">
           <div className="flex items-center gap-2 flex-wrap">
-            <button
+            <Button
               type="button"
+              variant="primary"
               onClick={handlePrint}
-              className="flex-1 min-w-[45%] bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white py-3 rounded-2xl text-xs font-black shadow-md shadow-emerald-700/20 transition-all flex items-center justify-center gap-1.5"
+              className="flex-1 min-w-[45%] h-12 rounded-2xl text-xs font-black shadow-md flex items-center justify-center gap-1.5"
             >
               <Printer className="w-4 h-4" />
               <span>طباعة الإيصال</span>
-            </button>
+            </Button>
 
-            <button
+            <Button
               type="button"
+              variant="secondary"
               onClick={handleShareWhatsApp}
-              className="flex-1 min-w-[45%] bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 py-3 rounded-2xl text-xs font-black transition-all active:scale-98 flex items-center justify-center gap-1.5 shadow-2xs"
+              className="flex-1 min-w-[45%] h-12 rounded-2xl text-xs font-black transition-all flex items-center justify-center gap-1.5 border border-line"
             >
-              <Share2 className="w-4 h-4 text-emerald-600" />
+              <Share2 className="w-4 h-4 text-ok" />
               <span>مشاركة واتساب</span>
-            </button>
+            </Button>
           </div>
 
           {onStartNewInvoice ? (
-            <button
+            <Button
               type="button"
+              variant="secondary"
               onClick={onStartNewInvoice}
-              className="w-full bg-slate-900 hover:bg-slate-800 text-white py-2.5 rounded-2xl text-xs font-black transition-colors flex items-center justify-center gap-2"
+              className="w-full h-11 rounded-2xl text-xs font-black transition-colors flex items-center justify-center gap-2"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               <span>فاتورة جديدة (Esc)</span>
-            </button>
+            </Button>
           ) : (
-            <button
+            <Button
               type="button"
+              variant="secondary"
               onClick={onClose}
-              className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 py-2.5 rounded-2xl text-xs font-bold transition-colors"
+              className="w-full h-11 rounded-2xl text-xs font-bold transition-colors"
             >
               إغلاق النافذة
-            </button>
+            </Button>
           )}
         </div>
       </div>

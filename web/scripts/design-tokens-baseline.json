@@ -155,12 +155,8 @@
     "raw": 66,
     "hex": 1
   },
-  "src/presentation/components/pos/HeldCartsModal.tsx": {
-    "raw": 39,
-    "hex": 0
-  },
   "src/presentation/components/pos/PosReceiptModal.tsx": {
-    "raw": 62,
+    "raw": 36,
     "hex": 1
   },
   "src/presentation/components/products/AddBatchModal.tsx": {
