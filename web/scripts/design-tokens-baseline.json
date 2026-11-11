@@ -307,10 +307,6 @@
     "raw": 114,
     "hex": 0
   },
-  "src/presentation/components/wc-orders/WcOrdersToolbar.tsx": {
-    "raw": 36,
-    "hex": 0
-  },
   "src/presentation/context/ConfirmContext.tsx": {
     "raw": 24,
     "hex": 0

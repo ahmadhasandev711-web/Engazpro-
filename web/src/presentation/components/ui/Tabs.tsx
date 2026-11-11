@@ -21,7 +21,7 @@ export const Tabs: React.FC<TabsProps> = ({ tabs, activeTab, onChange, className
       role="tablist"
       aria-orientation="horizontal"
       className={cn(
-        'flex items-center gap-1.5 p-1 bg-surface-2 border border-line rounded-xl overflow-x-auto select-none',
+        'flex items-center gap-1.5 p-1 bg-surface-2 border border-line rounded-xl overflow-x-auto select-none max-w-full min-w-0',
         className
       )}
       dir="rtl"
