@@ -293,7 +293,7 @@ export const WcOrderMobileCard: React.FC<WcOrderMobileCardProps> = ({
                     {item.attributes.map((attr: any, aIdx: number) => (
                       <span
                         key={aIdx}
-                        className="text-2xs bg-white border border-slate-200 px-1.5 py-0.2 rounded text-slate-600 font-bold"
+                        className="text-2xs bg-white border border-slate-200 px-1.5 py-0.5 rounded text-slate-600 font-bold"
                       >
                         {attr.key}: {attr.value}
                       </span>

@@ -87,7 +87,7 @@ export const TreasuriesHeader: React.FC<{ vm: TreasuriesViewModel }> = ({ vm }) 
             <div className="flex items-center gap-1.5">
               <h2 className="text-sm font-black text-slate-900 truncate">الخزن والورديات</h2>
               {pendingShifts.length > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full text-2xs font-black bg-rose-500 text-white animate-pulse shrink-0">
+                <span className="px-1.5 py-0.5 rounded-full text-2xs font-black bg-rose-500 text-white animate-pulse shrink-0">
                   {pendingShifts.length} معلق
                 </span>
               )}

@@ -103,22 +103,22 @@ const PosProductCard: React.FC<{ product: ProductItem; onAddToCart: (product: Pr
         </h4>
         <div className="flex flex-wrap items-center gap-1 mt-1">
           {hasDiscount && (
-            <span className="text-2xs px-1.5 py-0.2 rounded-md bg-rose-50 text-rose-600 font-bold border border-rose-100">
+            <span className="text-2xs px-1.5 py-0.5 rounded-md bg-rose-50 text-rose-600 font-bold border border-rose-100">
               خصم {Math.round(((Number(product.regular_price) - Number(product.sale_price)) / Number(product.regular_price)) * 100)}%
             </span>
           )}
           {Boolean(product.has_variants || product.variants?.length) && (
-            <span className="text-2xs px-1.5 py-0.2 rounded-md bg-indigo-50 text-indigo-700 font-bold border border-indigo-100">
+            <span className="text-2xs px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 font-bold border border-indigo-100">
               {product.variants?.length ? `${product.variants.length} مقاس/لون` : 'متغيرات'}
             </span>
           )}
           {Boolean(product.has_expiry || product.batches?.length) && (
-            <span className="text-2xs px-1.5 py-0.2 rounded-md bg-amber-50 text-amber-700 font-bold border border-amber-100">
+            <span className="text-2xs px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 font-bold border border-amber-100">
               صلاحية
             </span>
           )}
           {Boolean(product.sub_unit) && (
-            <span className="text-2xs px-1.5 py-0.2 rounded-md bg-sky-50 text-sky-700 font-bold border border-sky-100">
+            <span className="text-2xs px-1.5 py-0.5 rounded-md bg-sky-50 text-sky-700 font-bold border border-sky-100">
               {product.sub_unit}
             </span>
           )}

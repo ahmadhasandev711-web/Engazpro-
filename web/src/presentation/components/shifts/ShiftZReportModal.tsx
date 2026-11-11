@@ -418,7 +418,7 @@ export const ShiftZReportModal: React.FC<ShiftZReportModalProps> = ({
             padding: 2mm 4mm !important;
             border: none !important;
             box-shadow: none !important;
-            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Cairo', 'Tajawal', sans-serif !important;
+            font-family: 'IBM Plex Sans Arabic', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif !important;
             font-size: 11px !important;
             line-height: 1.35 !important;
             color: #000 !important;

@@ -217,7 +217,7 @@ export const WcOrderDetailsModal: React.FC<{ vm: WcOrdersViewModel }> = ({ vm })
                     <span className="flex items-center gap-1">
                       <span>خصم الكوبون:</span>
                       {viewingOrder.wc_coupon_codes && viewingOrder.wc_coupon_codes.length > 0 && (
-                        <span className="bg-emerald-100 text-emerald-800 text-2xs px-1.5 py-0.2 rounded font-mono font-bold">
+                        <span className="bg-emerald-100 text-emerald-800 text-2xs px-1.5 py-0.5 rounded font-mono font-bold">
                           {viewingOrder.wc_coupon_codes.join(', ')}
                         </span>
                       )}

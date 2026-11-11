@@ -1,0 +1,426 @@
+{
+  "src/App.tsx": {
+    "raw": 2,
+    "hex": 0
+  },
+  "src/presentation/components/admin/AdminKPICards.tsx": {
+    "raw": 41,
+    "hex": 0
+  },
+  "src/presentation/components/admin/ExtendSubscriptionModal.tsx": {
+    "raw": 27,
+    "hex": 0
+  },
+  "src/presentation/components/admin/LicenseGeneratorTab.tsx": {
+    "raw": 95,
+    "hex": 0
+  },
+  "src/presentation/components/admin/ResetPasswordModal.tsx": {
+    "raw": 33,
+    "hex": 0
+  },
+  "src/presentation/components/admin/StoreInquiriesTab.tsx": {
+    "raw": 101,
+    "hex": 0
+  },
+  "src/presentation/components/admin/StoreStaffModal.tsx": {
+    "raw": 56,
+    "hex": 0
+  },
+  "src/presentation/components/admin/SystemHealthTab.tsx": {
+    "raw": 23,
+    "hex": 0
+  },
+  "src/presentation/components/admin/UsersManagementTab.tsx": {
+    "raw": 59,
+    "hex": 0
+  },
+  "src/presentation/components/AuthHydrationGate.tsx": {
+    "raw": 3,
+    "hex": 0
+  },
+  "src/presentation/components/common/AppErrorBoundary.tsx": {
+    "raw": 14,
+    "hex": 0
+  },
+  "src/presentation/components/common/DateRangeFilter.tsx": {
+    "raw": 33,
+    "hex": 0
+  },
+  "src/presentation/components/common/PaginationBar.tsx": {
+    "raw": 28,
+    "hex": 0
+  },
+  "src/presentation/components/dashboard/CashierDashboard.tsx": {
+    "raw": 130,
+    "hex": 0
+  },
+  "src/presentation/components/dashboard/MandobDashboard.tsx": {
+    "raw": 132,
+    "hex": 0
+  },
+  "src/presentation/components/dashboard/OwnerDashboard.tsx": {
+    "raw": 129,
+    "hex": 0
+  },
+  "src/presentation/components/employees/PayrollModal.tsx": {
+    "raw": 188,
+    "hex": 0
+  },
+  "src/presentation/components/invoice/InvoiceItemsTable.tsx": {
+    "raw": 41,
+    "hex": 0
+  },
+  "src/presentation/components/invoice/InvoiceParentLookup.tsx": {
+    "raw": 27,
+    "hex": 0
+  },
+  "src/presentation/components/invoice/InvoiceSummaryPanel.tsx": {
+    "raw": 40,
+    "hex": 0
+  },
+  "src/presentation/components/landing/StoreDesignSection.tsx": {
+    "raw": 133,
+    "hex": 29
+  },
+  "src/presentation/components/landing/StoreInquiryModal.tsx": {
+    "raw": 53,
+    "hex": 22
+  },
+  "src/presentation/components/mobile/BranchMobileCard.tsx": {
+    "raw": 54,
+    "hex": 0
+  },
+  "src/presentation/components/mobile/CourierMobileCard.tsx": {
+    "raw": 56,
+    "hex": 0
+  },
+  "src/presentation/components/mobile/EmployeeMobileCard.tsx": {
+    "raw": 98,
+    "hex": 0
+  },
+  "src/presentation/components/mobile/ExpenseMobileCard.tsx": {
+    "raw": 37,
+    "hex": 0
+  },
+  "src/presentation/components/mobile/InvoiceMobileCard.tsx": {
+    "raw": 44,
+    "hex": 0
+  },
+  "src/presentation/components/mobile/LedgerEntryMobileCard.tsx": {
+    "raw": 15,
+    "hex": 0
+  },
+  "src/presentation/components/mobile/MobileBottomSheet.tsx": {
+    "raw": 10,
+    "hex": 0
+  },
+  "src/presentation/components/mobile/MobileCameraScannerModal.tsx": {
+    "raw": 33,
+    "hex": 0
+  },
+  "src/presentation/components/mobile/MobileCard.tsx": {
+    "raw": 3,
+    "hex": 0
+  },
+  "src/presentation/components/mobile/MobileFilterChips.tsx": {
+    "raw": 11,
+    "hex": 0
+  },
+  "src/presentation/components/mobile/PartyMobileCard.tsx": {
+    "raw": 61,
+    "hex": 0
+  },
+  "src/presentation/components/mobile/PaymentMobileCard.tsx": {
+    "raw": 40,
+    "hex": 0
+  },
+  "src/presentation/components/mobile/ProductMobileCard.tsx": {
+    "raw": 83,
+    "hex": 0
+  },
+  "src/presentation/components/mobile/RecentActivityMobileCard.tsx": {
+    "raw": 35,
+    "hex": 0
+  },
+  "src/presentation/components/mobile/StockTransferMobileCard.tsx": {
+    "raw": 71,
+    "hex": 0
+  },
+  "src/presentation/components/mobile/WcOrderMobileCard.tsx": {
+    "raw": 90,
+    "hex": 0
+  },
+  "src/presentation/components/payments/PaymentReceiptModal.tsx": {
+    "raw": 66,
+    "hex": 1
+  },
+  "src/presentation/components/pos/HeldCartsModal.tsx": {
+    "raw": 39,
+    "hex": 0
+  },
+  "src/presentation/components/pos/PosCartTicket.tsx": {
+    "raw": 104,
+    "hex": 0
+  },
+  "src/presentation/components/pos/PosCustomerSearch.tsx": {
+    "raw": 31,
+    "hex": 0
+  },
+  "src/presentation/components/pos/PosPaymentModal.tsx": {
+    "raw": 170,
+    "hex": 0
+  },
+  "src/presentation/components/pos/PosProductCatalog.tsx": {
+    "raw": 66,
+    "hex": 0
+  },
+  "src/presentation/components/pos/PosReceiptModal.tsx": {
+    "raw": 62,
+    "hex": 1
+  },
+  "src/presentation/components/products/AddBatchModal.tsx": {
+    "raw": 46,
+    "hex": 0
+  },
+  "src/presentation/components/products/BarcodePrintModal.tsx": {
+    "raw": 114,
+    "hex": 6
+  },
+  "src/presentation/components/products/OpeningStockModal.tsx": {
+    "raw": 85,
+    "hex": 0
+  },
+  "src/presentation/components/products/ProductFormModal.tsx": {
+    "raw": 108,
+    "hex": 0
+  },
+  "src/presentation/components/products/ProductsHeader.tsx": {
+    "raw": 16,
+    "hex": 0
+  },
+  "src/presentation/components/products/ProductsList.tsx": {
+    "raw": 63,
+    "hex": 0
+  },
+  "src/presentation/components/products/ProductsMobileHero.tsx": {
+    "raw": 14,
+    "hex": 0
+  },
+  "src/presentation/components/products/ProductsNotifications.tsx": {
+    "raw": 8,
+    "hex": 0
+  },
+  "src/presentation/components/products/ProductsSearchBar.tsx": {
+    "raw": 6,
+    "hex": 0
+  },
+  "src/presentation/components/products/ProductVariantModal.tsx": {
+    "raw": 85,
+    "hex": 0
+  },
+  "src/presentation/components/products/VariantMatrixGenerator.tsx": {
+    "raw": 135,
+    "hex": 31
+  },
+  "src/presentation/components/pwa/OfflineBanner.tsx": {
+    "raw": 5,
+    "hex": 0
+  },
+  "src/presentation/components/pwa/PWAInstallBanner.tsx": {
+    "raw": 54,
+    "hex": 0
+  },
+  "src/presentation/components/pwa/PWAInstallButton.tsx": {
+    "raw": 28,
+    "hex": 0
+  },
+  "src/presentation/components/reports/cash-flow/CashFlowBreakdownCards.tsx": {
+    "raw": 96,
+    "hex": 0
+  },
+  "src/presentation/components/reports/cash-flow/CashFlowChannelCards.tsx": {
+    "raw": 60,
+    "hex": 0
+  },
+  "src/presentation/components/reports/cash-flow/CashFlowGuidanceBanner.tsx": {
+    "raw": 8,
+    "hex": 0
+  },
+  "src/presentation/components/reports/cash-flow/CashFlowTotalBanner.tsx": {
+    "raw": 15,
+    "hex": 0
+  },
+  "src/presentation/components/reports/cash-flow/CashFlowTransactionsTable.tsx": {
+    "raw": 88,
+    "hex": 0
+  },
+  "src/presentation/components/reports/CashFlowTab.tsx": {
+    "raw": 1,
+    "hex": 0
+  },
+  "src/presentation/components/reports/ProfitReportTab.tsx": {
+    "raw": 55,
+    "hex": 0
+  },
+  "src/presentation/components/reports/SalesReportTab.tsx": {
+    "raw": 25,
+    "hex": 0
+  },
+  "src/presentation/components/reports/StockReportTab.tsx": {
+    "raw": 41,
+    "hex": 0
+  },
+  "src/presentation/components/shifts/ActiveShiftBanner.tsx": {
+    "raw": 27,
+    "hex": 0
+  },
+  "src/presentation/components/shifts/CloseShiftModal.tsx": {
+    "raw": 67,
+    "hex": 0
+  },
+  "src/presentation/components/shifts/OpenShiftModal.tsx": {
+    "raw": 33,
+    "hex": 0
+  },
+  "src/presentation/components/shifts/ShiftZReportModal.tsx": {
+    "raw": 77,
+    "hex": 1
+  },
+  "src/presentation/components/treasuries/TreasuriesCreateModal.tsx": {
+    "raw": 31,
+    "hex": 0
+  },
+  "src/presentation/components/treasuries/TreasuriesDetailTab.tsx": {
+    "raw": 101,
+    "hex": 0
+  },
+  "src/presentation/components/treasuries/TreasuriesHeader.tsx": {
+    "raw": 93,
+    "hex": 0
+  },
+  "src/presentation/components/treasuries/TreasuriesPendingTab.tsx": {
+    "raw": 51,
+    "hex": 0
+  },
+  "src/presentation/components/treasuries/TreasuriesSettleModal.tsx": {
+    "raw": 26,
+    "hex": 0
+  },
+  "src/presentation/components/treasuries/TreasuriesShiftsTab.tsx": {
+    "raw": 82,
+    "hex": 0
+  },
+  "src/presentation/components/treasuries/TreasuriesTransferModal.tsx": {
+    "raw": 29,
+    "hex": 0
+  },
+  "src/presentation/components/wc-orders/helpers.tsx": {
+    "raw": 24,
+    "hex": 0
+  },
+  "src/presentation/components/wc-orders/WcOrderActionModals.tsx": {
+    "raw": 155,
+    "hex": 0
+  },
+  "src/presentation/components/wc-orders/WcOrderDetailsModal.tsx": {
+    "raw": 109,
+    "hex": 0
+  },
+  "src/presentation/components/wc-orders/WcOrdersList.tsx": {
+    "raw": 114,
+    "hex": 0
+  },
+  "src/presentation/components/wc-orders/WcOrdersToolbar.tsx": {
+    "raw": 36,
+    "hex": 0
+  },
+  "src/presentation/context/ConfirmContext.tsx": {
+    "raw": 24,
+    "hex": 0
+  },
+  "src/presentation/context/ToastContext.tsx": {
+    "raw": 14,
+    "hex": 0
+  },
+  "src/presentation/pages/AdminDashboardPage.tsx": {
+    "raw": 40,
+    "hex": 0
+  },
+  "src/presentation/pages/BranchesPage.tsx": {
+    "raw": 166,
+    "hex": 0
+  },
+  "src/presentation/pages/CouriersPage.tsx": {
+    "raw": 369,
+    "hex": 0
+  },
+  "src/presentation/pages/EmployeesPage.tsx": {
+    "raw": 270,
+    "hex": 0
+  },
+  "src/presentation/pages/ExcelPage.tsx": {
+    "raw": 131,
+    "hex": 0
+  },
+  "src/presentation/pages/ExpensesPage.tsx": {
+    "raw": 147,
+    "hex": 0
+  },
+  "src/presentation/pages/InvoiceFormPage.tsx": {
+    "raw": 28,
+    "hex": 0
+  },
+  "src/presentation/pages/InvoicesPage.tsx": {
+    "raw": 173,
+    "hex": 0
+  },
+  "src/presentation/pages/LandingPage.tsx": {
+    "raw": 259,
+    "hex": 143
+  },
+  "src/presentation/pages/LedgerPage.tsx": {
+    "raw": 149,
+    "hex": 0
+  },
+  "src/presentation/pages/LoginPage.tsx": {
+    "raw": 89,
+    "hex": 1
+  },
+  "src/presentation/pages/PartiesPage.tsx": {
+    "raw": 100,
+    "hex": 0
+  },
+  "src/presentation/pages/PaymentsPage.tsx": {
+    "raw": 113,
+    "hex": 0
+  },
+  "src/presentation/pages/PosPage.tsx": {
+    "raw": 63,
+    "hex": 0
+  },
+  "src/presentation/pages/RegisterPage.tsx": {
+    "raw": 107,
+    "hex": 1
+  },
+  "src/presentation/pages/ReportsPage.tsx": {
+    "raw": 213,
+    "hex": 0
+  },
+  "src/presentation/pages/SettingsPage.tsx": {
+    "raw": 183,
+    "hex": 0
+  },
+  "src/presentation/pages/StockTransfersPage.tsx": {
+    "raw": 164,
+    "hex": 0
+  },
+  "src/presentation/pages/WooCommerceSettingsPage.tsx": {
+    "raw": 192,
+    "hex": 0
+  },
+  "src/presentation/utils/barcodeSvgRenderer.ts": {
+    "raw": 0,
+    "hex": 3
+  }
+}

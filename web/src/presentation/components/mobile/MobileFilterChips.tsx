@@ -62,7 +62,7 @@ export function MobileFilterChips<T extends string>({
             {typeof opt.count === 'number' && (
               <span
                 className={clsx(
-                  'px-1.5 py-0.2 rounded-full text-2xs font-black',
+                  'px-1.5 py-0.5 rounded-full text-2xs font-black',
                   isSelected
                     ? 'bg-white/20 text-white'
                     : 'bg-slate-100 text-slate-500'
