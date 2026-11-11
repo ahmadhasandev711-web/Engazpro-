@@ -295,10 +295,6 @@
     "raw": 29,
     "hex": 0
   },
-  "src/presentation/components/wc-orders/WcOrderActionModals.tsx": {
-    "raw": 155,
-    "hex": 0
-  },
   "src/presentation/context/ConfirmContext.tsx": {
     "raw": 24,
     "hex": 0
