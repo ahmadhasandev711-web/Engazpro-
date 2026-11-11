@@ -159,10 +159,6 @@
     "raw": 39,
     "hex": 0
   },
-  "src/presentation/components/pos/PosPaymentModal.tsx": {
-    "raw": 170,
-    "hex": 0
-  },
   "src/presentation/components/pos/PosReceiptModal.tsx": {
     "raw": 62,
     "hex": 1
