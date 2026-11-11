@@ -303,10 +303,6 @@
     "raw": 109,
     "hex": 0
   },
-  "src/presentation/components/wc-orders/WcOrdersList.tsx": {
-    "raw": 114,
-    "hex": 0
-  },
   "src/presentation/context/ConfirmContext.tsx": {
     "raw": 24,
     "hex": 0
