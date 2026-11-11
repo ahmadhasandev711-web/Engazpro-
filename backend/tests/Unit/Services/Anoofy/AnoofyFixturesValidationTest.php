@@ -36,4 +36,42 @@ class AnoofyFixturesValidationTest extends TestCase
             $this->assertNotEmpty($envelope->eventId);
         }
     }
+
+    public function test_order_confirmed_fixtures_money_fields_are_two_decimal_strings(): void
+    {
+        $fixturesDir = dirname(__DIR__, 5) . '/docs/integrations/fixtures';
+        $fixtureFiles = glob($fixturesDir . '/order.confirmed*.json');
+
+        $this->assertNotEmpty($fixtureFiles, 'Fixtures directory must contain order.confirmed fixtures');
+
+        $decimalPattern = '/^-?\d+\.\d{2}$/';
+
+        foreach ($fixtureFiles as $filePath) {
+            $json = (string) file_get_contents($filePath);
+            $data = json_decode($json, true);
+
+            $this->assertIsArray($data, "Fixture file {$filePath} is not valid json");
+            $this->assertArrayHasKey('data', $data, "Fixture file {$filePath} missing data key");
+            $this->assertArrayHasKey('line_items', $data['data'], "Fixture file {$filePath} missing line_items");
+
+            foreach ($data['data']['line_items'] as $item) {
+                $this->assertArrayHasKey('price', $item, "Line item missing price in {$filePath}");
+                $this->assertArrayHasKey('total', $item, "Line item missing total in {$filePath}");
+
+                $this->assertIsString($item['price'], "Price must be string in {$filePath}");
+                $this->assertMatchesRegularExpression(
+                    $decimalPattern,
+                    $item['price'],
+                    "Price '{$item['price']}' in {$filePath} does not match 2-decimal string format"
+                );
+
+                $this->assertIsString($item['total'], "Total must be string in {$filePath}");
+                $this->assertMatchesRegularExpression(
+                    $decimalPattern,
+                    $item['total'],
+                    "Total '{$item['total']}' in {$filePath} does not match 2-decimal string format"
+                );
+            }
+        }
+    }
 }
