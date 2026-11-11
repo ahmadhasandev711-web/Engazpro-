@@ -147,10 +147,6 @@
     "raw": 71,
     "hex": 0
   },
-  "src/presentation/components/mobile/WcOrderMobileCard.tsx": {
-    "raw": 90,
-    "hex": 0
-  },
   "src/presentation/components/payments/PaymentReceiptModal.tsx": {
     "raw": 66,
     "hex": 1
