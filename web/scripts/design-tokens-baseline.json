@@ -171,10 +171,6 @@
     "raw": 170,
     "hex": 0
   },
-  "src/presentation/components/pos/PosProductCatalog.tsx": {
-    "raw": 66,
-    "hex": 0
-  },
   "src/presentation/components/pos/PosReceiptModal.tsx": {
     "raw": 62,
     "hex": 1
