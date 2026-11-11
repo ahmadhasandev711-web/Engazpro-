@@ -89,12 +89,25 @@
       "quantity": 2,
       "name": "قميص قطني",
       "sku": "SHIRT-01",
-      "price": 100,
-      "total": 200
+      "price": "100.00",
+      "total": "200.00"
     }
   ]
 }
 ```
+
+- `wc_order_id` (int): معرف الطلب في ووكومرس.
+- `confirmed_at` (string): توقيت التأكيد بصيغة ISO-8601 UTC.
+- `confirmed_by_name` (string): اسم الموظف الذي قام بالتأكيد الهاتفي.
+- `customer` (object): بيانات العميل المحدثة (الهاتف والعنوان).
+- `line_items` (array): قائمة بنود الطلب المؤكدة:
+  - `price` (string): سعر الوحدة قبل الخصم، بصيغة string عشري بخانتين (مثل `"33.33"`) ومقرّب round-half-up.
+  - `total` (string): قيمة السطر المحسوبة من ووكومرس، بصيغة string عشري بخانتين (مثل `"99.99"`).
+  - `quantity` (int|float): كمية الصنف.
+  - `wc_product_id` (int): معرف المنتج الأصلي في ووكومرس.
+  - `wc_variation_id` (int|null): معرف الفاريانت في حال كان المنتج متغيراً.
+  - `name` (string): اسم الصنف.
+  - `sku` (string|null): رمز التخزين التعريفي للصنف.
 
 ---
 
