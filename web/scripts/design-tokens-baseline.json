@@ -80,7 +80,7 @@
     "hex": 0
   },
   "src/presentation/components/landing/StoreDesignSection.tsx": {
-    "raw": 132,
+    "raw": 133,
     "hex": 29
   },
   "src/presentation/components/landing/StoreInquiryModal.tsx": {
@@ -376,7 +376,7 @@
     "hex": 0
   },
   "src/presentation/pages/LandingPage.tsx": {
-    "raw": 244,
+    "raw": 259,
     "hex": 143
   },
   "src/presentation/pages/LedgerPage.tsx": {
