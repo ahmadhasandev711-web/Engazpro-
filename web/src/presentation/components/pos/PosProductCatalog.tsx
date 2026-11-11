@@ -10,7 +10,6 @@ export interface ProductItem {
   code: string;
   barcode?: string;
   category_id?: number | null;
-  image?: string | null;
   type?: string;
   has_expiry?: boolean;
   has_variants?: boolean;
@@ -106,21 +105,13 @@ const PosProductCard: React.FC<{ product: ProductItem; onAddToCart: (product: Pr
     >
       <div className="flex items-center justify-between gap-1 w-full text-2xs mb-2">
         <div className="flex items-center gap-2 min-w-0">
-          {product.image ? (
-            <img
-              src={product.image}
-              alt={product.name}
-              className="w-[34px] h-[34px] rounded-xl object-cover shrink-0"
-            />
-          ) : (
-            <div
-              className={`w-[34px] h-[34px] rounded-xl flex items-center justify-center font-bold text-sm shrink-0 ${getCategoryColorClass(
-                product.category_id
-              )}`}
-            >
-              {product.name ? product.name.trim().charAt(0) : 'ص'}
-            </div>
-          )}
+          <div
+            className={`w-[34px] h-[34px] rounded-xl flex items-center justify-center font-bold text-sm shrink-0 ${getCategoryColorClass(
+              product.category_id
+            )}`}
+          >
+            {product.name ? product.name.trim().charAt(0) : 'ص'}
+          </div>
           <span className="truncate max-w-[80px] bg-surface-2 text-muted px-1.5 py-0.5 rounded-md font-medium">
             {product.code}
           </span>
