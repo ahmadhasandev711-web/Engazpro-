@@ -155,28 +155,8 @@
     "raw": 66,
     "hex": 1
   },
-  "src/presentation/components/pos/HeldCartsModal.tsx": {
-    "raw": 39,
-    "hex": 0
-  },
-  "src/presentation/components/pos/PosCartTicket.tsx": {
-    "raw": 104,
-    "hex": 0
-  },
-  "src/presentation/components/pos/PosCustomerSearch.tsx": {
-    "raw": 31,
-    "hex": 0
-  },
-  "src/presentation/components/pos/PosPaymentModal.tsx": {
-    "raw": 170,
-    "hex": 0
-  },
-  "src/presentation/components/pos/PosProductCatalog.tsx": {
-    "raw": 66,
-    "hex": 0
-  },
   "src/presentation/components/pos/PosReceiptModal.tsx": {
-    "raw": 62,
+    "raw": 36,
     "hex": 1
   },
   "src/presentation/components/products/AddBatchModal.tsx": {
@@ -393,10 +373,6 @@
   },
   "src/presentation/pages/PaymentsPage.tsx": {
     "raw": 113,
-    "hex": 0
-  },
-  "src/presentation/pages/PosPage.tsx": {
-    "raw": 63,
     "hex": 0
   },
   "src/presentation/pages/RegisterPage.tsx": {

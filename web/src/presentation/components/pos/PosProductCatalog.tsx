@@ -1,12 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Search, Package, X } from 'lucide-react';
 import { formatCurrency } from '@pos-mandob/shared';
+import { Badge, BadgeTone } from '../ui/Badge';
+import { EmptyState } from '../ui/EmptyState';
 
 export interface ProductItem {
   id: number;
   name: string;
   code: string;
   barcode?: string;
+  category_id?: number | null;
   type?: string;
   has_expiry?: boolean;
   has_variants?: boolean;
@@ -66,6 +69,24 @@ const stockOf = (product: ProductItem): number => {
   return product.variants?.length ? variantStockSum : (product.quantity ?? 0);
 };
 
+const getCategoryColorClass = (categoryId?: number | null): string => {
+  if (categoryId === null || categoryId === undefined) {
+    return 'bg-surface-2 text-muted';
+  }
+  const rem = Math.abs(categoryId) % 4;
+  switch (rem) {
+    case 0:
+      return 'bg-brand-soft text-brand-ink';
+    case 1:
+      return 'bg-ok-soft text-ok';
+    case 2:
+      return 'bg-warn-soft text-warn';
+    case 3:
+    default:
+      return 'bg-info-soft text-info';
+  }
+};
+
 const PosProductCard: React.FC<{ product: ProductItem; onAddToCart: (product: ProductItem) => void }> = ({
   product,
   onAddToCart,
@@ -73,69 +94,73 @@ const PosProductCard: React.FC<{ product: ProductItem; onAddToCart: (product: Pr
   const stock = stockOf(product);
   const isOutOfStock = stock <= 0;
   const hasDiscount = Boolean(product.regular_price && Number(product.regular_price) > Number(product.sale_price));
+  const stockTone: BadgeTone = isOutOfStock ? 'bad' : stock <= 3 ? 'warn' : 'neutral';
 
   return (
     <button
       onClick={() => onAddToCart(product)}
       type="button"
       style={{ height: ROW_HEIGHT }}
-      className="relative flex flex-col justify-between p-3.5 bg-white hover:bg-emerald-50/50 active:scale-[0.98] border border-slate-200 hover:border-emerald-300 rounded-2xl transition-all text-right shadow-xs hover:shadow-md group focus:outline-none focus:ring-2 focus:ring-primary-500 overflow-hidden"
+      className="relative flex flex-col justify-between p-3.5 bg-panel hover:bg-surface-2 active:scale-[0.98] border border-line hover:border-brand-soft rounded-2xl transition-all text-right shadow-xs hover:shadow-md group focus:outline-none focus:ring-2 focus:ring-brand overflow-hidden"
     >
-      <div className="flex items-center justify-between gap-1 w-full text-2xs text-slate-400 mb-2">
-        <span className="font-mono truncate max-w-[80px] bg-slate-100 px-1.5 py-0.5 rounded-md">
-          {product.code}
-        </span>
-        <span
-          className={`px-2 py-0.5 rounded-full font-mono font-bold ${
-            isOutOfStock
-              ? 'bg-rose-100 text-rose-700'
-              : stock <= 5
-              ? 'bg-amber-100 text-amber-800'
-              : 'bg-emerald-100 text-emerald-800'
-          }`}
-        >
+      <div className="flex items-center justify-between gap-1 w-full text-2xs mb-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <div
+            className={`w-[34px] h-[34px] rounded-xl flex items-center justify-center font-bold text-sm shrink-0 ${getCategoryColorClass(
+              product.category_id
+            )}`}
+          >
+            {product.name ? product.name.trim().charAt(0) : 'ص'}
+          </div>
+          <span className="truncate max-w-[80px] bg-surface-2 text-muted px-1.5 py-0.5 rounded-md font-medium">
+            {product.code}
+          </span>
+        </div>
+        <Badge tone={stockTone} className="text-2xs px-2 py-0.5 shrink-0">
           {isOutOfStock ? 'نفذ' : `${stock} ${product.unit || 'قطعة'}`}
-        </span>
+        </Badge>
       </div>
+
       <div className="my-1 min-h-0">
-        <h4 className="text-xs sm:text-sm font-black text-slate-900 group-hover:text-emerald-700 line-clamp-2 leading-tight">
+        <h4 className="text-xs sm:text-sm font-black text-ink group-hover:text-brand line-clamp-2 leading-tight">
           {product.name}
         </h4>
         <div className="flex flex-wrap items-center gap-1 mt-1">
           {hasDiscount && (
-            <span className="text-2xs px-1.5 py-0.5 rounded-md bg-rose-50 text-rose-600 font-bold border border-rose-100">
+            <Badge tone="bad" className="text-2xs px-1.5 py-0.5 rounded-md font-bold">
               خصم {Math.round(((Number(product.regular_price) - Number(product.sale_price)) / Number(product.regular_price)) * 100)}%
-            </span>
+            </Badge>
           )}
           {Boolean(product.has_variants || product.variants?.length) && (
-            <span className="text-2xs px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 font-bold border border-indigo-100">
+            <Badge tone="info" className="text-2xs px-1.5 py-0.5 rounded-md font-bold">
               {product.variants?.length ? `${product.variants.length} مقاس/لون` : 'متغيرات'}
-            </span>
+            </Badge>
           )}
           {Boolean(product.has_expiry || product.batches?.length) && (
-            <span className="text-2xs px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 font-bold border border-amber-100">
+            <Badge tone="warn" className="text-2xs px-1.5 py-0.5 rounded-md font-bold">
               صلاحية
-            </span>
+            </Badge>
           )}
           {Boolean(product.sub_unit) && (
-            <span className="text-2xs px-1.5 py-0.5 rounded-md bg-sky-50 text-sky-700 font-bold border border-sky-100">
+            <Badge tone="neutral" className="text-2xs px-1.5 py-0.5 rounded-md font-bold">
               {product.sub_unit}
-            </span>
+            </Badge>
           )}
         </div>
       </div>
-      <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between w-full">
+
+      <div className="mt-3 pt-2 border-t border-line flex items-center justify-between w-full">
         <div className="flex items-baseline gap-1.5 overflow-hidden">
-          <span className="text-xs sm:text-sm font-black text-emerald-600 font-mono">
+          <span className="text-xs sm:text-sm font-black text-brand">
             {formatCurrency(product.sale_price)}
           </span>
           {hasDiscount && (
-            <span className="line-through text-slate-400 text-2xs font-mono">
+            <span className="line-through text-muted text-2xs">
               {formatCurrency(Number(product.regular_price))}
             </span>
           )}
         </div>
-        <div className="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-bold group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+        <div className="w-6 h-6 rounded-lg bg-brand-soft text-brand-ink flex items-center justify-center text-xs font-bold group-hover:bg-brand group-hover:text-on-brand transition-colors">
           +
         </div>
       </div>
@@ -235,14 +260,14 @@ export const PosProductCatalog: React.FC<PosProductCatalogProps> = ({
 
   return (
     <div
-      className="flex flex-col h-full bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden"
+      className="flex flex-col h-full bg-panel rounded-3xl border border-line shadow-xs overflow-hidden"
       data-pos-rendered={slice.length}
       data-pos-loaded={shownProducts.length}
       data-pos-search-ms={searchMs ?? undefined}
     >
-      <div className="p-4 border-b border-slate-100 space-y-3 bg-slate-50/50">
+      <div className="p-4 border-b border-line space-y-3 bg-panel/50">
         <div className="relative">
-          <Search className="w-5 h-5 absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Search className="w-5 h-5 absolute right-3.5 top-1/2 -translate-y-1/2 text-muted" />
           <input
             ref={searchInputRef}
             type="text"
@@ -256,17 +281,17 @@ export const PosProductCatalog: React.FC<PosProductCatalogProps> = ({
               }
             }}
             placeholder="ابحث باسم الصنف أو امسح الباركود... [F2]"
-            className="w-full pl-24 pr-11 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm transition-all"
+            className="w-full pl-24 pr-11 py-3 bg-panel border border-line rounded-2xl text-sm font-medium text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-brand shadow-xs transition-all"
           />
           <div className="absolute left-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
-            <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-bold text-slate-400 bg-slate-100 border border-slate-200 rounded-md pointer-events-none">
+            <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-bold text-muted bg-surface-2 border border-line rounded-md pointer-events-none">
               F2
             </kbd>
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
+                className="p-1 text-muted hover:text-ink rounded-lg"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -277,23 +302,25 @@ export const PosProductCatalog: React.FC<PosProductCatalogProps> = ({
         {categories.length > 0 && (
           <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs scrollbar-none">
             <button
+              type="button"
               onClick={() => onSelectCategory(null)}
-              className={`px-3.5 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all ${
+              className={`min-h-[36px] h-9 px-3.5 rounded-xl font-bold whitespace-nowrap transition-all flex items-center justify-center ${
                 selectedCategoryId === null
-                  ? 'bg-slate-900 text-white shadow-sm'
-                  : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                  ? 'bg-ink text-canvas shadow-xs'
+                  : 'bg-panel text-muted border border-line hover:bg-surface-2 hover:text-ink'
               }`}
             >
               جميع الأصناف{browseTotal !== null ? ` (${browseTotal})` : ''}
             </button>
             {categories.map((category) => (
               <button
+                type="button"
                 key={category.id}
                 onClick={() => onSelectCategory(category.id)}
-                className={`px-3.5 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all ${
+                className={`min-h-[36px] h-9 px-3.5 rounded-xl font-bold whitespace-nowrap transition-all flex items-center justify-center ${
                   selectedCategoryId === category.id
-                    ? 'bg-slate-900 text-white shadow-sm'
-                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                    ? 'bg-ink text-canvas shadow-xs'
+                    : 'bg-panel text-muted border border-line hover:bg-surface-2 hover:text-ink'
                 }`}
               >
                 {category.name}
@@ -311,22 +338,21 @@ export const PosProductCatalog: React.FC<PosProductCatalogProps> = ({
         className="flex-1 overflow-y-auto p-4 pb-28 lg:pb-4"
       >
         {isLoading && products.length === 0 ? (
-          <div className="h-full flex items-center justify-center text-slate-400 text-sm">
+          <div className="h-full flex items-center justify-center text-muted text-sm">
             جاري تحميل كتالوج الأصناف...
           </div>
         ) : shownProducts.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-center p-6">
-            <div className="w-14 h-14 bg-slate-100 text-slate-400 rounded-2xl flex items-center justify-center mb-3">
-              <Package className="w-7 h-7" />
-            </div>
-            <h4 className="text-sm font-bold text-slate-700">
-              {isSearching ? 'جاري البحث في كل الأصناف...' : 'لا يوجد صنف يطابق هذا البحث'}
-            </h4>
-            <p className="text-xs text-slate-400 mt-1 max-w-xs">
-              {isSearching
-                ? 'البحث يتم على الكتالوج كامل، مش على الصفحة الظاهرة فقط.'
-                : 'تأكد من كتابة الاسم أو الباركود بشكل صحيح، أو أضف الصنف لقائمة المنتجات أولاً.'}
-            </p>
+          <div className="h-full flex flex-col items-center justify-center p-6">
+            <EmptyState
+              icon={<Package className="w-6 h-6 text-muted" />}
+              title={isSearching ? 'جاري البحث في كل الأصناف...' : 'لا يوجد صنف يطابق هذا البحث'}
+              description={
+                isSearching
+                  ? 'البحث يتم على الكتالوج كامل، مش على الصفحة الظاهرة فقط.'
+                  : 'تأكد من كتابة الاسم أو الباركود بشكل صحيح، أو أضف الصنف لقائمة المنتجات أولاً.'
+              }
+              className="bg-transparent border-0 py-8"
+            />
           </div>
         ) : (
           <div style={{ height: totalHeight, position: 'relative' }}>
@@ -344,10 +370,10 @@ export const PosProductCatalog: React.FC<PosProductCatalogProps> = ({
           </div>
         )}
         {isFetchingMore && (
-          <p className="text-center text-[11px] text-slate-400 py-3">جاري تحميل المزيد...</p>
+          <p className="text-center text-[11px] text-muted py-3">جاري تحميل المزيد...</p>
         )}
         {!isLoading && searchQuery.trim() && totalCount > shownProducts.length && isSearching && (
-          <p className="text-center text-[11px] text-slate-400 py-2">نتائج البحث: {totalCount}</p>
+          <p className="text-center text-[11px] text-muted py-2">نتائج البحث: {totalCount}</p>
         )}
       </div>
     </div>

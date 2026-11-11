@@ -514,34 +514,34 @@ export const PosPage: React.FC = () => {
   ]);
 
   return (
-    <div className="flex flex-col h-screen bg-slate-100 font-sans text-slate-800 antialiased overflow-hidden" dir="rtl">
+    <div className="flex flex-col h-screen bg-canvas font-sans text-ink antialiased overflow-hidden" dir="rtl">
       {/* Toast Notification */}
       {notification && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white px-5 py-2.5 rounded-2xl shadow-xl text-xs font-bold animate-in fade-in slide-in-from-top-4 duration-200 flex items-center gap-2 border border-slate-700">
-          <Sparkles className="w-4 h-4 text-emerald-400" />
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-ink text-canvas px-5 py-2.5 rounded-2xl shadow-xl text-xs font-bold animate-in fade-in slide-in-from-top-4 duration-200 flex items-center gap-2 border border-line">
+          <Sparkles className="w-4 h-4 text-brand" />
           <span>{notification}</span>
         </div>
       )}
 
       {/* POS Top Header Bar */}
-      <header className="h-16 bg-white border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between shadow-xs flex-shrink-0 z-10">
+      <header className="h-16 bg-panel border-b border-line px-4 sm:px-6 flex items-center justify-between shadow-xs shrink-0 z-10 text-ink">
         {/* Left: Back to Dashboard & Branding */}
         <div className="flex items-center gap-3">
           <Link
             to="/dashboard"
-            className="p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors"
+            className="p-2 text-muted hover:text-ink hover:bg-surface-2 rounded-xl transition-colors"
             title="العودة للوحة القيادة"
           >
             <ArrowRight className="w-5 h-5" />
           </Link>
 
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-slate-950 font-black text-sm shadow-xs">
+            <div className="w-8 h-8 rounded-xl bg-brand text-on-brand flex items-center justify-center font-black text-sm shadow-xs">
               كـ
             </div>
             <div>
-              <h1 className="font-black text-sm text-slate-900 leading-tight">نقطة البيع (POS)</h1>
-              <p className="text-2xs text-slate-500 font-medium">البيع السريع وإصدار الفواتير</p>
+              <h1 className="font-black text-sm text-ink leading-tight">نقطة البيع (POS)</h1>
+              <p className="text-2xs text-muted font-medium">البيع السريع وإصدار الفواتير</p>
             </div>
           </div>
         </div>
@@ -549,13 +549,13 @@ export const PosPage: React.FC = () => {
         {/* Middle: Branch Indicator & Shift Status */}
         <div className="hidden md:flex items-center gap-2.5 text-xs">
           {/* Branch Badge / Selector */}
-          <div className="flex items-center gap-1.5 bg-slate-100 text-slate-700 border border-slate-200/80 px-3 py-1.5 rounded-full font-bold">
-            <Building2 className="w-3.5 h-3.5 text-emerald-600" />
+          <div className="flex items-center gap-1.5 bg-surface-2 text-ink border border-line px-3 py-1.5 rounded-full font-bold">
+            <Building2 className="w-3.5 h-3.5 text-brand" />
             {isOwnerOrAdmin ? (
               <select
                 value={selectedBranchId || ''}
                 onChange={(e) => setSelectedBranchId(Number(e.target.value))}
-                className="bg-transparent border-0 font-bold text-slate-800 text-xs focus:ring-0 cursor-pointer p-0"
+                className="bg-transparent border-0 font-bold text-ink text-xs focus:ring-0 cursor-pointer p-0"
               >
                 {branchList.map((b: any) => (
                   <option key={b.id} value={b.id}>
@@ -564,7 +564,7 @@ export const PosPage: React.FC = () => {
                 ))}
               </select>
             ) : (
-              <span className="font-bold text-slate-800">
+              <span className="font-bold text-ink">
                 {branchList.find((b: any) => b.id === (user?.branch_id || selectedBranchId))?.name || (user as any)?.branch?.name || 'فرعك المخصص'}
               </span>
             )}
@@ -573,18 +573,18 @@ export const PosPage: React.FC = () => {
           {canOperateShift && (
             <>
               {activeShift ? (
-                <div className="flex items-center gap-2 bg-emerald-50 text-emerald-800 border border-emerald-200/80 px-3.5 py-1.5 rounded-full font-bold">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <div className="flex items-center gap-2 bg-ok-soft text-ok border border-ok/20 px-3.5 py-1.5 rounded-full font-bold">
+                  <span className="w-2 h-2 rounded-full bg-ok animate-pulse" />
                   <span>الوردية: {activeShift.shift_number}</span>
-                  <span className="text-slate-300">•</span>
-                  <Coins className="w-3.5 h-3.5 text-amber-600" />
+                  <span className="text-muted">•</span>
+                  <Coins className="w-3.5 h-3.5 text-warn" />
                   <span>نقدية الدرج: {formatCurrency(activeShift.expected_cash)}</span>
                 </div>
               ) : (
                 <button
                   type="button"
                   onClick={() => setIsOpenShiftModalOpen(true)}
-                  className="flex items-center gap-1.5 bg-rose-50 text-rose-700 border border-rose-200 px-3 py-1.5 rounded-full font-bold hover:bg-rose-100 transition-colors animate-pulse"
+                  className="flex items-center gap-1.5 bg-bad-soft text-bad border border-bad/20 px-3 py-1.5 rounded-full font-bold hover:bg-bad-soft/80 transition-colors animate-pulse"
                 >
                   <AlertCircle className="w-3.5 h-3.5" />
                   <span>لا توجد وردية مفتوحة! اضغط هنا لفتح الوردية</span>
@@ -600,14 +600,14 @@ export const PosPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setIsHeldCartsModalOpen(true)}
-            className="relative inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors"
+            className="relative inline-flex items-center gap-1.5 px-3 py-2 bg-surface-2 hover:bg-line text-ink rounded-xl text-xs font-bold transition-colors"
             title="الفواتير المعلقة"
           >
-            <PauseCircle className="w-4 h-4 text-amber-600" />
+            <PauseCircle className="w-4 h-4 text-warn" />
             <span className="hidden sm:inline">المعلقة</span>
-            <kbd className="hidden md:inline-block px-1.5 py-0.5 text-[10px] font-bold text-slate-500 bg-slate-200/80 rounded">F8</kbd>
+            <kbd className="hidden md:inline-block px-1.5 py-0.5 text-[10px] font-bold text-muted bg-panel rounded border border-line">F8</kbd>
             {heldCarts.length > 0 && (
-              <span className="w-5 h-5 rounded-full bg-rose-600 text-white text-[10px] font-black flex items-center justify-center">
+              <span className="w-5 h-5 rounded-full bg-bad text-on-brand text-[10px] font-black flex items-center justify-center">
                 {heldCarts.length}
               </span>
             )}
@@ -617,7 +617,7 @@ export const PosPage: React.FC = () => {
           <button
             type="button"
             onClick={toggleFullscreen}
-            className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors"
+            className="p-2 text-muted hover:text-ink hover:bg-surface-2 rounded-xl transition-colors"
             title="ملء الشاشة"
           >
             {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
@@ -627,11 +627,12 @@ export const PosPage: React.FC = () => {
 
       {/* Shift Alert Banner on mobile if closed */}
       {canOperateShift && !activeShift && (
-        <div className="bg-rose-600 text-white px-4 py-2 flex items-center justify-between text-xs font-bold md:hidden">
+        <div className="bg-bad text-on-brand px-4 py-2 flex items-center justify-between text-xs font-bold md:hidden">
           <span>يجب فتح وردية لبدء تسجيل المبيعات النقدية في الدرج.</span>
           <button
+            type="button"
             onClick={() => setIsOpenShiftModalOpen(true)}
-            className="bg-white text-rose-700 px-2.5 py-1 rounded-lg text-xs font-black"
+            className="bg-panel text-bad px-2.5 py-1 rounded-lg text-xs font-black shadow-xs"
           >
             فتح وردية
           </button>
@@ -641,7 +642,7 @@ export const PosPage: React.FC = () => {
       {/* Master Workspace: Split Screen Layout */}
       <div className="flex-1 p-3 sm:p-4 overflow-hidden flex flex-col lg:flex-row gap-3 sm:gap-4">
         {/* Right Pane (RTL): Product Catalog & Quick Search */}
-        <div className="flex-1 h-full min-w-0">
+        <div className="flex-1 h-full min-w-0 pb-20 lg:pb-0">
           <AppErrorBoundary fallbackTitle="تعذر عرض كتالوج المنتجات">
             <PosProductCatalog
               products={products}
@@ -666,7 +667,7 @@ export const PosPage: React.FC = () => {
         </div>
 
         {/* Left Pane (RTL): Order Ticket & Cart (Desktop) */}
-        <div className="hidden lg:block w-[420px] xl:w-[460px] h-full flex-shrink-0">
+        <div className="hidden lg:block w-[420px] xl:w-[460px] h-full shrink-0">
           <PosCartTicket
             items={cartItems}
             selectedCustomer={selectedCustomer}
@@ -689,17 +690,17 @@ export const PosPage: React.FC = () => {
 
       {/* Mobile Floating Cart Action Bar */}
       {cartItems.length > 0 && (
-        <div className="lg:hidden fixed bottom-[calc(4.2rem+env(safe-area-inset-bottom,0px))] left-3 right-3 z-30 p-3 bg-white/95 backdrop-blur-xl border border-white/80 shadow-[0_12px_30px_-5px_rgba(35,45,60,0.15)] rounded-2xl flex items-center justify-between gap-3 animate-in slide-in-from-bottom duration-200">
-          <div className="flex items-center gap-2.5">
-            <div className="relative p-2.5 bg-emerald-600 text-white rounded-2xl shadow-sm">
+        <div className="lg:hidden fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] left-3 right-3 z-30 h-14 min-h-[56px] px-4 bg-brand text-on-brand shadow-lg rounded-2xl flex items-center justify-between gap-3 animate-in slide-in-from-bottom duration-200">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="relative p-2 bg-on-brand/10 text-on-brand rounded-xl">
               <ShoppingBag className="w-5 h-5" />
-              <span className="absolute -top-1.5 -right-1.5 bg-rose-600 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-white">
+              <span className="absolute -top-1.5 -right-1.5 bg-bad text-on-brand text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-brand">
                 {cartItems.reduce((acc, item) => acc + item.quantity, 0)}
               </span>
             </div>
-            <div>
-              <span className="text-2xs text-slate-400 font-bold block">إجمالي السلة</span>
-              <span className="text-base font-black font-mono text-slate-900 leading-none">
+            <div className="min-w-0 truncate">
+              <span className="text-2xs opacity-80 font-bold block leading-none mb-0.5">إجمالي السلة</span>
+              <span className="text-base font-black text-on-brand leading-none truncate block">
                 {formatCurrency(totalAmount)}
               </span>
             </div>
@@ -711,10 +712,10 @@ export const PosPage: React.FC = () => {
               hapticSelection();
               setIsMobileCartOpen(true);
             }}
-            className="flex-1 max-w-[200px] py-3 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 active:scale-95 text-white rounded-xl font-black text-xs shadow-md shadow-emerald-600/25 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+            className="py-2.5 px-4 bg-ink text-canvas hover:opacity-95 active:scale-95 rounded-xl font-black text-xs shadow-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer shrink-0"
           >
             <span>عرض السلة والدفع</span>
-            <span className="font-mono bg-white/20 px-1.5 py-0.5 rounded-md text-2xs">
+            <span className="bg-canvas/20 px-1.5 py-0.5 rounded-md text-2xs font-bold">
               ({cartItems.reduce((acc, item) => acc + item.quantity, 0)})
             </span>
           </button>
