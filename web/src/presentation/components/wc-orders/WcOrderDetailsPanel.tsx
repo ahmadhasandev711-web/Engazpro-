@@ -54,6 +54,7 @@ export const WcOrderDetailsPanel: React.FC<WcOrderDetailsPanelProps> = ({ vm, on
     branches,
     mandobs,
     returnMutation,
+    orders,
   } = vm;
 
   if (!viewingOrder) {
@@ -72,7 +73,7 @@ export const WcOrderDetailsPanel: React.FC<WcOrderDetailsPanelProps> = ({ vm, on
     return null;
   }
 
-  const order = viewingOrder;
+  const order = (orders && orders.find((o: any) => o.id === viewingOrder.id)) || viewingOrder;
   const stages = calculateOrderStages(order);
 
   const phone = order.customer_phone || order.party?.phone;
