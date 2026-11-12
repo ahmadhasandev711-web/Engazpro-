@@ -1,5 +1,6 @@
 import React from 'react';
 import { Truck, Package, CheckCircle2, Headphones } from 'lucide-react';
+import { WcOrderStatus } from '@pos-mandob/shared';
 import { Badge } from '../ui/Badge';
 
 export const cleanItemName = (name?: string): string => {
@@ -55,58 +56,58 @@ export const getCallConfirmedBadge = (order: any): React.ReactNode => {
 
 export const getStatusBadge = (status: string): React.ReactNode => {
   switch (status) {
-    case 'PENDING_CONFIRMATION':
+    case WcOrderStatus.PENDING_CONFIRMATION:
       return (
         <Badge tone="warn" className="font-black">
           بانتظار التأكيد
         </Badge>
       );
-    case 'CONFIRMED':
+    case WcOrderStatus.CONFIRMED:
       return (
         <Badge tone="brand" className="font-black">
           مؤكد وقيد التجهيز
         </Badge>
       );
-    case 'PREPARING':
+    case WcOrderStatus.PREPARING:
       return (
         <Badge tone="brand" className="font-black">
           قيد التجهيز
         </Badge>
       );
-    case 'DISPATCHED':
+    case WcOrderStatus.DISPATCHED:
       return (
         <Badge tone="info" className="font-black">
           <Truck className="w-3 h-3" />
           مع المندوب
         </Badge>
       );
-    case 'SHIPPED_VIA_COURIER':
+    case WcOrderStatus.SHIPPED_VIA_COURIER:
       return (
         <Badge tone="info" className="font-black">
           <Package className="w-3 h-3" />
           مع شركة الشحن
         </Badge>
       );
-    case 'DELIVERED':
+    case WcOrderStatus.DELIVERED:
       return (
         <Badge tone="ok" className="font-black">
           <CheckCircle2 className="w-3 h-3" />
           تم التسليم والتحصيل
         </Badge>
       );
-    case 'PARTIALLY_DELIVERED':
+    case WcOrderStatus.PARTIALLY_DELIVERED:
       return (
         <Badge tone="warn" className="font-black">
           تسليم جزئي
         </Badge>
       );
-    case 'RETURNED':
+    case WcOrderStatus.RETURNED:
       return (
         <Badge tone="bad" className="font-black">
           مرتجع
         </Badge>
       );
-    case 'CANCELLED':
+    case WcOrderStatus.CANCELLED:
       return (
         <Badge tone="bad" className="font-black">
           ملغي
@@ -149,12 +150,12 @@ export function calculateOrderStages(order: any): OrderStage[] {
   if (!order) return [];
 
   const orderDateFormatted = formatOrderDate(order);
-  const isCancelled = order.status === 'CANCELLED';
-  const isReturned = order.status === 'RETURNED';
-  const isPartial = order.status === 'PARTIALLY_DELIVERED';
-  const isDelivered = order.status === 'DELIVERED';
-  const isDispatched = order.status === 'DISPATCHED' || order.status === 'SHIPPED_VIA_COURIER';
-  const isConfirmed = order.status === 'CONFIRMED' || order.status === 'PREPARING' || isDispatched || isDelivered || isReturned || isPartial;
+  const isCancelled = order.status === WcOrderStatus.CANCELLED;
+  const isReturned = order.status === WcOrderStatus.RETURNED;
+  const isPartial = order.status === WcOrderStatus.PARTIALLY_DELIVERED;
+  const isDelivered = order.status === WcOrderStatus.DELIVERED;
+  const isDispatched = order.status === WcOrderStatus.DISPATCHED || order.status === WcOrderStatus.SHIPPED_VIA_COURIER;
+  const isConfirmed = order.status === WcOrderStatus.CONFIRMED || order.status === WcOrderStatus.PREPARING || isDispatched || isDelivered || isReturned || isPartial;
 
   // Stage 1: Store Arrival (always arrived)
   const stageStore: OrderStage = {
@@ -267,7 +268,7 @@ export function calculateOrderStages(order: any): OrderStage[] {
       sublabel: 'تم التسليم بنجاح',
       status: 'done',
     };
-  } else if (order.status === 'SHIPPED_VIA_COURIER') {
+  } else if (order.status === WcOrderStatus.SHIPPED_VIA_COURIER) {
     const courier = order.courier_name ? `شركة ${order.courier_name}` : 'شركة الشحن';
     stageDelivery = {
       id: 'delivery',
@@ -275,7 +276,7 @@ export function calculateOrderStages(order: any): OrderStage[] {
       sublabel: `مع ${courier}`,
       status: 'now',
     };
-  } else if (order.status === 'DISPATCHED') {
+  } else if (order.status === WcOrderStatus.DISPATCHED) {
     const mandob = order.mandob?.name ? `المندوب ${order.mandob.name}` : 'المندوب';
     stageDelivery = {
       id: 'delivery',
@@ -283,7 +284,7 @@ export function calculateOrderStages(order: any): OrderStage[] {
       sublabel: `في الطريق مع ${mandob}`,
       status: 'now',
     };
-  } else if (order.status === 'CONFIRMED' || order.status === 'PREPARING') {
+  } else if (order.status === WcOrderStatus.CONFIRMED || order.status === WcOrderStatus.PREPARING) {
     stageDelivery = {
       id: 'delivery',
       label: 'التجهيز والتسليم',
