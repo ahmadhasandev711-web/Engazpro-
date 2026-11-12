@@ -3,6 +3,7 @@
 namespace App\Rules;
 
 use App\Contracts\HostResolver;
+use App\Support\DevNetworkPolicy;
 use App\Support\PublicIpPolicy;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -34,46 +35,76 @@ class PublicHttpsUrl implements ValidationRule
             return;
         }
 
-        if (strtolower($parsed['scheme']) !== 'https') {
-            $fail('يجب أن يبدأ رابط المتجر ببروتوكول آمن https:// حصراً.');
+        $allowsInsecure = DevNetworkPolicy::allowsInsecure();
+
+        if (!$this->validateScheme((string) $parsed['scheme'], $allowsInsecure, $fail)) {
             return;
         }
 
-        $host = strtolower($parsed['host']);
-
-        // Prevent explicit localhost / loopback names
-        if (
-            $host === 'localhost' ||
-            str_ends_with($host, '.localhost') ||
-            str_ends_with($host, '.local') ||
-            $host === 'ip6-localhost' ||
-            $host === 'ip6-loopback'
-        ) {
-            $fail('غير مسموح بربط عناوين الشبكة المحلية أو الداخلية.');
+        $host = strtolower((string) $parsed['host']);
+        if (!$this->validateHostName($host, $allowsInsecure, $fail)) {
             return;
         }
 
-        // If host is direct IP address
-        if (filter_var($host, FILTER_VALIDATE_IP)) {
-            if (!PublicIpPolicy::isPublic($host)) {
-                $fail('غير مسموح بربط عناوين الآي بي الداخلية أو الخاصة.');
-                return;
+        $this->validateHostResolution($host, $allowsInsecure, $fail);
+    }
+
+    private function validateScheme(string $scheme, bool $allowsInsecure, Closure $fail): bool
+    {
+        $normalizedScheme = strtolower($scheme);
+        if ($normalizedScheme !== 'https') {
+            if (!($allowsInsecure && $normalizedScheme === 'http')) {
+                $fail('يجب أن يبدأ رابط المتجر ببروتوكول آمن https:// حصراً.');
+                return false;
             }
+        }
+
+        return true;
+    }
+
+    private function validateHostName(string $host, bool $allowsInsecure, Closure $fail): bool
+    {
+        if (!$allowsInsecure) {
+            if (
+                $host === 'localhost' ||
+                str_ends_with($host, '.localhost') ||
+                str_ends_with($host, '.local') ||
+                $host === 'ip6-localhost' ||
+                $host === 'ip6-loopback'
+            ) {
+                $fail('غير مسموح بربط عناوين الشبكة المحلية أو الداخلية.');
+                return false;
+            }
+        }
+
+        if (filter_var($host, FILTER_VALIDATE_IP)) {
+            if (!$allowsInsecure && !PublicIpPolicy::isPublic($host)) {
+                $fail('غير مسموح بربط عناوين الآي بي الداخلية أو الخاصة.');
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function validateHostResolution(string $host, bool $allowsInsecure, Closure $fail): void
+    {
+        if (filter_var($host, FILTER_VALIDATE_IP)) {
             return;
         }
 
-        // Resolve domain name using HostResolver
         $ips = $this->hostResolver->resolve($host);
-
         if (empty($ips)) {
             $fail('تعذر التحقق من عنوان المتجر أو أن اسم النطاق غير موجود.');
             return;
         }
 
-        foreach ($ips as $ip) {
-            if (!PublicIpPolicy::isPublic($ip)) {
-                $fail('اسم النطاق يشير إلى عناوين آي بي داخلية أو خاصة غير مسموح بها.');
-                return;
+        if (!$allowsInsecure) {
+            foreach ($ips as $ip) {
+                if (!PublicIpPolicy::isPublic($ip)) {
+                    $fail('اسم النطاق يشير إلى عناوين آي بي داخلية أو خاصة غير مسموح بها.');
+                    return;
+                }
             }
         }
     }
