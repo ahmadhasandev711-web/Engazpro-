@@ -147,10 +147,6 @@
     "raw": 71,
     "hex": 0
   },
-  "src/presentation/components/mobile/WcOrderMobileCard.tsx": {
-    "raw": 90,
-    "hex": 0
-  },
   "src/presentation/components/payments/PaymentReceiptModal.tsx": {
     "raw": 66,
     "hex": 1
@@ -293,26 +289,6 @@
   },
   "src/presentation/components/treasuries/TreasuriesTransferModal.tsx": {
     "raw": 29,
-    "hex": 0
-  },
-  "src/presentation/components/wc-orders/helpers.tsx": {
-    "raw": 24,
-    "hex": 0
-  },
-  "src/presentation/components/wc-orders/WcOrderActionModals.tsx": {
-    "raw": 155,
-    "hex": 0
-  },
-  "src/presentation/components/wc-orders/WcOrderDetailsModal.tsx": {
-    "raw": 109,
-    "hex": 0
-  },
-  "src/presentation/components/wc-orders/WcOrdersList.tsx": {
-    "raw": 114,
-    "hex": 0
-  },
-  "src/presentation/components/wc-orders/WcOrdersToolbar.tsx": {
-    "raw": 36,
     "hex": 0
   },
   "src/presentation/context/ConfirmContext.tsx": {

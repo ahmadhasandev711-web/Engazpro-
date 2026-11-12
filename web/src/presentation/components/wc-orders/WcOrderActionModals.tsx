@@ -1,74 +1,131 @@
 import React from 'react';
-import { Truck, AlertCircle, X, RefreshCw, Package, Check, Building2, Plus } from 'lucide-react';
+import { Truck, AlertCircle, X, Package, Check, Building2, Plus } from 'lucide-react';
+import { Button } from '../ui/Button';
+import { Input } from '../ui/Input';
+import { Select } from '../ui/Select';
+import { Badge } from '../ui/Badge';
+import { cn } from '../../utils/cn';
 import type { WcOrdersViewModel } from './types';
 
 export const WcOrderActionModals: React.FC<{ vm: WcOrdersViewModel }> = ({ vm }) => {
-  const { selection, isManager, confirmModalOrder, setConfirmModalOrder, selectedBranchId, setSelectedBranchId, confirmError, setConfirmError, forceConfirm, setForceConfirm, dispatchModalOrder, setDispatchModalOrder, selectedMandobId, setSelectedMandobId, courierModalOrder, setCourierModalOrder, courierName, setCourierName, courierPartyId, setCourierPartyId, courierTrackingNumber, setCourierTrackingNumber, courierBranchId, setCourierBranchId, showAddCourier, setShowAddCourier, newCourierName, setNewCourierName, newCourierPhone, setNewCourierPhone, newCourierNotes, setNewCourierNotes, addCourierError, setAddCourierError, deliverModalOrder, setDeliverModalOrder, collectedAmount, setCollectedAmount, paymentMethod, setPaymentMethod, setFeedback, user, branches, mandobs, couriers, confirmMutation, dispatchMutation, courierDispatchMutation, handleCreateCourier, createCourierMutation, deliverMutation } = vm;
+  const {
+    selection,
+    isManager,
+    confirmModalOrder,
+    setConfirmModalOrder,
+    selectedBranchId,
+    setSelectedBranchId,
+    confirmError,
+    setConfirmError,
+    forceConfirm,
+    setForceConfirm,
+    dispatchModalOrder,
+    setDispatchModalOrder,
+    selectedMandobId,
+    setSelectedMandobId,
+    courierModalOrder,
+    setCourierModalOrder,
+    courierName,
+    setCourierName,
+    courierPartyId,
+    setCourierPartyId,
+    courierTrackingNumber,
+    setCourierTrackingNumber,
+    courierBranchId,
+    setCourierBranchId,
+    showAddCourier,
+    setShowAddCourier,
+    newCourierName,
+    setNewCourierName,
+    newCourierPhone,
+    setNewCourierPhone,
+    newCourierNotes,
+    setNewCourierNotes,
+    addCourierError,
+    setAddCourierError,
+    deliverModalOrder,
+    setDeliverModalOrder,
+    collectedAmount,
+    setCollectedAmount,
+    paymentMethod,
+    setPaymentMethod,
+    setFeedback,
+    user,
+    branches,
+    mandobs,
+    couriers,
+    confirmMutation,
+    dispatchMutation,
+    courierDispatchMutation,
+    handleCreateCourier,
+    createCourierMutation,
+    deliverMutation,
+  } = vm;
 
   return (
     <>
       {/* Modal 1: Confirm Order Modal - Responsive Bottom Sheet */}
       {confirmModalOrder && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 p-0 sm:p-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-t-[2.5rem] sm:rounded-3xl p-5 sm:p-6 max-w-md w-full space-y-4 shadow-2xl animate-in slide-in-from-bottom sm:zoom-in-95 duration-200 max-h-[92vh] flex flex-col overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-canvas/80 p-0 sm:p-4 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="bg-panel border border-line rounded-t-[2.5rem] sm:rounded-3xl p-5 sm:p-6 max-w-md w-full space-y-4 shadow-xl animate-in slide-in-from-bottom sm:zoom-in-95 duration-200 max-h-[92vh] flex flex-col overflow-y-auto text-right" dir="rtl">
             {/* Sheet Handle */}
-            <div className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-1 sm:hidden" />
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="font-black text-sm text-slate-900">
+            <div className="w-12 h-1.5 bg-line rounded-full mx-auto mb-1 sm:hidden shrink-0" />
+            <div className="flex items-center justify-between border-b border-line pb-3">
+              <h3 className="font-black text-sm text-ink tabular-nums">
                 تأكيد الطلب #{confirmModalOrder.wc_order_id}
               </h3>
               <button
+                type="button"
                 onClick={() => setConfirmModalOrder(null)}
-                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
+                className="p-1 text-muted hover:text-ink rounded-lg transition-colors cursor-pointer"
+                title="إغلاق"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <p className="text-xs text-slate-500 leading-relaxed">
+            <p className="text-xs text-muted leading-relaxed">
               اختر الفرع أو المخزن المسؤول عن تجهيز هذا الطلب. سيقوم النظام بالتحقق الآلي من توفر أرصدة المقاسات والألوان المطلوبة.
             </p>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">فرع التجهيز والمخزون:</label>
+              <label className="block text-xs font-bold text-ink mb-1.5">فرع التجهيز والمخزون:</label>
               {isManager ? (
-                <div className="p-2.5 bg-purple-50 border border-purple-200 rounded-xl text-xs font-bold text-purple-900 flex items-center gap-2">
-                  <Building2 className="w-4 h-4 text-purple-600 shrink-0" />
+                <div className="p-3 bg-brand-soft border border-brand/20 rounded-xl text-xs font-bold text-brand-ink flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-brand shrink-0" />
                   <span>تجهيز وسحب من فرعك: {branches.find((b: any) => b.id === (user?.branch_id ?? selectedBranchId))?.name || 'فرعك المعين'}</span>
                 </div>
               ) : (
-                <select
+                <Select
                   value={selectedBranchId}
                   onChange={(e) => setSelectedBranchId(Number(e.target.value))}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold"
-                >
-                  {branches.map((b: any) => (
-                    <option key={b.id} value={b.id}>
-                      {b.name} ({b.type})
-                    </option>
-                  ))}
-                </select>
+                  options={branches.map((b: any) => ({
+                    value: b.id,
+                    label: `${b.name} (${b.type || 'فرع'})`,
+                  }))}
+                  className="text-xs font-bold"
+                />
               )}
             </div>
 
             {confirmError && (
-              <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-900 space-y-2">
-                <div className="flex items-center gap-1.5 font-bold text-rose-800">
-                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+              <div className="p-3 bg-bad-soft border border-bad/20 rounded-xl text-xs text-bad space-y-2">
+                <div className="flex items-center gap-1.5 font-bold">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
                   <span>تنبيه المخزون بالفرع:</span>
                 </div>
-                <p className="whitespace-pre-line text-[11px] leading-relaxed font-medium text-rose-800">
+                <p className="whitespace-pre-line text-2xs leading-relaxed font-medium">
                   {confirmError}
                 </p>
-                <div className="pt-2 border-t border-rose-200/60 flex items-center justify-between">
+                <div className="pt-2 border-t border-bad/20 flex items-center justify-between">
                   <label className="flex items-center gap-2 cursor-pointer select-none">
                     <input
                       type="checkbox"
                       checked={forceConfirm}
                       onChange={(e) => setForceConfirm(e.target.checked)}
-                      className="rounded border-rose-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
+                      className="rounded border-line text-brand focus:ring-brand cursor-pointer"
                     />
-                    <span className="text-[11px] font-bold text-rose-950">
+                    <span className="text-2xs font-bold">
                       تأكيد الطلب استثنائياً واستلام البضاعة لاحقاً
                     </span>
                   </label>
@@ -77,7 +134,9 @@ export const WcOrderActionModals: React.FC<{ vm: WcOrdersViewModel }> = ({ vm })
             )}
 
             <div className="flex items-center gap-2 pt-2">
-              <button
+              <Button
+                variant="primary"
+                size="lg"
                 onClick={() =>
                   confirmMutation.mutate({
                     orderId: confirmModalOrder.id,
@@ -86,24 +145,23 @@ export const WcOrderActionModals: React.FC<{ vm: WcOrdersViewModel }> = ({ vm })
                   })
                 }
                 disabled={confirmMutation.isPending || !selectedBranchId}
-                className="flex-1 py-2.5 bg-primary-600 text-slate-950 font-black rounded-xl text-xs hover:bg-primary-500 shadow-xs cursor-pointer disabled:opacity-50"
+                isLoading={confirmMutation.isPending}
+                className="flex-1 min-h-[44px] font-black text-xs"
               >
-                {confirmMutation.isPending
-                  ? 'جاري الفحص والتأكيد...'
-                  : forceConfirm
-                  ? '⚠️ تأكيد استثنائي مع نقص المخزون'
-                  : 'تأكيد وحجز المخزون'}
-              </button>
-              <button
+                {forceConfirm ? '⚠️ تأكيد استثنائي مع نقص المخزون' : 'تأكيد وحجز المخزون'}
+              </Button>
+              <Button
+                variant="secondary"
+                size="lg"
                 onClick={() => {
                   setConfirmModalOrder(null);
                   setConfirmError(null);
                   setForceConfirm(false);
                 }}
-                className="px-4 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-xl text-xs hover:bg-slate-200 cursor-pointer"
+                className="min-h-[44px] font-bold text-xs"
               >
                 إلغاء
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -111,43 +169,45 @@ export const WcOrderActionModals: React.FC<{ vm: WcOrdersViewModel }> = ({ vm })
 
       {/* Modal 2: Dispatch to Mandob Modal - Responsive Bottom Sheet */}
       {dispatchModalOrder && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 p-0 sm:p-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-t-[2.5rem] sm:rounded-3xl p-5 sm:p-6 max-w-md w-full space-y-4 shadow-2xl animate-in slide-in-from-bottom sm:zoom-in-95 duration-200 max-h-[92vh] flex flex-col overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-canvas/80 p-0 sm:p-4 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="bg-panel border border-line rounded-t-[2.5rem] sm:rounded-3xl p-5 sm:p-6 max-w-md w-full space-y-4 shadow-xl animate-in slide-in-from-bottom sm:zoom-in-95 duration-200 max-h-[92vh] flex flex-col overflow-y-auto text-right" dir="rtl">
             {/* Sheet Handle */}
-            <div className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-1 sm:hidden" />
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="font-black text-sm text-slate-900">
+            <div className="w-12 h-1.5 bg-line rounded-full mx-auto mb-1 sm:hidden shrink-0" />
+            <div className="flex items-center justify-between border-b border-line pb-3">
+              <h3 className="font-black text-sm text-ink tabular-nums">
                 إسناد الطلب للمندوب #{dispatchModalOrder.wc_order_id}
               </h3>
               <button
+                type="button"
                 onClick={() => setDispatchModalOrder(null)}
-                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
+                className="p-1 text-muted hover:text-ink rounded-lg transition-colors cursor-pointer"
+                title="إغلاق"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <p className="text-xs text-slate-500 leading-relaxed">
+            <p className="text-xs text-muted leading-relaxed">
               اختر المندوب المكلف بالتسليم. سيتم تحويل بضاعة الطلب إلى عهدة سيارة المندوب (VAN) لضمان انضباط المخزون في الطريق.
             </p>
 
             {mandobs.length === 0 ? (
-              <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-center space-y-2">
-                <AlertCircle className="w-6 h-6 text-amber-600 mx-auto" />
-                <div className="text-xs font-bold text-amber-900">لا يوجد مناديب مسجلين حالياً في هذا الفرع</div>
-                <p className="text-[11px] text-amber-700 leading-relaxed">
+              <div className="p-4 bg-warn-soft border border-warn/20 rounded-2xl text-center space-y-2">
+                <AlertCircle className="w-6 h-6 text-warn mx-auto" />
+                <div className="text-xs font-bold text-warn">لا يوجد مناديب مسجلين حالياً في هذا الفرع</div>
+                <p className="text-2xs text-muted leading-relaxed">
                   يرجى إضافة مندوب جديد وتعيين دوره (مندوب توصيل) من صفحة الموظفين أولاً لتتمكن من إسناد الطلبات إليه.
                 </p>
               </div>
             ) : (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="block text-xs font-bold text-slate-700">
+                  <label className="block text-xs font-bold text-ink">
                     اختر مندوب التوصيل المكلف:
                   </label>
-                  <span className="text-2xs bg-indigo-50 text-indigo-700 font-bold px-2 py-0.5 rounded-full border border-indigo-200">
+                  <Badge tone="brand">
                     {mandobs.length} {mandobs.length === 1 ? 'مندوب متاح' : 'مناديب متاحين'}
-                  </span>
+                  </Badge>
                 </div>
 
                 <div className="space-y-2 max-h-60 overflow-y-auto pr-0.5" style={{ touchAction: 'pan-y' }}>
@@ -168,28 +228,30 @@ export const WcOrderActionModals: React.FC<{ vm: WcOrdersViewModel }> = ({ vm })
                             setSelectedMandobId(m.id);
                           }
                         }}
-                        className={`w-full p-3 rounded-2xl border text-right flex items-center justify-between transition-all cursor-pointer select-none active:scale-[0.99] ${
+                        className={cn(
+                          'w-full p-3 rounded-2xl border text-right flex items-center justify-between transition-all cursor-pointer select-none active:scale-[0.99]',
                           isSelected
-                            ? 'bg-indigo-50/90 border-indigo-600 ring-2 ring-indigo-500/20 shadow-xs'
-                            : 'bg-slate-50 border-slate-200 hover:bg-slate-100 hover:border-slate-300'
-                        }`}
+                            ? 'bg-brand-soft border-brand ring-2 ring-brand/20 shadow-xs'
+                            : 'bg-surface-2 border-line hover:border-muted'
+                        )}
                       >
                         <div className="flex items-center gap-3">
                           <div
-                            className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                            className={cn(
+                              'w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors',
                               isSelected
-                                ? 'bg-indigo-600 text-white shadow-xs'
-                                : 'bg-slate-200 text-slate-600'
-                            }`}
+                                ? 'bg-brand text-on-brand shadow-xs'
+                                : 'bg-surface-3 text-muted'
+                            )}
                           >
                             <Truck className="w-5 h-5" />
                           </div>
                           <div>
-                            <div className="font-black text-xs text-slate-900">{m.name}</div>
-                            <div className="text-[11px] text-slate-500 font-mono mt-0.5 flex items-center gap-1.5">
+                            <div className="font-black text-xs text-ink">{m.name}</div>
+                            <div className="text-2xs text-muted tabular-nums mt-0.5 flex items-center gap-1.5">
                               <span>{m.phone || 'بدون رقم هاتف'}</span>
                               {m.branch?.name && (
-                                <span className="text-2xs text-slate-400 font-sans">
+                                <span className="text-2xs text-muted">
                                   • {m.branch.name}
                                 </span>
                               )}
@@ -199,11 +261,11 @@ export const WcOrderActionModals: React.FC<{ vm: WcOrdersViewModel }> = ({ vm })
 
                         <div className="shrink-0 mr-2">
                           {isSelected ? (
-                            <div className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-xs">
+                            <div className="w-6 h-6 rounded-full bg-brand text-on-brand flex items-center justify-center shadow-xs">
                               <Check className="w-3.5 h-3.5 stroke-[3]" />
                             </div>
                           ) : (
-                            <div className="w-6 h-6 rounded-full border-2 border-slate-300 bg-white" />
+                            <div className="w-6 h-6 rounded-full border-2 border-line bg-panel" />
                           )}
                         </div>
                       </div>
@@ -214,7 +276,9 @@ export const WcOrderActionModals: React.FC<{ vm: WcOrdersViewModel }> = ({ vm })
             )}
 
             <div className="flex items-center gap-2 pt-2">
-              <button
+              <Button
+                variant="primary"
+                size="lg"
                 onClick={() =>
                   dispatchMutation.mutate({
                     orderId: dispatchModalOrder.id,
@@ -222,16 +286,19 @@ export const WcOrderActionModals: React.FC<{ vm: WcOrdersViewModel }> = ({ vm })
                   })
                 }
                 disabled={dispatchMutation.isPending || !selectedMandobId}
-                className="flex-1 py-2.5 bg-indigo-600 text-white font-black rounded-xl text-xs hover:bg-indigo-700 shadow-xs"
+                isLoading={dispatchMutation.isPending}
+                className="flex-1 min-h-[44px] font-black text-xs"
               >
-                {dispatchMutation.isPending ? 'جاري التحويل والشحن...' : 'تأكيد الشحن مع المندوب'}
-              </button>
-              <button
+                تأكيد الشحن مع المندوب
+              </Button>
+              <Button
+                variant="secondary"
+                size="lg"
                 onClick={() => setDispatchModalOrder(null)}
-                className="px-4 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-xl text-xs hover:bg-slate-200"
+                className="min-h-[44px] font-bold text-xs"
               >
                 إلغاء
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -239,40 +306,42 @@ export const WcOrderActionModals: React.FC<{ vm: WcOrdersViewModel }> = ({ vm })
 
       {/* Modal 3: Deliver & Collect Modal - Responsive Bottom Sheet */}
       {deliverModalOrder && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 p-0 sm:p-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-t-[2.5rem] sm:rounded-3xl p-5 sm:p-6 max-w-md w-full space-y-4 shadow-2xl animate-in slide-in-from-bottom sm:zoom-in-95 duration-200 max-h-[92vh] flex flex-col overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-canvas/80 p-0 sm:p-4 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="bg-panel border border-line rounded-t-[2.5rem] sm:rounded-3xl p-5 sm:p-6 max-w-md w-full space-y-4 shadow-xl animate-in slide-in-from-bottom sm:zoom-in-95 duration-200 max-h-[92vh] flex flex-col overflow-y-auto text-right" dir="rtl">
             {/* Sheet Handle */}
-            <div className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-1 sm:hidden" />
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="font-black text-sm text-slate-900">
+            <div className="w-12 h-1.5 bg-line rounded-full mx-auto mb-1 sm:hidden shrink-0" />
+            <div className="flex items-center justify-between border-b border-line pb-3">
+              <h3 className="font-black text-sm text-ink tabular-nums">
                 تسليم وتحصيل الطلب #{deliverModalOrder.wc_order_id}
               </h3>
               <button
+                type="button"
                 onClick={() => setDeliverModalOrder(null)}
-                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
+                className="p-1 text-muted hover:text-ink rounded-lg transition-colors cursor-pointer"
+                title="إغلاق"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {deliverModalOrder.courier_party_id ? (
-              <div className="p-3 bg-sky-50 rounded-2xl border border-sky-200 text-xs text-sky-800 space-y-1">
+              <div className="p-3 bg-info-soft rounded-2xl border border-info/20 text-xs text-info space-y-1">
                 <div className="font-bold flex items-center gap-1">
                   <span>شركة الشحن: {deliverModalOrder.courier_name || 'شركة شحن خارجية'}</span>
                 </div>
-                <p className="text-[11px] text-sky-700">
+                <p className="text-2xs leading-relaxed">
                   {deliverModalOrder.payment_status === 'PAID_ONLINE' || (deliverModalOrder.wc_payment_method && deliverModalOrder.wc_payment_method !== 'cod')
                     ? 'الطلب مسدد أونلاين مسبقاً، ومهمة شركة الشحن هي التوصيل فقط (المطلوب تحصيله 0 ج.م).'
                     : 'المبلغ المحصل سيُقيد كعهدة معلقة في كشف حساب شركة الشحن، ولن يدخل الخزينة إلا عند توريد الكاش بسند قبض.'}
                 </p>
               </div>
             ) : (deliverModalOrder.payment_status === 'PAID_ONLINE' || (deliverModalOrder.wc_payment_method && deliverModalOrder.wc_payment_method !== 'cod')) ? (
-              <div className="p-3 bg-emerald-50 rounded-2xl border border-emerald-200 text-xs text-emerald-800 space-y-1">
+              <div className="p-3 bg-ok-soft rounded-2xl border border-ok/20 text-xs text-ok space-y-1">
                 <div className="font-bold flex items-center gap-1">
                   <span>✓</span>
                   <span>الطلب مسدد مسبقاً بالكامل عبر المتجر أونلاين</span>
                 </div>
-                <p className="text-[11px] text-emerald-700">
+                <p className="text-2xs leading-relaxed">
                   المبلغ المطلوب تحصيله نقداً هو 0.00 ج.م، وستصدر الفاتورة مسددة إلكترونياً دون تحميل عهدة المندوب أي نقدية.
                 </p>
               </div>
@@ -280,37 +349,40 @@ export const WcOrderActionModals: React.FC<{ vm: WcOrdersViewModel }> = ({ vm })
 
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">المبلغ المحصل فعلياً (ج.م):</label>
-                <input
+                <Input
+                  label="المبلغ المحصل فعلياً (ج.م):"
                   type="number"
                   step="0.01"
                   value={collectedAmount}
                   onChange={(e) => setCollectedAmount(Number(e.target.value))}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold font-mono"
+                  className="tabular-nums font-bold"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">طريقة الدفع والتحصيل:</label>
-                <select
+                <Select
+                  label="طريقة الدفع والتحصيل:"
                   value={paymentMethod}
                   onChange={(e: any) => setPaymentMethod(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold"
-                >
-                  {deliverModalOrder.courier_party_id && (
-                    <option value="COURIER_COD">تحصيل عبر شركة شحن (COD)</option>
-                  )}
-                  <option value="CASH">نقدية كاش (COD)</option>
-                  <option value="CARD">بطاقة بنكية / فيزا</option>
-                  <option value="INSTAPAY">تحويل إنستاباي (InstaPay)</option>
-                  <option value="VODAFONE_CASH">محفظة إلكترونية / فودافون كاش</option>
-                  <option value="TRANSFER">تحويل بنكي آخر</option>
-                </select>
+                  options={[
+                    ...(deliverModalOrder.courier_party_id
+                      ? [{ value: 'COURIER_COD', label: 'تحصيل عبر شركة شحن (COD)' }]
+                      : []),
+                    { value: 'CASH', label: 'نقدية كاش (COD)' },
+                    { value: 'CARD', label: 'بطاقة بنكية / فيزا' },
+                    { value: 'INSTAPAY', label: 'تحويل إنستاباي (InstaPay)' },
+                    { value: 'VODAFONE_CASH', label: 'محفظة إلكترونية / فودافون كاش' },
+                    { value: 'TRANSFER', label: 'تحويل بنكي آخر' },
+                  ]}
+                  className="font-bold"
+                />
               </div>
             </div>
 
             <div className="flex items-center gap-2 pt-2">
-              <button
+              <Button
+                variant="primary"
+                size="lg"
                 onClick={() =>
                   deliverMutation.mutate({
                     orderId: deliverModalOrder.id,
@@ -319,16 +391,19 @@ export const WcOrderActionModals: React.FC<{ vm: WcOrdersViewModel }> = ({ vm })
                   })
                 }
                 disabled={deliverMutation.isPending}
-                className="flex-1 py-2.5 bg-emerald-600 text-white font-black rounded-xl text-xs hover:bg-emerald-700 shadow-xs"
+                isLoading={deliverMutation.isPending}
+                className="flex-1 min-h-[44px] font-black text-xs"
               >
-                {deliverMutation.isPending ? 'جاري إصدار الفاتورة...' : 'إصدار الفاتورة وتأكيد التسليم'}
-              </button>
-              <button
+                إصدار الفاتورة وتأكيد التسليم
+              </Button>
+              <Button
+                variant="secondary"
+                size="lg"
                 onClick={() => setDeliverModalOrder(null)}
-                className="px-4 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-xl text-xs hover:bg-slate-200"
+                className="min-h-[44px] font-bold text-xs"
               >
                 إلغاء
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -336,24 +411,26 @@ export const WcOrderActionModals: React.FC<{ vm: WcOrdersViewModel }> = ({ vm })
 
       {/* Modal 4: Dispatch to Courier Modal - Responsive Bottom Sheet */}
       {courierModalOrder && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 p-0 sm:p-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-t-[2.5rem] sm:rounded-3xl p-5 sm:p-6 max-w-md w-full space-y-4 shadow-2xl animate-in slide-in-from-bottom sm:zoom-in-95 duration-200 max-h-[92vh] flex flex-col overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-canvas/80 p-0 sm:p-4 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="bg-panel border border-line rounded-t-[2.5rem] sm:rounded-3xl p-5 sm:p-6 max-w-md w-full space-y-4 shadow-xl animate-in slide-in-from-bottom sm:zoom-in-95 duration-200 max-h-[92vh] flex flex-col overflow-y-auto text-right" dir="rtl">
             {/* Sheet Handle */}
-            <div className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-1 sm:hidden" />
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="font-black text-sm text-slate-900 flex items-center gap-2">
-                <Package className="w-5 h-5 text-purple-600" />
+            <div className="w-12 h-1.5 bg-line rounded-full mx-auto mb-1 sm:hidden shrink-0" />
+            <div className="flex items-center justify-between border-b border-line pb-3">
+              <h3 className="font-black text-sm text-ink flex items-center gap-2 tabular-nums">
+                <Package className="w-5 h-5 text-brand" />
                 <span>إسناد الطلب لشركة شحن #{courierModalOrder.wc_order_id}</span>
               </h3>
               <button
+                type="button"
                 onClick={() => setCourierModalOrder(null)}
-                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg cursor-pointer"
+                className="p-1 text-muted hover:text-ink rounded-lg transition-colors cursor-pointer"
+                title="إغلاق"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <p className="text-xs text-slate-500 leading-relaxed">
+            <p className="text-xs text-muted leading-relaxed">
               إسناد شحنة المتجر لشركة شحن خارجية (مثل بوسطة، أرامكس، مايلرز). يتم حجز رصيد البضاعة من المخزن المحدد وتوثيق رقم البوليصة لمتابعة التسليم وتصفية الكاش.
             </p>
 
@@ -361,8 +438,8 @@ export const WcOrderActionModals: React.FC<{ vm: WcOrdersViewModel }> = ({ vm })
               {/* Registered Courier Selection */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-bold text-slate-800">
-                    شركة الشحن المسجلة بالدفاتر <span className="text-red-500">*</span>
+                  <label className="block text-xs font-bold text-ink">
+                    شركة الشحن المسجلة بالدفاتر <span className="text-bad">*</span>
                   </label>
                   {!showAddCourier && (
                     <button
@@ -374,7 +451,7 @@ export const WcOrderActionModals: React.FC<{ vm: WcOrdersViewModel }> = ({ vm })
                         setNewCourierNotes('');
                         setAddCourierError(null);
                       }}
-                      className="text-[11px] font-bold text-purple-600 hover:text-purple-700 hover:underline flex items-center gap-1 cursor-pointer"
+                      className="text-2xs font-bold text-brand hover:underline flex items-center gap-1 cursor-pointer"
                     >
                       <Plus className="w-3.5 h-3.5" />
                       <span>+ إضافة شركة جديدة</span>
@@ -383,77 +460,70 @@ export const WcOrderActionModals: React.FC<{ vm: WcOrdersViewModel }> = ({ vm })
                 </div>
 
                 {showAddCourier ? (
-                  <div className="bg-purple-50/80 border border-purple-200 rounded-2xl p-3.5 space-y-2.5 animate-in fade-in duration-150">
+                  <div className="bg-brand-soft border border-brand/20 rounded-2xl p-3.5 space-y-2.5 animate-in fade-in duration-150">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-black text-purple-900 flex items-center gap-1.5">
-                        <Truck className="w-3.5 h-3.5 text-purple-600" />
+                      <span className="text-xs font-black text-brand-ink flex items-center gap-1.5">
+                        <Truck className="w-3.5 h-3.5 text-brand" />
                         إضافة شركة شحن جديدة للدفاتر (بوسطة / أرامكس / مايلرز)
                       </span>
                       <button
                         type="button"
                         onClick={() => setShowAddCourier(false)}
-                        className="text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                        className="text-muted hover:text-ink p-0.5 cursor-pointer"
                       >
                         <X className="w-4 h-4" />
                       </button>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <div>
-                        <label className="block text-[11px] font-bold text-slate-700 mb-1">اسم شركة الشحن *</label>
-                        <input
-                          type="text"
-                          value={newCourierName}
-                          onChange={(e) => setNewCourierName(e.target.value)}
-                          placeholder="مثال: بوسطة (Bosta) / أرامكس"
-                          className="w-full px-2.5 py-1.5 bg-white border border-purple-200 rounded-lg text-xs font-bold focus:outline-none focus:border-purple-400"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] font-bold text-slate-700 mb-1">رقم الهاتف للتواصل</label>
-                        <input
-                          type="text"
-                          value={newCourierPhone}
-                          onChange={(e) => setNewCourierPhone(e.target.value)}
-                          placeholder="مثال: 01012345678"
-                          className="w-full px-2.5 py-1.5 bg-white border border-purple-200 rounded-lg text-xs font-bold focus:outline-none focus:border-purple-400"
-                        />
-                      </div>
+                      <Input
+                        label="اسم شركة الشحن *"
+                        value={newCourierName}
+                        onChange={(e) => setNewCourierName(e.target.value)}
+                        placeholder="مثال: بوسطة (Bosta) / أرامكس"
+                      />
+                      <Input
+                        label="رقم الهاتف للتواصل"
+                        value={newCourierPhone}
+                        onChange={(e) => setNewCourierPhone(e.target.value)}
+                        placeholder="مثال: 01012345678"
+                        className="tabular-nums"
+                      />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-700 mb-1">ملاحظات الحساب (اختياري)</label>
-                      <input
-                        type="text"
+                      <Input
+                        label="ملاحظات الحساب (اختياري)"
                         value={newCourierNotes}
                         onChange={(e) => setNewCourierNotes(e.target.value)}
                         placeholder="مثال: تحصيل أسبوعي / تغطية كافة المحافظات"
-                        className="w-full px-2.5 py-1.5 bg-white border border-purple-200 rounded-lg text-xs focus:outline-none focus:border-purple-400"
                       />
                     </div>
                     {addCourierError && (
-                      <p className="text-[11px] font-bold text-red-600 bg-red-50 p-1.5 rounded-lg border border-red-200">{addCourierError}</p>
+                      <p className="text-2xs font-bold text-bad bg-bad-soft p-1.5 rounded-lg border border-bad/20">
+                        {addCourierError}
+                      </p>
                     )}
                     <div className="flex items-center justify-end gap-2 pt-1">
-                      <button
-                        type="button"
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => setShowAddCourier(false)}
-                        className="px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-white rounded-lg cursor-pointer"
                       >
                         إلغاء
-                      </button>
-                      <button
-                        type="button"
+                      </Button>
+                      <Button
+                        variant="primary"
+                        size="sm"
                         disabled={createCourierMutation.isPending || !newCourierName.trim()}
+                        isLoading={createCourierMutation.isPending}
                         onClick={handleCreateCourier}
-                        className="px-3.5 py-1.5 bg-purple-600 text-white rounded-lg text-xs font-bold hover:bg-purple-700 transition cursor-pointer disabled:opacity-50 flex items-center gap-1.5 shadow-xs"
                       >
-                        {createCourierMutation.isPending && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
-                        <span>حفظ واختيار الشركة</span>
-                      </button>
+                        حفظ واختيار الشركة
+                      </Button>
                     </div>
                   </div>
                 ) : (
                   <div>
-                    <select
+                    <Select
                       value={courierPartyId}
                       onChange={(e) => {
                         const val = e.target.value ? Number(e.target.value) : '';
@@ -465,20 +535,19 @@ export const WcOrderActionModals: React.FC<{ vm: WcOrdersViewModel }> = ({ vm })
                           setCourierName('');
                         }
                       }}
-                      className={`w-full px-3 py-2.5 bg-slate-50 border rounded-xl text-xs font-bold transition-all ${
-                        !courierPartyId ? 'border-amber-300 bg-amber-50/20' : 'border-slate-200 focus:border-purple-500'
-                      }`}
-                    >
-                      <option value="">-- اختر شركة الشحن المسجلة بالدفاتر * --</option>
-                      {couriers.map((c: any) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name} {c.phone ? `(${c.phone})` : ''}
-                        </option>
-                      ))}
-                    </select>
+                      options={[
+                        { value: '', label: '-- اختر شركة الشحن المسجلة بالدفاتر * --' },
+                        ...couriers.map((c: any) => ({
+                          value: c.id,
+                          label: `${c.name} ${c.phone ? `(${c.phone})` : ''}`,
+                        })),
+                      ]}
+                      error={!courierPartyId ? 'يرجى اختيار شركة شحن' : undefined}
+                      className="font-bold"
+                    />
 
                     {couriers.length === 0 && (
-                      <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 p-2.5 rounded-xl mt-2 font-bold leading-relaxed">
+                      <p className="text-2xs text-warn bg-warn-soft border border-warn/20 p-2.5 rounded-xl mt-2 font-bold leading-relaxed">
                         ⚠️ لا توجد شركات شحن مسجلة بالدفاتر حالياً. يرجى الضغط على <strong>"+ إضافة شركة جديدة"</strong> أعلاه لتسجيل شركة الشحن (مثل بوسطة أو أرامكس) لضمان توثيق كشف الحساب والمديونية المحاسبية.
                       </p>
                     )}
@@ -488,37 +557,35 @@ export const WcOrderActionModals: React.FC<{ vm: WcOrdersViewModel }> = ({ vm })
 
               {/* Tracking Number / AWB */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  رقم بوليصة الشحن (Tracking Number / AWB):
-                </label>
-                <input
+                <Input
+                  label="رقم بوليصة الشحن (Tracking Number / AWB):"
                   type="text"
                   value={courierTrackingNumber}
                   onChange={(e) => setCourierTrackingNumber(e.target.value)}
                   placeholder="رقم البوليصة إن وُجد (اختياري)"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold"
+                  className="tabular-nums font-bold"
                 />
               </div>
 
               {/* Source Branch */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">مخزن خروج الشحنة:</label>
-                <select
+                <Select
+                  label="مخزن خروج الشحنة:"
                   value={courierBranchId}
                   onChange={(e) => setCourierBranchId(e.target.value ? Number(e.target.value) : '')}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold"
-                >
-                  {branches.map((b: any) => (
-                    <option key={b.id} value={b.id}>
-                      {b.name} ({b.type})
-                    </option>
-                  ))}
-                </select>
+                  options={branches.map((b: any) => ({
+                    value: b.id,
+                    label: `${b.name} (${b.type || 'فرع'})`,
+                  }))}
+                  className="font-bold"
+                />
               </div>
             </div>
 
             <div className="flex items-center gap-2 pt-2">
-              <button
+              <Button
+                variant="primary"
+                size="lg"
                 onClick={() => {
                   if (!courierPartyId) {
                     setFeedback({ type: 'error', message: 'يرجى اختيار شركة شحن مسجلة بالدفاتر أولاً لإسناد الشحنة' });
@@ -533,16 +600,19 @@ export const WcOrderActionModals: React.FC<{ vm: WcOrdersViewModel }> = ({ vm })
                   });
                 }}
                 disabled={courierDispatchMutation.isPending || !courierPartyId}
-                className="flex-1 py-2.5 bg-purple-600 text-white font-black rounded-xl text-xs hover:bg-purple-700 shadow-xs cursor-pointer disabled:opacity-50"
+                isLoading={courierDispatchMutation.isPending}
+                className="flex-1 min-h-[44px] font-black text-xs"
               >
-                {courierDispatchMutation.isPending ? 'جاري الإسناد والتحديث...' : 'تأكيد الإسناد لشركة الشحن'}
-              </button>
-              <button
+                تأكيد الإسناد لشركة الشحن
+              </Button>
+              <Button
+                variant="secondary"
+                size="lg"
                 onClick={() => setCourierModalOrder(null)}
-                className="px-4 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-xl text-xs hover:bg-slate-200 cursor-pointer"
+                className="min-h-[44px] font-bold text-xs"
               >
                 إلغاء
-              </button>
+              </Button>
             </div>
           </div>
         </div>
