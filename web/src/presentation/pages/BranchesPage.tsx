@@ -23,6 +23,14 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { BranchMobileCard } from '../components/mobile/BranchMobileCard';
 import { nativeBackButton } from '../../platform/nativeBackButton';
 import { useConfirm } from '../context/ConfirmContext';
+import { PageHeader } from '../components/ui/PageHeader';
+import { Card } from '../components/ui/Card';
+import { Badge } from '../components/ui/Badge';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Select } from '../components/ui/Select';
+import { DataTable } from '../components/ui/DataTable';
+import { EmptyState } from '../components/ui/EmptyState';
 
 export const BranchesPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -185,24 +193,24 @@ export const BranchesPage: React.FC = () => {
     switch (type) {
       case 'STORE':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
+          <Badge tone="ok" className="gap-1">
             <Store className="w-3.5 h-3.5" />
             معرض بيع تجزئة
-          </span>
+          </Badge>
         );
       case 'WAREHOUSE':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
+          <Badge tone="warn" className="gap-1">
             <Warehouse className="w-3.5 h-3.5" />
             مستودع / مخزن رئيسي
-          </span>
+          </Badge>
         );
       case 'VAN':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-sky-100 text-sky-800">
+          <Badge tone="info" className="gap-1">
             <Truck className="w-3.5 h-3.5" />
             سيارة مندوب متنقلة
-          </span>
+          </Badge>
         );
       default:
         return null;
@@ -218,50 +226,43 @@ export const BranchesPage: React.FC = () => {
   return (
     <div className="space-y-3 sm:space-y-6 max-w-7xl mx-auto" dir="rtl">
       {/* Desktop Header */}
-      <div className="hidden md:flex flex-row justify-between items-center gap-4 bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
-        <div>
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl">
-              <Building2 className="w-6 h-6" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-slate-800">الفروع والمخازن (Multi-Branch)</h1>
-              <p className="text-sm text-slate-500 mt-0.5">
-                إدارة المعارض، المستودعات المركزية، وسيارات التوزيع مع متابعة الأرصدة المستقلة
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {(isOwner || isManager) && (
-          <button
-            onClick={() => {
-              resetForm();
-              setEditingBranch(null);
-              setAddModalOpen(true);
-            }}
-            className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-medium shadow-sm transition-all text-sm"
-          >
-            <Plus className="w-4 h-4" />
-            إضافة فرع / مخزن جديد
-          </button>
-        )}
-      </div>
+      <PageHeader
+        className="hidden md:flex mb-0 bg-panel p-5 rounded-2xl border border-line shadow-xs"
+        title="الفروع والمخازن (Multi-Branch)"
+        description="إدارة المعارض، المستودعات المركزية، وسيارات التوزيع مع متابعة الأرصدة المستقلة"
+        actions={
+          (isOwner || isManager) ? (
+            <Button
+              variant="primary"
+              size="md"
+              onClick={() => {
+                resetForm();
+                setEditingBranch(null);
+                setAddModalOpen(true);
+              }}
+              leftIcon={<Plus className="w-4 h-4" />}
+              className="font-bold"
+            >
+              إضافة فرع / مخزن جديد
+            </Button>
+          ) : undefined
+        }
+      />
 
       {/* Mobile Compact Hero Bar (md:hidden) */}
-      <div className="md:hidden bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between gap-2">
+      <Card className="md:hidden p-3 sm:p-3 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-black shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-ok-soft text-ok flex items-center justify-center font-black shrink-0 border border-ok/20">
             <Building2 className="w-5 h-5" />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              <h2 className="text-sm font-black text-slate-900 truncate">الفروع والمخازن</h2>
-              <span className="bg-slate-100 text-slate-700 text-2xs font-black px-2 py-0.5 rounded-full shrink-0">
+              <h2 className="text-sm font-black text-ink truncate">الفروع والمخازن</h2>
+              <Badge tone="neutral" className="text-2xs font-black px-2 py-0.5 shrink-0 tabular-nums">
                 {totalBranches}
-              </span>
+              </Badge>
             </div>
-            <p className="text-[11px] text-slate-500 font-medium truncate">
+            <p className="text-2xs text-muted font-medium truncate tabular-nums">
               {storeCount} معارض • {warehouseCount} مخازن • {vanCount} سيارات
             </p>
           </div>
@@ -269,94 +270,102 @@ export const BranchesPage: React.FC = () => {
 
         <div className="flex items-center gap-1.5 shrink-0">
           {(isOwner || isManager) && (
-            <button
+            <Button
+              variant="primary"
+              size="md"
               onClick={() => {
                 resetForm();
                 setEditingBranch(null);
                 setAddModalOpen(true);
               }}
-              className="inline-flex items-center gap-1 bg-emerald-600 active:bg-emerald-700 text-white px-3 py-2 rounded-xl text-xs font-bold shadow-xs active:scale-95 transition-all"
+              leftIcon={<Plus className="w-4 h-4" />}
+              className="px-3 text-xs font-bold"
             >
-              <Plus className="w-4 h-4" />
-              <span>إضافة</span>
-            </button>
+              إضافة
+            </Button>
           )}
         </div>
-      </div>
+      </Card>
 
       {/* Alerts */}
       {message && (
         <div
-          className={`p-3 sm:p-4 rounded-xl flex items-center justify-between gap-3 text-xs sm:text-sm animate-fade-in ${
-            message.type === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200'
+          className={`p-3 sm:p-4 rounded-xl flex items-center justify-between gap-3 text-xs sm:text-sm animate-fade-in border ${
+            message.type === 'success' ? 'bg-ok-soft text-ok border-ok/25' : 'bg-bad-soft text-bad border-bad/25'
           }`}
         >
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 font-medium">
             {message.type === 'success' ? <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" /> : <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5" />}
             <span>{message.text}</span>
           </div>
-          <button onClick={() => setMessage(null)} className="text-slate-400 hover:text-slate-600">
+          <Button
+            variant="ghost"
+            size="md"
+            onClick={() => setMessage(null)}
+            className="min-w-[44px] px-0 text-muted hover:text-ink"
+          >
             <X className="w-4 h-4" />
-          </button>
+          </Button>
         </div>
       )}
 
       {/* Desktop KPI Stats Cards (hidden on mobile to save vertical space) */}
       <div className="hidden md:grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex items-center gap-3.5">
-          <div className="p-3 rounded-lg bg-emerald-50 text-emerald-600">
+        <Card className="p-4 sm:p-4 rounded-xl flex items-center gap-3.5">
+          <div className="p-3 rounded-lg bg-ok-soft text-ok border border-ok/20">
             <Building2 className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-xs text-slate-400 font-medium">إجمالي الفروع</div>
-            <div className="text-xl font-bold text-slate-800 mt-0.5">{totalBranches}</div>
+            <div className="text-xs text-muted font-medium">إجمالي الفروع</div>
+            <div className="text-xl font-bold text-ink mt-0.5 tabular-nums">{totalBranches}</div>
           </div>
-        </div>
+        </Card>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex items-center gap-3.5">
-          <div className="p-3 rounded-lg bg-blue-50 text-blue-600">
+        <Card className="p-4 sm:p-4 rounded-xl flex items-center gap-3.5">
+          <div className="p-3 rounded-lg bg-info-soft text-info border border-info/20">
             <Store className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-xs text-slate-400 font-medium">معارض ومحلات بيع</div>
-            <div className="text-xl font-bold text-slate-800 mt-0.5">{storeCount}</div>
+            <div className="text-xs text-muted font-medium">معارض ومحلات بيع</div>
+            <div className="text-xl font-bold text-ink mt-0.5 tabular-nums">{storeCount}</div>
           </div>
-        </div>
+        </Card>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex items-center gap-3.5">
-          <div className="p-3 rounded-lg bg-amber-50 text-amber-600">
+        <Card className="p-4 sm:p-4 rounded-xl flex items-center gap-3.5">
+          <div className="p-3 rounded-lg bg-warn-soft text-warn border border-warn/20">
             <Warehouse className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-xs text-slate-400 font-medium">مستودعات ومخازن</div>
-            <div className="text-xl font-bold text-slate-800 mt-0.5">{warehouseCount}</div>
+            <div className="text-xs text-muted font-medium">مستودعات ومخازن</div>
+            <div className="text-xl font-bold text-ink mt-0.5 tabular-nums">{warehouseCount}</div>
           </div>
-        </div>
+        </Card>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex items-center gap-3.5">
-          <div className="p-3 rounded-lg bg-purple-50 text-purple-600">
+        <Card className="p-4 sm:p-4 rounded-xl flex items-center gap-3.5">
+          <div className="p-3 rounded-lg bg-brand-soft text-brand border border-brand/20">
             <Truck className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-xs text-slate-400 font-medium">سيارات المناديب</div>
-            <div className="text-xl font-bold text-slate-800 mt-0.5">{vanCount}</div>
+            <div className="text-xs text-muted font-medium">سيارات المناديب</div>
+            <div className="text-xl font-bold text-ink mt-0.5 tabular-nums">{vanCount}</div>
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* Branches List */}
       <div>
         {isLoading ? (
-          <div className="text-center py-12 text-slate-400">
-            <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-2 text-emerald-600" />
+          <div className="text-center py-12 text-muted">
+            <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-2 text-brand" />
             جاري تحميل بيانات الفروع...
           </div>
         ) : branches.length === 0 ? (
-          <div className="bg-white p-12 text-center rounded-2xl border border-dashed border-slate-200">
-            <Building2 className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-            <p className="text-slate-600 font-semibold">لا توجد فروع مسجلة حتى الآن</p>
-            <p className="text-slate-400 text-sm mt-1">ابدأ بإضافة أول فرع أو مخزن لمتجرك</p>
-          </div>
+          <EmptyState
+            className="border-dashed border-line"
+            icon={<Building2 className="w-6 h-6 text-muted" />}
+            title="لا توجد فروع مسجلة حتى الآن"
+            description="ابدأ بإضافة أول فرع أو مخزن لمتجرك"
+          />
         ) : (
           <>
             {/* Mobile Cards List (md:hidden) */}
@@ -385,76 +394,82 @@ export const BranchesPage: React.FC = () => {
             {/* Desktop Grid (hidden md:grid) */}
             <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-5">
               {branches.map((branch: any) => (
-                <div
+                <Card
                   key={branch.id}
-                  className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all p-5 flex flex-col justify-between"
+                  className="hover:border-line-2 transition-all p-5 sm:p-5 flex flex-col justify-between"
                 >
                   <div>
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-bold text-slate-800 text-lg">{branch.name}</h3>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-bold text-ink text-lg">{branch.name}</h3>
                           {branch.is_main && (
-                            <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                            <Badge tone="warn" className="text-2xs rounded-md px-2 py-0.5">
                               الفرع الرئيسي
-                            </span>
+                            </Badge>
                           )}
                         </div>
-                        <span className="text-xs font-mono font-medium text-slate-400">كود: {branch.code}</span>
+                        <span className="text-xs tabular-nums font-medium text-muted">كود: {branch.code}</span>
                       </div>
                       {getTypeBadge(branch.type)}
                     </div>
 
-                    <div className="mt-4 space-y-2 text-sm text-slate-600">
+                    <div className="mt-4 space-y-2 text-sm text-muted">
                       {branch.address && (
                         <div className="flex items-center gap-2">
-                          <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
+                          <MapPin className="w-4 h-4 text-muted shrink-0" />
                           <span className="truncate">{branch.address}</span>
                         </div>
                       )}
                       {branch.phone && (
                         <div className="flex items-center gap-2">
-                          <Phone className="w-4 h-4 text-slate-400 shrink-0" />
-                          <span dir="ltr">{branch.phone}</span>
+                          <Phone className="w-4 h-4 text-muted shrink-0" />
+                          <span dir="ltr" className="tabular-nums">{branch.phone}</span>
                         </div>
                       )}
                     </div>
 
                     {/* Sub-stats */}
-                    <div className="mt-4 pt-3 border-t border-slate-100 grid grid-cols-2 gap-2 text-xs">
-                      <div className="bg-slate-50 p-2 rounded-lg text-center">
-                        <span className="text-slate-400 block">فريق العمل</span>
-                        <span className="font-bold text-slate-700 mt-0.5">{branch.users_count || 0} موظف</span>
+                    <div className="mt-4 pt-3 border-t border-line grid grid-cols-2 gap-2 text-xs">
+                      <div className="bg-surface-2 p-2 rounded-lg text-center border border-line">
+                        <span className="text-muted block">فريق العمل</span>
+                        <span className="font-bold text-ink mt-0.5 tabular-nums">{branch.users_count || 0} موظف</span>
                       </div>
-                      <div className="bg-slate-50 p-2 rounded-lg text-center">
-                        <span className="text-slate-400 block">الأصناف المسجلة</span>
-                        <span className="font-bold text-slate-700 mt-0.5">{branch.stocks_count || 0} صنف</span>
+                      <div className="bg-surface-2 p-2 rounded-lg text-center border border-line">
+                        <span className="text-muted block">الأصناف المسجلة</span>
+                        <span className="font-bold text-ink mt-0.5 tabular-nums">{branch.stocks_count || 0} صنف</span>
                       </div>
                     </div>
                   </div>
 
                   {/* Actions */}
-                  <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
-                    <button
+                  <div className="mt-5 pt-3 border-t border-line flex items-center justify-between gap-2">
+                    <Button
+                      variant="secondary"
+                      size="md"
                       onClick={() => setInventoryBranch(branch)}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-xs font-semibold transition-colors"
+                      leftIcon={<Package className="w-3.5 h-3.5" />}
+                      className="flex-1 bg-ok-soft hover:bg-ok-soft/80 text-ok border-ok/25 text-xs font-semibold"
                     >
-                      <Package className="w-3.5 h-3.5" />
                       جرد المخزون
-                    </button>
+                    </Button>
 
                     {(isOwner || isManager) && (
                       <div className="flex items-center gap-1">
-                        <button
+                        <Button
+                          variant="ghost"
+                          size="md"
                           onClick={() => handleOpenEdit(branch)}
-                          className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                          className="min-w-[44px] px-0 text-muted hover:text-brand hover:bg-brand-soft"
                           title="تعديل الفرع"
                         >
                           <Edit2 className="w-4 h-4" />
-                        </button>
+                        </Button>
 
                         {!branch.is_main && (
-                          <button
+                          <Button
+                            variant="ghost"
+                            size="md"
                             onClick={async () => {
                               const ok = await confirm({
                                 title: 'تأكيد حذف الفرع',
@@ -465,16 +480,16 @@ export const BranchesPage: React.FC = () => {
                                 deleteMutation.mutate(branch.id);
                               }
                             }}
-                            className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                            className="min-w-[44px] px-0 text-muted hover:text-bad hover:bg-bad-soft"
                             title="حذف الفرع"
                           >
                             <Trash2 className="w-4 h-4" />
-                          </button>
+                          </Button>
                         )}
                       </div>
                     )}
                   </div>
-                </div>
+                </Card>
               ))}
             </div>
           </>
@@ -483,84 +498,76 @@ export const BranchesPage: React.FC = () => {
 
       {/* Add / Edit Branch Modal */}
       {(addModalOpen || editingBranch) && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden animate-scale-in">
-            <div className="p-5 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
-              <h2 className="font-bold text-slate-800 text-lg">
+        <div className="fixed inset-0 z-50 bg-canvas/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-panel w-full max-w-md rounded-2xl border border-line shadow-xl overflow-hidden animate-scale-in">
+            <div className="p-5 bg-surface-2/60 border-b border-line flex items-center justify-between">
+              <h2 className="font-bold text-ink text-lg">
                 {editingBranch ? `تعديل فرع: ${editingBranch.name}` : 'إضافة فرع / مخزن جديد'}
               </h2>
-              <button
+              <Button
+                variant="ghost"
+                size="md"
                 onClick={() => {
                   setAddModalOpen(false);
                   setEditingBranch(null);
                 }}
-                className="p-1 rounded-lg text-slate-400 hover:bg-slate-200 transition-colors"
+                className="min-w-[44px] px-0 text-muted hover:text-ink"
               >
                 <X className="w-5 h-5" />
-              </button>
+              </Button>
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1.5">اسم الفرع / المخزن *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="مثال: فرع المعادي، المخزن الرئيسي، سيارة 1"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
+              <Input
+                label="اسم الفرع / المخزن *"
+                type="text"
+                required
+                placeholder="مثال: فرع المعادي، المخزن الرئيسي، سيارة 1"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="bg-surface-2/50"
+              />
 
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">كود الفرع</label>
-                  <input
-                    type="text"
-                    placeholder="BR-02"
-                    value={formData.code}
-                    onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">طبيعة الفرع *</label>
-                  <select
-                    value={formData.type}
-                    onChange={(e) => setFormData({ ...formData, type: e.target.value as BranchType })}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  >
-                    <option value={BranchType.STORE}>معرض / محل تجزئة</option>
-                    <option value={BranchType.WAREHOUSE}>مستودع / مخزن مركزي</option>
-                    <option value={BranchType.VAN}>سيارة مندوب متنقلة</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1.5">رقم الهاتف (اختياري)</label>
-                <input
+                <Input
+                  label="كود الفرع"
                   type="text"
-                  placeholder="01012345678"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  dir="ltr"
+                  placeholder="BR-02"
+                  value={formData.code}
+                  onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                  className="bg-surface-2/50 tabular-nums"
                 />
+
+                <Select
+                  label="طبيعة الفرع *"
+                  value={formData.type}
+                  onChange={(e) => setFormData({ ...formData, type: e.target.value as BranchType })}
+                  className="bg-surface-2/50"
+                >
+                  <option value={BranchType.STORE}>معرض / محل تجزئة</option>
+                  <option value={BranchType.WAREHOUSE}>مستودع / مخزن مركزي</option>
+                  <option value={BranchType.VAN}>سيارة مندوب متنقلة</option>
+                </Select>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1.5">العنوان / الموقع</label>
-                <input
-                  type="text"
-                  placeholder="الشارع، المنطقة، المدينة"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
+              <Input
+                label="رقم الهاتف (اختياري)"
+                type="text"
+                placeholder="01012345678"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                className="bg-surface-2/50 tabular-nums"
+                dir="ltr"
+              />
+
+              <Input
+                label="العنوان / الموقع"
+                type="text"
+                placeholder="الشارع، المنطقة، المدينة"
+                value={formData.address}
+                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                className="bg-surface-2/50"
+              />
 
               <div className="flex items-center gap-2 pt-2">
                 <input
@@ -568,31 +575,34 @@ export const BranchesPage: React.FC = () => {
                   id="is_active"
                   checked={formData.is_active}
                   onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                  className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 h-4 w-4"
+                  className="rounded border-line-2 accent-brand focus:ring-brand h-4 w-4"
                 />
-                <label htmlFor="is_active" className="text-xs font-medium text-slate-700 cursor-pointer">
+                <label htmlFor="is_active" className="text-xs font-medium text-ink cursor-pointer">
                   الفرع نشط ومتاح للعمليات ونقل البضاعة
                 </label>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
-                <button
+              <div className="flex items-center justify-end gap-2 pt-4 border-t border-line">
+                <Button
                   type="button"
+                  variant="secondary"
+                  size="md"
                   onClick={() => {
                     setAddModalOpen(false);
                     setEditingBranch(null);
                   }}
-                  className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
                 >
                   إلغاء
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
+                  variant="primary"
+                  size="md"
                   disabled={createMutation.isPending || updateMutation.isPending}
-                  className="px-5 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-medium transition-all shadow-sm"
+                  isLoading={createMutation.isPending || updateMutation.isPending}
                 >
                   {createMutation.isPending || updateMutation.isPending ? 'جاري الحفظ...' : editingBranch ? 'حفظ التعديلات' : 'إنشاء الفرع'}
-                </button>
+                </Button>
               </div>
             </form>
           </div>
@@ -601,65 +611,66 @@ export const BranchesPage: React.FC = () => {
 
       {/* Branch Inventory Drawer / Modal */}
       {inventoryBranch && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-3xl rounded-2xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col animate-scale-in">
-            <div className="p-5 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 bg-canvas/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-panel w-full max-w-3xl rounded-2xl border border-line shadow-xl overflow-hidden max-h-[90vh] flex flex-col animate-scale-in">
+            <div className="p-5 bg-surface-2/60 border-b border-line flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-2">
-                  <Package className="w-5 h-5 text-emerald-600" />
-                  <h2 className="font-bold text-slate-800 text-lg">جرد مخزون: {inventoryBranch.name}</h2>
+                  <Package className="w-5 h-5 text-brand" />
+                  <h2 className="font-bold text-ink text-lg">جرد مخزون: {inventoryBranch.name}</h2>
                 </div>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="text-xs text-muted mt-0.5 tabular-nums">
                   إجمالي الأصناف المتاحة في هذا الفرع: {inventoryData?.total || 0} صنف
                 </p>
               </div>
-              <button
+              <Button
+                variant="ghost"
+                size="md"
                 onClick={() => {
                   setInventoryBranch(null);
                   setInventorySearch('');
                 }}
-                className="p-1 rounded-lg text-slate-400 hover:bg-slate-200 transition-colors"
+                className="min-w-[44px] px-0 text-muted hover:text-ink"
               >
                 <X className="w-5 h-5" />
-              </button>
+              </Button>
             </div>
 
             {/* Search Input */}
-            <div className="p-4 border-b border-slate-100 bg-white">
-              <div className="relative">
-                <Search className="w-4 h-4 text-slate-400 absolute right-3 top-3" />
-                <input
-                  type="text"
-                  placeholder="بحث باسم الصنف أو الباركود..."
-                  value={inventorySearch}
-                  onChange={(e) => setInventorySearch(e.target.value)}
-                  className="w-full pl-3 pr-9 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
+            <div className="p-4 border-b border-line bg-panel">
+              <Input
+                type="text"
+                placeholder="بحث باسم الصنف أو الباركود..."
+                value={inventorySearch}
+                onChange={(e) => setInventorySearch(e.target.value)}
+                leftIcon={<Search className="w-4 h-4 text-muted" />}
+                className="bg-surface-2/50"
+              />
             </div>
 
             {/* Inventory Table */}
             <div className="flex-1 overflow-y-auto p-4">
               {isInventoryLoading ? (
-                <div className="text-center py-12 text-slate-400">
-                  <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-emerald-600" />
+                <div className="text-center py-12 text-muted">
+                  <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-brand" />
                   جاري جرد رصيد الفرع...
                 </div>
               ) : inventoryData?.items.length === 0 ? (
-                <div className="text-center py-12 text-slate-400">
-                  لا توجد أصناف مطابقة في هذا الفرع
-                </div>
+                <EmptyState
+                  icon={<Package className="w-6 h-6 text-muted" />}
+                  title="لا توجد أصناف مطابقة في هذا الفرع"
+                />
               ) : (
-                <table className="w-full text-right text-sm">
-                  <thead>
-                    <tr className="border-b border-slate-100 text-slate-400 text-xs font-semibold">
-                      <th className="pb-3">الصنف / المتغير</th>
-                      <th className="pb-3">الباركود / الكود</th>
-                      <th className="pb-3 text-center">الرصيد في الفرع</th>
-                      <th className="pb-3 text-center">الحالة</th>
+                <DataTable>
+                  <thead className="bg-surface-2 text-muted text-xs font-semibold border-b border-line">
+                    <tr>
+                      <th className="py-3 px-4">الصنف / المتغير</th>
+                      <th className="py-3 px-4">الباركود / الكود</th>
+                      <th className="py-3 px-4 text-center">الرصيد في الفرع</th>
+                      <th className="py-3 px-4 text-center">الحالة</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-line">
                     {inventoryData?.items.map((stockItem: any) => {
                       const prod = stockItem.product;
                       const variant = stockItem.variant;
@@ -667,54 +678,55 @@ export const BranchesPage: React.FC = () => {
                       const isLow = stockItem.min_quantity !== null && qty <= Number(stockItem.min_quantity);
 
                       return (
-                        <tr key={stockItem.id} className="hover:bg-slate-50/70 transition-colors">
-                          <td className="py-3">
-                            <div className="font-semibold text-slate-800">{prod?.name}</div>
+                        <tr key={stockItem.id} className="hover:bg-surface-2/50 transition-colors">
+                          <td className="py-3 px-4">
+                            <div className="font-semibold text-ink">{prod?.name}</div>
                             {variant && (
-                              <div className="text-xs text-purple-700 font-medium mt-0.5">
+                              <div className="text-xs text-brand font-medium mt-0.5">
                                 مقاس: {variant.size || '-'} | لون: {variant.color || '-'}
                               </div>
                             )}
                           </td>
-                          <td className="py-3 text-xs font-mono text-slate-500">
+                          <td className="py-3 px-4 text-xs tabular-nums text-muted">
                             {variant?.barcode || prod?.barcode || prod?.code || '-'}
                           </td>
-                          <td className="py-3 text-center font-bold text-slate-800">
+                          <td className="py-3 px-4 text-center font-bold text-ink tabular-nums">
                             {qty} {prod?.unit || 'قطعة'}
                           </td>
-                          <td className="py-3 text-center">
+                          <td className="py-3 px-4 text-center">
                             {qty === 0 ? (
-                              <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-rose-100 text-rose-700">
+                              <Badge tone="bad" className="text-2xs rounded-md px-2 py-0.5">
                                 رصيد نافد
-                              </span>
+                              </Badge>
                             ) : isLow ? (
-                              <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-100 text-amber-700">
+                              <Badge tone="warn" className="text-2xs rounded-md px-2 py-0.5">
                                 قرب ينفد
-                              </span>
+                              </Badge>
                             ) : (
-                              <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-700">
+                              <Badge tone="ok" className="text-2xs rounded-md px-2 py-0.5">
                                 متوفر
-                              </span>
+                              </Badge>
                             )}
                           </td>
                         </tr>
                       );
                     })}
                   </tbody>
-                </table>
+                </DataTable>
               )}
             </div>
 
-            <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end">
-              <button
+            <div className="p-4 bg-surface-2/60 border-t border-line flex justify-end">
+              <Button
+                variant="secondary"
+                size="md"
                 onClick={() => {
                   setInventoryBranch(null);
                   setInventorySearch('');
                 }}
-                className="px-5 py-2 text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl font-medium transition-colors"
               >
                 إغلاق
-              </button>
+              </Button>
             </div>
           </div>
         </div>
