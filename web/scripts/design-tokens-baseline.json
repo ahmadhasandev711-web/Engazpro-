@@ -155,25 +155,9 @@
     "raw": 36,
     "hex": 1
   },
-  "src/presentation/components/products/AddBatchModal.tsx": {
-    "raw": 46,
-    "hex": 0
-  },
   "src/presentation/components/products/BarcodePrintModal.tsx": {
     "raw": 114,
     "hex": 6
-  },
-  "src/presentation/components/products/OpeningStockModal.tsx": {
-    "raw": 85,
-    "hex": 0
-  },
-  "src/presentation/components/products/ProductFormModal.tsx": {
-    "raw": 108,
-    "hex": 0
-  },
-  "src/presentation/components/products/ProductVariantModal.tsx": {
-    "raw": 85,
-    "hex": 0
   },
   "src/presentation/components/products/VariantMatrixGenerator.tsx": {
     "raw": 135,

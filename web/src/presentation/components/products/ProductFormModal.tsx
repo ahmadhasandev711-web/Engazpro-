@@ -1,204 +1,209 @@
 import React from 'react';
 import { VariantMatrixGenerator } from './VariantMatrixGenerator';
 import { Package, X, Layers, Calendar, Tag } from 'lucide-react';
+import { Button } from '../ui/Button';
+import { Input } from '../ui/Input';
+import { Textarea } from '../ui/Textarea';
+import { cn } from '../../utils/cn';
 import type { ProductsViewModel } from './types';
 
 export const ProductFormModal: React.FC<{ vm: ProductsViewModel }> = ({ vm }) => {
-  const { isModalOpen, setIsModalOpen, editingProduct, productType, setProductType, hasSubUnit, setHasSubUnit, variants, setVariants, batchData, setBatchData, canViewPurchasePrice, register, handleSubmit, watch, errors, saveMutation, onSubmit } = vm;
+  const {
+    isModalOpen,
+    setIsModalOpen,
+    editingProduct,
+    productType,
+    setProductType,
+    hasSubUnit,
+    setHasSubUnit,
+    variants,
+    setVariants,
+    batchData,
+    setBatchData,
+    canViewPurchasePrice,
+    register,
+    handleSubmit,
+    watch,
+    errors,
+    saveMutation,
+    onSubmit,
+  } = vm;
 
   return (
     <>
       {/* Add / Edit Modal - Responsive Bottom Sheet */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-0 sm:p-4 animate-in fade-in duration-150 overflow-y-auto" dir="rtl">
-          <div className="bg-white rounded-t-[2.5rem] sm:rounded-3xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[92vh] overflow-y-auto animate-in slide-in-from-bottom sm:zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-canvas/80 backdrop-blur-sm p-0 sm:p-4 animate-in fade-in duration-150 overflow-y-auto" dir="rtl">
+          <div className="bg-panel rounded-t-[2.5rem] sm:rounded-3xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl border border-line space-y-4 max-h-[92vh] overflow-y-auto animate-in slide-in-from-bottom sm:zoom-in-95 duration-200">
             {/* Sheet Handle */}
-            <div className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-1 sm:hidden" />
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div className="w-12 h-1.5 bg-line-2 rounded-full mx-auto mb-1 sm:hidden" />
+            <div className="flex items-center justify-between border-b border-line pb-3">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-primary-50 text-primary-600 flex items-center justify-center font-black">
+                <div className="w-9 h-9 rounded-xl bg-brand-soft text-brand flex items-center justify-center font-black border border-brand/20">
                   <Package className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-base text-slate-900">
+                  <h3 className="font-bold text-base text-ink">
                     {editingProduct ? 'تعديل بيانات الصنف' : 'إضافة صنف جديد'}
                   </h3>
-                  <p className="text-xs text-slate-400">حدد نوع الصنف وإعدادات الوحدات والمتغيرات</p>
+                  <p className="text-xs text-muted">حدد نوع الصنف وإعدادات الوحدات والمتغيرات</p>
                 </div>
               </div>
-              <button
+              <Button
+                type="button"
+                variant="ghost"
+                size="md"
                 onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100"
+                className="min-w-[44px] px-0 text-muted hover:text-ink"
               >
                 <X className="w-5 h-5" />
-              </button>
+              </Button>
             </div>
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               {/* Product Type Selector */}
               {!editingProduct && (
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-slate-700">نوع الصنف (طبيعة النشاط):</label>
+                  <label className="block text-xs font-bold text-ink">نوع الصنف (طبيعة النشاط):</label>
                   <div className="grid grid-cols-3 gap-2">
                     <button
                       type="button"
                       onClick={() => setProductType('STANDARD')}
-                      className={`p-3 rounded-2xl border text-center transition-all ${
+                      className={cn(
+                        'min-h-[44px] p-3 rounded-2xl border text-center transition-all cursor-pointer',
                         productType === 'STANDARD'
-                          ? 'border-primary-600 bg-primary-50/60 ring-2 ring-primary-500/20 text-primary-900 font-bold'
-                          : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-600'
-                      }`}
+                          ? 'border-brand bg-brand-soft ring-2 ring-brand/20 text-brand-ink font-bold'
+                          : 'border-line bg-panel hover:bg-surface-2 text-muted'
+                      )}
                     >
-                      <Tag className="w-4 h-4 mx-auto mb-1 text-primary-600" />
-                      <span className="text-xs font-black block">صنف قياسي</span>
-                      <span className="text-2xs text-slate-400 block">سوبر ماركت / عام</span>
+                      <Tag className="w-4 h-4 mx-auto mb-1 text-brand" />
+                      <span className="text-xs font-black block text-ink">صنف قياسي</span>
+                      <span className="text-2xs text-muted block">سوبر ماركت / عام</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => setProductType('VARIABLE')}
-                      className={`p-3 rounded-2xl border text-center transition-all ${
+                      className={cn(
+                        'min-h-[44px] p-3 rounded-2xl border text-center transition-all cursor-pointer',
                         productType === 'VARIABLE'
-                          ? 'border-indigo-600 bg-indigo-50/60 ring-2 ring-indigo-500/20 text-indigo-900 font-bold'
-                          : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-600'
-                      }`}
+                          ? 'border-brand bg-brand-soft ring-2 ring-brand/20 text-brand-ink font-bold'
+                          : 'border-line bg-panel hover:bg-surface-2 text-muted'
+                      )}
                     >
-                      <Layers className="w-4 h-4 mx-auto mb-1 text-indigo-600" />
-                      <span className="text-xs font-black block">متغيرات ومقاسات</span>
-                      <span className="text-2xs text-slate-400 block">ملابس وأحذية</span>
+                      <Layers className="w-4 h-4 mx-auto mb-1 text-brand" />
+                      <span className="text-xs font-black block text-ink">متغيرات ومقاسات</span>
+                      <span className="text-2xs text-muted block">ملابس وأحذية</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => setProductType('EXPIRY')}
-                      className={`p-3 rounded-2xl border text-center transition-all ${
+                      className={cn(
+                        'min-h-[44px] p-3 rounded-2xl border text-center transition-all cursor-pointer',
                         productType === 'EXPIRY'
-                          ? 'border-emerald-600 bg-emerald-50/60 ring-2 ring-emerald-500/20 text-emerald-900 font-bold'
-                          : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-600'
-                      }`}
+                          ? 'border-ok bg-ok-soft ring-2 ring-ok/20 text-ok font-bold'
+                          : 'border-line bg-panel hover:bg-surface-2 text-muted'
+                      )}
                     >
-                      <Calendar className="w-4 h-4 mx-auto mb-1 text-emerald-600" />
-                      <span className="text-xs font-black block">تاريخ صلاحية</span>
-                      <span className="text-2xs text-slate-400 block">أغذية / صيدلية</span>
+                      <Calendar className="w-4 h-4 mx-auto mb-1 text-ok" />
+                      <span className="text-xs font-black block text-ink">تاريخ صلاحية</span>
+                      <span className="text-2xs text-muted block">أغذية / صيدلية</span>
                     </button>
                   </div>
                 </div>
               )}
 
               {/* Basic Fields */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">اسم الصنف *</label>
-                <input
-                  {...register('name')}
-                  type="text"
-                  placeholder="مثال: قميص أكسفورد قطن / حليب كامل الدسم"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 text-right"
-                />
-                {errors.name && <p className="text-xs text-rose-600 mt-1">{errors.name.message}</p>}
-              </div>
+              <Input
+                {...register('name')}
+                label="اسم الصنف *"
+                type="text"
+                placeholder="مثال: قميص أكسفورد قطن / حليب كامل الدسم"
+                error={errors.name?.message}
+                className="bg-surface-2/50"
+              />
 
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">الباركود الرئيسي</label>
-                  <input
-                    {...register('barcode')}
-                    type="text"
-                    placeholder="622xxxxxxx"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 text-right font-mono"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">الكود الداخلي</label>
-                  <input
-                    {...register('code')}
-                    type="text"
-                    placeholder="PRD-001"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 text-right font-mono"
-                  />
-                </div>
+                <Input
+                  {...register('barcode')}
+                  label="الباركود الرئيسي"
+                  type="text"
+                  placeholder="622xxxxxxx"
+                  className="bg-surface-2/50 tabular-nums"
+                />
+                <Input
+                  {...register('code')}
+                  label="الكود الداخلي"
+                  type="text"
+                  placeholder="PRD-001"
+                  className="bg-surface-2/50 tabular-nums"
+                />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">سعر الشراء (التكلفة) *</label>
-                  <input
-                    {...register('purchase_price')}
-                    type="number"
-                    step="0.01"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 text-right font-mono"
-                  />
-                  {errors.purchase_price && (
-                    <p className="text-xs text-rose-600 mt-1">{errors.purchase_price.message}</p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">سعر البيع الأساسي (قبل الخصم)</label>
-                  <input
-                    {...register('regular_price')}
-                    type="number"
-                    step="0.01"
-                    placeholder="اختياري (سعر القائمة)"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 text-right font-mono"
-                  />
-                  {errors.regular_price && (
-                    <p className="text-xs text-rose-600 mt-1">{errors.regular_price.message}</p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">سعر البيع الفعلي / المخفض *</label>
-                  <input
-                    {...register('sale_price')}
-                    type="number"
-                    step="0.01"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 text-right font-bold text-emerald-700 font-mono"
-                  />
-                  {errors.sale_price && (
-                    <p className="text-xs text-rose-600 mt-1">{errors.sale_price.message}</p>
-                  )}
-                </div>
+                <Input
+                  {...register('purchase_price')}
+                  label="سعر الشراء (التكلفة) *"
+                  type="number"
+                  step="0.01"
+                  error={errors.purchase_price?.message}
+                  className="bg-surface-2/50 tabular-nums"
+                />
+                <Input
+                  {...register('regular_price')}
+                  label="سعر البيع الأساسي (قبل الخصم)"
+                  type="number"
+                  step="0.01"
+                  placeholder="اختياري (سعر القائمة)"
+                  error={errors.regular_price?.message}
+                  className="bg-surface-2/50 tabular-nums"
+                />
+                <Input
+                  {...register('sale_price')}
+                  label="سعر البيع الفعلي / المخفض *"
+                  type="number"
+                  step="0.01"
+                  error={errors.sale_price?.message}
+                  className="bg-surface-2/50 font-bold text-ok tabular-nums"
+                />
               </div>
 
               {/* Standard product quantity and min quantity */}
               {productType === 'STANDARD' && (
                 <div className="grid grid-cols-2 gap-3">
                   {!editingProduct && (
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1">الرصيد الافتتاحي بالمخزن</label>
-                      <input
-                        {...register('quantity')}
-                        type="number"
-                        step="0.01"
-                        placeholder="0"
-                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 text-right"
-                      />
-                    </div>
-                  )}
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">حد الطلب (تنبيه النواقص)</label>
-                    <input
-                      {...register('min_quantity')}
+                    <Input
+                      {...register('quantity')}
+                      label="الرصيد الافتتاحي بالمخزن"
                       type="number"
                       step="0.01"
-                      placeholder="مثال: 5"
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 text-right"
+                      placeholder="0"
+                      className="bg-surface-2/50 tabular-nums"
                     />
-                  </div>
+                  )}
+                  <Input
+                    {...register('min_quantity')}
+                    label="حد الطلب (تنبيه النواقص)"
+                    type="number"
+                    step="0.01"
+                    placeholder="مثال: 5"
+                    className="bg-surface-2/50 tabular-nums"
+                  />
                 </div>
               )}
 
               {/* Unit of Measurement */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">الوحدة الأساسية</label>
-                <input
-                  {...register('unit')}
-                  type="text"
-                  placeholder="قطعة / لتر / كجم / متر"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 text-right"
-                />
-              </div>
+              <Input
+                {...register('unit')}
+                label="الوحدة الأساسية"
+                type="text"
+                placeholder="قطعة / لتر / كجم / متر"
+                className="bg-surface-2/50"
+              />
 
               {/* Multi-Unit Section (Sub-Unit / Carton) */}
-              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
+              <div className="p-4 bg-surface-2 border border-line rounded-2xl space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <input
@@ -206,43 +211,43 @@ export const ProductFormModal: React.FC<{ vm: ProductsViewModel }> = ({ vm }) =>
                       id="enable_sub_unit"
                       checked={hasSubUnit}
                       onChange={(e) => setHasSubUnit(e.target.checked)}
-                      className="w-4 h-4 text-primary-600 rounded-lg focus:ring-primary-500"
+                      className="w-4 h-4 accent-brand rounded-lg focus:ring-brand"
                     />
-                    <label htmlFor="enable_sub_unit" className="text-xs font-black text-slate-800 cursor-pointer">
+                    <label htmlFor="enable_sub_unit" className="text-xs font-black text-ink cursor-pointer">
                       تفعيل وحدة تعبئة فرعية (مثل: كرتونة / باكتة / دستة)
                     </label>
                   </div>
                 </div>
 
                 {hasSubUnit && (
-                  <div className="grid grid-cols-3 gap-3 pt-2 border-t border-slate-200 animate-in fade-in duration-150">
+                  <div className="grid grid-cols-3 gap-3 pt-2 border-t border-line animate-in fade-in duration-150">
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-600 mb-1">اسم الوحدة الفرعية</label>
+                      <label className="block text-2xs font-bold text-muted mb-1">اسم الوحدة الفرعية</label>
                       <input
                         {...register('sub_unit')}
                         type="text"
                         placeholder="كرتونة"
-                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-right"
+                        className="w-full min-h-[40px] px-2.5 py-1.5 bg-panel text-ink border border-line rounded-xl text-xs text-right focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand"
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-600 mb-1">معامل التحويل (عدد الوحدات)</label>
+                      <label className="block text-2xs font-bold text-muted mb-1">معامل التحويل (عدد الوحدات)</label>
                       <input
                         {...register('sub_unit_factor')}
                         type="number"
                         step="0.01"
                         placeholder="مثال: 24"
-                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-right"
+                        className="w-full min-h-[40px] px-2.5 py-1.5 bg-panel text-ink border border-line rounded-xl text-xs text-right tabular-nums focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand"
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-600 mb-1">سعر بيع الوحدة الفرعية</label>
+                      <label className="block text-2xs font-bold text-muted mb-1">سعر بيع الوحدة الفرعية</label>
                       <input
                         {...register('sub_unit_price')}
                         type="number"
                         step="0.01"
                         placeholder="350"
-                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-right"
+                        className="w-full min-h-[40px] px-2.5 py-1.5 bg-panel text-ink border border-line rounded-xl text-xs text-right tabular-nums focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand"
                       />
                     </div>
                   </div>
@@ -251,11 +256,11 @@ export const ProductFormModal: React.FC<{ vm: ProductsViewModel }> = ({ vm }) =>
 
               {/* Variable Matrix Section (Clothing / Shoes) */}
               {productType === 'VARIABLE' && (
-                <div className="p-4 bg-indigo-50/40 border border-indigo-100 rounded-3xl space-y-3">
+                <div className="p-4 bg-brand-soft/60 border border-brand/20 rounded-3xl space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="text-sm font-black text-indigo-950">مصفوفة المقاسات والألوان الذكية (المتغيرات)</h4>
-                      <p className="text-xs text-slate-500 mt-0.5">
+                      <h4 className="text-sm font-black text-ink">مصفوفة المقاسات والألوان الذكية (المتغيرات)</h4>
+                      <p className="text-xs text-muted mt-0.5">
                         اختر الألوان والمقاسات لتوليد كافة التوافيق والباركودات المخصصة بضغطة زر
                       </p>
                     </div>
@@ -275,89 +280,91 @@ export const ProductFormModal: React.FC<{ vm: ProductsViewModel }> = ({ vm }) =>
 
               {/* Expiry / Batch Initial Fields for New Product */}
               {productType === 'EXPIRY' && !editingProduct && (
-                <div className="p-4 bg-emerald-50/50 border border-emerald-100 rounded-2xl space-y-3">
+                <div className="p-4 bg-ok-soft/60 border border-ok/20 rounded-2xl space-y-3">
                   <div>
-                    <h4 className="text-xs font-black text-emerald-950">بيانات التشغيلة الافتتاحية (Batch)</h4>
-                    <p className="text-[11px] text-slate-500">أدخل رقم التشغيلة وتاريخ انتهاء الصلاحية للرصيد الحالي</p>
+                    <h4 className="text-xs font-black text-ink">بيانات التشغيلة الافتتاحية (Batch)</h4>
+                    <p className="text-2xs text-muted">أدخل رقم التشغيلة وتاريخ انتهاء الصلاحية للرصيد الحالي</p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-700 mb-1">رقم التشغيلة *</label>
+                      <label className="block text-2xs font-bold text-ink mb-1">رقم التشغيلة *</label>
                       <input
                         type="text"
                         value={batchData.batch_number}
                         onChange={(e) => setBatchData({ ...batchData, batch_number: e.target.value })}
                         placeholder="LOT-2026-001"
-                        className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-mono"
+                        className="w-full min-h-[40px] px-3 py-1.5 bg-panel text-ink border border-line rounded-xl text-xs tabular-nums focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand"
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-700 mb-1">تاريخ انتهاء الصلاحية *</label>
+                      <label className="block text-2xs font-bold text-ink mb-1">تاريخ انتهاء الصلاحية *</label>
                       <input
                         type="date"
                         value={batchData.expiry_date}
                         onChange={(e) => setBatchData({ ...batchData, expiry_date: e.target.value })}
-                        className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-mono"
+                        className="w-full min-h-[40px] px-3 py-1.5 bg-panel text-ink border border-line rounded-xl text-xs tabular-nums focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand"
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-700 mb-1">تاريخ الإنتاج (اختياري)</label>
+                      <label className="block text-2xs font-bold text-ink mb-1">تاريخ الإنتاج (اختياري)</label>
                       <input
                         type="date"
                         value={batchData.production_date}
                         onChange={(e) => setBatchData({ ...batchData, production_date: e.target.value })}
-                        className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-mono"
+                        className="w-full min-h-[40px] px-3 py-1.5 bg-panel text-ink border border-line rounded-xl text-xs tabular-nums focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand"
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-700 mb-1">الرصيد الافتتاحي للتشغيلة</label>
+                      <label className="block text-2xs font-bold text-ink mb-1">الرصيد الافتتاحي للتشغيلة</label>
                       <input
                         type="number"
                         min="0"
                         step="0.01"
                         value={batchData.quantity}
                         onChange={(e) => setBatchData({ ...batchData, quantity: Number(e.target.value) })}
-                        className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-mono"
+                        className="w-full min-h-[40px] px-3 py-1.5 bg-panel text-ink border border-line rounded-xl text-xs tabular-nums focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand"
                       />
                     </div>
                   </div>
                 </div>
               )}
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">ملاحظات إضافية</label>
-                <textarea
-                  {...register('notes')}
-                  rows={2}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 text-right"
-                />
-              </div>
+              <Textarea
+                {...register('notes')}
+                label="ملاحظات إضافية"
+                rows={2}
+                className="bg-surface-2/50"
+              />
 
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
-                <button
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-line">
+                <Button
                   type="button"
+                  variant="secondary"
+                  size="md"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+                  className="text-xs font-bold"
                 >
                   إلغاء
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
+                  variant="primary"
+                  size="md"
                   disabled={saveMutation.isPending}
-                  className="px-5 py-2.5 text-xs font-bold bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white rounded-xl shadow-sm transition-colors"
+                  isLoading={saveMutation.isPending}
+                  className="text-xs font-bold"
                 >
                   {saveMutation.isPending ? 'جاري الحفظ...' : editingProduct ? 'حفظ التعديلات' : 'إضافة الصنف'}
-                </button>
+                </Button>
               </div>
             </form>
           </div>
         </div>
       )}
-
     </>
   );
 };

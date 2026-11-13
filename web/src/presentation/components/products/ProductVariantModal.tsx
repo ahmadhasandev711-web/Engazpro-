@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, Layers, Calendar, Check, ShoppingCart } from 'lucide-react';
 import { formatCurrency } from '@pos-mandob/shared';
+import { Button } from '../ui/Button';
+import { Badge } from '../ui/Badge';
+import { cn } from '../../utils/cn';
 
 export interface VariantSelectionPayload {
   product: any;
@@ -113,28 +116,30 @@ export const ProductVariantModal: React.FC<ProductVariantModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-canvas/80 backdrop-blur-sm animate-in fade-in duration-200" dir="rtl">
+      <div className="bg-panel rounded-3xl border border-line shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
         {/* Modal Header */}
-        <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
+        <div className="p-4 sm:p-5 border-b border-line flex items-center justify-between bg-surface-2/60">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black flex-shrink-0">
+            <div className="w-10 h-10 rounded-2xl bg-brand-soft text-brand flex items-center justify-center font-black flex-shrink-0 border border-brand/20">
               <Layers className="w-5 h-5" />
             </div>
             <div className="truncate">
-              <h3 className="text-base font-black text-slate-900 truncate">{product.name}</h3>
-              <p className="text-xs text-slate-400 font-mono">
+              <h3 className="text-base font-black text-ink truncate">{product.name}</h3>
+              <p className="text-xs text-muted tabular-nums">
                 كود: {product.code || '—'} {product.barcode ? `| باركود: ${product.barcode}` : ''}
               </p>
             </div>
           </div>
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="md"
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors"
+            className="min-w-[44px] px-0 text-muted hover:text-ink"
           >
             <X className="w-5 h-5" />
-          </button>
+          </Button>
         </div>
 
         {/* Modal Body */}
@@ -142,22 +147,23 @@ export const ProductVariantModal: React.FC<ProductVariantModalProps> = ({
           {/* Multi-Unit Toggle (Base Unit vs Sub-Unit) */}
           {hasSubUnit && (
             <div className="space-y-2">
-              <label className="text-xs font-black text-slate-700 block">وحدة البيع المطلوبة:</label>
+              <label className="text-xs font-black text-ink block">وحدة البيع المطلوبة:</label>
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
                   onClick={() => setUseSubUnit(false)}
-                  className={`p-3.5 rounded-2xl border text-right transition-all flex flex-col justify-between ${
+                  className={cn(
+                    'min-h-[44px] p-3.5 rounded-2xl border text-right transition-all flex flex-col justify-between cursor-pointer',
                     !useSubUnit
-                      ? 'border-indigo-600 bg-indigo-50/60 ring-2 ring-indigo-500/20'
-                      : 'border-slate-200 bg-white hover:border-slate-300'
-                  }`}
+                      ? 'border-brand bg-brand-soft ring-2 ring-brand/20'
+                      : 'border-line bg-panel hover:border-line-2'
+                  )}
                 >
                   <div className="flex items-center justify-between w-full mb-1">
-                    <span className="text-xs font-black text-slate-900">{product.unit || 'قطعة'} (أساسية)</span>
-                    {!useSubUnit && <Check className="w-4 h-4 text-indigo-600" />}
+                    <span className="text-xs font-black text-ink">{product.unit || 'قطعة'} (أساسية)</span>
+                    {!useSubUnit && <Check className="w-4 h-4 text-brand" />}
                   </div>
-                  <span className="text-sm font-black text-indigo-600 font-mono">
+                  <span className="text-sm font-black text-brand-ink tabular-nums">
                     {formatCurrency(Number(product.sale_price || 0))}
                   </span>
                 </button>
@@ -165,19 +171,20 @@ export const ProductVariantModal: React.FC<ProductVariantModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setUseSubUnit(true)}
-                  className={`p-3.5 rounded-2xl border text-right transition-all flex flex-col justify-between ${
+                  className={cn(
+                    'min-h-[44px] p-3.5 rounded-2xl border text-right transition-all flex flex-col justify-between cursor-pointer',
                     useSubUnit
-                      ? 'border-indigo-600 bg-indigo-50/60 ring-2 ring-indigo-500/20'
-                      : 'border-slate-200 bg-white hover:border-slate-300'
-                  }`}
+                      ? 'border-brand bg-brand-soft ring-2 ring-brand/20'
+                      : 'border-line bg-panel hover:border-line-2'
+                  )}
                 >
                   <div className="flex items-center justify-between w-full mb-1">
-                    <span className="text-xs font-black text-slate-900">
+                    <span className="text-xs font-black text-ink">
                       {product.sub_unit} ({product.sub_unit_factor} {product.unit || 'قطعة'})
                     </span>
-                    {useSubUnit && <Check className="w-4 h-4 text-indigo-600" />}
+                    {useSubUnit && <Check className="w-4 h-4 text-brand" />}
                   </div>
-                  <span className="text-sm font-black text-indigo-600 font-mono">
+                  <span className="text-sm font-black text-brand-ink tabular-nums">
                     {formatCurrency(Number(product.sub_unit_price || 0))}
                   </span>
                 </button>
@@ -188,7 +195,7 @@ export const ProductVariantModal: React.FC<ProductVariantModalProps> = ({
           {/* Variants Grid (Clothing / Shoes) */}
           {hasVariants && (
             <div className="space-y-2">
-              <label className="text-xs font-black text-slate-700 block">
+              <label className="text-xs font-black text-ink block">
                 اختر المقاس أو اللون ({product.variants?.length} متغير):
               </label>
               <div className="grid grid-cols-2 gap-2.5 max-h-48 overflow-y-auto pr-1">
@@ -200,19 +207,20 @@ export const ProductVariantModal: React.FC<ProductVariantModalProps> = ({
                       key={v.id}
                       type="button"
                       onClick={() => setSelectedVariantId(v.id)}
-                      className={`p-3 rounded-2xl border text-right transition-all flex flex-col justify-between ${
+                      className={cn(
+                        'min-h-[44px] p-3 rounded-2xl border text-right transition-all flex flex-col justify-between cursor-pointer',
                         isSelected
-                          ? 'border-indigo-600 bg-indigo-50/70 ring-2 ring-indigo-500/20'
-                          : 'border-slate-200 bg-white hover:border-slate-300'
-                      }`}
+                          ? 'border-brand bg-brand-soft ring-2 ring-brand/20'
+                          : 'border-line bg-panel hover:border-line-2'
+                      )}
                     >
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-black text-slate-800 truncate">{v.name}</span>
-                        {isSelected && <Check className="w-3.5 h-3.5 text-indigo-600 flex-shrink-0" />}
+                        <span className="text-xs font-black text-ink truncate">{v.name}</span>
+                        {isSelected && <Check className="w-3.5 h-3.5 text-brand flex-shrink-0" />}
                       </div>
 
-                      <div className="flex items-center justify-between text-[11px] text-slate-500">
-                        <span className="font-mono font-bold text-indigo-600">
+                      <div className="flex items-center justify-between text-2xs text-muted">
+                        <span className="tabular-nums font-bold text-brand-ink">
                           {formatCurrency(
                             Number(
                               mode === 'purchase'
@@ -221,7 +229,7 @@ export const ProductVariantModal: React.FC<ProductVariantModalProps> = ({
                             )
                           )}
                         </span>
-                        <span className={`font-mono font-bold ${mode === 'purchase' ? 'text-slate-600' : isAvailable ? 'text-slate-600' : 'text-rose-500'}`}>
+                        <span className={cn('tabular-nums font-bold', mode === 'purchase' || isAvailable ? 'text-muted' : 'text-bad')}>
                           {mode === 'purchase' ? `الرصيد: ${v.quantity}` : isAvailable ? `${v.quantity} متاح` : 'نفد'}
                         </span>
                       </div>
@@ -235,7 +243,7 @@ export const ProductVariantModal: React.FC<ProductVariantModalProps> = ({
           {/* Batches & Expiry Dates */}
           {hasExpiry && product.batches?.length > 0 && (
             <div className="space-y-2">
-              <label className="text-xs font-black text-slate-700 block">
+              <label className="text-xs font-black text-ink block">
                 تشغيلات الصلاحية المتوفرة (FEFO):
               </label>
               <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
@@ -249,37 +257,38 @@ export const ProductVariantModal: React.FC<ProductVariantModalProps> = ({
                       key={b.id}
                       type="button"
                       onClick={() => setSelectedBatchId(b.id)}
-                      className={`w-full p-3 rounded-2xl border text-right transition-all flex items-center justify-between ${
+                      className={cn(
+                        'w-full min-h-[44px] p-3 rounded-2xl border text-right transition-all flex items-center justify-between cursor-pointer',
                         isSelected
-                          ? 'border-emerald-600 bg-emerald-50/60 ring-2 ring-emerald-500/20'
-                          : 'border-slate-200 bg-white hover:border-slate-300'
-                      }`}
+                          ? 'border-ok bg-ok-soft ring-2 ring-ok/20'
+                          : 'border-line bg-panel hover:border-line-2'
+                      )}
                     >
                       <div className="flex items-center gap-3">
-                        <Calendar className="w-4 h-4 text-slate-400" />
+                        <Calendar className="w-4 h-4 text-muted" />
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="text-xs font-black text-slate-800">
+                            <span className="text-xs font-black text-ink">
                               تشغيلة: {b.batch_number}
                             </span>
                             {isExpired && (
-                              <span className="text-2xs px-1.5 py-0.5 rounded-md bg-rose-100 text-rose-700 font-bold">
+                              <Badge tone="bad" className="text-2xs rounded-md px-1.5 py-0.5">
                                 منتهي
-                              </span>
+                              </Badge>
                             )}
                             {isNear && !isExpired && (
-                              <span className="text-2xs px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-700 font-bold">
+                              <Badge tone="warn" className="text-2xs rounded-md px-1.5 py-0.5">
                                 قريب الانتهاء
-                              </span>
+                              </Badge>
                             )}
                           </div>
-                          <span className="text-[11px] text-slate-500">
+                          <span className="text-2xs text-muted tabular-nums">
                             انتهاء: {b.expiry_date} | رصيد: {b.quantity}
                           </span>
                         </div>
                       </div>
 
-                      {isSelected && <Check className="w-4 h-4 text-emerald-600" />}
+                      {isSelected && <Check className="w-4 h-4 text-ok" />}
                     </button>
                   );
                 })}
@@ -288,59 +297,67 @@ export const ProductVariantModal: React.FC<ProductVariantModalProps> = ({
           )}
 
           {/* Quantity Controls */}
-          <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
-            <span className="text-xs font-black text-slate-700">الكمية المطلوبة:</span>
+          <div className="p-4 bg-surface-2 rounded-2xl border border-line flex items-center justify-between">
+            <span className="text-xs font-black text-ink">الكمية المطلوبة:</span>
             <div className="flex items-center gap-2">
-              <button
+              <Button
                 type="button"
+                variant="secondary"
+                size="md"
                 onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                className="w-8 h-8 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 flex items-center justify-center font-black text-slate-700 text-sm shadow-xs"
+                className="min-w-[44px] px-0 bg-panel font-black text-sm"
               >
                 -
-              </button>
+              </Button>
               <input
                 type="number"
                 min="1"
                 value={quantity}
                 onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
-                className="w-14 text-center font-mono font-black text-sm bg-white border border-slate-200 rounded-xl py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-16 min-h-[44px] text-center tabular-nums font-black text-sm bg-panel text-ink border border-line rounded-xl py-1 focus:outline-none focus:ring-2 focus:ring-brand"
               />
-              <button
+              <Button
                 type="button"
+                variant="secondary"
+                size="md"
                 onClick={() => setQuantity((q) => q + 1)}
-                className="w-8 h-8 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 flex items-center justify-center font-black text-slate-700 text-sm shadow-xs"
+                className="min-w-[44px] px-0 bg-panel font-black text-sm"
               >
                 +
-              </button>
+              </Button>
             </div>
           </div>
         </div>
 
         {/* Modal Footer */}
-        <div className="p-4 sm:p-5 border-t border-slate-100 bg-slate-50 flex items-center justify-between gap-3">
+        <div className="p-4 sm:p-5 border-t border-line bg-surface-2/60 flex items-center justify-between gap-3">
           <div>
-            <span className="text-[11px] text-slate-400 font-medium block">الإجمالي:</span>
-            <span className="text-lg font-black text-slate-900 font-mono">
+            <span className="text-2xs text-muted font-medium block">الإجمالي:</span>
+            <span className="text-lg font-black text-ink tabular-nums">
               {formatCurrency(effectiveUnitPrice * quantity)}
             </span>
           </div>
 
           <div className="flex items-center gap-2">
-            <button
+            <Button
               type="button"
+              variant="secondary"
+              size="md"
               onClick={onClose}
-              className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors"
+              className="text-xs font-bold"
             >
               إلغاء
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="primary"
+              size="md"
               onClick={handleConfirm}
-              className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black shadow-md shadow-indigo-600/20 flex items-center gap-2 transition-all active:scale-95"
+              leftIcon={<ShoppingCart className="w-4 h-4" />}
+              className="text-xs font-black"
             >
-              <ShoppingCart className="w-4 h-4" />
-              <span>{mode === 'purchase' ? 'إضافة للفاتورة' : 'إضافة للسلة'}</span>
-            </button>
+              {mode === 'purchase' ? 'إضافة للفاتورة' : 'إضافة للسلة'}
+            </Button>
           </div>
         </div>
       </div>

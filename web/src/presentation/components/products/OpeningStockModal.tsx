@@ -16,6 +16,13 @@ import {
 import { apiClient } from '../../../data/api/client';
 import { Product } from '@pos-mandob/shared';
 import { useToast } from '../../context/ToastContext';
+import { Button } from '../ui/Button';
+import { Badge } from '../ui/Badge';
+import { Input } from '../ui/Input';
+import { Select } from '../ui/Select';
+import { DataTable } from '../ui/DataTable';
+import { EmptyState } from '../ui/EmptyState';
+import { cn } from '../../utils/cn';
 
 interface OpeningStockModalProps {
   isOpen: boolean;
@@ -287,71 +294,76 @@ export const OpeningStockModal: React.FC<OpeningStockModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
-      <div className="bg-white w-full max-w-5xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-canvas/80 backdrop-blur-sm overflow-y-auto" dir="rtl">
+      <div className="bg-panel w-full max-w-5xl rounded-2xl shadow-2xl border border-line overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in duration-200">
         
         {/* Header */}
-        <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
+        <div className="p-4 sm:p-5 border-b border-line flex items-center justify-between bg-surface-2/60">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary-50 text-primary-600 flex items-center justify-center font-bold">
+            <div className="w-10 h-10 rounded-xl bg-brand-soft text-brand flex items-center justify-center font-bold border border-brand/20">
               <Boxes className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base sm:text-lg font-black text-slate-900">إدخال رصيد أول المدة</h2>
-              <p className="text-xs text-slate-500 font-medium">
+              <h2 className="text-base sm:text-lg font-black text-ink">إدخال رصيد أول المدة</h2>
+              <p className="text-xs text-muted font-medium">
                 تسجيل حركة مخزنية رسمية (INITIAL) للأصناف والمتغيرات بدون فواتير مشتريات أو مديونيات
               </p>
             </div>
           </div>
-          <button
+          <Button
+            type="button"
+            variant="ghost"
+            size="md"
             onClick={onClose}
-            className="w-8 h-8 rounded-lg hover:bg-slate-200/60 text-slate-400 hover:text-slate-600 flex items-center justify-center transition-colors"
+            className="min-w-[44px] px-0 text-muted hover:text-ink"
           >
             <X className="w-5 h-5" />
-          </button>
+          </Button>
         </div>
 
         {/* Toolbar Bar (Branch, Search, Excel, Filters) */}
-        <div className="p-4 border-b border-slate-100 bg-white flex flex-col gap-3">
-          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
+        <div className="p-4 border-b border-line bg-panel flex flex-col gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
             {/* Branch Selector */}
             <div className="sm:col-span-4">
-              <label className="block text-[11px] font-bold text-slate-700 mb-1 flex items-center gap-1">
-                <Building2 className="w-3.5 h-3.5 text-primary-600" />
+              <label className="block text-2xs font-bold text-ink mb-1.5 flex items-center gap-1">
+                <Building2 className="w-3.5 h-3.5 text-brand" />
                 <span>الفرع / المخزن المستهدف:</span>
               </label>
-              <select
+              <Select
                 value={selectedBranchId}
                 onChange={(e) => setSelectedBranchId(Number(e.target.value) || '')}
-                className="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:bg-white"
+                className="text-xs font-bold bg-surface-2/50 focus:bg-panel"
               >
                 {branches.map((b: any) => (
                   <option key={b.id} value={b.id}>
                     {b.name} {b.is_main ? '(الرئيسي)' : ''}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
 
             {/* Search Input */}
             <div className="sm:col-span-5">
-              <label className="block text-[11px] font-bold text-slate-700 mb-1 flex items-center gap-1">
-                <Search className="w-3.5 h-3.5 text-slate-400" />
+              <label className="block text-2xs font-bold text-ink mb-1.5 flex items-center gap-1">
+                <Search className="w-3.5 h-3.5 text-muted" />
                 <span>بحث سريع:</span>
               </label>
-              <input
+              <Input
                 type="text"
                 placeholder="ابحث بالاسم أو الباركود أو المقاس..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:bg-white text-right"
+                className="text-xs bg-surface-2/50 focus:bg-panel"
               />
             </div>
 
             {/* Excel Actions */}
-            <div className="sm:col-span-3 flex items-center gap-2 pt-4 sm:pt-0">
-              <button
+            <div className="sm:col-span-3 flex items-center gap-2 pt-2 sm:pt-0">
+              <Button
                 type="button"
+                variant="secondary"
+                size="md"
                 onClick={async () => {
                   try {
                     const { downloadOpeningStockTemplate } = await import('../../utils/excelExport');
@@ -361,22 +373,24 @@ export const OpeningStockModal: React.FC<OpeningStockModalProps> = ({
                     toast.error('تعذر تحميل أداة Excel، تأكد من الاتصال وحاول مرة أخرى');
                   }
                 }}
-                className="flex-1 inline-flex items-center justify-center gap-1 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-2.5 py-2 rounded-xl text-xs font-bold transition-all shadow-xs"
+                leftIcon={<Download className="w-3.5 h-3.5 text-ok" />}
+                className="flex-1 px-2.5 text-xs font-bold"
                 title="تحميل نموذج Excel معبأ بالأصناف والمتغيرات لتسهيل الإدخال"
               >
-                <Download className="w-3.5 h-3.5 text-emerald-600" />
-                <span>نموذج Excel</span>
-              </button>
+                نموذج Excel
+              </Button>
 
-              <button
+              <Button
                 type="button"
+                variant="secondary"
+                size="md"
                 onClick={() => fileInputRef.current?.click()}
-                className="flex-1 inline-flex items-center justify-center gap-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 px-2.5 py-2 rounded-xl text-xs font-bold transition-all shadow-xs"
+                leftIcon={<Upload className="w-3.5 h-3.5 text-ok" />}
+                className="flex-1 px-2.5 bg-ok-soft hover:bg-ok-soft/80 text-ok border-ok/25 text-xs font-bold"
                 title="رفع ملف Excel معبأ بالأرصدة"
               >
-                <Upload className="w-3.5 h-3.5 text-emerald-600" />
-                <span>رفع Excel</span>
-              </button>
+                رفع Excel
+              </Button>
               <input
                 type="file"
                 ref={fileInputRef}
@@ -389,36 +403,37 @@ export const OpeningStockModal: React.FC<OpeningStockModalProps> = ({
 
           {/* Quick Filter Pill */}
           <div className="flex items-center justify-between text-xs pt-1">
-            <button
+            <Button
               type="button"
+              variant="secondary"
+              size="md"
               onClick={() => setShowZeroOnly(!showZeroOnly)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg font-bold transition-all ${
-                showZeroOnly
-                  ? 'bg-amber-100 text-amber-800 border border-amber-300'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
+              leftIcon={<Filter className="w-3.5 h-3.5" />}
+              className={cn(
+                'px-3 text-xs font-bold',
+                showZeroOnly && 'bg-warn-soft text-warn border-warn/30'
+              )}
             >
-              <Filter className="w-3.5 h-3.5" />
-              <span>عرض الأصناف بدون رصيد فقط (المستوردة بـ 0)</span>
-            </button>
+              عرض الأصناف بدون رصيد فقط (المستوردة بـ 0)
+            </Button>
 
-            <span className="text-slate-500 font-medium">
-              تم تجهيز رصيد لـ <strong className="text-primary-600">{filledCount}</strong> صنف
+            <span className="text-muted font-medium">
+              تم تجهيز رصيد لـ <strong className="text-brand tabular-nums">{filledCount}</strong> صنف
             </span>
           </div>
         </div>
 
         {/* Notifications */}
         {excelSuccessNote && (
-          <div className="mx-4 mt-3 p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-xl flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+          <div className="mx-4 mt-3 p-3 bg-ok-soft border border-ok/25 text-ok text-xs rounded-xl flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-ok shrink-0" />
             <span>{excelSuccessNote}</span>
           </div>
         )}
 
         {errorMessage && (
-          <div className="mx-4 mt-3 p-3 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-xl flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+          <div className="mx-4 mt-3 p-3 bg-bad-soft border border-bad/25 text-bad text-xs rounded-xl flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-bad shrink-0" />
             <span>{errorMessage}</span>
           </div>
         )}
@@ -426,125 +441,124 @@ export const OpeningStockModal: React.FC<OpeningStockModalProps> = ({
         {/* Table Body */}
         <div className="p-4 overflow-y-auto flex-1">
           {filteredItems.length === 0 ? (
-            <div className="text-center py-12 text-slate-400 text-sm">
-              لا توجد أصناف مطابقة للبحث أو الفلتر المحدد.
-            </div>
+            <EmptyState
+              icon={<Boxes className="w-6 h-6 text-muted" />}
+              title="لا توجد أصناف مطابقة للبحث أو الفلتر المحدد."
+            />
           ) : (
-            <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs">
-              <table className="w-full text-right text-xs">
-                <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
-                  <tr>
-                    <th className="p-2.5 sm:p-3 w-10 text-center">#</th>
-                    <th className="p-2.5 sm:p-3">الصنف / المتغير</th>
-                    <th className="p-2.5 sm:p-3 hidden sm:table-cell">الباركود / الكود</th>
-                    <th className="p-2.5 sm:p-3 text-center">الرصيد الحالي</th>
-                    <th className="p-2.5 sm:p-3 w-36 sm:w-44">كمية أول المدة</th>
-                    <th className="p-2.5 sm:p-3 w-32 sm:w-36">سعر التكلفة (اختياري)</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {filteredItems.map((item, idx) => {
-                    const isFilled = Number(item.quantity) > 0;
-                    return (
-                      <tr
-                        key={item.key}
-                        className={`transition-colors ${
-                          isFilled ? 'bg-emerald-50/40 hover:bg-emerald-50/70' : 'hover:bg-slate-50'
-                        }`}
-                      >
-                        <td className="p-2.5 sm:p-3 text-center text-slate-400 font-medium">{idx + 1}</td>
-                        <td className="p-2.5 sm:p-3">
-                          <div className="font-bold text-slate-900 flex items-center gap-1.5">
-                            {item.isVariant ? (
-                              <span className="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 text-2xs font-black px-1.5 py-0.5 rounded-md">
-                                <Layers className="w-3 h-3" />
-                                {item.variantName}
-                              </span>
-                            ) : (
-                              <span>{item.productName}</span>
-                            )}
-                          </div>
-                          {item.isVariant && (
-                            <div className="text-[11px] text-slate-500 font-medium mt-0.5">
-                              تابع لصنف: {item.productName}
-                            </div>
+            <DataTable>
+              <thead className="bg-surface-2 text-muted text-xs font-bold border-b border-line">
+                <tr>
+                  <th className="p-2.5 sm:p-3 w-10 text-center">#</th>
+                  <th className="p-2.5 sm:p-3">الصنف / المتغير</th>
+                  <th className="p-2.5 sm:p-3 hidden sm:table-cell">الباركود / الكود</th>
+                  <th className="p-2.5 sm:p-3 text-center">الرصيد الحالي</th>
+                  <th className="p-2.5 sm:p-3 w-36 sm:w-44">كمية أول المدة</th>
+                  <th className="p-2.5 sm:p-3 w-32 sm:w-36">سعر التكلفة (اختياري)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line text-xs">
+                {filteredItems.map((item, idx) => {
+                  const isFilled = Number(item.quantity) > 0;
+                  return (
+                    <tr
+                      key={item.key}
+                      className={cn(
+                        'transition-colors',
+                        isFilled ? 'bg-ok-soft/40 hover:bg-ok-soft/70' : 'hover:bg-surface-2/50'
+                      )}
+                    >
+                      <td className="p-2.5 sm:p-3 text-center text-muted font-medium tabular-nums">{idx + 1}</td>
+                      <td className="p-2.5 sm:p-3">
+                        <div className="font-bold text-ink flex items-center gap-1.5">
+                          {item.isVariant ? (
+                            <Badge tone="brand" className="text-2xs font-black px-1.5 py-0.5 rounded-md">
+                              <Layers className="w-3 h-3" />
+                              {item.variantName}
+                            </Badge>
+                          ) : (
+                            <span>{item.productName}</span>
                           )}
-                        </td>
-                        <td className="p-2.5 sm:p-3 hidden sm:table-cell font-mono text-slate-500 text-[11px]">
-                          {item.barcode || '—'}
-                        </td>
-                        <td className="p-2.5 sm:p-3 text-center font-bold">
-                          <span
-                            className={`px-2 py-0.5 rounded-md text-[11px] ${
-                              item.currentStock > 0
-                                ? 'bg-slate-100 text-slate-700'
-                                : 'bg-rose-50 text-rose-700'
-                            }`}
-                          >
-                            {item.currentStock} {item.unit}
-                          </span>
-                        </td>
-                        <td className="p-2.5 sm:p-3">
-                          <div className="relative">
-                            <input
-                              type="number"
-                              min="0"
-                              step="any"
-                              placeholder="0"
-                              value={item.quantity}
-                              onChange={(e) => handleInputChange(item.key, 'quantity', e.target.value)}
-                              className={`w-full text-center font-black text-xs py-1.5 px-2 rounded-lg border transition-all ${
-                                isFilled
-                                  ? 'border-emerald-500 bg-white text-emerald-900 ring-2 ring-emerald-500/20'
-                                  : 'border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-500'
-                              }`}
-                            />
+                        </div>
+                        {item.isVariant && (
+                          <div className="text-2xs text-muted font-medium mt-0.5">
+                            تابع لصنف: {item.productName}
                           </div>
-                        </td>
-                        <td className="p-2.5 sm:p-3">
-                          <div className="relative">
-                            <input
-                              type="number"
-                              min="0"
-                              step="any"
-                              placeholder="سعر التكلفة"
-                              value={item.costPrice}
-                              onChange={(e) => handleInputChange(item.key, 'costPrice', e.target.value)}
-                              className="w-full text-center text-xs py-1.5 px-2 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary-500 font-bold text-slate-800"
-                            />
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                        )}
+                      </td>
+                      <td className="p-2.5 sm:p-3 hidden sm:table-cell tabular-nums text-muted text-2xs">
+                        {item.barcode || '—'}
+                      </td>
+                      <td className="p-2.5 sm:p-3 text-center font-bold">
+                        <Badge
+                          tone={item.currentStock > 0 ? 'neutral' : 'bad'}
+                          className="rounded-md text-2xs tabular-nums"
+                        >
+                          {item.currentStock} {item.unit}
+                        </Badge>
+                      </td>
+                      <td className="p-2.5 sm:p-3">
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          placeholder="0"
+                          value={item.quantity}
+                          onChange={(e) => handleInputChange(item.key, 'quantity', e.target.value)}
+                          className={cn(
+                            'w-full min-h-[40px] text-center font-black text-xs py-1.5 px-2 rounded-lg border transition-all tabular-nums outline-none',
+                            isFilled
+                              ? 'border-ok bg-panel text-ok ring-2 ring-ok/20'
+                              : 'border-line bg-surface-2/50 text-ink focus:bg-panel focus:border-brand'
+                          )}
+                        />
+                      </td>
+                      <td className="p-2.5 sm:p-3">
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          placeholder="سعر التكلفة"
+                          value={item.costPrice}
+                          onChange={(e) => handleInputChange(item.key, 'costPrice', e.target.value)}
+                          className="w-full min-h-[40px] text-center text-xs py-1.5 px-2 rounded-lg border border-line bg-surface-2/50 text-ink focus:bg-panel focus:border-brand font-bold tabular-nums outline-none"
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </DataTable>
           )}
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
-          <div className="text-xs text-slate-500 font-medium">
-            سيتم قيد حركة مخزنية بنوع <strong className="text-slate-800 font-black">INITIAL</strong> لكل صنف تم تحديد كميته.
+        <div className="p-4 border-t border-line bg-surface-2/60 flex items-center justify-between gap-2 flex-wrap">
+          <div className="text-xs text-muted font-medium">
+            سيتم قيد حركة مخزنية بنوع <strong className="text-ink font-black">INITIAL</strong> لكل صنف تم تحديد كميته.
           </div>
           <div className="flex items-center gap-2">
-            <button
+            <Button
               type="button"
+              variant="secondary"
+              size="md"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-200 transition-colors"
+              className="text-xs font-bold"
             >
               إلغاء
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="primary"
+              size="md"
               onClick={() => mutation.mutate()}
               disabled={mutation.isPending || filledCount === 0}
-              className="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white px-5 py-2 rounded-xl text-xs font-bold shadow-sm transition-all"
+              isLoading={mutation.isPending}
+              leftIcon={<Save className="w-4 h-4" />}
+              className="text-xs font-bold"
             >
-              <Save className="w-4 h-4" />
-              <span>{mutation.isPending ? 'جاري الاعتماد...' : `اعتماد رصيد أول المدة (${filledCount})`}</span>
-            </button>
+              {mutation.isPending ? 'جاري الاعتماد...' : `اعتماد رصيد أول المدة (${filledCount})`}
+            </Button>
           </div>
         </div>
 
