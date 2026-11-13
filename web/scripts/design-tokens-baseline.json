@@ -156,12 +156,8 @@
     "hex": 1
   },
   "src/presentation/components/products/BarcodePrintModal.tsx": {
-    "raw": 114,
+    "raw": 0,
     "hex": 6
-  },
-  "src/presentation/components/products/VariantMatrixGenerator.tsx": {
-    "raw": 135,
-    "hex": 31
   },
   "src/presentation/components/pwa/OfflineBanner.tsx": {
     "raw": 5,

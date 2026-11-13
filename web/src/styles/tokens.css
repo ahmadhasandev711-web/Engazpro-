@@ -40,6 +40,23 @@
   --c-primary-800: 59 34 138;
   --c-primary-900: 46 24 111;
   --c-primary-950: 26 11 70;
+
+  /* Product Color Swatches (Garment/Variant visual indicators) */
+  --swatch-black: #18181b;
+  --swatch-white: #ffffff;
+  --swatch-navy: #1e3a8a;
+  --swatch-gray: #6b7280;
+  --swatch-red: #dc2626;
+  --swatch-olive: #4d7c0f;
+  --swatch-beige: #d4b996;
+  --swatch-blue: #2563eb;
+  --swatch-brown: #78350f;
+  --swatch-pink: #ec4899;
+  --swatch-green: #16a34a;
+  --swatch-yellow: #eab308;
+  --swatch-orange: #ea580c;
+  --swatch-cyan: #06b6d4;
+  --swatch-purple: #9333ea;
 }
 
 .dark {

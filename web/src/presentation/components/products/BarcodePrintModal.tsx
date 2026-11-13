@@ -15,6 +15,11 @@ import {
 import { useAuthStore } from '../../../data/store/useAuthStore';
 import { renderBarcodeSvg } from '../../utils/barcodeSvgRenderer';
 import { useToast } from '../../context/ToastContext';
+import { Button } from '../ui/Button';
+import { Badge } from '../ui/Badge';
+import { Input } from '../ui/Input';
+import { DataTable } from '../ui/DataTable';
+import { cn } from '../../utils/cn';
 
 interface BarcodePrintModalProps {
   product: Product | null;
@@ -195,7 +200,7 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
   const currentConfig = LABEL_CONFIGS[labelSize];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-canvas/80 backdrop-blur-sm animate-fadeIn">
       {/* Dynamic Print CSS injected into head during print */}
       <style>{`
         @media screen {
@@ -275,31 +280,33 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
       `}</style>
 
       {/* Modal Dialog */}
-      <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden text-right">
+      <div className="bg-panel rounded-3xl shadow-2xl border border-line w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden text-right">
         {/* Top Header */}
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+        <div className="px-6 py-4 border-b border-line flex items-center justify-between bg-surface-2/60">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
+            <div className="w-10 h-10 rounded-2xl bg-brand text-on-brand flex items-center justify-center shadow-xs">
               <Barcode className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-black text-slate-900 leading-tight">
+              <h3 className="text-base font-black text-ink leading-tight">
                 طباعة ملصقات الباركود للملابس والأحذية
               </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                الصنف: <span className="font-bold text-slate-800">{product.name}</span>
+              <p className="text-xs text-muted mt-0.5">
+                الصنف: <span className="font-bold text-ink">{product.name}</span>
                 {product.has_variants && ` • (${items.length} مقاس/لون)`}
               </p>
             </div>
           </div>
 
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="md"
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors"
+            className="min-w-[44px] px-0 text-muted hover:text-ink"
           >
             <X className="w-5 h-5" />
-          </button>
+          </Button>
         </div>
 
         {/* Modal Body: Left Settings / Right Preview */}
@@ -307,9 +314,9 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
           {/* Left / Top (7 cols): Sizes and Copies selection */}
           <div className="lg:col-span-7 space-y-5">
             {/* 1. Label Size Selector */}
-            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-2.5">
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
-                <Settings2 className="w-4 h-4 text-indigo-600" />
+            <div className="bg-surface-2 p-4 rounded-2xl border border-line space-y-2.5">
+              <div className="flex items-center gap-2 text-xs font-bold text-ink">
+                <Settings2 className="w-4 h-4 text-brand" />
                 <span>اختر مقاس ونوع الملصق:</span>
               </div>
 
@@ -321,17 +328,19 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
                       key={key}
                       type="button"
                       onClick={() => setLabelSize(key as BarcodeLabelSize)}
-                      className={`p-3 rounded-xl border text-right transition-all flex flex-col justify-between ${
+                      className={cn(
+                        'min-h-[44px] p-3 rounded-xl border text-right transition-all flex flex-col justify-between cursor-pointer',
                         isSelected
-                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs ring-2 ring-indigo-200'
-                          : 'bg-white hover:bg-slate-100/70 border-slate-200 text-slate-800'
-                      }`}
+                          ? 'bg-brand text-on-brand border-brand shadow-xs ring-2 ring-brand/25'
+                          : 'bg-panel hover:bg-surface-2 border-line text-ink'
+                      )}
                     >
                       <div className="font-bold text-xs">{cfg.name}</div>
                       <div
-                        className={`text-2xs mt-1 line-clamp-2 ${
-                          isSelected ? 'text-indigo-100' : 'text-slate-400'
-                        }`}
+                        className={cn(
+                          'text-2xs mt-1 line-clamp-2',
+                          isSelected ? 'text-on-brand/80' : 'text-muted'
+                        )}
                       >
                         {cfg.description}
                       </div>
@@ -342,185 +351,193 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
             </div>
 
             {/* 2. Customization Toggles */}
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-3">
-              <h5 className="text-xs font-black text-slate-800">بيانات الملصق المطبوعة:</h5>
+            <div className="bg-panel p-4 rounded-2xl border border-line shadow-xs space-y-3">
+              <h5 className="text-xs font-black text-ink">بيانات الملصق المطبوعة:</h5>
 
               <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
-                <label className="flex items-center gap-2 cursor-pointer select-none">
+                <label className="flex items-center gap-2 cursor-pointer select-none min-h-[36px]">
                   <input
                     type="checkbox"
                     checked={showStoreName}
                     onChange={(e) => setShowStoreName(e.target.checked)}
-                    className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500"
+                    className="w-4 h-4 rounded accent-brand focus:ring-brand"
                   />
-                  <span className="font-bold text-slate-700">اسم المتجر / الماركة</span>
+                  <span className="font-bold text-ink">اسم المتجر / الماركة</span>
                 </label>
 
-                <label className="flex items-center gap-2 cursor-pointer select-none">
+                <label className="flex items-center gap-2 cursor-pointer select-none min-h-[36px]">
                   <input
                     type="checkbox"
                     checked={showProductName}
                     onChange={(e) => setShowProductName(e.target.checked)}
-                    className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500"
+                    className="w-4 h-4 rounded accent-brand focus:ring-brand"
                   />
-                  <span className="font-bold text-slate-700">اسم الصنف</span>
+                  <span className="font-bold text-ink">اسم الصنف</span>
                 </label>
 
-                <label className="flex items-center gap-2 cursor-pointer select-none">
+                <label className="flex items-center gap-2 cursor-pointer select-none min-h-[36px]">
                   <input
                     type="checkbox"
                     checked={showSizeColor}
                     onChange={(e) => setShowSizeColor(e.target.checked)}
-                    className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500"
+                    className="w-4 h-4 rounded accent-brand focus:ring-brand"
                   />
-                  <span className="font-bold text-slate-700">المقاس واللون</span>
+                  <span className="font-bold text-ink">المقاس واللون</span>
                 </label>
 
-                <label className="flex items-center gap-2 cursor-pointer select-none">
+                <label className="flex items-center gap-2 cursor-pointer select-none min-h-[36px]">
                   <input
                     type="checkbox"
                     checked={showBarcodeText}
                     onChange={(e) => setShowBarcodeText(e.target.checked)}
-                    className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500"
+                    className="w-4 h-4 rounded accent-brand focus:ring-brand"
                   />
-                  <span className="font-bold text-slate-700">الرقم المقروء</span>
+                  <span className="font-bold text-ink">الرقم المقروء</span>
                 </label>
 
-                <label className="flex items-center gap-2 cursor-pointer select-none">
+                <label className="flex items-center gap-2 cursor-pointer select-none min-h-[36px]">
                   <input
                     type="checkbox"
                     checked={showPrice}
                     onChange={(e) => setShowPrice(e.target.checked)}
-                    className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500"
+                    className="w-4 h-4 rounded accent-brand focus:ring-brand"
                   />
-                  <span className="font-bold text-slate-700">سعر البيع</span>
+                  <span className="font-bold text-ink">سعر البيع</span>
                 </label>
               </div>
 
               {showStoreName && (
                 <div className="pt-2">
-                  <input
+                  <Input
                     type="text"
                     value={storeName}
                     onChange={(e) => setStoreName(e.target.value)}
                     placeholder="اسم المتجر / المحل المطبوع أعلى الاستيكر..."
-                    className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-right font-medium"
+                    className="bg-surface-2/50 focus:bg-panel text-xs font-medium"
                   />
                 </div>
               )}
             </div>
 
             {/* 3. Items & Copies Table */}
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+            <div className="bg-panel p-4 rounded-2xl border border-line shadow-xs space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2 text-xs">
-                  <Layers className="w-4 h-4 text-slate-600" />
-                  <span className="font-black text-slate-800">تحديد عدد النسخ لكل مقاس:</span>
+                  <Layers className="w-4 h-4 text-muted" />
+                  <span className="font-black text-ink">تحديد عدد النسخ لكل مقاس:</span>
                 </div>
 
                 <div className="flex items-center gap-1.5 text-xs">
-                  <button
+                  <Button
                     type="button"
+                    variant="secondary"
+                    size="md"
                     onClick={() => handleSetAllCopies(1)}
-                    className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold transition-colors"
+                    className="px-2.5 text-xs font-bold"
                   >
                     1 لكل مقاس
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
+                    variant="secondary"
+                    size="md"
                     onClick={handleSetCopiesToStock}
-                    className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg font-bold transition-colors"
+                    className="px-2.5 bg-ok-soft hover:bg-ok-soft/80 text-ok border-ok/25 text-xs font-bold"
                     title="ضبط النسخ مساوية لكمية المخزون الحالي"
                   >
                     حسب المخزون
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="md"
                     onClick={() => handleSetAllCopies(0)}
-                    className="px-2 py-1 text-slate-400 hover:text-rose-600 font-bold"
+                    className="px-2 text-muted hover:text-bad font-bold text-xs"
                   >
                     تصفير
-                  </button>
+                  </Button>
                 </div>
               </div>
 
-              <div className="max-h-56 overflow-y-auto border border-slate-100 rounded-xl">
-                <table className="w-full text-right text-xs">
-                  <thead className="bg-slate-50 text-slate-500 font-bold sticky top-0 z-10 border-b border-slate-100">
-                    <tr>
-                      <th className="py-2 px-3">المقاس / المتغير</th>
-                      <th className="py-2 px-2">الباركود</th>
-                      <th className="py-2 px-2">السعر</th>
-                      <th className="py-2 px-2">المتاح</th>
-                      <th className="py-2 px-3 text-center">النسخ المطلوبة</th>
+              <DataTable className="max-h-56 overflow-y-auto">
+                <thead className="bg-surface-2 text-muted font-bold sticky top-0 z-10 border-b border-line text-xs">
+                  <tr>
+                    <th className="py-2 px-3">المقاس / المتغير</th>
+                    <th className="py-2 px-2">الباركود</th>
+                    <th className="py-2 px-2">السعر</th>
+                    <th className="py-2 px-2">المتاح</th>
+                    <th className="py-2 px-3 text-center">النسخ المطلوبة</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-line text-xs">
+                  {items.map((item) => (
+                    <tr key={item.key} className="hover:bg-surface-2/50">
+                      <td className="py-2 px-3 font-bold text-ink">
+                        {item.variant_name || item.name}
+                      </td>
+                      <td className="py-2 px-2 tabular-nums text-2xs text-muted">
+                        {item.barcode}
+                      </td>
+                      <td className="py-2 px-2 font-bold text-ok tabular-nums">
+                        {formatCurrency(item.price)}
+                      </td>
+                      <td className="py-2 px-2 text-muted tabular-nums">
+                        {item.stock}
+                      </td>
+                      <td className="py-2 px-3 text-center">
+                        <div className="inline-flex items-center gap-1">
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="md"
+                            onClick={() => handleUpdateCopies(item.key, item.copies - 1)}
+                            className="min-w-[44px] px-0 font-bold text-xs"
+                          >
+                            -
+                          </Button>
+                          <input
+                            type="number"
+                            min="0"
+                            value={item.copies}
+                            onChange={(e) =>
+                              handleUpdateCopies(item.key, parseInt(e.target.value) || 0)
+                            }
+                            className="w-14 min-h-[44px] text-center tabular-nums font-bold text-xs bg-surface-2/50 text-ink border border-line rounded-lg py-1 focus:bg-panel focus:outline-none focus:border-brand"
+                          />
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="md"
+                            onClick={() => handleUpdateCopies(item.key, item.copies + 1)}
+                            className="min-w-[44px] px-0 font-bold text-xs"
+                          >
+                            +
+                          </Button>
+                        </div>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {items.map((item) => (
-                      <tr key={item.key} className="hover:bg-slate-50/50">
-                        <td className="py-2 px-3 font-bold text-slate-800">
-                          {item.variant_name || item.name}
-                        </td>
-                        <td className="py-2 px-2 font-mono text-[11px] text-slate-500">
-                          {item.barcode}
-                        </td>
-                        <td className="py-2 px-2 font-bold text-emerald-700 font-mono">
-                          {formatCurrency(item.price)}
-                        </td>
-                        <td className="py-2 px-2 text-slate-500 font-mono">
-                          {item.stock}
-                        </td>
-                        <td className="py-2 px-3 text-center">
-                          <div className="inline-flex items-center gap-1">
-                            <button
-                              type="button"
-                              onClick={() => handleUpdateCopies(item.key, item.copies - 1)}
-                              className="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold flex items-center justify-center text-xs"
-                            >
-                              -
-                            </button>
-                            <input
-                              type="number"
-                              min="0"
-                              value={item.copies}
-                              onChange={(e) =>
-                                handleUpdateCopies(item.key, parseInt(e.target.value) || 0)
-                              }
-                              className="w-14 text-center font-mono font-bold text-xs bg-slate-50 border border-slate-200 rounded-lg py-1 focus:bg-white focus:outline-none"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => handleUpdateCopies(item.key, item.copies + 1)}
-                              className="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold flex items-center justify-center text-xs"
-                            >
-                              +
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+              </DataTable>
             </div>
           </div>
 
           {/* Right (5 cols): Live Visual Preview */}
-          <div className="lg:col-span-5 bg-slate-100/70 p-5 rounded-2xl border border-slate-200 flex flex-col justify-between space-y-4">
+          <div className="lg:col-span-5 bg-surface-2 p-5 rounded-2xl border border-line flex flex-col justify-between space-y-4">
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-xs font-black text-slate-800">
-                  <Eye className="w-4 h-4 text-indigo-600" />
+                <div className="flex items-center gap-1.5 text-xs font-black text-ink">
+                  <Eye className="w-4 h-4 text-brand" />
                   <span>معاينة الملصق المباشرة (Live Preview)</span>
                 </div>
-                <span className="text-2xs font-mono px-2 py-0.5 rounded-full bg-white text-slate-600 border border-slate-200 font-bold">
+                <Badge tone="neutral" className="text-2xs tabular-nums bg-panel">
                   {currentConfig.widthMm} × {currentConfig.heightMm} مم
-                </span>
+                </Badge>
               </div>
 
               {/* Visual Card Preview */}
               {expandedPrintLabels.length > 0 ? (
-                <div className="flex justify-center p-4 bg-slate-200/60 rounded-2xl border border-dashed border-slate-300">
+                <div className="flex justify-center p-4 bg-panel/60 rounded-2xl border border-dashed border-line-2">
                   {(() => {
                     const sample = expandedPrintLabels[0];
                     const svgData = renderBarcodeSvg(sample.barcode, {
@@ -531,7 +548,7 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
 
                     return (
                       <div
-                        className="bg-white rounded-lg shadow-md p-2.5 flex flex-col justify-between items-center text-center text-slate-900 border border-slate-300 select-none transition-all"
+                        className="bg-panel rounded-lg shadow-md p-2.5 flex flex-col justify-between items-center text-center text-ink border border-line-2 select-none transition-all"
                         style={{
                           width: `${currentConfig.widthMm * 5.2}px`,
                           minHeight: `${currentConfig.heightMm * 5.2}px`,
@@ -539,21 +556,21 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
                       >
                         {/* Store / Brand */}
                         {showStoreName && storeName && (
-                          <div className="text-2xs font-black uppercase tracking-wider text-slate-900 truncate w-full border-b border-slate-100 pb-0.5 mb-1">
+                          <div className="text-2xs font-black uppercase tracking-wider text-ink truncate w-full border-b border-line pb-0.5 mb-1">
                             {storeName}
                           </div>
                         )}
 
                         {/* Product Name */}
                         {showProductName && (
-                          <div className="text-[11px] font-extrabold leading-tight line-clamp-1 w-full text-slate-950">
+                          <div className="text-2xs font-extrabold leading-tight line-clamp-1 w-full text-ink">
                             {sample.name}
                           </div>
                         )}
 
                         {/* Size & Color Badge */}
                         {showSizeColor && (sample.size || sample.color) && (
-                          <div className="inline-flex items-center gap-1 my-0.5 text-2xs font-black px-2 py-0.5 rounded-md bg-slate-100 border border-slate-300">
+                          <div className="inline-flex items-center gap-1 my-0.5 text-2xs font-black px-2 py-0.5 rounded-md bg-surface-2 border border-line-2 text-ink">
                             {sample.color && <span>{sample.color}</span>}
                             {sample.color && sample.size && <span>•</span>}
                             {sample.size && <span>مقاس: {sample.size}</span>}
@@ -568,7 +585,7 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
 
                         {/* Price */}
                         {showPrice && (
-                          <div className="text-xs font-black text-slate-950 font-mono mt-0.5 border-t border-slate-100 pt-0.5 w-full">
+                          <div className="text-xs font-black text-ink tabular-nums mt-0.5 border-t border-line pb-0 pt-0.5 w-full">
                             {formatCurrency(sample.price)}
                           </div>
                         )}
@@ -577,20 +594,20 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
                   })()}
                 </div>
               ) : (
-                <div className="p-8 text-center bg-white rounded-2xl border border-slate-200 text-slate-400 text-xs font-bold">
+                <div className="p-8 text-center bg-panel rounded-2xl border border-line text-muted text-xs font-bold">
                   لم تقم بتحديد أي نسخ للطباعة.
                 </div>
               )}
 
-              <p className="text-[11px] text-slate-500 text-center leading-relaxed">
+              <p className="text-2xs text-muted text-center leading-relaxed">
                 ملاحظة: الباركود يُطبع كـ Vector SVG فائق الدقة بدون تشويش أو بهتان ليضمن قراءة 100% فورية بجميع أجهزة الماسح الضوئي والليزر.
               </p>
             </div>
 
             {/* Total Summary Badge */}
-            <div className="p-3 bg-white rounded-xl border border-slate-200 flex items-center justify-between text-xs">
-              <span className="font-bold text-slate-600">إجمالي الملصقات للطباعة:</span>
-              <span className="font-black text-sm text-indigo-700 font-mono">
+            <div className="p-3 bg-panel rounded-xl border border-line flex items-center justify-between text-xs">
+              <span className="font-bold text-muted">إجمالي الملصقات للطباعة:</span>
+              <span className="font-black text-sm text-brand-ink tabular-nums">
                 {totalLabels} استيكر
               </span>
             </div>
@@ -598,24 +615,28 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
         </div>
 
         {/* Modal Footer */}
-        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/70 flex items-center justify-between">
-          <button
+        <div className="px-6 py-4 border-t border-line bg-surface-2/60 flex items-center justify-between">
+          <Button
             type="button"
+            variant="secondary"
+            size="md"
             onClick={onClose}
-            className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-200/70 rounded-xl transition-colors"
+            className="text-xs font-bold"
           >
             إلغاء
-          </button>
+          </Button>
 
-          <button
+          <Button
             type="button"
+            variant="primary"
+            size="md"
             disabled={totalLabels === 0}
             onClick={handlePrint}
-            className="inline-flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:scale-98 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all"
+            leftIcon={<Printer className="w-4 h-4" />}
+            className="text-xs font-bold"
           >
-            <Printer className="w-4 h-4" />
-            <span>طباعة الملصقات الآن ({totalLabels})</span>
-          </button>
+            طباعة الملصقات الآن ({totalLabels})
+          </Button>
         </div>
       </div>
 
