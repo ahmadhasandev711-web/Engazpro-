@@ -16,35 +16,22 @@ services:
       - default
 
   api:
+    image: engaz-e2e-php
     build:
       context: .
       dockerfile: docker/backend/Dockerfile
     container_name: engaz-e2e-api
     restart: unless-stopped
     working_dir: /var/www/backend
-    command: php artisan serve --host=0.0.0.0 --port=28180
+    env_file:
+      - ./backend/.env.e2e
+    environment:
+      PHP_CLI_SERVER_WORKERS: 4
+    command: sh -c "php artisan config:clear && php artisan serve --host=0.0.0.0 --port=28180 --no-reload"
     ports:
       - '28180:28180'
     volumes:
       - ./backend:/var/www/backend
-    environment:
-      PHP_CLI_SERVER_WORKERS: 4
-      APP_NAME: EngazPRO
-      APP_ENV: local
-      APP_KEY: base64:c29tZXJhbmRvbWtleWZvcmUyZXRlc3RpbmcxcTIzNDU=
-      APP_DEBUG: 'true'
-      APP_URL: http://engazpro.test:28180
-      DB_CONNECTION: mysql
-      DB_HOST: mysql
-      DB_PORT: 3306
-      DB_DATABASE: engazpro_e2e
-      DB_USERNAME: engaz
-      DB_PASSWORD: secret
-      QUEUE_CONNECTION: database
-      DB_QUEUE_RETRY_AFTER: 960
-      SESSION_DRIVER: database
-      CACHE_STORE: database
-      ANOOFY_ALLOW_INSECURE_DEV_NETWORK: 'true'
     depends_on:
       - mysql
     networks:
@@ -54,67 +41,37 @@ services:
           - engazpro.test
 
   queue:
-    build:
-      context: .
-      dockerfile: docker/backend/Dockerfile
+    image: engaz-e2e-php
+    pull_policy: never
     container_name: engaz-e2e-queue
     restart: unless-stopped
     working_dir: /var/www/backend
-    command: php artisan queue:work --tries=3
+    env_file:
+      - ./backend/.env.e2e
+    command: sh -c "php artisan config:clear && php artisan queue:work --tries=3"
     volumes:
       - ./backend:/var/www/backend
-    environment:
-      APP_NAME: EngazPRO
-      APP_ENV: local
-      APP_KEY: base64:c29tZXJhbmRvbWtleWZvcmUyZXRlc3RpbmcxcTIzNDU=
-      APP_DEBUG: 'true'
-      APP_URL: http://engazpro.test:28180
-      DB_CONNECTION: mysql
-      DB_HOST: mysql
-      DB_PORT: 3306
-      DB_DATABASE: engazpro_e2e
-      DB_USERNAME: engaz
-      DB_PASSWORD: secret
-      QUEUE_CONNECTION: database
-      DB_QUEUE_RETRY_AFTER: 960
-      SESSION_DRIVER: database
-      CACHE_STORE: database
-      ANOOFY_ALLOW_INSECURE_DEV_NETWORK: 'true'
     depends_on:
       - mysql
+      - api
     networks:
       - default
       - engaz-e2e
 
   scheduler:
-    build:
-      context: .
-      dockerfile: docker/backend/Dockerfile
+    image: engaz-e2e-php
+    pull_policy: never
     container_name: engaz-e2e-scheduler
     restart: unless-stopped
     working_dir: /var/www/backend
-    command: php artisan schedule:work
+    env_file:
+      - ./backend/.env.e2e
+    command: sh -c "php artisan config:clear && php artisan schedule:work"
     volumes:
       - ./backend:/var/www/backend
-    environment:
-      APP_NAME: EngazPRO
-      APP_ENV: local
-      APP_KEY: base64:c29tZXJhbmRvbWtleWZvcmUyZXRlc3RpbmcxcTIzNDU=
-      APP_DEBUG: 'true'
-      APP_URL: http://engazpro.test:28180
-      DB_CONNECTION: mysql
-      DB_HOST: mysql
-      DB_PORT: 3306
-      DB_DATABASE: engazpro_e2e
-      DB_USERNAME: engaz
-      DB_PASSWORD: secret
-      QUEUE_CONNECTION: database
-      DB_QUEUE_RETRY_AFTER: 960
-      SESSION_DRIVER: database
-      CACHE_STORE: database
-      ANOOFY_ALLOW_INSECURE_DEV_NETWORK: 'true'
     depends_on:
       - mysql
+      - api
     networks:
       - default
       - engaz-e2e
@@ -124,7 +81,7 @@ services:
     container_name: engaz-e2e-web
     restart: unless-stopped
     working_dir: /app
-    command: sh -c "npm install && npm run dev --workspace=web -- --host 0.0.0.0 --port 28181"
+    command: sh -c "npm ci && npm run dev --workspace=web -- --host 0.0.0.0 --port 28181"
     ports:
       - '28181:28181'
     volumes:

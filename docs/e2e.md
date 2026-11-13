@@ -53,6 +53,17 @@
 
 ## 5. أوامر التشغيل والإدارة اليومية
 
+### تجهيز ملف البيئة وتوليد `APP_KEY` (لأول مرة):
+1. انسخ ملف المثال لإنشاء ملف البيئة المحلي (مُتجاهَل في Git):
+   ```bash
+   cp backend/.env.e2e.example backend/.env.e2e
+   ```
+2. ولّد مفتاح التطبيق:
+   ```bash
+   docker compose -f docker-compose.e2e.yml run --rm api php artisan key:generate --show
+   ```
+3. انسخ الناتج (`base64:...`) وضعه في `APP_KEY=` داخل ملف `backend/.env.e2e`.
+
 ### إقلاع بيئة الـ E2E:
 ```bash
 docker compose -f docker-compose.e2e.yml up -d --build
