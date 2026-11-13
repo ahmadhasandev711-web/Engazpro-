@@ -171,26 +171,6 @@
     "raw": 108,
     "hex": 0
   },
-  "src/presentation/components/products/ProductsHeader.tsx": {
-    "raw": 16,
-    "hex": 0
-  },
-  "src/presentation/components/products/ProductsList.tsx": {
-    "raw": 63,
-    "hex": 0
-  },
-  "src/presentation/components/products/ProductsMobileHero.tsx": {
-    "raw": 14,
-    "hex": 0
-  },
-  "src/presentation/components/products/ProductsNotifications.tsx": {
-    "raw": 8,
-    "hex": 0
-  },
-  "src/presentation/components/products/ProductsSearchBar.tsx": {
-    "raw": 6,
-    "hex": 0
-  },
   "src/presentation/components/products/ProductVariantModal.tsx": {
     "raw": 85,
     "hex": 0

@@ -5,6 +5,7 @@ export interface TabItem {
   id: string;
   label: string;
   count?: number | string;
+  icon?: React.ReactNode;
   disabled?: boolean;
 }
 
@@ -37,12 +38,13 @@ export const Tabs: React.FC<TabsProps> = ({ tabs, activeTab, onChange, className
             disabled={tab.disabled}
             onClick={() => onChange(tab.id)}
             className={cn(
-              'inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand disabled:opacity-50 disabled:pointer-events-none',
+              'inline-flex items-center gap-2 min-h-[44px] px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand disabled:opacity-50 disabled:pointer-events-none',
               isActive
                 ? 'bg-panel text-brand shadow-2xs font-black'
                 : 'text-muted hover:text-ink hover:bg-panel/50'
             )}
           >
+            {tab.icon}
             <span>{tab.label}</span>
             {tab.count !== undefined && (
               <span
