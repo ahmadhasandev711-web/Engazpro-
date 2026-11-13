@@ -19,12 +19,24 @@ import {
 import { apiClient } from '../../data/api/client';
 import { usePermissions } from '../../hooks/usePermissions';
 import { StockTransferStatus, StockTransfer } from '@pos-mandob/shared';
-import { MobileFilterChips, FilterChipOption } from '../components/mobile/MobileFilterChips';
 import { StockTransferMobileCard } from '../components/mobile/StockTransferMobileCard';
 import { PaginationBar } from '../components/common/PaginationBar';
 import { nativeBackButton } from '../../platform/nativeBackButton';
 import { useToast } from '../context/ToastContext';
 import { useConfirm } from '../context/ConfirmContext';
+import {
+  Badge,
+  Button,
+  Card,
+  DataTable,
+  EmptyState,
+  Input,
+  PageHeader,
+  Select,
+  Tabs,
+  TabItem,
+  Textarea,
+} from '../components/ui';
 
 export const StockTransfersPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -212,31 +224,27 @@ export const StockTransfersPage: React.FC = () => {
     switch (status) {
       case StockTransferStatus.IN_TRANSIT:
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+          <Badge tone="info" className="gap-1">
             <Clock className="w-3.5 h-3.5" />
             في الطريق
-          </span>
+          </Badge>
         );
       case StockTransferStatus.RECEIVED:
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
+          <Badge tone="ok" className="gap-1">
             <CheckCircle2 className="w-3.5 h-3.5" />
             تم الاستلام
-          </span>
+          </Badge>
         );
       case StockTransferStatus.CANCELLED:
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-800">
+          <Badge tone="bad" className="gap-1">
             <XCircle className="w-3.5 h-3.5" />
             ملغي
-          </span>
+          </Badge>
         );
       default:
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-800">
-            {status}
-          </span>
-        );
+        return <Badge tone="neutral">{status}</Badge>;
     }
   };
 
@@ -264,7 +272,7 @@ export const StockTransfersPage: React.FC = () => {
     }
   }, [selectedTransfer]);
 
-  const statusFilterOptions: FilterChipOption<string>[] = useMemo(
+  const statusFilterOptions: TabItem[] = useMemo(
     () => [
       { id: 'ALL', label: 'جميع التحويلات', count: transfersData?.total || 0 },
       { id: StockTransferStatus.IN_TRANSIT, label: 'في الطريق', count: inTransitCount },
@@ -277,52 +285,49 @@ export const StockTransfersPage: React.FC = () => {
   return (
     <div className="space-y-3 sm:space-y-6 max-w-7xl mx-auto" dir="rtl">
       {/* Desktop Header */}
-      <div className="hidden md:flex flex-row justify-between items-center gap-4 bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
-        <div>
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl">
-              <ArrowLeftRight className="w-6 h-6" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-slate-800">تحويلات المخزون بين الفروع (Stock Transfers)</h1>
-              <p className="text-sm text-slate-500 mt-0.5">
-                نقل البضاعة بين المخزن الرئيسي والمعارض وسيارات المناديب مع تأكيد الاستلام الميداني
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {(isOwner || isManager) && (
-          <button
-            onClick={() => {
-              resetForm();
-              setCreateModalOpen(true);
-            }}
-            className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium shadow-sm transition-all text-sm"
-          >
-            <Plus className="w-4 h-4" />
-            إذن تحويل بضاعة جديد
-          </button>
-        )}
-      </div>
+      <PageHeader
+        className="hidden md:flex mb-0 bg-panel p-5 rounded-2xl border border-line shadow-xs"
+        title="تحويلات المخزون بين الفروع (Stock Transfers)"
+        badge={
+          <span className="p-2 bg-brand-soft text-brand-ink rounded-xl inline-flex">
+            <ArrowLeftRight className="w-5 h-5" />
+          </span>
+        }
+        description="نقل البضاعة بين المخزن الرئيسي والمعارض وسيارات المناديب مع تأكيد الاستلام الميداني"
+        actions={
+          (isOwner || isManager) ? (
+            <Button
+              variant="primary"
+              size="md"
+              onClick={() => {
+                resetForm();
+                setCreateModalOpen(true);
+              }}
+              leftIcon={<Plus className="w-4 h-4" />}
+            >
+              إذن تحويل بضاعة جديد
+            </Button>
+          ) : undefined
+        }
+      />
 
       {/* Mobile Compact Hero Bar (md:hidden) */}
-      <div className="md:hidden bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between gap-2">
+      <Card className="md:hidden p-3 sm:p-3 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-black shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-brand-soft text-brand-ink flex items-center justify-center font-black shrink-0">
             <ArrowLeftRight className="w-5 h-5" />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              <h2 className="text-sm font-black text-slate-900 truncate">تحويلات المخزون</h2>
-              <span className="bg-slate-100 text-slate-700 text-2xs font-black px-2 py-0.5 rounded-full shrink-0">
+              <h2 className="text-sm font-black text-ink truncate">تحويلات المخزون</h2>
+              <Badge tone="neutral" className="tabular-nums shrink-0">
                 {transfersData?.total || 0}
-              </span>
+              </Badge>
             </div>
-            <p className="text-[11px] text-slate-500 font-medium truncate">
-              في الطريق: <span className="font-bold text-blue-700">{inTransitCount}</span>
+            <p className="text-2xs text-muted font-medium truncate">
+              في الطريق: <span className="font-bold text-info tabular-nums">{inTransitCount}</span>
               {receivedCount > 0 && (
-                <span className="text-emerald-600 font-bold mr-1.5 inline-flex items-center gap-0.5">
+                <span className="text-ok font-bold mr-1.5 inline-flex items-center gap-0.5 tabular-nums">
                   • {receivedCount} مستلم
                 </span>
               )}
@@ -332,32 +337,41 @@ export const StockTransfersPage: React.FC = () => {
 
         <div className="flex items-center gap-1.5 shrink-0">
           {(isOwner || isManager) && (
-            <button
+            <Button
+              variant="primary"
+              size="md"
               onClick={() => {
                 resetForm();
                 setCreateModalOpen(true);
               }}
-              className="inline-flex items-center gap-1 bg-blue-600 active:bg-blue-700 text-white px-3 py-2 rounded-xl text-xs font-bold shadow-xs active:scale-95 transition-all"
+              leftIcon={<Plus className="w-4 h-4" />}
+              className="px-3 text-xs"
             >
-              <Plus className="w-4 h-4" />
               <span>تحويل جديد</span>
-            </button>
+            </Button>
           )}
         </div>
-      </div>
+      </Card>
 
       {/* Alerts */}
       {message && (
         <div
-          className={`p-3 sm:p-4 rounded-xl flex items-center justify-between gap-3 text-xs sm:text-sm animate-fade-in ${
-            message.type === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200'
+          className={`p-3 sm:p-4 rounded-xl flex items-center justify-between gap-3 text-xs sm:text-sm animate-fade-in border ${
+            message.type === 'success'
+              ? 'bg-ok-soft text-ok border-ok/30'
+              : 'bg-bad-soft text-bad border-bad/30'
           }`}
         >
           <div className="flex items-center gap-2">
             {message.type === 'success' ? <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" /> : <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5" />}
             <span>{message.text}</span>
           </div>
-          <button onClick={() => setMessage(null)} className="text-slate-400 hover:text-slate-600">
+          <button
+            type="button"
+            onClick={() => setMessage(null)}
+            className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center rounded-xl text-muted hover:text-ink hover:bg-surface-2 transition-colors"
+            aria-label="إغلاق"
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -365,170 +379,175 @@ export const StockTransfersPage: React.FC = () => {
 
       {/* Desktop KPI Stats (Hidden on mobile to save vertical real estate) */}
       <div className="hidden md:grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex items-center gap-3.5">
-          <div className="p-3 rounded-lg bg-slate-100 text-slate-700">
+        <Card className="p-4 sm:p-4 flex items-center gap-3.5">
+          <div className="p-3 rounded-lg bg-surface-2 text-ink">
             <Package className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-xs text-slate-400 font-medium">إجمالي التحويلات</div>
-            <div className="text-xl font-bold text-slate-800 mt-0.5">{transfersData?.total || 0}</div>
+            <div className="text-xs text-muted font-medium">إجمالي التحويلات</div>
+            <div className="text-xl font-bold text-ink mt-0.5 tabular-nums">{transfersData?.total || 0}</div>
           </div>
-        </div>
+        </Card>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex items-center gap-3.5">
-          <div className="p-3 rounded-lg bg-blue-50 text-blue-600">
+        <Card className="p-4 sm:p-4 flex items-center gap-3.5">
+          <div className="p-3 rounded-lg bg-info-soft text-info">
             <Clock className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-xs text-slate-400 font-medium">في الطريق (معلق)</div>
-            <div className="text-xl font-bold text-blue-700 mt-0.5">{inTransitCount}</div>
+            <div className="text-xs text-muted font-medium">في الطريق (معلق)</div>
+            <div className="text-xl font-bold text-info mt-0.5 tabular-nums">{inTransitCount}</div>
           </div>
-        </div>
+        </Card>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex items-center gap-3.5">
-          <div className="p-3 rounded-lg bg-emerald-50 text-emerald-600">
+        <Card className="p-4 sm:p-4 flex items-center gap-3.5">
+          <div className="p-3 rounded-lg bg-ok-soft text-ok">
             <CheckCircle2 className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-xs text-slate-400 font-medium">تم الاستلام والاعتماد</div>
-            <div className="text-xl font-bold text-emerald-700 mt-0.5">{receivedCount}</div>
+            <div className="text-xs text-muted font-medium">تم الاستلام والاعتماد</div>
+            <div className="text-xl font-bold text-ok mt-0.5 tabular-nums">{receivedCount}</div>
           </div>
-        </div>
+        </Card>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex items-center gap-3.5">
-          <div className="p-3 rounded-lg bg-rose-50 text-rose-600">
+        <Card className="p-4 sm:p-4 flex items-center gap-3.5">
+          <div className="p-3 rounded-lg bg-bad-soft text-bad">
             <XCircle className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-xs text-slate-400 font-medium">أوامر ملغاة</div>
-            <div className="text-xl font-bold text-rose-700 mt-0.5">{cancelledCount}</div>
+            <div className="text-xs text-muted font-medium">أوامر ملغاة</div>
+            <div className="text-xl font-bold text-bad mt-0.5 tabular-nums">{cancelledCount}</div>
           </div>
-        </div>
+        </Card>
       </div>
 
-      {/* Filter Tabs using MobileFilterChips */}
-      <MobileFilterChips
-        options={statusFilterOptions}
-        selectedId={statusFilter}
-        onSelect={(id) => {
+      {/* Filter Tabs */}
+      <Tabs
+        tabs={statusFilterOptions}
+        activeTab={statusFilter}
+        onChange={(id) => {
           setStatusFilter(id);
           setPage(1);
         }}
       />
 
       {/* Transfers Table */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <Card className="p-0 sm:p-0 overflow-hidden">
         {isLoading ? (
-          <div className="text-center py-16 text-slate-400">
-            <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-2 text-blue-600" />
+          <div className="text-center py-16 text-muted">
+            <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-2 text-brand" />
             جاري تحميل أوامر التحويل...
           </div>
         ) : transfers.length === 0 ? (
-          <div className="p-12 text-center text-slate-400">
-            <ArrowLeftRight className="w-12 h-12 mx-auto mb-3 text-slate-300" />
-            <p className="font-semibold text-slate-600">لا توجد أوامر تحويل مسجلة</p>
-            <p className="text-xs text-slate-400 mt-1">يمكنك إنشاء إذن تحويل بضاعة جديد بين أي فرعين بنقرة زر</p>
-          </div>
+          <EmptyState
+            icon={<ArrowLeftRight className="w-10 h-10" />}
+            title="لا توجد أوامر تحويل مسجلة"
+            description="يمكنك إنشاء إذن تحويل بضاعة جديد بين أي فرعين بنقرة زر"
+          />
         ) : (
           <>
             {/* Desktop Table View */}
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-right text-sm">
-                <thead className="bg-slate-50 border-b border-slate-100 text-slate-400 text-xs font-semibold">
-                  <tr>
-                    <th className="py-3.5 px-4">رقم الإذن</th>
-                    <th className="py-3.5 px-4">التاريخ</th>
-                    <th className="py-3.5 px-4">فرع المصدر (من)</th>
-                    <th className="py-3.5 px-4">فرع الوجهة (إلى)</th>
-                    <th className="py-3.5 px-4 text-center">عدد الأصناف</th>
-                    <th className="py-3.5 px-4 text-center">الحالة</th>
-                    <th className="py-3.5 px-4 text-center">الإجراءات</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {transfers.map((trf: any) => (
-                    <tr key={trf.id} className="hover:bg-slate-50/70 transition-colors">
-                      <td className="py-3.5 px-4 font-bold font-mono text-slate-800">
-                        {trf.transfer_number}
-                      </td>
-                      <td className="py-3.5 px-4 text-slate-500 text-xs">
-                        {trf.transferred_at ? new Date(trf.transferred_at).toLocaleString('ar-EG') : '-'}
-                      </td>
-                      <td className="py-3.5 px-4 font-medium text-slate-700">
-                        <span className="flex items-center gap-1.5">
-                          <Building2 className="w-3.5 h-3.5 text-slate-400" />
-                          {trf.from_branch?.name || '-'}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 font-medium text-slate-700">
-                        <span className="flex items-center gap-1.5">
-                          <Building2 className="w-3.5 h-3.5 text-blue-500" />
-                          {trf.to_branch?.name || '-'}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 text-center font-bold text-slate-800">
-                        {trf.items?.length || 0} صنف
-                      </td>
-                      <td className="py-3.5 px-4 text-center">
-                        {getStatusBadge(trf.status)}
-                      </td>
-                      <td className="py-3.5 px-4 text-center">
-                        <div className="flex items-center justify-center gap-1.5">
-                          {trf.status === StockTransferStatus.IN_TRANSIT && (
-                            <>
-                              <button
-                                onClick={async () => {
-                                  const ok = await confirm({
-                                    title: 'تأكيد استلام التحويل',
-                                    message: `هل تؤكد استلام كامل بضاعة الإذن رقم "${trf.transfer_number}"؟`,
-                                    type: 'info',
-                                    confirmText: 'تأكيد الاستلام',
-                                  });
-                                  if (ok) {
-                                    receiveMutation.mutate(trf.id);
+            <DataTable className="hidden md:block border-0 rounded-none shadow-none">
+              <thead>
+                <tr className="bg-surface-2 border-b border-line text-muted text-xs font-semibold">
+                  <th className="py-3.5 px-4 text-right">رقم الإذن</th>
+                  <th className="py-3.5 px-4 text-right">التاريخ</th>
+                  <th className="py-3.5 px-4 text-right">فرع المصدر (من)</th>
+                  <th className="py-3.5 px-4 text-right">فرع الوجهة (إلى)</th>
+                  <th className="py-3.5 px-4 text-center">عدد الأصناف</th>
+                  <th className="py-3.5 px-4 text-center">الحالة</th>
+                  <th className="py-3.5 px-4 text-center">الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {transfers.map((trf: any) => (
+                  <tr key={trf.id} className="hover:bg-surface-2/60 transition-colors">
+                    <td className="py-3.5 px-4 font-bold tabular-nums text-ink">
+                      {trf.transfer_number}
+                    </td>
+                    <td className="py-3.5 px-4 text-muted text-xs">
+                      {trf.transferred_at ? new Date(trf.transferred_at).toLocaleString('ar-EG') : '-'}
+                    </td>
+                    <td className="py-3.5 px-4 font-medium text-ink">
+                      <span className="flex items-center gap-1.5">
+                        <Building2 className="w-3.5 h-3.5 text-muted" />
+                        {trf.from_branch?.name || '-'}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 font-medium text-ink">
+                      <span className="flex items-center gap-1.5">
+                        <Building2 className="w-3.5 h-3.5 text-brand-ink" />
+                        {trf.to_branch?.name || '-'}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 text-center font-bold text-ink tabular-nums">
+                      {trf.items?.length || 0} صنف
+                    </td>
+                    <td className="py-3.5 px-4 text-center">
+                      {getStatusBadge(trf.status)}
+                    </td>
+                    <td className="py-3.5 px-4 text-center">
+                      <div className="flex items-center justify-center gap-1.5">
+                        {trf.status === StockTransferStatus.IN_TRANSIT && (
+                          <>
+                            <Button
+                              variant="primary"
+                              size="md"
+                              onClick={async () => {
+                                const ok = await confirm({
+                                  title: 'تأكيد استلام التحويل',
+                                  message: `هل تؤكد استلام كامل بضاعة الإذن رقم "${trf.transfer_number}"؟`,
+                                  type: 'info',
+                                  confirmText: 'تأكيد الاستلام',
+                                });
+                                if (ok) {
+                                  receiveMutation.mutate(trf.id);
+                                }
+                              }}
+                              leftIcon={<Check className="w-3.5 h-3.5" />}
+                              className="bg-ok hover:bg-ok/90 text-on-brand px-3 text-xs"
+                              title="تأكيد الاستلام"
+                            >
+                              تأكيد الاستلام
+                            </Button>
+
+                            {(isOwner || isManager) && (
+                              <Button
+                                variant="danger"
+                                size="md"
+                                onClick={() => {
+                                  const reason = prompt('يرجى كتابة سبب الإلغاء:');
+                                  if (reason) {
+                                    cancelMutation.mutate({ id: trf.id, reason });
                                   }
                                 }}
-                                className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition-all shadow-sm"
-                                title="تأكيد الاستلام"
+                                className="bg-bad-soft hover:bg-bad/15 text-bad border border-bad/25 px-3 text-xs"
+                                title="إلغاء التحويل"
                               >
-                                <Check className="w-3.5 h-3.5" />
-                                تأكيد الاستلام
-                              </button>
+                                إلغاء
+                              </Button>
+                            )}
+                          </>
+                        )}
 
-                              {(isOwner || isManager) && (
-                                <button
-                                  onClick={() => {
-                                    const reason = prompt('يرجى كتابة سبب الإلغاء:');
-                                    if (reason) {
-                                      cancelMutation.mutate({ id: trf.id, reason });
-                                    }
-                                  }}
-                                  className="px-2 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-xs font-medium transition-colors"
-                                  title="إلغاء التحويل"
-                                >
-                                  إلغاء
-                                </button>
-                              )}
-                            </>
-                          )}
-
-                          <button
-                            onClick={() => setSelectedTransfer(trf)}
-                            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                            title="عرض التفاصيل"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                        <Button
+                          variant="ghost"
+                          size="md"
+                          onClick={() => setSelectedTransfer(trf)}
+                          className="min-w-[44px] px-2.5 text-muted hover:text-brand-ink hover:bg-brand-soft"
+                          title="عرض التفاصيل"
+                          aria-label="عرض التفاصيل"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </DataTable>
 
             {/* Mobile Touch Cards View (md:hidden) */}
-            <div className="md:hidden p-3 space-y-3 bg-slate-50/60">
+            <div className="md:hidden p-3 space-y-3 bg-surface-2/40">
               {transfers.map((trf: any) => (
                 <StockTransferMobileCard
                   key={trf.id}
@@ -568,22 +587,24 @@ export const StockTransfersPage: React.FC = () => {
             />
           </>
         )}
-      </div>
+      </Card>
 
       {/* Create Transfer Modal - Responsive Bottom Sheet */}
       {createModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150">
-          <div className="bg-white w-full sm:max-w-2xl rounded-t-[2.5rem] sm:rounded-2xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col animate-in slide-in-from-bottom sm:zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 bg-canvas/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150">
+          <div className="bg-panel border border-line w-full sm:max-w-2xl rounded-t-[2.5rem] sm:rounded-2xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col animate-in slide-in-from-bottom sm:zoom-in-95 duration-200">
             {/* Sheet Handle */}
-            <div className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto my-2.5 sm:hidden" />
-            <div className="p-5 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+            <div className="w-12 h-1.5 bg-line-2 rounded-full mx-auto my-2.5 sm:hidden" />
+            <div className="p-5 bg-surface-2 border-b border-line flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <ArrowLeftRight className="w-5 h-5 text-blue-600" />
-                <h2 className="font-bold text-slate-800 text-lg">إذن تحويل بضاعة بين الفروع</h2>
+                <ArrowLeftRight className="w-5 h-5 text-brand-ink" />
+                <h2 className="font-bold text-ink text-lg">إذن تحويل بضاعة بين الفروع</h2>
               </div>
               <button
+                type="button"
                 onClick={() => setCreateModalOpen(false)}
-                className="p-1 rounded-lg text-slate-400 hover:bg-slate-200 transition-colors"
+                className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center rounded-xl text-muted hover:bg-surface-2 hover:text-ink transition-colors"
+                aria-label="إغلاق"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -592,55 +613,51 @@ export const StockTransfersPage: React.FC = () => {
             <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
               {/* From & To Branch Selectors */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">فرع المصدر (يتم الخصم منه) *</label>
-                  <select
-                    required
-                    value={formData.from_branch_id}
-                    onChange={(e) => setFormData({ ...formData, from_branch_id: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">-- اختر فرع المصدر --</option>
-                    {branches.map((b: any) => (
+                <Select
+                  label="فرع المصدر (يتم الخصم منه) *"
+                  required
+                  value={formData.from_branch_id}
+                  onChange={(e) => setFormData({ ...formData, from_branch_id: e.target.value })}
+                >
+                  <option value="">-- اختر فرع المصدر --</option>
+                  {branches.map((b: any) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name} ({b.code})
+                    </option>
+                  ))}
+                </Select>
+
+                <Select
+                  label="فرع الوجهة (المستقبل) *"
+                  required
+                  value={formData.to_branch_id}
+                  onChange={(e) => setFormData({ ...formData, to_branch_id: e.target.value })}
+                >
+                  <option value="">-- اختر فرع الوجهة --</option>
+                  {branches
+                    .filter((b: any) => String(b.id) !== formData.from_branch_id)
+                    .map((b: any) => (
                       <option key={b.id} value={b.id}>
                         {b.name} ({b.code})
                       </option>
                     ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">فرع الوجهة (المستقبل) *</label>
-                  <select
-                    required
-                    value={formData.to_branch_id}
-                    onChange={(e) => setFormData({ ...formData, to_branch_id: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">-- اختر فرع الوجهة --</option>
-                    {branches
-                      .filter((b: any) => String(b.id) !== formData.from_branch_id)
-                      .map((b: any) => (
-                        <option key={b.id} value={b.id}>
-                          {b.name} ({b.code})
-                        </option>
-                      ))}
-                  </select>
-                </div>
+                </Select>
               </div>
 
               {/* Items List */}
               <div className="pt-3">
                 <div className="flex items-center justify-between mb-2">
-                  <label className="block text-xs font-semibold text-slate-700">الأصناف والكميات المحولة *</label>
-                  <button
+                  <label className="block text-xs font-semibold text-ink">الأصناف والكميات المحولة *</label>
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="md"
                     onClick={handleAddItem}
-                    className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                    leftIcon={<Plus className="w-3.5 h-3.5" />}
+                    className="text-xs font-semibold text-brand-ink"
                   >
-                    <Plus className="w-3.5 h-3.5" />
                     إضافة صنف آخر
-                  </button>
+                  </Button>
                 </div>
 
                 <div className="space-y-3">
@@ -649,13 +666,12 @@ export const StockTransfersPage: React.FC = () => {
                     const hasVariants = selectedProd?.variants && selectedProd.variants.length > 0;
 
                     return (
-                      <div key={idx} className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex flex-col sm:flex-row items-center gap-2">
+                      <div key={idx} className="p-3 bg-surface-2 border border-line rounded-xl flex flex-col sm:flex-row items-center gap-2">
                         <div className="flex-1 w-full">
-                          <select
+                          <Select
                             required
                             value={item.product_id}
                             onChange={(e) => handleItemChange(idx, 'product_id', e.target.value)}
-                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                           >
                             <option value="">-- اختر الصنف --</option>
                             {products.map((p: any) => (
@@ -663,16 +679,16 @@ export const StockTransfersPage: React.FC = () => {
                                 {p.name} {p.code ? `(${p.code})` : ''}
                               </option>
                             ))}
-                          </select>
+                          </Select>
                         </div>
 
                         {hasVariants && (
                           <div className="w-full sm:w-48">
-                            <select
+                            <Select
                               required
                               value={item.product_variant_id}
                               onChange={(e) => handleItemChange(idx, 'product_variant_id', e.target.value)}
-                              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-purple-800 font-medium"
+                              className="text-brand-ink font-medium"
                             >
                               <option value="">-- اختر المقاس / اللون --</option>
                               {selectedProd.variants.map((v: any) => (
@@ -680,12 +696,12 @@ export const StockTransfersPage: React.FC = () => {
                                   {v.name} (مقاس: {v.size || '-'} | لون: {v.color || '-'})
                                 </option>
                               ))}
-                            </select>
+                            </Select>
                           </div>
                         )}
 
                         <div className="w-full sm:w-28">
-                          <input
+                          <Input
                             type="number"
                             min="0.1"
                             step="any"
@@ -693,18 +709,21 @@ export const StockTransfersPage: React.FC = () => {
                             placeholder="الكمية"
                             value={item.quantity_sent}
                             onChange={(e) => handleItemChange(idx, 'quantity_sent', Number(e.target.value))}
-                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-center font-bold focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="text-center font-bold tabular-nums"
                           />
                         </div>
 
                         {formData.items.length > 1 && (
-                          <button
+                          <Button
                             type="button"
+                            variant="ghost"
+                            size="md"
                             onClick={() => handleRemoveItem(idx)}
-                            className="p-2 text-slate-400 hover:text-rose-600 rounded-lg transition-colors"
+                            className="min-w-[44px] px-2.5 text-muted hover:text-bad hover:bg-bad-soft"
+                            aria-label="حذف الصنف"
                           >
                             <Trash2 className="w-4 h-4" />
-                          </button>
+                          </Button>
                         )}
                       </div>
                     );
@@ -712,33 +731,33 @@ export const StockTransfersPage: React.FC = () => {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1.5">ملاحظات التحويل (اختياري)</label>
-                <textarea
-                  rows={2}
-                  placeholder="أي تفاصيل أو رقم مرجعي للشحن والتسليم..."
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                />
-              </div>
+              <Textarea
+                label="ملاحظات التحويل (اختياري)"
+                rows={2}
+                placeholder="أي تفاصيل أو رقم مرجعي للشحن والتسليم..."
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                className="resize-none"
+              />
 
-              <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
-                <button
+              <div className="flex items-center justify-end gap-2 pt-4 border-t border-line">
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="md"
                   onClick={() => setCreateModalOpen(false)}
-                  className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
                 >
                   إلغاء
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
+                  variant="primary"
+                  size="md"
                   disabled={createMutation.isPending}
-                  className="flex items-center gap-1.5 px-5 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-all shadow-sm"
+                  leftIcon={<Send className="w-4 h-4" />}
                 >
-                  <Send className="w-4 h-4" />
                   {createMutation.isPending ? 'جاري التحويل...' : 'تأكيد وإرسال التحويل'}
-                </button>
+                </Button>
               </div>
             </form>
           </div>
@@ -747,51 +766,53 @@ export const StockTransfersPage: React.FC = () => {
 
       {/* View Transfer Details Modal - Responsive Bottom Sheet */}
       {selectedTransfer && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150">
-          <div className="bg-white w-full sm:max-w-lg rounded-t-[2.5rem] sm:rounded-2xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col animate-in slide-in-from-bottom sm:zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 bg-canvas/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150">
+          <div className="bg-panel border border-line w-full sm:max-w-lg rounded-t-[2.5rem] sm:rounded-2xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col animate-in slide-in-from-bottom sm:zoom-in-95 duration-200">
             {/* Sheet Handle */}
-            <div className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto my-2.5 sm:hidden" />
-            <div className="p-5 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+            <div className="w-12 h-1.5 bg-line-2 rounded-full mx-auto my-2.5 sm:hidden" />
+            <div className="p-5 bg-surface-2 border-b border-line flex items-center justify-between">
               <div>
-                <h3 className="font-bold text-slate-800 text-lg">إذن تحويل: {selectedTransfer.transfer_number}</h3>
-                <span className="text-xs text-slate-400">
+                <h3 className="font-bold text-ink text-lg">إذن تحويل: {selectedTransfer.transfer_number}</h3>
+                <span className="text-xs text-muted">
                   {selectedTransfer.transferred_at ? new Date(selectedTransfer.transferred_at).toLocaleString('ar-EG') : ''}
                 </span>
               </div>
               <button
+                type="button"
                 onClick={() => setSelectedTransfer(null)}
-                className="p-1 rounded-lg text-slate-400 hover:bg-slate-200 transition-colors"
+                className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center rounded-xl text-muted hover:bg-surface-2 hover:text-ink transition-colors"
+                aria-label="إغلاق"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <div className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-xl text-xs">
+              <div className="grid grid-cols-2 gap-3 p-3 bg-surface-2 rounded-xl text-xs">
                 <div>
-                  <span className="text-slate-400 block">من فرع:</span>
-                  <span className="font-bold text-slate-800 mt-0.5 block">{selectedTransfer.from_branch?.name}</span>
+                  <span className="text-muted block">من فرع:</span>
+                  <span className="font-bold text-ink mt-0.5 block">{selectedTransfer.from_branch?.name}</span>
                 </div>
                 <div>
-                  <span className="text-slate-400 block">إلى فرع:</span>
-                  <span className="font-bold text-blue-700 mt-0.5 block">{selectedTransfer.to_branch?.name}</span>
+                  <span className="text-muted block">إلى فرع:</span>
+                  <span className="font-bold text-brand-ink mt-0.5 block">{selectedTransfer.to_branch?.name}</span>
                 </div>
               </div>
 
               <div>
-                <h4 className="text-xs font-semibold text-slate-600 mb-2">الأصناف المحولة:</h4>
-                <div className="divide-y divide-slate-100 border border-slate-100 rounded-xl overflow-hidden">
+                <h4 className="text-xs font-semibold text-muted mb-2">الأصناف المحولة:</h4>
+                <div className="divide-y divide-line border border-line rounded-xl overflow-hidden">
                   {selectedTransfer.items?.map((item: any) => (
                     <div key={item.id} className="p-3 flex items-center justify-between text-sm">
                       <div>
-                        <div className="font-semibold text-slate-800">{item.product?.name}</div>
+                        <div className="font-semibold text-ink">{item.product?.name}</div>
                         {item.variant && (
-                          <div className="text-xs text-purple-700 font-medium">
+                          <div className="text-xs text-brand-ink font-medium">
                             مقاس: {item.variant.size || '-'} | لون: {item.variant.color || '-'}
                           </div>
                         )}
                       </div>
-                      <div className="text-left font-bold text-slate-800">
+                      <div className="text-left font-bold text-ink tabular-nums">
                         {item.quantity_sent} {item.unit_name || 'قطعة'}
                       </div>
                     </div>
@@ -800,20 +821,22 @@ export const StockTransfersPage: React.FC = () => {
               </div>
 
               {selectedTransfer.notes && (
-                <div className="p-3 bg-amber-50 rounded-xl text-xs text-amber-800 border border-amber-200">
+                <div className="p-3 bg-warn-soft rounded-xl text-xs text-warn border border-warn/25">
                   <span className="font-bold block mb-0.5">ملاحظات:</span>
                   {selectedTransfer.notes}
                 </div>
               )}
             </div>
 
-            <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end">
-              <button
+            <div className="p-4 bg-surface-2 border-t border-line flex justify-end">
+              <Button
+                type="button"
+                variant="secondary"
+                size="md"
                 onClick={() => setSelectedTransfer(null)}
-                className="px-5 py-2 text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl font-medium transition-colors"
               >
                 إغلاق
-              </button>
+              </Button>
             </div>
           </div>
         </div>
