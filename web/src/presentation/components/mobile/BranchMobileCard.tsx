@@ -10,6 +10,7 @@ import {
   Trash2,
   Users,
 } from 'lucide-react';
+import { Badge, Button, Card } from '../ui';
 
 interface BranchMobileCardProps {
   branch: any;
@@ -30,24 +31,24 @@ export const BranchMobileCard: React.FC<BranchMobileCardProps> = ({
     switch (type) {
       case 'STORE':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-            <Store className="w-3.5 h-3.5 text-emerald-600" />
+          <Badge tone="ok" className="py-1 rounded-xl font-bold gap-1">
+            <Store className="w-3.5 h-3.5" />
             معرض بيع
-          </span>
+          </Badge>
         );
       case 'WAREHOUSE':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
-            <Warehouse className="w-3.5 h-3.5 text-amber-600" />
+          <Badge tone="warn" className="py-1 rounded-xl font-bold gap-1">
+            <Warehouse className="w-3.5 h-3.5" />
             مستودع رئيسي
-          </span>
+          </Badge>
         );
       case 'VAN':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-sky-50 text-sky-800 border border-sky-200">
-            <Truck className="w-3.5 h-3.5 text-sky-600" />
+          <Badge tone="info" className="py-1 rounded-xl font-bold gap-1">
+            <Truck className="w-3.5 h-3.5" />
             سيارة مندوب
-          </span>
+          </Badge>
         );
       default:
         return null;
@@ -55,21 +56,21 @@ export const BranchMobileCard: React.FC<BranchMobileCardProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-xs space-y-3 transition-all duration-200">
+    <Card className="p-4 sm:p-4 space-y-3">
       {/* Header: Name, Main Branch Tag, Type Badge */}
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5 flex-wrap">
-            <h3 className="font-black text-slate-900 text-base leading-snug truncate">
+            <h3 className="font-black text-ink text-base leading-snug truncate">
               {branch.name}
             </h3>
             {branch.is_main && (
-              <span className="px-2 py-0.5 rounded-lg text-2xs font-black bg-amber-50 text-amber-800 border border-amber-200">
+              <Badge tone="warn" className="rounded-lg text-2xs font-black">
                 الفرع الرئيسي
-              </span>
+              </Badge>
             )}
           </div>
-          <span className="text-[11px] font-mono font-bold text-slate-400">
+          <span className="text-2xs tabular-nums font-bold text-muted">
             كود: {branch.code}
           </span>
         </div>
@@ -79,19 +80,19 @@ export const BranchMobileCard: React.FC<BranchMobileCardProps> = ({
 
       {/* Address & Phone */}
       {(branch.address || branch.phone) && (
-        <div className="space-y-1.5 text-xs text-slate-600 bg-slate-50/70 p-2.5 rounded-xl border border-slate-100">
+        <div className="space-y-1.5 text-xs text-muted bg-surface-2/70 p-2.5 rounded-xl border border-line">
           {branch.address && (
             <div className="flex items-center gap-1.5 truncate">
-              <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-              <span className="truncate">{branch.address}</span>
+              <MapPin className="w-3.5 h-3.5 text-muted shrink-0" />
+              <span className="truncate text-ink">{branch.address}</span>
             </div>
           )}
           {branch.phone && (
             <div className="flex items-center gap-1.5">
-              <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <Phone className="w-3.5 h-3.5 text-muted shrink-0" />
               <a
                 href={`tel:${branch.phone}`}
-                className="font-mono text-emerald-700 hover:underline active:opacity-75 font-bold"
+                className="tabular-nums text-ok hover:underline active:opacity-75 font-bold"
                 dir="ltr"
               >
                 {branch.phone}
@@ -103,56 +104,63 @@ export const BranchMobileCard: React.FC<BranchMobileCardProps> = ({
 
       {/* Sub-stats: Staff & Stock Items */}
       <div className="grid grid-cols-2 gap-2 text-xs">
-        <div className="bg-slate-50 p-2 rounded-xl text-center border border-slate-100 flex items-center justify-center gap-1.5">
-          <Users className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-          <span className="text-slate-500 font-medium">فريق العمل:</span>
-          <span className="font-black text-slate-800">{branch.users_count || 0}</span>
+        <div className="bg-surface-2 p-2 rounded-xl text-center border border-line flex items-center justify-center gap-1.5">
+          <Users className="w-3.5 h-3.5 text-muted shrink-0" />
+          <span className="text-muted font-medium">فريق العمل:</span>
+          <span className="font-black text-ink tabular-nums">{branch.users_count || 0}</span>
         </div>
-        <div className="bg-slate-50 p-2 rounded-xl text-center border border-slate-100 flex items-center justify-center gap-1.5">
-          <Package className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-          <span className="text-slate-500 font-medium">الأصناف:</span>
-          <span className="font-black text-slate-800">{branch.stocks_count || 0}</span>
+        <div className="bg-surface-2 p-2 rounded-xl text-center border border-line flex items-center justify-center gap-1.5">
+          <Package className="w-3.5 h-3.5 text-muted shrink-0" />
+          <span className="text-muted font-medium">الأصناف:</span>
+          <span className="font-black text-ink tabular-nums">{branch.stocks_count || 0}</span>
         </div>
       </div>
 
       {/* Actions: Minimum 44px touch targets */}
-      <div className="pt-2 border-t border-slate-100 flex items-center gap-2">
-        <button
+      <div className="pt-2 border-t border-line flex items-center gap-2">
+        <Button
           type="button"
+          variant="secondary"
+          size="md"
           onClick={() => onOpenInventory(branch)}
-          className="flex-1 min-h-[44px] flex items-center justify-center gap-1.5 py-2.5 px-3 bg-emerald-50 hover:bg-emerald-100 active:bg-emerald-200 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition-all active:scale-95"
+          leftIcon={<Package className="w-4 h-4 text-ok" />}
+          className="flex-1 bg-ok-soft hover:bg-ok/15 text-ok border-ok/25 text-xs"
         >
-          <Package className="w-4 h-4 text-emerald-600" />
           <span>جرد المخزون</span>
-        </button>
+        </Button>
 
         {isOwnerOrManager && (
           <>
             {onEdit && (
-              <button
+              <Button
                 type="button"
+                variant="secondary"
+                size="md"
                 onClick={() => onEdit(branch)}
-                className="min-h-[44px] px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5 border border-slate-200 transition-all active:scale-95"
+                leftIcon={<Edit2 className="w-3.5 h-3.5" />}
+                className="px-3.5 text-xs"
                 title="تعديل الفرع"
               >
-                <Edit2 className="w-3.5 h-3.5 text-slate-600" />
                 <span>تعديل</span>
-              </button>
+              </Button>
             )}
 
             {!branch.is_main && onDelete && (
-              <button
+              <Button
                 type="button"
+                variant="danger"
+                size="md"
                 onClick={() => onDelete(branch.id, branch.name)}
-                className="min-h-[44px] px-3 py-2.5 bg-rose-50 hover:bg-rose-100 active:bg-rose-200 text-rose-700 rounded-xl text-xs font-bold flex items-center gap-1 border border-rose-200 transition-all active:scale-95"
+                className="min-w-[44px] px-3 bg-bad-soft hover:bg-bad/15 text-bad border border-bad/25"
                 title="حذف الفرع"
+                aria-label="حذف الفرع"
               >
-                <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-              </button>
+                <Trash2 className="w-3.5 h-3.5" />
+              </Button>
             )}
           </>
         )}
       </div>
-    </div>
+    </Card>
   );
 };

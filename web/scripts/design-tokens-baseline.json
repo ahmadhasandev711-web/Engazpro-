@@ -87,10 +87,6 @@
     "raw": 53,
     "hex": 22
   },
-  "src/presentation/components/mobile/BranchMobileCard.tsx": {
-    "raw": 54,
-    "hex": 0
-  },
   "src/presentation/components/mobile/CourierMobileCard.tsx": {
     "raw": 56,
     "hex": 0
@@ -135,16 +131,8 @@
     "raw": 40,
     "hex": 0
   },
-  "src/presentation/components/mobile/ProductMobileCard.tsx": {
-    "raw": 83,
-    "hex": 0
-  },
   "src/presentation/components/mobile/RecentActivityMobileCard.tsx": {
     "raw": 35,
-    "hex": 0
-  },
-  "src/presentation/components/mobile/StockTransferMobileCard.tsx": {
-    "raw": 71,
     "hex": 0
   },
   "src/presentation/components/payments/PaymentReceiptModal.tsx": {
