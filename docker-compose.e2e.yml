@@ -1,0 +1,103 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: engaz-e2e-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: engazpro_e2e
+      MYSQL_USER: engaz
+      MYSQL_PASSWORD: secret
+      MYSQL_ROOT_PASSWORD: root_secret
+    ports:
+      - '28306:3306'
+    volumes:
+      - engaz_e2e_mysql_data:/var/lib/mysql
+    networks:
+      - default
+
+  api:
+    image: engaz-e2e-php
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+    container_name: engaz-e2e-api
+    restart: unless-stopped
+    working_dir: /var/www/backend
+    env_file:
+      - ./backend/.env.e2e
+    environment:
+      PHP_CLI_SERVER_WORKERS: 4
+    command: sh -c "php artisan config:clear && php artisan serve --host=0.0.0.0 --port=28180 --no-reload"
+    ports:
+      - '28180:28180'
+    volumes:
+      - ./backend:/var/www/backend
+    depends_on:
+      - mysql
+    networks:
+      default:
+      engaz-e2e:
+        aliases:
+          - engazpro.test
+
+  queue:
+    image: engaz-e2e-php
+    pull_policy: never
+    container_name: engaz-e2e-queue
+    restart: unless-stopped
+    working_dir: /var/www/backend
+    env_file:
+      - ./backend/.env.e2e
+    command: sh -c "php artisan config:clear && php artisan queue:work --tries=3"
+    volumes:
+      - ./backend:/var/www/backend
+    depends_on:
+      - mysql
+      - api
+    networks:
+      - default
+      - engaz-e2e
+
+  scheduler:
+    image: engaz-e2e-php
+    pull_policy: never
+    container_name: engaz-e2e-scheduler
+    restart: unless-stopped
+    working_dir: /var/www/backend
+    env_file:
+      - ./backend/.env.e2e
+    command: sh -c "php artisan config:clear && php artisan schedule:work"
+    volumes:
+      - ./backend:/var/www/backend
+    depends_on:
+      - mysql
+      - api
+    networks:
+      - default
+      - engaz-e2e
+
+  web:
+    image: node:20-alpine
+    container_name: engaz-e2e-web
+    restart: unless-stopped
+    working_dir: /app
+    command: sh -c "npm ci && npm run dev --workspace=web -- --host 0.0.0.0 --port 28181"
+    ports:
+      - '28181:28181'
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/web/node_modules
+    environment:
+      VITE_API_URL: http://engazpro.test:28180
+    networks:
+      - default
+
+networks:
+  default:
+    driver: bridge
+  engaz-e2e:
+    external: true
+
+volumes:
+  engaz_e2e_mysql_data:

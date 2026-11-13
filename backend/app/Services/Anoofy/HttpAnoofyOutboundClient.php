@@ -6,6 +6,7 @@ use App\Contracts\AnoofyOutboundClientInterface;
 use App\Contracts\HostResolver;
 use App\Exceptions\Anoofy\AnoofySecurityException;
 use App\Models\WooCommerceIntegration;
+use App\Support\DevNetworkPolicy;
 use App\Support\PublicIpPolicy;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Client\Response;
@@ -46,9 +47,11 @@ class HttpAnoofyOutboundClient implements AnoofyOutboundClientInterface
             throw new AnoofySecurityException('unresolvable_host');
         }
 
-        foreach ($ips as $ip) {
-            if (!PublicIpPolicy::isPublic($ip)) {
-                throw new AnoofySecurityException('internal_ip_rejected');
+        if (!DevNetworkPolicy::allowsInsecure()) {
+            foreach ($ips as $ip) {
+                if (!PublicIpPolicy::isPublic($ip)) {
+                    throw new AnoofySecurityException('internal_ip_rejected');
+                }
             }
         }
     }
