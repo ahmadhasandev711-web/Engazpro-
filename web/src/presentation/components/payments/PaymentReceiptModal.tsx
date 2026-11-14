@@ -3,6 +3,7 @@ import { Printer, X, Share2, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import { formatCurrency } from '@pos-mandob/shared';
 import { useAuthStore } from '../../../data/store/useAuthStore';
 import { webShareService } from '../../../infrastructure/pwa/webShareService';
+import { Button } from '../ui';
 
 export interface PaymentReceiptData {
   id: number;
@@ -115,35 +116,36 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 animate-in fade-in duration-150">
-      <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200 flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 z-50 bg-ink/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 animate-in fade-in duration-150">
+      <div className="bg-panel rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden border border-line animate-in zoom-in-95 duration-200 flex flex-col max-h-[92vh]">
         {/* Modal Header */}
-        <div className="p-4 bg-slate-900 text-white flex items-center justify-between no-print">
+        <div className="p-4 bg-surface border-b border-line text-ink flex items-center justify-between no-print">
           <div className="flex items-center gap-2">
             <span
-              className={`p-1.5 rounded-xl ${
-                isReceipt ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
+              className={`p-1.5 rounded-xl border ${
+                isReceipt ? 'bg-ok-soft text-ok border-ok/20' : 'bg-bad-soft text-bad border-bad/20'
               }`}
             >
               {isReceipt ? <ArrowDownLeft className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
             </span>
             <div>
-              <h3 className="text-sm font-black">
+              <h3 className="text-sm font-black text-ink">
                 {isReceipt ? 'إيصال سند قبض' : 'إيصال سند صرف'}
               </h3>
-              <span className="text-2xs text-slate-400 font-mono">سند رقم #{payment.id}</span>
+              <span className="text-[11px] text-muted tabular-nums">سند رقم #{payment.id}</span>
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/10 transition-colors"
+            className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted hover:text-ink rounded-xl hover:bg-surface-2 transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Printable Receipt Paper Container */}
-        <div className="p-4 overflow-y-auto flex-1 bg-slate-100/50 flex justify-center">
+        <div className="p-4 overflow-y-auto flex-1 bg-surface-2 flex justify-center">
           <div
             ref={printRef}
             id="payment-thermal-receipt"
@@ -271,34 +273,40 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
         </div>
 
         {/* Modal Actions */}
-        <div className="p-4 bg-white border-t border-slate-200 space-y-2 no-print">
+        <div className="p-4 bg-panel border-t border-line space-y-2 no-print">
           <div className="flex items-center gap-2">
-            <button
+            <Button
               type="button"
+              variant="primary"
+              size="md"
+              leftIcon={<Printer className="w-4 h-4" />}
               onClick={handlePrint}
-              className="flex-1 bg-primary-600 hover:bg-primary-700 text-white py-3 rounded-2xl text-xs font-black shadow-md shadow-primary-600/20 transition-all active:scale-98 flex items-center justify-center gap-1.5"
+              className="flex-1 rounded-2xl text-xs font-black"
             >
-              <Printer className="w-4 h-4" />
-              <span>طباعة بون (74mm)</span>
-            </button>
+              طباعة بون (74mm)
+            </Button>
 
-            <button
+            <Button
               type="button"
+              variant="secondary"
+              size="md"
+              leftIcon={<Share2 className="w-4 h-4 text-ok" />}
               onClick={handleShareWhatsApp}
-              className="flex-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 py-3 rounded-2xl text-xs font-black transition-all active:scale-98 flex items-center justify-center gap-1.5 shadow-2xs"
+              className="flex-1 rounded-2xl text-xs font-black bg-ok-soft hover:bg-ok-soft/80 text-ok border-ok/20"
             >
-              <Share2 className="w-4 h-4 text-emerald-600" />
-              <span>مشاركة واتساب</span>
-            </button>
+              مشاركة واتساب
+            </Button>
           </div>
 
-          <button
+          <Button
             type="button"
+            variant="secondary"
+            size="md"
             onClick={onClose}
-            className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 py-2.5 rounded-2xl text-xs font-bold transition-colors"
+            className="w-full rounded-2xl text-xs font-bold"
           >
             إغلاق
-          </button>
+          </Button>
         </div>
       </div>
 

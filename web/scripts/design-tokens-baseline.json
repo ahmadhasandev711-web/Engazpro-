@@ -136,7 +136,7 @@
     "hex": 0
   },
   "src/presentation/components/payments/PaymentReceiptModal.tsx": {
-    "raw": 66,
+    "raw": 41,
     "hex": 1
   },
   "src/presentation/components/pos/PosReceiptModal.tsx": {
@@ -195,20 +195,8 @@
     "raw": 41,
     "hex": 0
   },
-  "src/presentation/components/shifts/ActiveShiftBanner.tsx": {
-    "raw": 27,
-    "hex": 0
-  },
-  "src/presentation/components/shifts/CloseShiftModal.tsx": {
-    "raw": 67,
-    "hex": 0
-  },
-  "src/presentation/components/shifts/OpenShiftModal.tsx": {
-    "raw": 33,
-    "hex": 0
-  },
   "src/presentation/components/shifts/ShiftZReportModal.tsx": {
-    "raw": 77,
+    "raw": 54,
     "hex": 1
   },
   "src/presentation/context/ConfirmContext.tsx": {
