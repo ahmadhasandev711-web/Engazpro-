@@ -1,5 +1,6 @@
 import React from 'react';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
+import { Button } from '../ui';
 
 export interface PaginationBarProps {
   currentPage: number;
@@ -43,42 +44,46 @@ export const PaginationBar: React.FC<PaginationBarProps> = ({
   };
 
   const pageNumbers = getPageNumbers();
+  const pageBtnClass = (isActive: boolean) =>
+    `min-w-[44px] min-h-[44px] rounded-xl font-bold text-xs transition-all cursor-pointer ${
+      isActive
+        ? 'bg-brand text-on-brand shadow-xs'
+        : 'border border-line bg-panel text-muted hover:bg-surface-2 hover:text-ink'
+    }`;
 
   return (
     <div
-      className={`px-4 py-3 bg-slate-50/80 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-xs no-print transition-opacity ${
+      className={`px-4 py-3 bg-surface-2/60 border-t border-line flex flex-col sm:flex-row items-center justify-between gap-2.5 text-xs no-print transition-opacity ${
         isFetching ? 'opacity-65' : ''
       }`}
       dir="rtl"
     >
-      <div className="text-slate-500 font-medium">
-        عرض <span className="font-bold text-slate-800 font-mono">{fromItem}</span> إلى{' '}
-        <span className="font-bold text-slate-800 font-mono">{toItem}</span> من إجمالي{' '}
-        <span className="font-black text-primary-700 font-mono">{total}</span> {itemLabel}
+      <div className="text-muted font-medium">
+        عرض <span className="font-bold text-ink">{fromItem}</span> إلى{' '}
+        <span className="font-bold text-ink">{toItem}</span> من إجمالي{' '}
+        <span className="font-black text-brand-ink">{total}</span> {itemLabel}
       </div>
 
-      <div className="flex items-center gap-1">
-        <button
+      <div className="flex items-center gap-1 flex-wrap justify-center">
+        <Button
           type="button"
+          variant="secondary"
+          size="md"
           disabled={currentPage <= 1}
           onClick={() => onPageChange(Math.max(1, currentPage - 1))}
-          className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:pointer-events-none font-bold flex items-center gap-1 transition-colors shadow-2xs"
+          leftIcon={<ChevronRight className="w-3.5 h-3.5" />}
+          className="text-xs font-bold px-3 bg-panel"
         >
-          <ChevronRight className="w-3.5 h-3.5" />
-          <span>السابق</span>
-        </button>
+          السابق
+        </Button>
 
         <div className="flex items-center gap-1 px-1">
           {pageNumbers[0] > 1 && (
             <>
-              <button
-                type="button"
-                onClick={() => onPageChange(1)}
-                className="w-7 h-7 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 font-mono font-bold text-xs transition-colors"
-              >
+              <button type="button" onClick={() => onPageChange(1)} className={pageBtnClass(false)}>
                 1
               </button>
-              {pageNumbers[0] > 2 && <span className="text-slate-400 px-0.5">...</span>}
+              {pageNumbers[0] > 2 && <span className="text-muted px-0.5">...</span>}
             </>
           )}
 
@@ -87,11 +92,7 @@ export const PaginationBar: React.FC<PaginationBarProps> = ({
               key={num}
               type="button"
               onClick={() => onPageChange(num)}
-              className={`w-7 h-7 rounded-lg font-mono font-bold text-xs transition-all ${
-                num === currentPage
-                  ? 'bg-primary-600 text-white shadow-xs'
-                  : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-100'
-              }`}
+              className={pageBtnClass(num === currentPage)}
             >
               {num}
             </button>
@@ -100,12 +101,12 @@ export const PaginationBar: React.FC<PaginationBarProps> = ({
           {pageNumbers[pageNumbers.length - 1] < lastPage && (
             <>
               {pageNumbers[pageNumbers.length - 1] < lastPage - 1 && (
-                <span className="text-slate-400 px-0.5">...</span>
+                <span className="text-muted px-0.5">...</span>
               )}
               <button
                 type="button"
                 onClick={() => onPageChange(lastPage)}
-                className="w-7 h-7 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 font-mono font-bold text-xs transition-colors"
+                className={pageBtnClass(false)}
               >
                 {lastPage}
               </button>
@@ -113,15 +114,17 @@ export const PaginationBar: React.FC<PaginationBarProps> = ({
           )}
         </div>
 
-        <button
+        <Button
           type="button"
+          variant="secondary"
+          size="md"
           disabled={currentPage >= lastPage}
           onClick={() => onPageChange(Math.min(lastPage, currentPage + 1))}
-          className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:pointer-events-none font-bold flex items-center gap-1 transition-colors shadow-2xs"
+          rightIcon={<ChevronLeft className="w-3.5 h-3.5" />}
+          className="text-xs font-bold px-3 bg-panel"
         >
-          <span>التالي</span>
-          <ChevronLeft className="w-3.5 h-3.5" />
-        </button>
+          التالي
+        </Button>
       </div>
     </div>
   );

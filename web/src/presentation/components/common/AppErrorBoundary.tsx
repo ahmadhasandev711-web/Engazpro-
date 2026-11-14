@@ -1,5 +1,6 @@
 import { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, RotateCcw } from 'lucide-react';
+import { Button, Card } from '../ui';
 
 interface Props {
   children: ReactNode;
@@ -45,42 +46,46 @@ export class AppErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <div
+        <Card
           dir="rtl"
-          className="w-full min-h-[220px] p-6 my-4 bg-white border border-rose-200/80 rounded-2xl shadow-sm flex flex-col items-center justify-center text-center animate-in fade-in duration-200"
+          className="w-full min-h-[220px] p-6 my-4 border-bad/30 flex flex-col items-center justify-center text-center animate-in fade-in duration-200"
         >
-          <div className="w-12 h-12 bg-rose-50 border border-rose-200 rounded-2xl flex items-center justify-center text-rose-600 mb-3.5 shadow-sm">
+          <div className="w-12 h-12 bg-bad-soft border border-bad/25 rounded-2xl flex items-center justify-center text-bad mb-3.5 shadow-sm">
             <AlertTriangle className="w-6 h-6" />
           </div>
 
-          <h3 className="text-base font-bold text-slate-800 mb-1">
+          <h3 className="text-base font-bold text-ink mb-1">
             {this.props.fallbackTitle || 'حدث خطأ غير متوقع أثناء عرض هذا الجزء'}
           </h3>
 
-          <p className="text-xs text-slate-500 max-w-md mb-4 leading-relaxed">
+          <p className="text-xs text-muted max-w-md mb-4 leading-relaxed">
             {this.state.error?.message || 'تعذر استكمال العرض بصورة صحيحة. يمكنك إعادة المحاولة أو تحديث الصفحة بالكامل.'}
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-2.5">
-            <button
+            <Button
               type="button"
+              variant="primary"
+              size="md"
               onClick={this.handleReset}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold rounded-xl shadow-sm transition-all cursor-pointer"
+              leftIcon={<RotateCcw className="w-4 h-4" />}
+              className="text-xs font-bold bg-ok hover:bg-ok/90"
             >
-              <RotateCcw className="w-4 h-4" />
-              <span>إعادة المحاولة</span>
-            </button>
+              إعادة المحاولة
+            </Button>
 
-            <button
+            <Button
               type="button"
+              variant="secondary"
+              size="md"
               onClick={this.handleReload}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 transition-all cursor-pointer"
+              leftIcon={<RefreshCw className="w-4 h-4" />}
+              className="text-xs font-bold"
             >
-              <RefreshCw className="w-4 h-4" />
-              <span>إعادة تحميل الصفحة</span>
-            </button>
+              إعادة تحميل الصفحة
+            </Button>
           </div>
-        </div>
+        </Card>
       );
     }
 

@@ -39,18 +39,6 @@
     "raw": 3,
     "hex": 0
   },
-  "src/presentation/components/common/AppErrorBoundary.tsx": {
-    "raw": 14,
-    "hex": 0
-  },
-  "src/presentation/components/common/DateRangeFilter.tsx": {
-    "raw": 33,
-    "hex": 0
-  },
-  "src/presentation/components/common/PaginationBar.tsx": {
-    "raw": 28,
-    "hex": 0
-  },
   "src/presentation/components/employees/PayrollModal.tsx": {
     "raw": 188,
     "hex": 0
