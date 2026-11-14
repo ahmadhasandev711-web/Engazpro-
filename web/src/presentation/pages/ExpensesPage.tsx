@@ -8,11 +8,11 @@ import { apiClient } from '../../data/api/client';
 import { usePermissions } from '../../hooks/usePermissions';
 import { DateRangeFilter, calculatePresetDates } from '../components/common/DateRangeFilter';
 import { PaginationBar } from '../components/common/PaginationBar';
-import { MobileFilterChips, FilterChipOption } from '../components/mobile/MobileFilterChips';
 import { ExpenseMobileCard } from '../components/mobile/ExpenseMobileCard';
 import { nativeBackButton } from '../../platform/nativeBackButton';
 import { useConfirm } from '../context/ConfirmContext';
 import { useToast } from '../context/ToastContext';
+import { Badge, Button, Card, DataTable, EmptyState, Input, PageHeader, Select, Tabs, TabItem, Textarea } from '../components/ui';
 
 export const ExpensesPage: React.FC = () => {
   const { confirm } = useConfirm();
@@ -150,7 +150,7 @@ export const ExpensesPage: React.FC = () => {
     }
   }, [isCategoriesModalOpen]);
 
-  const categoryFilterOptions: FilterChipOption<string>[] = useMemo(
+  const categoryTabs: TabItem[] = useMemo(
     () => [
       { id: '', label: 'جميع التصنيفات' },
       ...categories.map((cat) => ({ id: cat.name, label: cat.name })),
@@ -231,96 +231,113 @@ export const ExpensesPage: React.FC = () => {
     <div className="space-y-6 flex flex-col h-full">
       {/* Desktop Header & Stats Banner (md:flex) */}
       <div className="hidden md:flex flex-col gap-6">
-        <div className="flex sm:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-bold text-slate-900">سجل المصروفات</h2>
-            <p className="text-sm text-slate-500">متابعة المصاريف والمنصرفات اليومية لحساب صافي الأرباح بدقة</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleExportExcel}
-              disabled={expenses.length === 0}
-              className="inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3.5 py-2.5 rounded-xl text-xs font-bold shadow-sm transition-colors disabled:opacity-50"
-              title="تصدير سجل المصروفات إلى Excel"
-            >
-              <Download className="w-4 h-4 text-emerald-600" />
-              تصدير Excel
-            </button>
-            <button
-              onClick={() => {
-                setCatError(null);
-                setIsCategoriesModalOpen(true);
-              }}
-              className="inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3.5 py-2.5 rounded-xl text-xs font-bold shadow-sm transition-colors"
-              title="إدارة تصنيفات المصروفات"
-            >
-              <Tags className="w-4 h-4 text-indigo-600" />
-              إدارة التصنيفات
-            </button>
-            <button
-              onClick={() => {
-                setEditingExpense(null);
-                reset({
-                  title: '',
-                  category: '',
-                  amount: 0,
-                  date: new Date().toISOString().split('T')[0],
-                  notes: '',
-                });
-                setIsModalOpen(true);
-              }}
-              className="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              إضافة مصروف جديد
-            </button>
-          </div>
-        </div>
+        <PageHeader
+          title="سجل المصروفات"
+          description="متابعة المصاريف والمنصرفات اليومية لحساب صافي الأرباح بدقة"
+          className="mb-0"
+          actions={
+            <>
+              <Button
+                type="button"
+                variant="secondary"
+                size="md"
+                leftIcon={<Download className="w-4 h-4 text-ok" />}
+                onClick={handleExportExcel}
+                disabled={expenses.length === 0}
+                className="text-xs font-bold"
+                title="تصدير سجل المصروفات إلى Excel"
+              >
+                تصدير Excel
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                size="md"
+                leftIcon={<Tags className="w-4 h-4 text-brand" />}
+                onClick={() => {
+                  setCatError(null);
+                  setIsCategoriesModalOpen(true);
+                }}
+                className="text-xs font-bold"
+                title="إدارة تصنيفات المصروفات"
+              >
+                إدارة التصنيفات
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                size="md"
+                leftIcon={<Plus className="w-4 h-4" />}
+                onClick={() => {
+                  setEditingExpense(null);
+                  reset({
+                    title: '',
+                    category: '',
+                    amount: 0,
+                    date: new Date().toISOString().split('T')[0],
+                    notes: '',
+                  });
+                  setIsModalOpen(true);
+                }}
+                className="text-sm font-bold"
+              >
+                إضافة مصروف جديد
+              </Button>
+            </>
+          }
+        />
 
         {/* Desktop Summary Card */}
-        <div className="bg-gradient-to-l from-rose-500 to-amber-600 rounded-2xl p-5 text-white shadow-lg flex items-center justify-between">
+        <Card className="rounded-2xl p-5 border-bad/30 bg-bad-soft/40 flex items-center justify-between">
           <div>
-            <span className="text-xs font-bold text-rose-100 uppercase tracking-wider">إجمالي منصرفات الفترة</span>
-            <h3 className="text-3xl font-black mt-1">{formatCurrency(totalExpenses)}</h3>
+            <span className="text-xs font-bold text-bad uppercase tracking-wider">إجمالي منصرفات الفترة</span>
+            <h3 className="text-3xl font-black mt-1 tabular-nums text-bad">{formatCurrency(totalExpenses)}</h3>
           </div>
-          <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
-            <Wallet className="w-6 h-6 text-white" />
+          <div className="w-12 h-12 bg-bad-soft border border-bad/20 rounded-2xl flex items-center justify-center">
+            <Wallet className="w-6 h-6 text-bad" />
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* Mobile Compact Hero Bar (md:hidden) */}
-      <div className="md:hidden bg-gradient-to-l from-rose-500 to-amber-600 rounded-2xl p-3.5 text-white shadow-md flex items-center justify-between">
+      <Card className="md:hidden rounded-2xl p-3.5 border-bad/30 bg-bad-soft/40 flex items-center justify-between gap-2">
         <div>
-          <div className="flex items-center gap-1 text-[11px] font-bold text-rose-100">
-            <Wallet className="w-3.5 h-3.5" />
+          <div className="flex items-center gap-1 text-[11px] font-bold text-muted">
+            <Wallet className="w-3.5 h-3.5 text-bad" />
             <span>إجمالي المنصرفات ({expenses.length})</span>
           </div>
-          <h3 className="text-xl font-black mt-0.5 tracking-tight">{formatCurrency(totalExpenses)}</h3>
+          <h3 className="text-xl font-black mt-0.5 tracking-tight tabular-nums text-bad">{formatCurrency(totalExpenses)}</h3>
         </div>
         <div className="flex items-center gap-1.5">
-          <button
+          <Button
             type="button"
+            variant="secondary"
+            size="md"
             onClick={handleExportExcel}
             disabled={expenses.length === 0}
-            className="p-2 bg-white/20 hover:bg-white/30 text-white rounded-xl backdrop-blur-sm transition-colors disabled:opacity-40"
+            className="px-3"
             title="تصدير Excel"
           >
-            <Download className="w-4 h-4" />
-          </button>
-          <button
+            <Download className="w-4 h-4 text-ok" />
+          </Button>
+          <Button
             type="button"
+            variant="secondary"
+            size="md"
             onClick={() => {
               setCatError(null);
               setIsCategoriesModalOpen(true);
             }}
-            className="p-2 bg-white/20 hover:bg-white/30 text-white rounded-xl backdrop-blur-sm transition-colors"
+            className="px-3"
             title="إدارة التصنيفات"
           >
-            <Tags className="w-4 h-4" />
-          </button>
-          <button
+            <Tags className="w-4 h-4 text-brand" />
+          </Button>
+          <Button
             type="button"
+            variant="primary"
+            size="md"
+            leftIcon={<Plus className="w-4 h-4" />}
             onClick={() => {
               setEditingExpense(null);
               reset({
@@ -332,30 +349,29 @@ export const ExpensesPage: React.FC = () => {
               });
               setIsModalOpen(true);
             }}
-            className="px-3 py-2 bg-white text-rose-700 hover:bg-rose-50 rounded-xl font-black text-xs shadow-sm flex items-center gap-1 active:scale-95"
+            className="px-3 text-xs font-black"
           >
-            <Plus className="w-4 h-4" />
-            <span>مصروف</span>
-          </button>
+            مصروف
+          </Button>
         </div>
-      </div>
+      </Card>
 
       {errorMessage && (
-        <div className="p-4 bg-rose-50 border border-rose-200 text-rose-800 text-sm rounded-xl flex items-center gap-2">
-          <AlertCircle className="w-5 h-5 text-rose-600 flex-shrink-0" />
+        <div className="p-4 bg-bad-soft border border-bad/20 text-bad text-sm rounded-xl flex items-center gap-2">
+          <AlertCircle className="w-5 h-5 text-bad flex-shrink-0" />
           <span>{errorMessage}</span>
         </div>
       )}
 
       {/* Filters & Search */}
-      <div className="flex flex-col gap-2.5 bg-white p-3 sm:p-4 rounded-2xl border border-slate-200 shadow-sm w-full min-w-0 max-w-full overflow-hidden">
+      <Card className="flex flex-col gap-2.5 p-3 sm:p-4 rounded-2xl w-full min-w-0 max-w-full overflow-hidden">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          {/* Category Filters (Single-line horizontal scroll track on mobile) */}
+          {/* Category Filters */}
           <div className="w-full sm:w-auto min-w-0">
-            <MobileFilterChips
-              options={categoryFilterOptions}
-              selectedId={selectedCategory}
-              onSelect={(catId) => {
+            <Tabs
+              tabs={categoryTabs}
+              activeTab={selectedCategory}
+              onChange={(catId) => {
                 setSelectedCategory(catId);
                 setPage(1);
               }}
@@ -363,23 +379,22 @@ export const ExpensesPage: React.FC = () => {
           </div>
 
           {/* Search */}
-          <div className="relative flex-1 sm:max-w-xs">
-            <Search className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
+          <div className="flex-1 sm:max-w-xs">
+            <Input
               type="text"
               placeholder="بحث في المصروفات..."
               value={search}
+              leftIcon={<Search className="w-4 h-4" />}
               onChange={(e) => {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="w-full pl-3 pr-9 py-1.5 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
         </div>
 
         {/* Date Range Filter Bar */}
-        <div className="pt-2 border-t border-slate-100 w-full min-w-0 max-w-full overflow-hidden">
+        <div className="pt-2 border-t border-line w-full min-w-0 max-w-full overflow-hidden">
           <DateRangeFilter
             fromDate={fromDate}
             toDate={toDate}
@@ -391,25 +406,25 @@ export const ExpensesPage: React.FC = () => {
             }}
           />
         </div>
-      </div>
+      </Card>
 
       {/* Table */}
-      <div className="bg-white flex-1 rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+      <Card className="flex-1 rounded-xl p-0 overflow-hidden flex flex-col">
         {isLoading ? (
-          <div className="text-center py-12 text-sm text-slate-400 font-medium flex-1">جاري التحميل...</div>
+          <div className="text-center py-12 text-sm text-muted font-medium flex-1">جاري التحميل...</div>
         ) : expenses.length === 0 ? (
-          <div className="text-center py-16 flex-1 flex flex-col justify-center items-center">
-            <h3 className="text-base font-bold text-slate-700">لا توجد مصروفات مسجلة</h3>
-            <p className="text-xs text-slate-400 max-w-sm mx-auto mt-1">
-              انقر فوق زر "إضافة مصروف جديد" لبدء تسجيل وتتبع المصروفات اليومية.
-            </p>
-          </div>
+          <EmptyState
+            icon={<Wallet className="w-6 h-6" />}
+            title="لا توجد مصروفات مسجلة"
+            description={'انقر فوق زر "إضافة مصروف جديد" لبدء تسجيل وتتبع المصروفات اليومية.'}
+            className="flex-1 border-0 rounded-none py-16"
+          />
         ) : (
           <>
             {/* Desktop Table View (Hidden on Mobile) */}
-            <div className="hidden md:block overflow-x-auto flex-1">
-              <table className="w-full text-right text-sm">
-                <thead className="bg-slate-50 text-slate-600 text-xs font-bold border-b border-slate-200">
+            <div className="hidden md:block flex-1">
+              <DataTable className="border-0 rounded-none shadow-none">
+                <thead className="bg-surface-2 text-muted text-xs font-bold border-b border-line">
                   <tr>
                     <th className="py-3.5 px-4">عنوان المصروف</th>
                     <th className="py-3.5 px-4">التصنيف</th>
@@ -420,25 +435,25 @@ export const ExpensesPage: React.FC = () => {
                     <th className="py-3.5 px-4 text-center">الإجراءات</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-line">
                   {expenses.map((exp: any) => (
-                    <tr key={exp.id} className="hover:bg-slate-50/70 transition-colors">
-                      <td className="py-3.5 px-4 font-bold text-slate-900">{exp.title}</td>
+                    <tr key={exp.id} className="hover:bg-surface-2/60 transition-colors">
+                      <td className="py-3.5 px-4 font-bold text-ink">{exp.title}</td>
                       <td className="py-3.5 px-4">
-                        <span className="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg text-xs font-medium">
-                          {exp.category || 'عام'}
-                        </span>
+                        <Badge tone="neutral">{exp.category || 'عام'}</Badge>
                       </td>
                       <td className="py-3.5 px-4">
-                        <span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${
-                          exp.payment_method === 'VODAFONE_CASH'
-                            ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                            : exp.payment_method === 'INSTAPAY'
-                            ? 'bg-purple-50 text-purple-700 border border-purple-200'
-                            : exp.payment_method === 'TRANSFER' || exp.payment_method === 'CARD'
-                            ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                            : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                        }`}>
+                        <Badge
+                          tone={
+                            exp.payment_method === 'VODAFONE_CASH'
+                              ? 'bad'
+                              : exp.payment_method === 'INSTAPAY'
+                              ? 'brand'
+                              : exp.payment_method === 'TRANSFER' || exp.payment_method === 'CARD'
+                              ? 'info'
+                              : 'ok'
+                          }
+                        >
                           {exp.payment_method === 'VODAFONE_CASH'
                             ? 'فودافون كاش'
                             : exp.payment_method === 'INSTAPAY'
@@ -448,24 +463,26 @@ export const ExpensesPage: React.FC = () => {
                             : exp.payment_method === 'CARD'
                             ? 'بطاقة بنكية'
                             : 'نقدية (الدرج)'}
-                        </span>
+                        </Badge>
                       </td>
-                      <td className="py-3.5 px-4 font-black text-rose-600">{formatCurrency(exp.amount)}</td>
-                      <td className="py-3.5 px-4 text-slate-600">{exp.date}</td>
-                      <td className="py-3.5 px-4 text-slate-500 max-w-xs truncate">{exp.notes || '-'}</td>
+                      <td className="py-3.5 px-4 font-black text-bad tabular-nums">{formatCurrency(exp.amount)}</td>
+                      <td className="py-3.5 px-4 text-muted tabular-nums">{exp.date}</td>
+                      <td className="py-3.5 px-4 text-muted max-w-xs truncate">{exp.notes || '-'}</td>
                       <td className="py-3.5 px-4 text-center">
                         <div className="flex items-center justify-center gap-1.5">
                           <button
+                            type="button"
                             onClick={() => handleEdit(exp)}
-                            className="p-1.5 text-slate-400 hover:text-primary-600 rounded-lg hover:bg-slate-100 transition-colors"
+                            className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center text-muted hover:text-brand rounded-xl hover:bg-surface-2 transition-colors"
                             title="تعديل"
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
                           {canDeleteExpense && (
                             <button
+                              type="button"
                               onClick={() => handleDelete(exp.id, exp.title)}
-                              className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-slate-100 transition-colors"
+                              className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center text-muted hover:text-bad rounded-xl hover:bg-bad-soft transition-colors"
                               title="حذف"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -476,11 +493,11 @@ export const ExpensesPage: React.FC = () => {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </DataTable>
             </div>
 
             {/* Mobile Cards View (Touch-Optimized) */}
-            <div className="md:hidden overflow-y-auto flex-1 p-3 space-y-3 bg-slate-50/60">
+            <div className="md:hidden overflow-y-auto flex-1 p-3 space-y-3 bg-surface-2">
               {expenses.map((exp: any) => (
                 <ExpenseMobileCard
                   key={exp.id}
@@ -502,46 +519,44 @@ export const ExpensesPage: React.FC = () => {
             />
           </>
         )}
-      </div>
+      </Card>
 
       {/* Add / Edit Modal - Responsive Bottom Sheet on Mobile */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150">
-          <div className="bg-white w-full sm:max-w-md rounded-t-[2.5rem] sm:rounded-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom sm:zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 bg-ink/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150">
+          <div className="bg-panel border border-line w-full sm:max-w-md rounded-t-[2.5rem] sm:rounded-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom sm:zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
             {/* Sheet Handle for Mobile */}
-            <div className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mt-3 sm:hidden" />
-            <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="font-bold text-base text-slate-900">
+            <div className="w-12 h-1.5 bg-line rounded-full mx-auto mt-3 sm:hidden" />
+            <div className="p-5 border-b border-line flex items-center justify-between bg-surface">
+              <h3 className="font-bold text-base text-ink">
                 {editingExpense ? 'تعديل المصروف' : 'إضافة مصروف جديد'}
               </h3>
               <button
+                type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg"
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted hover:text-ink rounded-xl hover:bg-surface-2"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleSubmit(onSubmit)} className="p-5 space-y-4 overflow-y-auto">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">عنوان أو جهة الصرف *</label>
-                <input
-                  type="text"
-                  placeholder="مثال: بنزين سيارة التوزيع، غداء المندوب..."
-                  {...register('title')}
-                  className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 font-medium"
-                />
-                {errors.title && <p className="text-xs text-rose-500 mt-1">{errors.title.message}</p>}
-              </div>
+              <Input
+                label="عنوان أو جهة الصرف *"
+                type="text"
+                placeholder="مثال: بنزين سيارة التوزيع، غداء المندوب..."
+                error={errors.title?.message}
+                className="font-medium"
+                {...register('title')}
+              />
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">التصنيف</label>
-                <input
+                <Input
+                  label="التصنيف"
                   type="text"
                   placeholder="اختر أو اكتب تصنيفاً..."
                   list="category-suggestions"
                   {...register('category')}
-                  className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
                 <datalist id="category-suggestions">
                   {categories.map((cat) => (
@@ -551,10 +566,10 @@ export const ExpensesPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">طريقة الصرف والخصم *</label>
-                <select
+                <Select
+                  label="طريقة الصرف والخصم *"
+                  className="font-bold"
                   {...register('payment_method')}
-                  className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white"
                 >
                   <option value="CASH">نقدية كاش (الدرج / الوردية)</option>
                   <option value="VODAFONE_CASH">فودافون كاش والمحافظ الإلكترونية</option>
@@ -565,8 +580,8 @@ export const ExpensesPage: React.FC = () => {
                       <option value="TRANSFER">حساب بنكي / تحويل بنكي</option>
                     </>
                   )}
-                </select>
-                <p className="text-[11px] text-slate-400 mt-1">
+                </Select>
+                <p className="text-[11px] text-muted mt-1">
                   {isCashier || isMandob
                     ? 'سيتم خصم المصروف من درج الوردية إذا كان كاش، أو من المحفظة المحددة للمحل.'
                     : 'اختر الخزينة أو القناة المنصرف منها لتحديث رصيدها تلقائياً.'}
@@ -574,55 +589,51 @@ export const ExpensesPage: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">المبلغ (ج.م) *</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0.01"
-                    placeholder="0.00"
-                    {...register('amount', { valueAsNumber: true })}
-                    className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  />
-                  {errors.amount && <p className="text-xs text-rose-500 mt-1">{errors.amount.message}</p>}
-                </div>
+                <Input
+                  label="المبلغ (ج.م) *"
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  placeholder="0.00"
+                  error={errors.amount?.message}
+                  className="font-bold tabular-nums"
+                  {...register('amount', { valueAsNumber: true })}
+                />
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">التاريخ *</label>
-                  <input
-                    type="date"
-                    {...register('date')}
-                    className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">ملاحظات إضافية</label>
-                <textarea
-                  rows={2}
-                  placeholder="أي تفاصيل أخرى..."
-                  {...register('notes')}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                <Input
+                  label="التاريخ *"
+                  type="date"
+                  {...register('date')}
                 />
               </div>
 
+              <Textarea
+                label="ملاحظات إضافية"
+                rows={2}
+                placeholder="أي تفاصيل أخرى..."
+                {...register('notes')}
+              />
+
               <div className="pt-2 flex justify-end gap-2">
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
+                  size="md"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-50"
+                  className="text-sm font-bold"
                 >
                   إلغاء
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
-                  disabled={saveMutation.isPending}
-                  className="px-5 py-2 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white rounded-xl text-sm font-bold shadow-sm flex items-center gap-1.5"
+                  variant="primary"
+                  size="md"
+                  isLoading={saveMutation.isPending}
+                  leftIcon={<CheckCircle2 className="w-4 h-4" />}
+                  className="text-sm font-bold"
                 >
-                  <CheckCircle2 className="w-4 h-4" />
                   {saveMutation.isPending ? 'جاري الحفظ...' : editingExpense ? 'تحديث المصروف' : 'حفظ المصروف'}
-                </button>
+                </Button>
               </div>
             </form>
           </div>
@@ -631,23 +642,24 @@ export const ExpensesPage: React.FC = () => {
 
       {/* Category Management Modal - Responsive Bottom Sheet on Mobile */}
       {isCategoriesModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150">
-          <div className="bg-white w-full sm:max-w-md rounded-t-[2.5rem] sm:rounded-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom sm:zoom-in-95 duration-200 max-h-[90vh] flex flex-col border border-slate-100">
+        <div className="fixed inset-0 z-50 bg-ink/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150">
+          <div className="bg-panel w-full sm:max-w-md rounded-t-[2.5rem] sm:rounded-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom sm:zoom-in-95 duration-200 max-h-[90vh] flex flex-col border border-line">
             {/* Sheet Handle for Mobile */}
-            <div className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mt-3 sm:hidden" />
-            <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+            <div className="w-12 h-1.5 bg-line rounded-full mx-auto mt-3 sm:hidden" />
+            <div className="p-5 border-b border-line flex items-center justify-between bg-surface">
               <div className="flex items-center gap-2">
-                <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
+                <div className="p-2 bg-brand-soft text-brand rounded-xl border border-brand/20">
                   <Tags className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-black text-base text-slate-900">إدارة تصنيفات المصروفات</h3>
-                  <p className="text-xs text-slate-400">إضافة وتعديل وحذف بنود وتصنيفات الصرف</p>
+                  <h3 className="font-black text-base text-ink">إدارة تصنيفات المصروفات</h3>
+                  <p className="text-xs text-muted">إضافة وتعديل وحذف بنود وتصنيفات الصرف</p>
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setIsCategoriesModalOpen(false)}
-                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted hover:text-ink rounded-xl hover:bg-surface-2"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -655,8 +667,8 @@ export const ExpensesPage: React.FC = () => {
 
             <div className="p-5 space-y-4">
               {catError && (
-                <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-xl flex items-center gap-2 font-bold">
-                  <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+                <div className="p-3 bg-bad-soft border border-bad/20 text-bad text-xs rounded-xl flex items-center gap-2 font-bold">
+                  <AlertCircle className="w-4 h-4 text-bad flex-shrink-0" />
                   <span>{catError}</span>
                 </div>
               )}
@@ -671,32 +683,37 @@ export const ExpensesPage: React.FC = () => {
                 }}
                 className="flex items-center gap-2"
               >
-                <input
-                  type="text"
-                  placeholder="اسم التصنيف الجديد (مثال: شحن بضائع، دعاية)..."
-                  value={newCatName}
-                  onChange={(e) => setNewCatName(e.target.value)}
-                  className="flex-1 px-3 py-2.5 border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary-500"
-                />
-                <button
+                <div className="flex-1">
+                  <Input
+                    type="text"
+                    placeholder="اسم التصنيف الجديد (مثال: شحن بضائع، دعاية)..."
+                    value={newCatName}
+                    onChange={(e) => setNewCatName(e.target.value)}
+                    className="text-xs font-bold"
+                  />
+                </div>
+                <Button
                   type="submit"
-                  disabled={addCategoryMutation.isPending || !newCatName.trim()}
-                  className="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white rounded-xl text-xs font-black shadow-xs transition-colors flex items-center gap-1"
+                  variant="primary"
+                  size="md"
+                  isLoading={addCategoryMutation.isPending}
+                  disabled={!newCatName.trim()}
+                  leftIcon={<Plus className="w-4 h-4" />}
+                  className="text-xs font-black shrink-0"
                 >
-                  <Plus className="w-4 h-4" />
-                  <span>إضافة</span>
-                </button>
+                  إضافة
+                </Button>
               </form>
 
               {/* Categories List */}
               <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
                 {categories.length === 0 ? (
-                  <p className="text-center text-xs text-slate-400 py-6">لا توجد تصنيفات مسجلة بعد</p>
+                  <p className="text-center text-xs text-muted py-6">لا توجد تصنيفات مسجلة بعد</p>
                 ) : (
                   categories.map((cat) => (
                     <div
                       key={cat.id}
-                      className="flex items-center justify-between p-2.5 bg-slate-50 hover:bg-slate-100/80 rounded-xl text-xs transition-colors group"
+                      className="flex items-center justify-between p-2.5 bg-surface-2 hover:bg-surface rounded-xl text-xs transition-colors group border border-line/60"
                     >
                       {editingCatId === cat.id ? (
                         <div className="flex items-center gap-2 flex-1">
@@ -704,49 +721,57 @@ export const ExpensesPage: React.FC = () => {
                             type="text"
                             value={editingCatName}
                             onChange={(e) => setEditingCatName(e.target.value)}
-                            className="flex-1 px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold"
+                            className="flex-1 min-h-[44px] px-2.5 py-1.5 bg-panel border border-line rounded-lg text-xs font-bold text-ink"
                             autoFocus
                           />
-                          <button
+                          <Button
+                            type="button"
+                            variant="primary"
+                            size="md"
                             onClick={() => {
                               if (editingCatName.trim()) {
                                 updateCategoryMutation.mutate({ id: cat.id, name: editingCatName.trim() });
                               }
                             }}
-                            className="px-2.5 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700"
+                            className="text-xs font-bold px-3"
                           >
                             حفظ
-                          </button>
-                          <button
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="md"
                             onClick={() => setEditingCatId(null)}
-                            className="px-2 py-1.5 bg-slate-200 text-slate-600 rounded-lg text-xs hover:bg-slate-300"
+                            className="text-xs font-bold px-3"
                           >
                             إلغاء
-                          </button>
+                          </Button>
                         </div>
                       ) : (
                         <>
                           <div className="flex items-center gap-2">
-                            <span className="font-bold text-slate-800">{cat.name}</span>
+                            <span className="font-bold text-ink">{cat.name}</span>
                             {cat.is_default && (
-                              <span className="text-2xs bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-md font-medium">
+                              <Badge tone="neutral" className="text-[10px]">
                                 أساسي
-                              </span>
+                              </Badge>
                             )}
                           </div>
 
-                          <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
+                          <div className="flex items-center gap-1">
                             <button
+                              type="button"
                               onClick={() => {
                                 setEditingCatId(cat.id);
                                 setEditingCatName(cat.name);
                               }}
-                              className="p-1 text-slate-400 hover:text-indigo-600 rounded-md hover:bg-white transition-colors"
+                              className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center text-muted hover:text-brand rounded-xl hover:bg-panel transition-colors"
                               title="تعديل الاسم"
                             >
                               <Edit2 className="w-3.5 h-3.5" />
                             </button>
                             <button
+                              type="button"
                               onClick={async () => {
                                 const ok = await confirm({
                                   title: 'تأكيد حذف التصنيف',
@@ -757,7 +782,7 @@ export const ExpensesPage: React.FC = () => {
                                   deleteCategoryMutation.mutate(cat.id);
                                 }
                               }}
-                              className="p-1 text-slate-400 hover:text-rose-600 rounded-md hover:bg-white transition-colors"
+                              className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center text-muted hover:text-bad rounded-xl hover:bg-bad-soft transition-colors"
                               title="حذف التصنيف"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -771,14 +796,16 @@ export const ExpensesPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="p-4 bg-slate-50 border-t border-slate-100 text-right">
-              <button
+            <div className="p-4 bg-surface-2 border-t border-line text-right">
+              <Button
                 type="button"
+                variant="secondary"
+                size="md"
                 onClick={() => setIsCategoriesModalOpen(false)}
-                className="w-full py-2.5 bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 rounded-xl text-xs font-bold transition-colors"
+                className="w-full text-xs font-bold"
               >
                 إغلاق النافذة
-              </button>
+              </Button>
             </div>
           </div>
         </div>

@@ -223,10 +223,6 @@
     "raw": 131,
     "hex": 0
   },
-  "src/presentation/pages/ExpensesPage.tsx": {
-    "raw": 147,
-    "hex": 0
-  },
   "src/presentation/pages/InvoiceFormPage.tsx": {
     "raw": 28,
     "hex": 0
@@ -239,20 +235,12 @@
     "raw": 259,
     "hex": 143
   },
-  "src/presentation/pages/LedgerPage.tsx": {
-    "raw": 149,
-    "hex": 0
-  },
   "src/presentation/pages/LoginPage.tsx": {
     "raw": 89,
     "hex": 1
   },
   "src/presentation/pages/PartiesPage.tsx": {
     "raw": 100,
-    "hex": 0
-  },
-  "src/presentation/pages/PaymentsPage.tsx": {
-    "raw": 113,
     "hex": 0
   },
   "src/presentation/pages/RegisterPage.tsx": {
