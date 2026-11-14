@@ -259,7 +259,7 @@ export const SettingsPage: React.FC = () => {
               <label className="text-xs font-bold text-ink block mb-1.5">
                 رمز العملة المعتمد <span className="text-bad">*</span>
               </label>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <input
                   type="text"
                   required
@@ -267,7 +267,7 @@ export const SettingsPage: React.FC = () => {
                   value={storeData.currency}
                   onChange={(e) => setStoreData({ ...storeData, currency: e.target.value })}
                   placeholder="ج.م"
-                  className="flex-1 min-h-[44px] bg-panel border border-line rounded-xl px-3.5 py-2.5 text-ink text-sm font-bold focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand disabled:opacity-60"
+                  className="flex-1 min-w-[100px] min-h-[44px] bg-panel border border-line rounded-xl px-3.5 py-2.5 text-ink text-sm font-bold focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand disabled:opacity-60"
                 />
                 {['ج.م', 'ر.س', 'د.إ', '$'].map((curr) => (
                   <button
