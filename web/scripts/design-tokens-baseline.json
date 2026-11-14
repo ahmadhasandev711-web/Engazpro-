@@ -43,10 +43,6 @@
     "raw": 53,
     "hex": 22
   },
-  "src/presentation/components/mobile/EmployeeMobileCard.tsx": {
-    "raw": 98,
-    "hex": 0
-  },
   "src/presentation/components/payments/PaymentReceiptModal.tsx": {
     "raw": 41,
     "hex": 1
