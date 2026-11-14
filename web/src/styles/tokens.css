@@ -60,43 +60,43 @@
 }
 
 .dark {
-  /* Surface & Base */
-  --c-canvas: 14 12 20;
-  --c-panel: 21 18 29;
-  --c-surface-2: 38 33 51;
+  /* Surface & Base (Calm Slate Hierarchy) */
+  --c-canvas: 15 23 42;
+  --c-panel: 30 41 59;
+  --c-surface-2: 51 65 85;
 
   /* Borders & Dividers */
-  --c-line: 42 37 54;
-  --c-line-2: 61 55 80;
+  --c-line: 51 65 85;
+  --c-line-2: 71 85 105;
 
   /* Typography */
-  --c-ink: 243 241 248;
-  --c-muted: 169 163 184;
+  --c-ink: 241 245 249;
+  --c-muted: 148 163 184;
 
-  /* Brand (Purple #7C5CE0) */
-  --c-brand: 124 92 224;
+  /* Brand (Purple #8B5CF6 / #7C5CE0 adapted for Slate) */
+  --c-brand: 139 92 246;
   --c-brand-ink: 196 181 253;
-  --c-brand-soft: 40 31 64;
+  --c-brand-soft: 49 46 95;
   --c-on-brand: 255 255 255;
 
   /* Feedback Tones */
-  --c-ok: 61 187 114;
-  --c-ok-soft: 27 42 41;
-  --c-warn: 229 163 58;
-  --c-warn-soft: 50 38 33;
-  --c-bad: 240 106 91;
-  --c-bad-soft: 52 30 38;
-  --c-info: 106 168 240;
-  --c-info-soft: 33 39 59;
+  --c-ok: 52 211 153;
+  --c-ok-soft: 20 60 52;
+  --c-warn: 251 191 36;
+  --c-warn-soft: 66 48 27;
+  --c-bad: 248 113 113;
+  --c-bad-soft: 69 34 44;
+  --c-info: 96 165 250;
+  --c-info-soft: 30 52 86;
 
   /* Primary Scale in Dark Mode */
-  --c-primary-50: 30 25 45;
-  --c-primary-100: 40 31 64;
-  --c-primary-200: 55 42 90;
-  --c-primary-300: 74 54 125;
-  --c-primary-400: 98 72 165;
-  --c-primary-500: 124 92 224;
-  --c-primary-600: 124 92 224;
+  --c-primary-50: 30 41 59;
+  --c-primary-100: 49 46 95;
+  --c-primary-200: 67 56 125;
+  --c-primary-300: 91 74 162;
+  --c-primary-400: 118 89 205;
+  --c-primary-500: 139 92 246;
+  --c-primary-600: 139 92 246;
   --c-primary-700: 167 139 250;
   --c-primary-800: 196 181 253;
   --c-primary-900: 221 214 254;
