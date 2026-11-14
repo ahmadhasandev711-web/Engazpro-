@@ -71,14 +71,6 @@
     "raw": 259,
     "hex": 143
   },
-  "src/presentation/pages/LoginPage.tsx": {
-    "raw": 89,
-    "hex": 1
-  },
-  "src/presentation/pages/RegisterPage.tsx": {
-    "raw": 107,
-    "hex": 1
-  },
   "src/presentation/pages/ReportsPage.tsx": {
     "raw": 165,
     "hex": 0
