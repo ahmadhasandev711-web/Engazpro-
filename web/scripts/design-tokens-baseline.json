@@ -51,18 +51,6 @@
     "raw": 28,
     "hex": 0
   },
-  "src/presentation/components/dashboard/CashierDashboard.tsx": {
-    "raw": 130,
-    "hex": 0
-  },
-  "src/presentation/components/dashboard/MandobDashboard.tsx": {
-    "raw": 132,
-    "hex": 0
-  },
-  "src/presentation/components/dashboard/OwnerDashboard.tsx": {
-    "raw": 129,
-    "hex": 0
-  },
   "src/presentation/components/employees/PayrollModal.tsx": {
     "raw": 188,
     "hex": 0
