@@ -31,10 +31,6 @@
     "raw": 59,
     "hex": 0
   },
-  "src/presentation/components/employees/PayrollModal.tsx": {
-    "raw": 188,
-    "hex": 0
-  },
   "src/presentation/components/landing/StoreDesignSection.tsx": {
     "raw": 133,
     "hex": 29
@@ -65,10 +61,6 @@
   },
   "src/presentation/pages/CouriersPage.tsx": {
     "raw": 57,
-    "hex": 0
-  },
-  "src/presentation/pages/EmployeesPage.tsx": {
-    "raw": 270,
     "hex": 0
   },
   "src/presentation/pages/ExcelPage.tsx": {

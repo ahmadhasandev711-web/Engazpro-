@@ -27,10 +27,12 @@ import { apiClient } from '../../data/api/client';
 import { formatCurrency } from '@pos-mandob/shared';
 import { usePermissions } from '../../hooks/usePermissions';
 import { PayrollModal } from '../components/employees/PayrollModal';
+import { getEmployeeRoleMeta } from '../components/employees/employeeRoleMap';
 import { EmployeeMobileCard, EmployeeItem } from '../components/mobile/EmployeeMobileCard';
 import { MobileFilterChips, FilterChipOption } from '../components/mobile/MobileFilterChips';
 import { nativeBackButton } from '../../platform/nativeBackButton';
 import { useConfirm } from '../context/ConfirmContext';
+import { Badge, Button, DataTable, EmptyState, Input, PageHeader, Select, StatCard } from '../components/ui';
 
 export const EmployeesPage: React.FC = () => {
   const { confirm } = useConfirm();
@@ -304,141 +306,108 @@ export const EmployeesPage: React.FC = () => {
     }
   };
 
-  const getRoleBadge = (role: string) => {
-    switch (role) {
-      case 'ADMIN':
-        return {
-          label: 'مدير نظام (شريك)',
-          bg: 'bg-emerald-50 text-emerald-800 border-emerald-300 font-bold',
-          dot: 'bg-emerald-600',
-        };
-      case 'CASHIER':
-        return {
-          label: 'كاشير POS',
-          bg: 'bg-amber-50 text-amber-700 border-amber-200',
-          dot: 'bg-amber-600',
-        };
-      case 'SALES':
-        return {
-          label: 'بائع صالة / سيلز',
-          bg: 'bg-teal-50 text-teal-700 border-teal-200',
-          dot: 'bg-teal-600',
-        };
-      case 'MANDOB':
-        return {
-          label: 'مندوب مبيعات',
-          bg: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-          dot: 'bg-indigo-600',
-        };
-      case 'MANAGER':
-        return {
-          label: 'مدير فرع',
-          bg: 'bg-purple-50 text-purple-700 border-purple-200',
-          dot: 'bg-purple-600',
-        };
-      case 'SUPERVISOR':
-        return {
-          label: 'مشرف ورديات',
-          bg: 'bg-blue-50 text-blue-700 border-blue-200',
-          dot: 'bg-blue-600',
-        };
-      default:
-        return {
-          label: role,
-          bg: 'bg-slate-50 text-slate-700 border-slate-200',
-          dot: 'bg-slate-600',
-        };
-    }
-  };
+  const branchOptions = [
+    { value: '', label: '-- بدون تقييد بفرع (عام على كل الفروع) --' },
+    ...branches.map((b: any) => ({
+      value: String(b.id),
+      label: `${b.name} (${b.code}) - ${
+        b.type === 'STORE' ? 'محل/معرض' : b.type === 'WAREHOUSE' ? 'مخزن' : 'سيارة/فان'
+      }`,
+    })),
+  ];
 
   return (
     <div className="space-y-6">
       {/* Notifications */}
       {successMessage && (
-        <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-xl flex items-center gap-3 animate-fade-in shadow-sm">
-          <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+        <div className="bg-ok-soft border border-ok/30 text-ok px-4 py-3 rounded-xl flex items-center gap-3 animate-fade-in shadow-sm">
+          <CheckCircle2 className="w-5 h-5 text-ok flex-shrink-0" />
           <p className="text-sm font-bold">{successMessage}</p>
         </div>
       )}
 
       {errorMessage && (
-        <div className="bg-rose-50 border border-rose-200 text-rose-800 px-4 py-3 rounded-xl flex items-center justify-between animate-fade-in shadow-sm">
+        <div className="bg-bad-soft border border-bad/30 text-bad px-4 py-3 rounded-xl flex items-center justify-between animate-fade-in shadow-sm">
           <div className="flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 text-rose-600 flex-shrink-0" />
+            <AlertCircle className="w-5 h-5 text-bad flex-shrink-0" />
             <p className="text-sm font-bold">{errorMessage}</p>
           </div>
-          <button onClick={() => setErrorMessage(null)} className="text-rose-500 hover:text-rose-700">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setErrorMessage(null)}
+            aria-label="إغلاق التنبيه"
+            className="p-2 text-bad hover:bg-bad-soft"
+          >
             <X className="w-4 h-4" />
-          </button>
+          </Button>
         </div>
       )}
 
       {/* Desktop Header */}
-      <div className="hidden md:flex flex-row items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary-100 text-primary-700 rounded-xl">
-              <Users className="w-6 h-6" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-black text-slate-900">فريق العمل والمناديب</h1>
-              <p className="text-xs text-slate-500 mt-0.5">
-                إدارة حسابات المناديب والكاشير، وتعيين الصلاحيات، ومتابعة مبيعاتهم وتحصيلاتهم اليومية
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <button
-          onClick={openCreateModal}
-          className="flex items-center justify-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-sm transition-all hover:shadow"
-        >
-          <UserPlus className="w-5 h-5" />
-          <span>إضافة موظف جديد</span>
-        </button>
+      <div className="hidden md:block">
+        <PageHeader
+          title="فريق العمل والمناديب"
+          description="إدارة حسابات المناديب والكاشير، وتعيين الصلاحيات، ومتابعة مبيعاتهم وتحصيلاتهم اليومية"
+          badge={<Badge tone="brand">{totalEmployees} موظف</Badge>}
+          actions={
+            <Button
+              type="button"
+              variant="primary"
+              size="md"
+              onClick={openCreateModal}
+              leftIcon={<UserPlus className="w-4 h-4" />}
+            >
+              إضافة موظف جديد
+            </Button>
+          }
+          className="mb-0"
+        />
       </div>
 
       {/* Mobile Compact Hero Bar (md:hidden) */}
-      <div className="md:hidden bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between gap-2">
+      <div className="md:hidden bg-panel p-3 rounded-2xl border border-line shadow-xs flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center font-black shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-brand-soft text-brand flex items-center justify-center font-black shrink-0">
             <Users className="w-5 h-5" />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              <h2 className="text-sm font-black text-slate-900 truncate">فريق العمل</h2>
-              <span className="bg-slate-100 text-slate-700 text-2xs font-black px-2 py-0.5 rounded-full shrink-0">
+              <h2 className="text-sm font-black text-ink truncate">فريق العمل</h2>
+              <Badge tone="neutral" className="text-2xs shrink-0">
                 {totalEmployees}
-              </span>
+              </Badge>
             </div>
-            <p className="text-[11px] text-slate-500 font-medium truncate">
-              مبيعات اليوم: <span className="font-bold text-primary-700 font-mono">{formatCurrency(totalTodaySales)}</span>
+            <p className="text-xs text-muted font-medium truncate">
+              مبيعات اليوم: <span className="font-bold text-brand tabular-nums">{formatCurrency(totalTodaySales)}</span>
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 shrink-0">
-          <button
-            onClick={openCreateModal}
-            className="inline-flex items-center gap-1 bg-primary-600 active:bg-primary-700 text-white px-3 py-2 rounded-xl text-xs font-bold shadow-xs active:scale-95 transition-all"
-          >
-            <UserPlus className="w-4 h-4" />
-            <span>إضافة</span>
-          </button>
-        </div>
+        <Button
+          type="button"
+          variant="primary"
+          size="md"
+          onClick={openCreateModal}
+          leftIcon={<UserPlus className="w-4 h-4" />}
+          className="shrink-0"
+        >
+          إضافة
+        </Button>
       </div>
 
       {/* Mobile 2-Column Performance Strip (md:hidden) */}
-      <div className="md:hidden grid grid-cols-2 gap-2 bg-white p-2.5 rounded-2xl border border-slate-200 shadow-xs text-center">
-        <div className="bg-primary-50/70 border border-primary-100/70 p-2.5 rounded-xl">
-          <span className="text-2xs text-primary-700 font-bold block">مبيعات اليوم</span>
-          <span className="text-sm font-black text-primary-800 font-mono block mt-0.5" dir="ltr">
+      <div className="md:hidden grid grid-cols-2 gap-2 bg-panel p-2.5 rounded-2xl border border-line shadow-xs text-center">
+        <div className="bg-brand-soft/60 border border-brand/25 p-2.5 rounded-xl">
+          <span className="text-2xs text-brand-ink font-bold block">مبيعات اليوم</span>
+          <span className="text-sm font-black text-brand tabular-nums block mt-0.5" dir="ltr">
             {formatCurrency(totalTodaySales)}
           </span>
         </div>
-        <div className="bg-teal-50/70 border border-teal-100/70 p-2.5 rounded-xl">
-          <span className="text-2xs text-teal-700 font-bold block">تحصيلات اليوم</span>
-          <span className="text-sm font-black text-teal-800 font-mono block mt-0.5" dir="ltr">
+        <div className="bg-ok-soft/60 border border-ok/25 p-2.5 rounded-xl">
+          <span className="text-2xs text-ok font-bold block">تحصيلات اليوم</span>
+          <span className="text-sm font-black text-ok tabular-nums block mt-0.5" dir="ltr">
             {formatCurrency(totalTodayCollections)}
           </span>
         </div>
@@ -446,69 +415,46 @@ export const EmployeesPage: React.FC = () => {
 
       {/* Desktop Overview Cards */}
       <div className="hidden md:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-xs font-bold text-slate-500">إجمالي الفريق</p>
-            <h3 className="text-2xl font-black text-slate-900 mt-1">{totalEmployees} موظف</h3>
-            <p className="text-[11px] text-slate-400 mt-1">
-              {activeMandobs} مندوب مبيعات • {activeCashiers} كاشير
-            </p>
-          </div>
-          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-            <Users className="w-6 h-6" />
-          </div>
-        </div>
-
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-xs font-bold text-slate-500">مناديب الميدان النشطين</p>
-            <h3 className="text-2xl font-black text-emerald-600 mt-1">{activeMandobs} مندوب</h3>
-            <p className="text-[11px] text-slate-400 mt-1">تطبيق الجوال والمبيعات الميدانية</p>
-          </div>
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-            <ShieldCheck className="w-6 h-6" />
-          </div>
-        </div>
-
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-xs font-bold text-slate-500">مبيعات الفريق اليوم</p>
-            <h3 className="text-2xl font-black text-primary-600 mt-1">
-              {formatCurrency(totalTodaySales)}
-            </h3>
-            <p className="text-[11px] text-slate-400 mt-1">إجمالي الفواتير الصادرة اليوم</p>
-          </div>
-          <div className="w-12 h-12 rounded-xl bg-primary-50 text-primary-600 flex items-center justify-center">
-            <TrendingUp className="w-6 h-6" />
-          </div>
-        </div>
-
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-xs font-bold text-slate-500">تحصيلات الفريق اليوم</p>
-            <h3 className="text-2xl font-black text-teal-600 mt-1">
-              {formatCurrency(totalTodayCollections)}
-            </h3>
-            <p className="text-[11px] text-slate-400 mt-1">سندات القبض النقدية اليوم</p>
-          </div>
-          <div className="w-12 h-12 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center">
-            <Wallet className="w-6 h-6" />
-          </div>
-        </div>
+        <StatCard
+          label="إجمالي الفريق"
+          value={`${totalEmployees} موظف`}
+          hint={`${activeMandobs} مندوب مبيعات • ${activeCashiers} كاشير`}
+          tone="info"
+          icon={<Users className="w-4 h-4" />}
+        />
+        <StatCard
+          label="مناديب الميدان النشطين"
+          value={`${activeMandobs} مندوب`}
+          hint="تطبيق الجوال والمبيعات الميدانية"
+          tone="ok"
+          icon={<ShieldCheck className="w-4 h-4" />}
+        />
+        <StatCard
+          label="مبيعات الفريق اليوم"
+          value={formatCurrency(totalTodaySales)}
+          hint="إجمالي الفواتير الصادرة اليوم"
+          tone="brand"
+          icon={<TrendingUp className="w-4 h-4" />}
+        />
+        <StatCard
+          label="تحصيلات الفريق اليوم"
+          value={formatCurrency(totalTodayCollections)}
+          hint="سندات القبض النقدية اليوم"
+          tone="ok"
+          icon={<Wallet className="w-4 h-4" />}
+        />
       </div>
 
       {/* Filters & Search */}
-      <div className="bg-white p-2.5 sm:p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row items-center justify-between gap-3">
-        {/* Search */}
-        <div className="relative w-full md:w-80">
-          <input
+      <div className="bg-panel p-2.5 sm:p-4 rounded-2xl border border-line shadow-xs flex flex-col md:flex-row items-center justify-between gap-3">
+        <div className="w-full md:w-80">
+          <Input
             type="text"
             placeholder="بحث بالاسم أو برقم الهاتف..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-4 pr-10 py-2 rounded-xl border border-slate-200 text-xs sm:text-sm focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-right"
+            leftIcon={<Search className="w-4 h-4" />}
           />
-          <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-2.5" />
         </div>
 
         {/* Mobile Filter Chips */}
@@ -520,93 +466,56 @@ export const EmployeesPage: React.FC = () => {
           />
         </div>
 
-        {/* Role Segmented Filter (Horizontal Scroll Track - hidden md:flex) */}
-        <div className="hidden md:flex items-center gap-1 bg-slate-100 p-1 rounded-xl w-full md:w-auto overflow-x-auto no-scrollbar scroll-smooth flex-nowrap">
-          <button
-            onClick={() => setRoleFilter('ALL')}
-            className={clsx(
-              'px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap',
-              roleFilter === 'ALL'
-                ? 'bg-white text-slate-900 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            )}
-          >
-            الكل ({employees.length})
-          </button>
-          <button
-            onClick={() => setRoleFilter('CASHIER')}
-            className={clsx(
-              'px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap',
-              roleFilter === 'CASHIER'
-                ? 'bg-white text-slate-900 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            )}
-          >
-            كاشير ({employees.filter((e) => e.role === 'CASHIER').length})
-          </button>
-          <button
-            onClick={() => setRoleFilter('SALES')}
-            className={clsx(
-              'px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap',
-              roleFilter === 'SALES'
-                ? 'bg-white text-slate-900 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            )}
-          >
-            سيلز / صالة ({employees.filter((e) => e.role === 'SALES').length})
-          </button>
-          <button
-            onClick={() => setRoleFilter('MANDOB')}
-            className={clsx(
-              'px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap',
-              roleFilter === 'MANDOB'
-                ? 'bg-white text-slate-900 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            )}
-          >
-            مناديب ({employees.filter((e) => e.role === 'MANDOB').length})
-          </button>
-          <button
-            onClick={() => setRoleFilter('MANAGEMENT')}
-            className={clsx(
-              'px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap',
-              roleFilter === 'MANAGEMENT'
-                ? 'bg-white text-slate-900 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            )}
-          >
-            إدارة ({employees.filter((e) => e.role === 'MANAGER' || e.role === 'SUPERVISOR' || e.role === 'ADMIN').length})
-          </button>
+        {/* Role Segmented Filter */}
+        <div className="hidden md:flex items-center gap-1 bg-surface-2 p-1 rounded-xl w-full md:w-auto overflow-x-auto no-scrollbar scroll-smooth flex-nowrap">
+          {roleFilterChips.map((chip) => (
+            <button
+              key={chip.id}
+              type="button"
+              onClick={() => setRoleFilter(chip.id)}
+              className={clsx(
+                'min-h-[38px] px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer',
+                roleFilter === chip.id
+                  ? 'bg-panel text-ink shadow-xs'
+                  : 'text-muted hover:text-ink'
+              )}
+            >
+              {chip.label} ({chip.count})
+            </button>
+          ))}
         </div>
       </div>
 
       {/* Employees Table */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-panel rounded-2xl border border-line shadow-sm overflow-hidden">
         {isLoading ? (
-          <div className="p-12 text-center text-slate-400 text-sm">جاري تحميل بيانات الفريق...</div>
+          <div className="p-12 text-center text-muted text-sm font-bold">جاري تحميل بيانات الفريق...</div>
         ) : filteredEmployees.length === 0 ? (
-          <div className="p-12 text-center">
-            <div className="w-16 h-16 bg-slate-50 text-slate-300 rounded-full flex items-center justify-center mx-auto mb-3">
-              <Users className="w-8 h-8" />
-            </div>
-            <h3 className="font-bold text-slate-700 text-base">لا يوجد موظفون مسجلون حالياً</h3>
-            <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-              أضف كاشير، مناديب مبيعات، أو مدراء فروع ووزعهم على الفروع والمخازن
-            </p>
-            <button
-              onClick={openCreateModal}
-              className="mt-4 inline-flex items-center gap-2 bg-primary-50 text-primary-700 px-4 py-2 rounded-xl text-xs font-bold hover:bg-primary-100"
-            >
-              <UserPlus className="w-4 h-4" />
-              <span>إضافة أول موظف</span>
-            </button>
+          <div className="p-4">
+            <EmptyState
+              icon={<Users className="w-6 h-6 text-brand" />}
+              title="لا يوجد موظفون مسجلون حالياً"
+              description="أضف كاشير، مناديب مبيعات، أو مدراء فروع ووزعهم على الفروع والمخازن"
+              action={
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="md"
+                  onClick={openCreateModal}
+                  leftIcon={<UserPlus className="w-4 h-4" />}
+                >
+                  إضافة أول موظف
+                </Button>
+              }
+              className="border-0 py-10"
+            />
           </div>
         ) : (
           <>
             {/* Desktop Table View */}
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-right text-sm">
-                <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold text-xs">
+            <div className="hidden md:block">
+              <DataTable className="border-0 rounded-none shadow-none">
+                <thead className="bg-surface-2/80 border-b border-line text-muted font-bold text-xs">
                   <tr>
                     <th className="py-3 px-4">الموظف</th>
                     <th className="py-3 px-4">الدور الوظيفي</th>
@@ -618,34 +527,29 @@ export const EmployeesPage: React.FC = () => {
                     <th className="py-3 px-4 text-center">الإجراءات</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 text-slate-700">
+                <tbody className="divide-y divide-line text-ink">
                   {filteredEmployees.map((emp) => {
-                    const roleBadge = getRoleBadge(emp.role);
+                    const roleMeta = getEmployeeRoleMeta(emp.role);
                     const isActive = emp.status === 'ACTIVE';
+                    const canManageRow =
+                      isOwnerOrAdmin ||
+                      (isManager && emp.role !== 'OWNER' && emp.role !== 'ADMIN' && emp.role !== 'MANAGER');
 
                     return (
-                      <tr key={emp.id} className="hover:bg-slate-50/70 transition-colors">
+                      <tr key={emp.id} className="hover:bg-surface-2/50 transition-colors">
                         <td className="py-3.5 px-4">
                           <div className="flex items-center gap-3">
                             <div
                               className={clsx(
-                                'w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm',
-                                emp.role === 'ADMIN'
-                                  ? 'bg-emerald-100 text-emerald-800'
-                                  : emp.role === 'MANDOB'
-                                  ? 'bg-indigo-50 text-indigo-700'
-                                  : emp.role === 'CASHIER'
-                                  ? 'bg-amber-50 text-amber-700'
-                                  : emp.role === 'MANAGER'
-                                  ? 'bg-purple-50 text-purple-700'
-                                  : 'bg-blue-50 text-blue-700'
+                                'w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm border',
+                                roleMeta.avatarClass
                               )}
                             >
                               {emp.name.charAt(0)}
                             </div>
                             <div>
-                              <div className="font-bold text-slate-900">{emp.name}</div>
-                              <div className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
+                              <div className="font-bold text-ink">{emp.name}</div>
+                              <div className="text-xs text-muted flex items-center gap-1 mt-0.5 tabular-nums">
                                 <Phone className="w-3 h-3" />
                                 <span dir="ltr">{emp.phone}</span>
                               </div>
@@ -654,38 +558,31 @@ export const EmployeesPage: React.FC = () => {
                         </td>
 
                         <td className="py-3.5 px-4">
-                          <span
-                            className={clsx(
-                              'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border',
-                              roleBadge.bg
-                            )}
-                          >
-                            <span
-                              className={clsx('w-1.5 h-1.5 rounded-full', roleBadge.dot)}
-                            />
-                            {roleBadge.label}
-                          </span>
+                          <Badge tone={roleMeta.tone} dot>
+                            {roleMeta.label}
+                          </Badge>
                         </td>
 
                         <td className="py-3.5 px-4">
                           {emp.branch ? (
-                            <div className="flex items-center gap-1.5 text-slate-800 font-bold text-xs">
-                              <Building2 className="w-3.5 h-3.5 text-primary-600 flex-shrink-0" />
+                            <div className="flex items-center gap-1.5 text-ink font-bold text-xs">
+                              <Building2 className="w-3.5 h-3.5 text-brand flex-shrink-0" />
                               <span>{emp.branch.name}</span>
-                              <span className="text-2xs px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 font-mono">
+                              <span className="text-2xs px-1.5 py-0.5 rounded bg-surface-2 text-muted tabular-nums border border-line">
                                 {emp.branch.code}
                               </span>
                             </div>
                           ) : (
-                            <span className="inline-flex items-center gap-1 text-[11px] text-slate-400 font-medium">
+                            <span className="inline-flex items-center gap-1 text-xs text-muted font-medium">
                               عام (كل الفروع)
                             </span>
                           )}
                         </td>
 
                         <td className="py-3.5 px-4">
-                          {isOwnerOrAdmin || (isManager && emp.role !== 'OWNER' && emp.role !== 'ADMIN' && emp.role !== 'MANAGER') ? (
+                          {canManageRow ? (
                             <button
+                              type="button"
                               onClick={() =>
                                 toggleStatusMutation.mutate({
                                   id: emp.id,
@@ -694,79 +591,83 @@ export const EmployeesPage: React.FC = () => {
                               }
                               title="اضغط لتغيير الحالة"
                               className={clsx(
-                                'inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold transition-all hover:opacity-80',
+                                'min-h-[36px] inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold transition-all hover:opacity-80 cursor-pointer border',
                                 isActive
-                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                  : 'bg-rose-50 text-rose-700 border border-rose-200'
+                                  ? 'bg-ok-soft text-ok border-ok/30'
+                                  : 'bg-bad-soft text-bad border-bad/30'
                               )}
                             >
                               {isActive ? (
                                 <>
-                                  <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
+                                  <UserCheck className="w-3.5 h-3.5 text-ok" />
                                   <span>نشط</span>
                                 </>
                               ) : (
                                 <>
-                                  <UserX className="w-3.5 h-3.5 text-rose-600" />
+                                  <UserX className="w-3.5 h-3.5 text-bad" />
                                   <span>موقوف</span>
                                 </>
                               )}
                             </button>
                           ) : (
-                            <span
-                              className={clsx(
-                                'inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold opacity-60 cursor-not-allowed',
-                                isActive
-                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                  : 'bg-rose-50 text-rose-700 border border-rose-200'
-                              )}
-                            >
+                            <Badge tone={isActive ? 'ok' : 'bad'} className="opacity-60 cursor-not-allowed">
                               {isActive ? 'نشط' : 'موقوف'}
-                            </span>
+                            </Badge>
                           )}
                         </td>
 
-                        <td className="py-3.5 px-4 font-bold text-slate-900">
+                        <td className="py-3.5 px-4 font-bold text-ink tabular-nums">
                           {formatCurrency(emp.today_stats?.sales || 0)}
                         </td>
 
-                        <td className="py-3.5 px-4 font-bold text-teal-700">
+                        <td className="py-3.5 px-4 font-bold text-ok tabular-nums">
                           {formatCurrency(emp.today_stats?.collections || 0)}
                         </td>
 
-                        <td className="py-3.5 px-4 font-medium text-slate-600">
+                        <td className="py-3.5 px-4 font-medium text-muted tabular-nums">
                           {emp.today_stats?.invoices_count || 0} فاتورة
                         </td>
 
                         <td className="py-3.5 px-4 text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            {emp.is_eligible_for_payroll && (isOwnerOrAdmin || (isManager && emp.role !== 'OWNER' && emp.role !== 'ADMIN' && emp.role !== 'MANAGER')) && (
-                              <button
+                          <div className="flex items-center justify-center gap-1.5">
+                            {emp.is_eligible_for_payroll && canManageRow && (
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                size="sm"
                                 onClick={() => openPayrollModal(emp)}
                                 title="مسير الراتب والعمولات"
-                                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition-colors"
+                                leftIcon={<Banknote className="w-3.5 h-3.5 text-ok" />}
+                                className="bg-ok-soft text-ok border-ok/30 hover:bg-ok-soft/80"
                               >
-                                <Banknote className="w-3.5 h-3.5" />
                                 <span className="hidden xl:inline">الراتب والعمولة</span>
-                              </button>
+                              </Button>
                             )}
-                            {(isOwnerOrAdmin || (isManager && emp.role !== 'OWNER' && emp.role !== 'ADMIN' && emp.role !== 'MANAGER')) && (
-                              <button
+                            {canManageRow && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
                                 onClick={() => openEditModal(emp)}
                                 title="تعديل الموظف"
-                                className="p-1.5 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                                aria-label="تعديل الموظف"
+                                className="px-2"
                               >
                                 <Edit2 className="w-4 h-4" />
-                              </button>
+                              </Button>
                             )}
                             {isOwnerOrAdmin && (
-                              <button
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
                                 onClick={() => handleDelete(emp)}
                                 title="حذف الموظف"
-                                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                                aria-label="حذف الموظف"
+                                className="px-2 text-bad hover:bg-bad-soft"
                               >
                                 <Trash2 className="w-4 h-4" />
-                              </button>
+                              </Button>
                             )}
                           </div>
                         </td>
@@ -774,11 +675,11 @@ export const EmployeesPage: React.FC = () => {
                     );
                   })}
                 </tbody>
-              </table>
+              </DataTable>
             </div>
 
             {/* Mobile Touch Cards View (md:hidden) */}
-            <div className="md:hidden p-3 space-y-3">
+            <div className="md:hidden p-3 space-y-3 bg-canvas/50">
               {filteredEmployees.map((emp) => (
                 <EmployeeMobileCard
                   key={emp.id}
@@ -803,71 +704,64 @@ export const EmployeesPage: React.FC = () => {
 
       {/* Create / Edit Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full overflow-hidden max-h-[92vh] flex flex-col">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-canvas/80 backdrop-blur-sm animate-fade-in">
+          <div className="bg-panel rounded-3xl border border-line shadow-2xl max-w-lg w-full overflow-hidden max-h-[92vh] flex flex-col">
             {/* Modal Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex-shrink-0">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-line bg-surface-2/60 flex-shrink-0">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 bg-primary-100 text-primary-700 rounded-lg">
+                <div className="p-1.5 bg-brand-soft text-brand rounded-lg">
                   <UserPlus className="w-5 h-5" />
                 </div>
-                <h3 className="font-black text-slate-900 text-base">
+                <h3 className="font-black text-ink text-base">
                   {editingEmployee ? 'تعديل بيانات الموظف' : 'إضافة موظف جديد إلى المتجر'}
                 </h3>
               </div>
-              <button
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
                 onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+                aria-label="إغلاق"
+                className="p-2"
               >
                 <X className="w-5 h-5" />
-              </button>
+              </Button>
             </div>
 
             {/* Modal Body */}
             <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto">
               {errorMessage && (
-                <div className="p-3 bg-rose-50 text-rose-700 text-xs rounded-xl border border-rose-200 flex items-center gap-2">
+                <div className="p-3 bg-bad-soft text-bad text-xs rounded-xl border border-bad/30 flex items-center gap-2 font-bold">
                   <AlertCircle className="w-4 h-4 flex-shrink-0" />
                   <span>{errorMessage}</span>
                 </div>
               )}
 
               {/* Name */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  اسم الموظف <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="مثال: أحمد محمود"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-                />
-              </div>
+              <Input
+                label="اسم الموظف *"
+                type="text"
+                placeholder="مثال: أحمد محمود"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              />
 
               {/* Phone */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  رقم الهاتف (يُستخدم للدخول إلى التطبيق) <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="مثال: 01012345678"
-                  dir="ltr"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-right"
-                />
-                <p className="text-[11px] text-slate-400 mt-1">
-                  سيسجل الموظف دخوله بهذا الرقم وكلمة المرور مباشرة بدون الحاجة لكود المنشأة.
-                </p>
-              </div>
+              <Input
+                label="رقم الهاتف (يُستخدم للدخول إلى التطبيق) *"
+                type="text"
+                placeholder="مثال: 01012345678"
+                dir="ltr"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                className="text-right tabular-nums"
+                helperText="سيسجل الموظف دخوله بهذا الرقم وكلمة المرور مباشرة بدون الحاجة لكود المنشأة."
+              />
 
               {/* Role */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  الدور الوظيفي والصلاحيات <span className="text-rose-500">*</span>
+                <label className="block text-xs font-bold text-ink mb-1.5">
+                  الدور الوظيفي والصلاحيات <span className="text-bad">*</span>
                 </label>
                 <div className="space-y-2">
                   {/* Admin / Partner Option (Owner/Admin Only) */}
@@ -876,24 +770,24 @@ export const EmployeesPage: React.FC = () => {
                       type="button"
                       onClick={() => setFormData({ ...formData, role: 'ADMIN' })}
                       className={clsx(
-                        'w-full p-2.5 rounded-xl border text-right transition-all flex items-center justify-between',
+                        'min-h-[44px] w-full p-2.5 rounded-xl border text-right transition-all flex items-center justify-between cursor-pointer',
                         formData.role === 'ADMIN'
-                          ? 'border-emerald-500 bg-emerald-50/80 ring-2 ring-emerald-500/20 shadow-sm'
-                          : 'border-slate-200 hover:border-slate-300 bg-slate-50/40'
+                          ? 'border-ok bg-ok-soft/70 ring-2 ring-ok/20 shadow-sm'
+                          : 'border-line hover:border-line-2 bg-surface-2/40'
                       )}
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0">
+                        <div className="w-8 h-8 rounded-lg bg-ok-soft text-ok flex items-center justify-center flex-shrink-0">
                           <ShieldCheck className="w-5 h-5" />
                         </div>
                         <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-black text-slate-900">مدير نظام / شريك (ADMIN)</span>
-                            <span className="text-2xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs font-black text-ink">مدير نظام / شريك (ADMIN)</span>
+                            <Badge tone="ok" className="text-2xs">
                               كامل الصلاحيات مثل المالك
-                            </span>
+                            </Badge>
                           </div>
-                          <p className="text-2xs text-slate-500 mt-0.5">
+                          <p className="text-2xs text-muted mt-0.5">
                             يرى الأرباح الصافية، أسعار التكلفة، الفروع، الموظفين، وإعدادات المتجر بالكامل.
                           </p>
                         </div>
@@ -908,17 +802,17 @@ export const EmployeesPage: React.FC = () => {
                         type="button"
                         onClick={() => setFormData({ ...formData, role: 'MANAGER' })}
                         className={clsx(
-                          'p-2.5 rounded-xl border text-right transition-all flex flex-col justify-between',
+                          'min-h-[44px] p-2.5 rounded-xl border text-right transition-all flex flex-col justify-between cursor-pointer',
                           formData.role === 'MANAGER'
-                            ? 'border-purple-500 bg-purple-50/60 ring-2 ring-purple-500/20'
-                            : 'border-slate-200 hover:border-slate-300'
+                            ? 'border-brand bg-brand-soft/60 ring-2 ring-brand/20'
+                            : 'border-line hover:border-line-2 bg-panel'
                         )}
                       >
                         <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs font-bold text-slate-900">مدير فرع / متجر</span>
-                          <Briefcase className="w-4 h-4 text-purple-600" />
+                          <span className="text-xs font-bold text-ink">مدير فرع / متجر</span>
+                          <Briefcase className="w-4 h-4 text-brand" />
                         </div>
-                        <p className="text-2xs text-slate-500 leading-tight">
+                        <p className="text-2xs text-muted leading-tight">
                           إدارة الفرع ومخزونه ومشترياته وأسعار التكلفة (محجوب عنه فقط صافي الأرباح)
                         </p>
                       </button>
@@ -928,17 +822,17 @@ export const EmployeesPage: React.FC = () => {
                       type="button"
                       onClick={() => setFormData({ ...formData, role: 'SUPERVISOR' })}
                       className={clsx(
-                        'p-2.5 rounded-xl border text-right transition-all flex flex-col justify-between',
+                        'min-h-[44px] p-2.5 rounded-xl border text-right transition-all flex flex-col justify-between cursor-pointer',
                         formData.role === 'SUPERVISOR'
-                          ? 'border-blue-500 bg-blue-50/60 ring-2 ring-blue-500/20'
-                          : 'border-slate-200 hover:border-slate-300'
+                          ? 'border-info bg-info-soft/60 ring-2 ring-info/20'
+                          : 'border-line hover:border-line-2 bg-panel'
                       )}
                     >
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-bold text-slate-900">مشرف ورديات واستلام</span>
-                        <Store className="w-4 h-4 text-blue-600" />
+                        <span className="text-xs font-bold text-ink">مشرف ورديات واستلام</span>
+                        <Store className="w-4 h-4 text-info" />
                       </div>
-                      <p className="text-2xs text-slate-500 leading-tight">
+                      <p className="text-2xs text-muted leading-tight">
                         استلام تحويلات البضاعة، ومراجعة وتصفية أدراج الكاشير
                       </p>
                     </button>
@@ -947,17 +841,17 @@ export const EmployeesPage: React.FC = () => {
                       type="button"
                       onClick={() => setFormData({ ...formData, role: 'CASHIER' })}
                       className={clsx(
-                        'p-2.5 rounded-xl border text-right transition-all flex flex-col justify-between',
+                        'min-h-[44px] p-2.5 rounded-xl border text-right transition-all flex flex-col justify-between cursor-pointer',
                         formData.role === 'CASHIER'
-                          ? 'border-amber-500 bg-amber-50/60 ring-2 ring-amber-500/20'
-                          : 'border-slate-200 hover:border-slate-300'
+                          ? 'border-warn bg-warn-soft/60 ring-2 ring-warn/20'
+                          : 'border-line hover:border-line-2 bg-panel'
                       )}
                     >
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-bold text-slate-900">كاشير نقطة بيع POS</span>
-                        <Receipt className="w-4 h-4 text-amber-600" />
+                        <span className="text-xs font-bold text-ink">كاشير نقطة بيع POS</span>
+                        <Receipt className="w-4 h-4 text-warn" />
                       </div>
-                      <p className="text-2xs text-slate-500 leading-tight">
+                      <p className="text-2xs text-muted leading-tight">
                         مبيعات المعرض، درج نقدية، خصم من مخزون الفرع
                       </p>
                     </button>
@@ -966,17 +860,17 @@ export const EmployeesPage: React.FC = () => {
                       type="button"
                       onClick={() => setFormData({ ...formData, role: 'SALES' })}
                       className={clsx(
-                        'p-2.5 rounded-xl border text-right transition-all flex flex-col justify-between',
+                        'min-h-[44px] p-2.5 rounded-xl border text-right transition-all flex flex-col justify-between cursor-pointer',
                         formData.role === 'SALES'
-                          ? 'border-teal-500 bg-teal-50/60 ring-2 ring-teal-500/20'
-                          : 'border-slate-200 hover:border-slate-300'
+                          ? 'border-info bg-info-soft/60 ring-2 ring-info/20'
+                          : 'border-line hover:border-line-2 bg-panel'
                       )}
                     >
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-bold text-slate-900">بائع صالة / سيلز</span>
-                        <Store className="w-4 h-4 text-teal-600" />
+                        <span className="text-xs font-bold text-ink">بائع صالة / سيلز</span>
+                        <Store className="w-4 h-4 text-info" />
                       </div>
-                      <p className="text-2xs text-slate-500 leading-tight">
+                      <p className="text-2xs text-muted leading-tight">
                         مساعدة العملاء بالمعرض، تسجيل الفواتير باسمه لاحتساب عمولته
                       </p>
                     </button>
@@ -985,17 +879,17 @@ export const EmployeesPage: React.FC = () => {
                       type="button"
                       onClick={() => setFormData({ ...formData, role: 'MANDOB' })}
                       className={clsx(
-                        'p-2.5 rounded-xl border text-right transition-all flex flex-col justify-between',
+                        'min-h-[44px] p-2.5 rounded-xl border text-right transition-all flex flex-col justify-between cursor-pointer',
                         formData.role === 'MANDOB'
-                          ? 'border-indigo-500 bg-indigo-50/60 ring-2 ring-indigo-500/20'
-                          : 'border-slate-200 hover:border-slate-300'
+                          ? 'border-brand bg-brand-soft/60 ring-2 ring-brand/20'
+                          : 'border-line hover:border-line-2 bg-panel'
                       )}
                     >
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-bold text-slate-900">مندوب مبيعات</span>
-                        <ShieldCheck className="w-4 h-4 text-indigo-600" />
+                        <span className="text-xs font-bold text-ink">مندوب مبيعات</span>
+                        <ShieldCheck className="w-4 h-4 text-brand" />
                       </div>
-                      <p className="text-2xs text-slate-500 leading-tight">
+                      <p className="text-2xs text-muted leading-tight">
                         تطبيق جوال، تحصيل ميداني، عهدة نقدية
                       </p>
                     </button>
@@ -1005,26 +899,26 @@ export const EmployeesPage: React.FC = () => {
 
               {/* Financial Compensation (Payroll & Commissions) */}
               {formData.role !== 'ADMIN' && (
-                <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
-                  <div className="flex items-center justify-between">
+                <div className="p-3.5 bg-surface-2/60 rounded-2xl border border-line space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <Banknote className="w-4 h-4 text-emerald-600" />
-                      <span className="text-xs font-black text-slate-900">نظام الراتب والعمولات</span>
+                      <Banknote className="w-4 h-4 text-ok" />
+                      <span className="text-xs font-black text-ink">نظام الراتب والعمولات</span>
                     </div>
                     {formData.role === 'MANAGER' ? (
-                      <span className="text-2xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-bold">
+                      <Badge tone="brand" className="text-2xs">
                         عمولة من مبيعات الفرع (باستثناء ووكومرس)
-                      </span>
+                      </Badge>
                     ) : (
-                      <span className="text-2xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full font-medium">
+                      <Badge tone="neutral" className="text-2xs">
                         عمولة على الفواتير المنسوبة له
-                      </span>
+                      </Badge>
                     )}
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                      <label className="block text-xs font-bold text-muted mb-1">
                         الراتب الأساسي الشهري
                       </label>
                       <div className="relative">
@@ -1035,20 +929,20 @@ export const EmployeesPage: React.FC = () => {
                           placeholder="0.00"
                           value={formData.base_salary}
                           onChange={(e) => setFormData({ ...formData, base_salary: e.target.value })}
-                          className="w-full pl-8 pr-3 py-2 rounded-xl border border-slate-200 text-xs font-mono font-bold focus:outline-none focus:border-primary-500 bg-white"
+                          className="w-full min-h-[44px] pl-9 pr-3 py-2 rounded-xl border border-line text-xs tabular-nums font-bold focus:outline-none focus:border-brand bg-panel text-ink"
                         />
-                        <span className="text-2xs text-slate-400 absolute left-2.5 top-2.5">ج.م</span>
+                        <span className="text-2xs text-muted absolute left-2.5 top-1/2 -translate-y-1/2">ج.م</span>
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                      <label className="block text-xs font-bold text-muted mb-1">
                         نوع احتساب العمولة
                       </label>
                       <select
                         value={formData.commission_type}
                         onChange={(e) => setFormData({ ...formData, commission_type: e.target.value as any })}
-                        className="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-primary-500 bg-white"
+                        className="w-full min-h-[44px] px-2.5 py-2 rounded-xl border border-line text-xs focus:outline-none focus:border-brand bg-panel text-ink"
                       >
                         <option value="NONE">بدون عمولة</option>
                         <option value="PERCENTAGE_OF_SALES">نسبة مئوية (%)</option>
@@ -1059,7 +953,7 @@ export const EmployeesPage: React.FC = () => {
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                      <label className="block text-xs font-bold text-muted mb-1">
                         {formData.commission_type === 'PERCENTAGE_OF_SALES' ? 'نسبة العمولة (%)' : 'قيمة العمولة (ج.م)'}
                       </label>
                       <div className="relative">
@@ -1071,9 +965,9 @@ export const EmployeesPage: React.FC = () => {
                           placeholder="0"
                           value={formData.commission_rate}
                           onChange={(e) => setFormData({ ...formData, commission_rate: e.target.value })}
-                          className="w-full pl-8 pr-3 py-2 rounded-xl border border-slate-200 text-xs font-mono font-bold focus:outline-none focus:border-primary-500 disabled:bg-slate-100 disabled:opacity-50 bg-white"
+                          className="w-full min-h-[44px] pl-9 pr-3 py-2 rounded-xl border border-line text-xs tabular-nums font-bold focus:outline-none focus:border-brand disabled:bg-surface-2 disabled:opacity-50 bg-panel text-ink"
                         />
-                        <span className="text-2xs text-slate-400 absolute left-2.5 top-2.5">
+                        <span className="text-2xs text-muted absolute left-2.5 top-1/2 -translate-y-1/2">
                           {formData.commission_type === 'PERCENTAGE_OF_SALES' ? '%' : 'ج.م'}
                         </span>
                       </div>
@@ -1084,90 +978,72 @@ export const EmployeesPage: React.FC = () => {
 
               {/* Branch Selection */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
-                  <span>الفرع أو المخزن التابع له الموظف</span>
-                  <span className="text-[11px] font-normal text-slate-400">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs font-bold text-ink">الفرع أو المخزن التابع له الموظف</span>
+                  <span className="text-xs font-normal text-muted">
                     {formData.role === 'CASHIER' ? '(مهم جداً لنقطة البيع)' : '(اختياري)'}
                   </span>
-                </label>
+                </div>
                 {isManager ? (
-                  <div className="p-3 bg-purple-50/60 border border-purple-200 rounded-xl text-xs flex items-center gap-2 text-purple-900 font-medium">
-                    <Building2 className="w-4 h-4 text-purple-600 flex-shrink-0" />
-                    <span>يتم ربط الموظف تلقائياً بفرعك: <strong>{branches.find((b: any) => b.id === user?.branch_id)?.name || 'فرعك المعين'}</strong></span>
+                  <div className="p-3 bg-brand-soft/60 border border-brand/25 rounded-xl text-xs flex items-center gap-2 text-brand-ink font-medium">
+                    <Building2 className="w-4 h-4 text-brand flex-shrink-0" />
+                    <span>
+                      يتم ربط الموظف تلقائياً بفرعك:{' '}
+                      <strong>{branches.find((b: any) => b.id === user?.branch_id)?.name || 'فرعك المعين'}</strong>
+                    </span>
                   </div>
                 ) : (
-                  <div className="relative">
-                    <select
-                      value={formData.branch_id}
-                      onChange={(e) => setFormData({ ...formData, branch_id: e.target.value })}
-                      className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 bg-white"
-                    >
-                      <option value="">-- بدون تقييد بفرع (عام على كل الفروع) --</option>
-                      {branches.map((b: any) => (
-                        <option key={b.id} value={b.id}>
-                          {b.name} ({b.code}) - {b.type === 'STORE' ? 'محل/معرض' : b.type === 'WAREHOUSE' ? 'مخزن' : 'سيارة/فان'}
-                        </option>
-                      ))}
-                    </select>
-                    <Building2 className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5 pointer-events-none" />
-                  </div>
+                  <Select
+                    value={String(formData.branch_id)}
+                    onChange={(e) => setFormData({ ...formData, branch_id: e.target.value })}
+                    options={branchOptions}
+                  />
                 )}
-                <p className="text-[11px] text-slate-400 mt-1">
+                <p className="text-xs text-muted mt-1">
                   عند تسجيل دخول الكاشير، سيتم ربط نقطة البيع POS والخصم التلقائي من مخزون هذا الفرع.
                 </p>
               </div>
 
               {/* Password */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  كلمة المرور {editingEmployee ? '(اتركها فارغة إذا كنت لا ترغب في تغييرها)' : <span className="text-rose-500">*</span>}
-                </label>
-                <div className="relative">
-                  <input
-                    type="password"
-                    placeholder={editingEmployee ? '••••••••' : '6 خانات على الأقل'}
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-                  />
-                  <Lock className="w-4 h-4 text-slate-400 absolute right-3.5 top-3.5" />
-                </div>
-              </div>
+              <Input
+                label={`كلمة المرور ${editingEmployee ? '(اتركها فارغة إذا كنت لا ترغب في تغييرها)' : '*'}`}
+                type="password"
+                placeholder={editingEmployee ? '••••••••' : '6 خانات على الأقل'}
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                leftIcon={<Lock className="w-4 h-4" />}
+              />
 
               {/* Status */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">حالة الحساب</label>
-                <select
-                  value={formData.status}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      status: e.target.value as 'ACTIVE' | 'INACTIVE',
-                    })
-                  }
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-                >
-                  <option value="ACTIVE">نشط (يستطيع تسجيل الدخول والعمل)</option>
-                  <option value="INACTIVE">موقوف (محظور من الدخول)</option>
-                </select>
-              </div>
+              <Select
+                label="حالة الحساب"
+                value={formData.status}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    status: e.target.value as 'ACTIVE' | 'INACTIVE',
+                  })
+                }
+                options={[
+                  { value: 'ACTIVE', label: 'نشط (يستطيع تسجيل الدخول والعمل)' },
+                  { value: 'INACTIVE', label: 'موقوف (محظور من الدخول)' },
+                ]}
+              />
 
               {/* Actions */}
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
-                >
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-line">
+                <Button type="button" variant="ghost" size="md" onClick={() => setIsModalOpen(false)}>
                   إلغاء
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
+                  variant="primary"
+                  size="md"
+                  isLoading={saveMutation.isPending}
                   disabled={saveMutation.isPending}
-                  className="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white text-xs font-bold rounded-xl shadow-sm disabled:opacity-50"
                 >
-                  {saveMutation.isPending ? 'جاري الحفظ...' : editingEmployee ? 'تحديث البيانات' : 'إضافة الموظف'}
-                </button>
+                  {editingEmployee ? 'تحديث البيانات' : 'إضافة الموظف'}
+                </Button>
               </div>
             </form>
           </div>
