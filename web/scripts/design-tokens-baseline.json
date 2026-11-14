@@ -87,10 +87,6 @@
     "raw": 53,
     "hex": 22
   },
-  "src/presentation/components/mobile/BranchMobileCard.tsx": {
-    "raw": 54,
-    "hex": 0
-  },
   "src/presentation/components/mobile/CourierMobileCard.tsx": {
     "raw": 56,
     "hex": 0
@@ -135,16 +131,8 @@
     "raw": 40,
     "hex": 0
   },
-  "src/presentation/components/mobile/ProductMobileCard.tsx": {
-    "raw": 83,
-    "hex": 0
-  },
   "src/presentation/components/mobile/RecentActivityMobileCard.tsx": {
     "raw": 35,
-    "hex": 0
-  },
-  "src/presentation/components/mobile/StockTransferMobileCard.tsx": {
-    "raw": 71,
     "hex": 0
   },
   "src/presentation/components/payments/PaymentReceiptModal.tsx": {
@@ -155,49 +143,9 @@
     "raw": 36,
     "hex": 1
   },
-  "src/presentation/components/products/AddBatchModal.tsx": {
-    "raw": 46,
-    "hex": 0
-  },
   "src/presentation/components/products/BarcodePrintModal.tsx": {
-    "raw": 114,
+    "raw": 0,
     "hex": 6
-  },
-  "src/presentation/components/products/OpeningStockModal.tsx": {
-    "raw": 85,
-    "hex": 0
-  },
-  "src/presentation/components/products/ProductFormModal.tsx": {
-    "raw": 108,
-    "hex": 0
-  },
-  "src/presentation/components/products/ProductsHeader.tsx": {
-    "raw": 16,
-    "hex": 0
-  },
-  "src/presentation/components/products/ProductsList.tsx": {
-    "raw": 63,
-    "hex": 0
-  },
-  "src/presentation/components/products/ProductsMobileHero.tsx": {
-    "raw": 14,
-    "hex": 0
-  },
-  "src/presentation/components/products/ProductsNotifications.tsx": {
-    "raw": 8,
-    "hex": 0
-  },
-  "src/presentation/components/products/ProductsSearchBar.tsx": {
-    "raw": 6,
-    "hex": 0
-  },
-  "src/presentation/components/products/ProductVariantModal.tsx": {
-    "raw": 85,
-    "hex": 0
-  },
-  "src/presentation/components/products/VariantMatrixGenerator.tsx": {
-    "raw": 135,
-    "hex": 31
   },
   "src/presentation/components/pwa/OfflineBanner.tsx": {
     "raw": 5,
@@ -303,10 +251,6 @@
     "raw": 40,
     "hex": 0
   },
-  "src/presentation/pages/BranchesPage.tsx": {
-    "raw": 166,
-    "hex": 0
-  },
   "src/presentation/pages/CouriersPage.tsx": {
     "raw": 369,
     "hex": 0
@@ -361,10 +305,6 @@
   },
   "src/presentation/pages/SettingsPage.tsx": {
     "raw": 183,
-    "hex": 0
-  },
-  "src/presentation/pages/StockTransfersPage.tsx": {
-    "raw": 164,
     "hex": 0
   },
   "src/presentation/pages/WooCommerceSettingsPage.tsx": {

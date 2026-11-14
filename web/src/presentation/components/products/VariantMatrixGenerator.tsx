@@ -12,6 +12,11 @@ import {
   Tag,
 } from 'lucide-react';
 import { apiClient } from '../../../data/api/client';
+import { Button } from '../ui/Button';
+import { Badge } from '../ui/Badge';
+import { DataTable } from '../ui/DataTable';
+import { EmptyState } from '../ui/EmptyState';
+import { cn } from '../../utils/cn';
 
 export interface VariantRow {
   id?: number;
@@ -37,21 +42,21 @@ interface VariantMatrixGeneratorProps {
 }
 
 const PRESET_COLORS = [
-  { name: 'أسود', hex: '#18181b', text: '#ffffff' },
-  { name: 'أبيض', hex: '#ffffff', text: '#09090b', border: true },
-  { name: 'كحلي', hex: '#1e3a8a', text: '#ffffff' },
-  { name: 'رمادي', hex: '#6b7280', text: '#ffffff' },
-  { name: 'أحمر', hex: '#dc2626', text: '#ffffff' },
-  { name: 'زيتي', hex: '#4d7c0f', text: '#ffffff' },
-  { name: 'بيج', hex: '#d4b996', text: '#451a03' },
-  { name: 'أزرق', hex: '#2563eb', text: '#ffffff' },
-  { name: 'بني', hex: '#78350f', text: '#ffffff' },
-  { name: 'وردي', hex: '#ec4899', text: '#ffffff' },
-  { name: 'أخضر', hex: '#16a34a', text: '#ffffff' },
-  { name: 'أصفر', hex: '#eab308', text: '#713f12' },
-  { name: 'برتقالي', hex: '#ea580c', text: '#ffffff' },
-  { name: 'سماوي', hex: '#06b6d4', text: '#ffffff' },
-  { name: 'بنفسجي', hex: '#9333ea', text: '#ffffff' },
+  { name: 'أسود', swatch: 'var(--swatch-black)' },
+  { name: 'أبيض', swatch: 'var(--swatch-white)', border: true },
+  { name: 'كحلي', swatch: 'var(--swatch-navy)' },
+  { name: 'رمادي', swatch: 'var(--swatch-gray)' },
+  { name: 'أحمر', swatch: 'var(--swatch-red)' },
+  { name: 'زيتي', swatch: 'var(--swatch-olive)' },
+  { name: 'بيج', swatch: 'var(--swatch-beige)' },
+  { name: 'أزرق', swatch: 'var(--swatch-blue)' },
+  { name: 'بني', swatch: 'var(--swatch-brown)' },
+  { name: 'وردي', swatch: 'var(--swatch-pink)' },
+  { name: 'أخضر', swatch: 'var(--swatch-green)' },
+  { name: 'أصفر', swatch: 'var(--swatch-yellow)' },
+  { name: 'برتقالي', swatch: 'var(--swatch-orange)' },
+  { name: 'سماوي', swatch: 'var(--swatch-cyan)' },
+  { name: 'بنفسجي', swatch: 'var(--swatch-purple)' },
 ];
 
 const PRESET_SIZE_CATEGORIES = {
@@ -299,32 +304,34 @@ export const VariantMatrixGenerator: React.FC<VariantMatrixGeneratorProps> = ({
     <div className="space-y-4">
       {/* Notifications banner */}
       {statusMessage && (
-        <div className="p-3 bg-indigo-50 border border-indigo-200 text-indigo-900 rounded-xl text-xs font-bold flex items-center gap-2 animate-fadeIn">
-          <Sparkles className="w-4 h-4 text-indigo-600 flex-shrink-0" />
+        <div className="p-3 bg-brand-soft border border-brand/25 text-brand-ink rounded-xl text-xs font-bold flex items-center gap-2 animate-fadeIn">
+          <Sparkles className="w-4 h-4 text-brand flex-shrink-0" />
           <span>{statusMessage}</span>
         </div>
       )}
 
       {/* 1. Quick Color Selector */}
-      <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs space-y-2.5">
+      <div className="bg-panel p-3.5 rounded-2xl border border-line shadow-xs space-y-2.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Palette className="w-4 h-4 text-indigo-600" />
-            <h5 className="text-xs font-black text-slate-800">1. اختيار الألوان</h5>
+            <Palette className="w-4 h-4 text-brand" />
+            <h5 className="text-xs font-black text-ink">1. اختيار الألوان</h5>
             {selectedColors.length > 0 && (
-              <span className="text-2xs font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800">
+              <Badge tone="brand" className="text-2xs px-2 py-0.5 tabular-nums">
                 {selectedColors.length} محدد
-              </span>
+              </Badge>
             )}
           </div>
           {selectedColors.length > 0 && (
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="md"
               onClick={() => setSelectedColors([])}
-              className="text-[11px] text-slate-400 hover:text-rose-600 font-bold"
+              className="text-2xs text-muted hover:text-bad font-bold px-2"
             >
               إلغاء التحديد
-            </button>
+            </Button>
           )}
         </div>
 
@@ -337,18 +344,16 @@ export const VariantMatrixGenerator: React.FC<VariantMatrixGeneratorProps> = ({
                 key={c.name}
                 type="button"
                 onClick={() => handleToggleColor(c.name)}
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                className={cn(
+                  'min-h-[44px] inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer',
                   isSelected
-                    ? 'bg-indigo-600 text-white shadow-xs scale-102 ring-2 ring-indigo-300'
-                    : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200/80'
-                }`}
+                    ? 'bg-brand text-on-brand shadow-xs scale-[1.02] ring-2 ring-brand/30'
+                    : 'bg-surface-2/60 text-ink hover:bg-surface-2 border border-line'
+                )}
               >
                 <span
-                  className="w-3 h-3 rounded-full flex-shrink-0"
-                  style={{
-                    backgroundColor: c.hex,
-                    border: c.border ? '1px solid #cbd5e1' : undefined,
-                  }}
+                  className={cn('w-3.5 h-3.5 rounded-full flex-shrink-0', c.border && 'border border-line-2')}
+                  style={{ backgroundColor: c.swatch }}
                 />
                 <span>{c.name}</span>
                 {isSelected && <Check className="w-3 h-3" />}
@@ -370,62 +375,69 @@ export const VariantMatrixGenerator: React.FC<VariantMatrixGeneratorProps> = ({
               }
             }}
             placeholder="لون مخصص (مثلاً: تركواز، فستقي)..."
-            className="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="flex-1 min-h-[44px] px-3 py-1.5 bg-surface-2/50 text-ink border border-line rounded-xl text-xs focus:bg-panel focus:outline-none focus:ring-2 focus:ring-brand placeholder:text-muted"
           />
-          <button
+          <Button
             type="button"
+            variant="secondary"
+            size="md"
             onClick={handleAddCustomColor}
-            className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors"
+            className="text-xs font-bold"
           >
             + إضافة
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* 2. Quick Size Selector */}
-      <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs space-y-2.5">
+      <div className="bg-panel p-3.5 rounded-2xl border border-line shadow-xs space-y-2.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Ruler className="w-4 h-4 text-emerald-600" />
-            <h5 className="text-xs font-black text-slate-800">2. اختيار المقاسات</h5>
+            <Ruler className="w-4 h-4 text-ok" />
+            <h5 className="text-xs font-black text-ink">2. اختيار المقاسات</h5>
             {selectedSizes.length > 0 && (
-              <span className="text-2xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+              <Badge tone="ok" className="text-2xs px-2 py-0.5 tabular-nums">
                 {selectedSizes.length} محدد
-              </span>
+              </Badge>
             )}
           </div>
 
-          <div className="flex items-center gap-2 text-xs">
-            <button
+          <div className="flex items-center gap-1 text-xs">
+            <Button
               type="button"
+              variant="ghost"
+              size="md"
               onClick={handleSelectAllCategorySizes}
-              className="text-[11px] text-emerald-700 hover:underline font-bold"
+              className="text-2xs text-ok hover:bg-ok-soft font-bold px-2"
             >
               تحديد الكل
-            </button>
-            <span className="text-slate-200">•</span>
-            <button
+            </Button>
+            <span className="text-line-2">•</span>
+            <Button
               type="button"
+              variant="ghost"
+              size="md"
               onClick={handleClearSizes}
-              className="text-[11px] text-slate-400 hover:text-rose-600 font-bold"
+              className="text-2xs text-muted hover:text-bad font-bold px-2"
             >
               إلغاء
-            </button>
+            </Button>
           </div>
         </div>
 
         {/* Category Tabs */}
-        <div className="flex items-center gap-1.5 pb-1 border-b border-slate-100">
+        <div className="flex items-center gap-1.5 pb-2 border-b border-line">
           {(['CLOTHING', 'SHOES', 'KIDS'] as const).map((cat) => (
             <button
               key={cat}
               type="button"
               onClick={() => setActiveSizeCategory(cat)}
-              className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+              className={cn(
+                'min-h-[44px] px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer',
                 activeSizeCategory === cat
-                  ? 'bg-slate-900 text-white'
-                  : 'text-slate-500 hover:bg-slate-100'
-              }`}
+                  ? 'bg-ink text-panel'
+                  : 'text-muted hover:bg-surface-2 hover:text-ink'
+              )}
             >
               {PRESET_SIZE_CATEGORIES[cat].label}
             </button>
@@ -441,11 +453,12 @@ export const VariantMatrixGenerator: React.FC<VariantMatrixGeneratorProps> = ({
                 key={s}
                 type="button"
                 onClick={() => handleToggleSize(s)}
-                className={`min-w-9 px-2.5 py-1.5 rounded-xl text-xs font-bold font-mono transition-all text-center ${
+                className={cn(
+                  'min-w-[44px] min-h-[44px] px-2.5 py-1.5 rounded-xl text-xs font-bold tabular-nums transition-all text-center cursor-pointer',
                   isSelected
-                    ? 'bg-emerald-600 text-white shadow-xs ring-2 ring-emerald-300'
-                    : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200/80'
-                }`}
+                    ? 'bg-ok text-on-brand shadow-xs ring-2 ring-ok/30'
+                    : 'bg-surface-2/60 text-ink hover:bg-surface-2 border border-line'
+                )}
               >
                 {s}
               </button>
@@ -466,50 +479,54 @@ export const VariantMatrixGenerator: React.FC<VariantMatrixGeneratorProps> = ({
               }
             }}
             placeholder="مقاس حر مخصص (مثال: 48, One Size, 5XL)..."
-            className="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="flex-1 min-h-[44px] px-3 py-1.5 bg-surface-2/50 text-ink border border-line rounded-xl text-xs focus:bg-panel focus:outline-none focus:ring-2 focus:ring-ok placeholder:text-muted"
           />
-          <button
+          <Button
             type="button"
+            variant="secondary"
+            size="md"
             onClick={handleAddCustomSize}
-            className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors"
+            className="text-xs font-bold"
           >
             + إضافة
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* 3. Cross Product Trigger Button */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-2 p-3 bg-gradient-to-r from-indigo-50 to-emerald-50 border border-indigo-100/80 rounded-2xl">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-2 p-3 bg-brand-soft/60 border border-brand/20 rounded-2xl">
         <div className="text-xs">
-          <span className="font-bold text-slate-700">التوافيق الناتجة: </span>
-          <span className="font-black text-indigo-700">
+          <span className="font-bold text-ink">التوافيق الناتجة: </span>
+          <span className="font-black text-brand-ink tabular-nums">
             {selectedColors.length || (selectedSizes.length ? 1 : 0)} ألوان ×{' '}
             {selectedSizes.length || (selectedColors.length ? 1 : 0)} مقاسات ={' '}
             {(selectedColors.length || 1) * (selectedSizes.length || 1)} مقاس/لون
           </span>
         </div>
 
-        <button
+        <Button
           type="button"
+          variant="primary"
+          size="md"
           onClick={handleGenerateMatrix}
-          className="w-full sm:w-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-98 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all"
+          leftIcon={<Sparkles className="w-4 h-4" />}
+          className="w-full sm:w-auto text-xs font-bold"
         >
-          <Sparkles className="w-4 h-4 text-amber-300" />
-          <span>⚡ توليد جميع المتغيرات بضغطة زر</span>
-        </button>
+          ⚡ توليد جميع المتغيرات بضغطة زر
+        </Button>
       </div>
 
       {/* 4. Bulk Edit Bar */}
       {variants.length > 0 && (
-        <div className="bg-slate-50 border border-slate-200 p-3 rounded-2xl space-y-2">
-          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
-            <Sliders className="w-3.5 h-3.5 text-slate-500" />
+        <div className="bg-surface-2 border border-line p-3 rounded-2xl space-y-2">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-ink">
+            <Sliders className="w-3.5 h-3.5 text-muted" />
             <span>شريط التعديل الجماعي (تطبيق موحد على الكل)</span>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-2 text-xs">
             <div>
-              <label className="text-2xs text-slate-500 block mb-0.5">سعر البيع</label>
+              <label className="text-2xs text-muted block mb-0.5">سعر البيع</label>
               <input
                 type="number"
                 min="0"
@@ -517,13 +534,13 @@ export const VariantMatrixGenerator: React.FC<VariantMatrixGeneratorProps> = ({
                 value={bulkSalePrice}
                 onChange={(e) => setBulkSalePrice(e.target.value)}
                 placeholder="250"
-                className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-mono text-emerald-700 font-bold"
+                className="w-full min-h-[40px] px-2.5 py-1.5 bg-panel border border-line rounded-xl text-xs tabular-nums text-ok font-bold outline-none focus:border-brand"
               />
             </div>
 
             {canViewPurchasePrice && (
               <div>
-                <label className="text-2xs text-slate-500 block mb-0.5">سعر التكلفة</label>
+                <label className="text-2xs text-muted block mb-0.5">سعر التكلفة</label>
                 <input
                   type="number"
                   min="0"
@@ -531,45 +548,47 @@ export const VariantMatrixGenerator: React.FC<VariantMatrixGeneratorProps> = ({
                   value={bulkPurchasePrice}
                   onChange={(e) => setBulkPurchasePrice(e.target.value)}
                   placeholder="150"
-                  className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-mono text-slate-700"
+                  className="w-full min-h-[40px] px-2.5 py-1.5 bg-panel border border-line rounded-xl text-xs tabular-nums text-ink outline-none focus:border-brand"
                 />
               </div>
             )}
 
             {!isEditing && (
               <div>
-                <label className="text-2xs text-slate-500 block mb-0.5">الرصيد الافتتاحي</label>
+                <label className="text-2xs text-muted block mb-0.5">الرصيد الافتتاحي</label>
                 <input
                   type="number"
                   min="0"
                   value={bulkQuantity}
                   onChange={(e) => setBulkQuantity(e.target.value)}
                   placeholder="10"
-                  className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-mono text-slate-900"
+                  className="w-full min-h-[40px] px-2.5 py-1.5 bg-panel border border-line rounded-xl text-xs tabular-nums text-ink outline-none focus:border-brand"
                 />
               </div>
             )}
 
             <div>
-              <label className="text-2xs text-slate-500 block mb-0.5">الحد الأدنى</label>
+              <label className="text-2xs text-muted block mb-0.5">الحد الأدنى</label>
               <input
                 type="number"
                 min="0"
                 value={bulkMinQuantity}
                 onChange={(e) => setBulkMinQuantity(e.target.value)}
                 placeholder="2"
-                className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-mono text-slate-900"
+                className="w-full min-h-[40px] px-2.5 py-1.5 bg-panel border border-line rounded-xl text-xs tabular-nums text-ink outline-none focus:border-brand"
               />
             </div>
 
             <div className="col-span-2 sm:col-span-4 lg:col-span-1 flex items-end">
-              <button
+              <Button
                 type="button"
+                variant="primary"
+                size="md"
                 onClick={handleBulkApply}
-                className="w-full py-1.5 px-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-colors"
+                className="w-full text-xs font-bold"
               >
                 تطبيق على الكل
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -579,181 +598,182 @@ export const VariantMatrixGenerator: React.FC<VariantMatrixGeneratorProps> = ({
       <div className="space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <Layers className="w-4 h-4 text-slate-600" />
-            <h5 className="text-xs font-black text-slate-800">
+            <Layers className="w-4 h-4 text-muted" />
+            <h5 className="text-xs font-black text-ink">
               قائمة المتغيرات ({variants.length})
             </h5>
-            <span className="text-2xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-bold font-mono">
+            <Badge tone="neutral" className="text-2xs px-2 py-0.5 tabular-nums">
               إجمالي المخزون: {totalQuantity} قطعة
-            </span>
+            </Badge>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {variants.length > 0 && (
-              <button
+              <Button
                 type="button"
+                variant="secondary"
+                size="md"
                 disabled={isGeneratingBarcodes}
                 onClick={handleAutoGenerateBarcodes}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition-all disabled:opacity-50 shadow-xs"
+                leftIcon={<Barcode className="w-3.5 h-3.5 text-ok" />}
+                className="bg-ok-soft hover:bg-ok-soft/80 text-ok border-ok/25 text-xs font-bold"
                 title="توليد باركود تلقائي فريد لكل المتغيرات التي ليس لها كود"
               >
-                <Barcode className="w-3.5 h-3.5 text-emerald-600" />
-                <span>{isGeneratingBarcodes ? 'جاري التوليد...' : '⚡ توليد باركود تلقائي للفارغ'}</span>
-              </button>
+                {isGeneratingBarcodes ? 'جاري التوليد...' : '⚡ توليد باركود تلقائي للفارغ'}
+              </Button>
             )}
 
-            <button
+            <Button
               type="button"
+              variant="secondary"
+              size="md"
               onClick={handleAddBlankRow}
-              className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors"
+              leftIcon={<Plus className="w-3.5 h-3.5" />}
+              className="text-xs font-bold"
             >
-              <Plus className="w-3.5 h-3.5" />
-              <span>إضافة صف يدوي</span>
-            </button>
+              إضافة صف يدوي
+            </Button>
           </div>
         </div>
 
         {/* Variants Rows Table */}
         {variants.length === 0 ? (
-          <div className="p-8 text-center border-2 border-dashed border-slate-200 rounded-2xl bg-white space-y-1.5">
-            <Tag className="w-8 h-8 text-slate-300 mx-auto" />
-            <p className="text-xs font-bold text-slate-600">لا توجد مقاسات أو ألوان مضافة بعد.</p>
-            <p className="text-[11px] text-slate-400 max-w-sm mx-auto">
-              اختر الألوان والمقاسات من الأعلى واضغط على "⚡ توليد جميع المتغيرات" لإنشاء الشبكة بلحظة واحدة.
-            </p>
-          </div>
+          <EmptyState
+            className="py-8 border-2 border-dashed border-line"
+            icon={<Tag className="w-6 h-6 text-muted" />}
+            title="لا توجد مقاسات أو ألوان مضافة بعد."
+            description='اختر الألوان والمقاسات من الأعلى واضغط على "⚡ توليد جميع المتغيرات" لإنشاء الشبكة بلحظة واحدة.'
+          />
         ) : (
-          <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
-            <div className="max-h-72 overflow-y-auto">
-              <table className="w-full text-right text-xs">
-                <thead className="bg-slate-50 text-slate-500 font-bold border-b border-slate-200 sticky top-0 z-10">
-                  <tr>
-                    <th className="py-2.5 px-3">اسم المتغير</th>
-                    <th className="py-2.5 px-2">اللون</th>
-                    <th className="py-2.5 px-2">المقاس</th>
-                    <th className="py-2.5 px-2">الباركود</th>
-                    <th className="py-2.5 px-2">سعر البيع</th>
-                    {canViewPurchasePrice && <th className="py-2.5 px-2">التكلفة</th>}
-                    {!isEditing && <th className="py-2.5 px-2">الرصيد</th>}
-                    <th className="py-2.5 px-2">حد الطلب</th>
-                    <th className="py-2.5 px-2 text-center">حذف</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {variants.map((v, idx) => (
-                    <tr key={idx} className="hover:bg-slate-50/70 transition-colors">
-                      {/* Name */}
-                      <td className="py-2 px-3">
-                        <input
-                          type="text"
-                          value={v.name}
-                          onChange={(e) => handleUpdateRow(idx, 'name', e.target.value)}
-                          className="w-full font-bold text-slate-900 border border-transparent hover:border-slate-200 focus:border-indigo-400 rounded-lg px-1.5 py-1 focus:bg-white focus:outline-none"
-                          placeholder="مثال: أسود / XL"
-                        />
-                      </td>
+          <DataTable className="max-h-72 overflow-y-auto">
+            <thead className="bg-surface-2 text-muted font-bold border-b border-line sticky top-0 z-10 text-xs">
+              <tr>
+                <th className="py-2.5 px-3">اسم المتغير</th>
+                <th className="py-2.5 px-2">اللون</th>
+                <th className="py-2.5 px-2">المقاس</th>
+                <th className="py-2.5 px-2">الباركود</th>
+                <th className="py-2.5 px-2">سعر البيع</th>
+                {canViewPurchasePrice && <th className="py-2.5 px-2">التكلفة</th>}
+                {!isEditing && <th className="py-2.5 px-2">الرصيد</th>}
+                <th className="py-2.5 px-2">حد الطلب</th>
+                <th className="py-2.5 px-2 text-center">حذف</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-line text-xs">
+              {variants.map((v, idx) => (
+                <tr key={idx} className="hover:bg-surface-2/50 transition-colors">
+                  {/* Name */}
+                  <td className="py-2 px-3">
+                    <input
+                      type="text"
+                      value={v.name}
+                      onChange={(e) => handleUpdateRow(idx, 'name', e.target.value)}
+                      className="w-full min-h-[38px] font-bold text-ink bg-transparent border border-transparent hover:border-line focus:border-brand rounded-lg px-1.5 py-1 focus:bg-panel focus:outline-none"
+                      placeholder="مثال: أسود / XL"
+                    />
+                  </td>
 
-                      {/* Color */}
-                      <td className="py-2 px-2">
-                        <input
-                          type="text"
-                          value={v.color || ''}
-                          onChange={(e) => handleUpdateRow(idx, 'color', e.target.value)}
-                          className="w-20 px-1.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs"
-                          placeholder="اللون"
-                        />
-                      </td>
+                  {/* Color */}
+                  <td className="py-2 px-2">
+                    <input
+                      type="text"
+                      value={v.color || ''}
+                      onChange={(e) => handleUpdateRow(idx, 'color', e.target.value)}
+                      className="w-20 min-h-[38px] px-1.5 py-1 bg-surface-2/50 text-ink border border-line rounded-lg text-xs"
+                      placeholder="اللون"
+                    />
+                  </td>
 
-                      {/* Size */}
-                      <td className="py-2 px-2">
-                        <input
-                          type="text"
-                          value={v.size || ''}
-                          onChange={(e) => handleUpdateRow(idx, 'size', e.target.value)}
-                          className="w-16 px-1.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono text-center"
-                          placeholder="المقاس"
-                        />
-                      </td>
+                  {/* Size */}
+                  <td className="py-2 px-2">
+                    <input
+                      type="text"
+                      value={v.size || ''}
+                      onChange={(e) => handleUpdateRow(idx, 'size', e.target.value)}
+                      className="w-16 min-h-[38px] px-1.5 py-1 bg-surface-2/50 text-ink border border-line rounded-lg text-xs tabular-nums text-center"
+                      placeholder="المقاس"
+                    />
+                  </td>
 
-                      {/* Barcode */}
-                      <td className="py-2 px-2">
-                        <input
-                          type="text"
-                          value={v.barcode || ''}
-                          onChange={(e) => handleUpdateRow(idx, 'barcode', e.target.value)}
-                          className="w-32 px-1.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono"
-                          placeholder="الباركود"
-                        />
-                      </td>
+                  {/* Barcode */}
+                  <td className="py-2 px-2">
+                    <input
+                      type="text"
+                      value={v.barcode || ''}
+                      onChange={(e) => handleUpdateRow(idx, 'barcode', e.target.value)}
+                      className="w-32 min-h-[38px] px-1.5 py-1 bg-surface-2/50 text-ink border border-line rounded-lg text-xs tabular-nums"
+                      placeholder="الباركود"
+                    />
+                  </td>
 
-                      {/* Sale Price */}
-                      <td className="py-2 px-2">
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.5"
-                          value={v.sale_price ?? ''}
-                          onChange={(e) => handleUpdateRow(idx, 'sale_price', Number(e.target.value))}
-                          className="w-20 px-1.5 py-1 bg-white border border-slate-200 rounded-lg text-xs font-mono font-bold text-emerald-700"
-                        />
-                      </td>
+                  {/* Sale Price */}
+                  <td className="py-2 px-2">
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      value={v.sale_price ?? ''}
+                      onChange={(e) => handleUpdateRow(idx, 'sale_price', Number(e.target.value))}
+                      className="w-20 min-h-[38px] px-1.5 py-1 bg-panel border border-line rounded-lg text-xs tabular-nums font-bold text-ok"
+                    />
+                  </td>
 
-                      {/* Purchase Price */}
-                      {canViewPurchasePrice && (
-                        <td className="py-2 px-2">
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.5"
-                            value={v.purchase_price ?? ''}
-                            onChange={(e) => handleUpdateRow(idx, 'purchase_price', Number(e.target.value))}
-                            className="w-20 px-1.5 py-1 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-700"
-                          />
-                        </td>
-                      )}
+                  {/* Purchase Price */}
+                  {canViewPurchasePrice && (
+                    <td className="py-2 px-2">
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.5"
+                        value={v.purchase_price ?? ''}
+                        onChange={(e) => handleUpdateRow(idx, 'purchase_price', Number(e.target.value))}
+                        className="w-20 min-h-[38px] px-1.5 py-1 bg-panel border border-line rounded-lg text-xs tabular-nums text-ink"
+                      />
+                    </td>
+                  )}
 
-                      {/* Initial Quantity (for new products) */}
-                      {!isEditing && (
-                        <td className="py-2 px-2">
-                          <input
-                            type="number"
-                            min="0"
-                            value={v.quantity ?? 0}
-                            onChange={(e) => handleUpdateRow(idx, 'quantity', Number(e.target.value))}
-                            className="w-16 px-1.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono text-center font-bold text-slate-900"
-                          />
-                        </td>
-                      )}
+                  {/* Initial Quantity (for new products) */}
+                  {!isEditing && (
+                    <td className="py-2 px-2">
+                      <input
+                        type="number"
+                        min="0"
+                        value={v.quantity ?? 0}
+                        onChange={(e) => handleUpdateRow(idx, 'quantity', Number(e.target.value))}
+                        className="w-16 min-h-[38px] px-1.5 py-1 bg-surface-2/50 border border-line rounded-lg text-xs tabular-nums text-center font-bold text-ink"
+                      />
+                    </td>
+                  )}
 
-                      {/* Min Quantity */}
-                      <td className="py-2 px-2">
-                        <input
-                          type="number"
-                          min="0"
-                          value={v.min_quantity ?? ''}
-                          onChange={(e) => handleUpdateRow(idx, 'min_quantity', Number(e.target.value))}
-                          className="w-14 px-1.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono text-center"
-                          placeholder="2"
-                        />
-                      </td>
+                  {/* Min Quantity */}
+                  <td className="py-2 px-2">
+                    <input
+                      type="number"
+                      min="0"
+                      value={v.min_quantity ?? ''}
+                      onChange={(e) => handleUpdateRow(idx, 'min_quantity', Number(e.target.value))}
+                      className="w-14 min-h-[38px] px-1.5 py-1 bg-surface-2/50 text-ink border border-line rounded-lg text-xs tabular-nums text-center"
+                      placeholder="2"
+                    />
+                  </td>
 
-                      {/* Actions */}
-                      <td className="py-2 px-2 text-center">
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveRow(idx)}
-                          className="p-1 text-slate-300 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors"
-                          title="حذف هذا المتغير"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                  {/* Actions */}
+                  <td className="py-2 px-2 text-center">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="md"
+                      onClick={() => handleRemoveRow(idx)}
+                      className="min-w-[44px] px-0 text-muted hover:text-bad hover:bg-bad-soft"
+                      title="حذف هذا المتغير"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </DataTable>
         )}
       </div>
     </div>

@@ -1,6 +1,8 @@
 import React from 'react';
 import { Plus, Download, Upload, Boxes } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
+import { PageHeader } from '../ui/PageHeader';
+import { Button } from '../ui/Button';
 import type { ProductsViewModel } from './types';
 
 export const ProductsHeader: React.FC<{ vm: ProductsViewModel }> = ({ vm }) => {
@@ -8,21 +10,19 @@ export const ProductsHeader: React.FC<{ vm: ProductsViewModel }> = ({ vm }) => {
   const toast = useToast();
 
   return (
-    <>
-      {/* Desktop Header */}
-      <div className="hidden md:flex items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-slate-900">
-            {isMandob ? 'الأصناف والأسعار' : 'الأصناف والمخزون المتقدم'}
-          </h2>
-          <p className="text-sm text-slate-500">
-            {isMandob
-              ? 'استعراض المنتجات، أسعار البيع، والكميات المتوفرة بالمخزن'
-              : 'إدارة المنتجات، المقاسات والألوان، تواريخ الصلاحية، والوحدات المتعددة'}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
+    <PageHeader
+      className="hidden md:flex mb-0"
+      title={isMandob ? 'الأصناف والأسعار' : 'الأصناف والمخزون المتقدم'}
+      description={
+        isMandob
+          ? 'استعراض المنتجات، أسعار البيع، والكميات المتوفرة بالمخزن'
+          : 'إدارة المنتجات، المقاسات والألوان، تواريخ الصلاحية، والوحدات المتعددة'
+      }
+      actions={
+        <>
+          <Button
+            variant="secondary"
+            size="md"
             onClick={async () => {
               try {
                 const { exportProductsToExcel } = await import('../../utils/excelExport');
@@ -33,44 +33,49 @@ export const ProductsHeader: React.FC<{ vm: ProductsViewModel }> = ({ vm }) => {
               }
             }}
             disabled={products.length === 0}
-            className="inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3.5 py-2.5 rounded-xl text-xs font-bold shadow-sm transition-colors disabled:opacity-50"
+            leftIcon={<Download className="w-4 h-4 text-ok" />}
             title="تصدير الأصناف والمخزون الحالي إلى Excel"
+            className="text-xs font-bold"
           >
-            <Download className="w-4 h-4 text-emerald-600" />
             تصدير Excel
-          </button>
+          </Button>
           {canImportProducts && (
-            <button
+            <Button
+              variant="secondary"
+              size="md"
               onClick={() => navigate('/excel')}
-              className="inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3.5 py-2.5 rounded-xl text-xs font-bold shadow-sm transition-colors"
+              leftIcon={<Upload className="w-4 h-4 text-brand" />}
               title="استيراد أصناف من ملف Excel"
+              className="text-xs font-bold"
             >
-              <Upload className="w-4 h-4 text-primary-600" />
               استيراد Excel
-            </button>
+            </Button>
           )}
           {canAddProduct && (
-            <button
+            <Button
+              variant="secondary"
+              size="md"
               onClick={() => setIsOpeningStockOpen(true)}
-              className="inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3.5 py-2.5 rounded-xl text-xs font-bold shadow-sm transition-colors"
+              leftIcon={<Boxes className="w-4 h-4 text-brand" />}
               title="إدخال رصيد أول المدة للأصناف والمتغيرات بدون فواتير"
+              className="text-xs font-bold"
             >
-              <Boxes className="w-4 h-4 text-primary-600" />
               رصيد أول المدة
-            </button>
+            </Button>
           )}
           {canAddProduct && (
-            <button
+            <Button
+              variant="primary"
+              size="md"
               onClick={openCreateModal}
-              className="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-colors"
+              leftIcon={<Plus className="w-4 h-4" />}
+              className="font-bold"
             >
-              <Plus className="w-4 h-4" />
               إضافة صنف جديد
-            </button>
+            </Button>
           )}
-        </div>
-      </div>
-
-    </>
+        </>
+      }
+    />
   );
 };

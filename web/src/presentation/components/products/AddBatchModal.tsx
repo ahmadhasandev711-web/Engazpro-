@@ -3,6 +3,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { X, Calendar, PlusCircle, AlertCircle } from 'lucide-react';
 import { apiClient } from '../../../data/api/client';
 import { Product } from '@pos-mandob/shared';
+import { Button } from '../ui/Button';
+import { Input } from '../ui/Input';
 
 interface AddBatchModalProps {
   product: Product | null;
@@ -76,127 +78,122 @@ export const AddBatchModal: React.FC<AddBatchModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-200" dir="rtl">
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-canvas/80 backdrop-blur-sm animate-in fade-in duration-200" dir="rtl">
+      <div className="bg-panel rounded-3xl border border-line shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
+        <div className="p-5 border-b border-line flex items-center justify-between bg-surface-2/60">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-black">
+            <div className="w-9 h-9 rounded-xl bg-ok-soft text-ok flex items-center justify-center font-black border border-ok/20">
               <Calendar className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm font-black text-slate-900">توريد تشغيلة صلاحية جديدة</h3>
-              <p className="text-xs text-slate-500 font-medium truncate max-w-[240px]">{product.name}</p>
+              <h3 className="text-sm font-black text-ink">توريد تشغيلة صلاحية جديدة</h3>
+              <p className="text-xs text-muted font-medium truncate max-w-[240px]">{product.name}</p>
             </div>
           </div>
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="md"
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
+            className="min-w-[44px] px-0 text-muted hover:text-ink"
           >
             <X className="w-5 h-5" />
-          </button>
+          </Button>
         </div>
 
         {/* Body Form */}
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           {error && (
-            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs font-bold text-rose-700 flex items-center gap-2">
+            <div className="p-3 bg-bad-soft border border-bad/25 rounded-xl text-xs font-bold text-bad flex items-center gap-2">
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
               <span>{error}</span>
             </div>
           )}
 
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">رقم التشغيلة (Batch Number) *</label>
-            <input
-              type="text"
-              value={batchNumber}
-              onChange={(e) => setBatchNumber(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              placeholder="مثال: LOT-2026-B1"
+          <Input
+            label="رقم التشغيلة (Batch Number) *"
+            type="text"
+            value={batchNumber}
+            onChange={(e) => setBatchNumber(e.target.value)}
+            className="bg-surface-2/50 tabular-nums"
+            placeholder="مثال: LOT-2026-B1"
+            required
+          />
+
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              label="تاريخ الانتهاء *"
+              type="date"
+              value={expiryDate}
+              onChange={(e) => setExpiryDate(e.target.value)}
+              className="bg-surface-2/50 tabular-nums"
               required
+            />
+
+            <Input
+              label="تاريخ الإنتاج (اختياري)"
+              type="date"
+              value={productionDate}
+              onChange={(e) => setProductionDate(e.target.value)}
+              className="bg-surface-2/50 tabular-nums"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">تاريخ الانتهاء *</label>
-              <input
-                type="date"
-                value={expiryDate}
-                onChange={(e) => setExpiryDate(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">تاريخ الإنتاج (اختياري)</label>
-              <input
-                type="date"
-                value={productionDate}
-                onChange={(e) => setProductionDate(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-            </div>
-          </div>
-
           <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">الكمية الموردة *</label>
-              <input
-                type="number"
-                min="0.01"
-                step="0.01"
-                value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                required
-              />
-            </div>
+            <Input
+              label="الكمية الموردة *"
+              type="number"
+              min="0.01"
+              step="0.01"
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+              className="bg-surface-2/50 tabular-nums"
+              required
+            />
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">سعر الشراء</label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={purchasePrice}
-                onChange={(e) => setPurchasePrice(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-            </div>
+            <Input
+              label="سعر الشراء"
+              type="number"
+              min="0"
+              step="0.01"
+              value={purchasePrice}
+              onChange={(e) => setPurchasePrice(e.target.value)}
+              className="bg-surface-2/50 tabular-nums"
+            />
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">سعر البيع</label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={salePrice}
-                onChange={(e) => setSalePrice(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-            </div>
+            <Input
+              label="سعر البيع"
+              type="number"
+              min="0"
+              step="0.01"
+              value={salePrice}
+              onChange={(e) => setSalePrice(e.target.value)}
+              className="bg-surface-2/50 tabular-nums"
+            />
           </div>
 
-          <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
-            <button
+          <div className="pt-3 border-t border-line flex items-center justify-end gap-2">
+            <Button
               type="button"
+              variant="secondary"
+              size="md"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
+              className="text-xs font-bold"
             >
               إلغاء
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
+              variant="primary"
+              size="md"
               disabled={mutation.isPending}
-              className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-md shadow-emerald-600/20 flex items-center gap-1.5 transition-all disabled:opacity-50"
+              isLoading={mutation.isPending}
+              leftIcon={<PlusCircle className="w-4 h-4" />}
+              className="text-xs font-black"
             >
-              <PlusCircle className="w-4 h-4" />
-              <span>{mutation.isPending ? 'جاري الحفظ...' : 'إضافة التشغيلة وتحديث المخزون'}</span>
-            </button>
+              {mutation.isPending ? 'جاري الحفظ...' : 'إضافة التشغيلة وتحديث المخزون'}
+            </Button>
           </div>
         </form>
       </div>
