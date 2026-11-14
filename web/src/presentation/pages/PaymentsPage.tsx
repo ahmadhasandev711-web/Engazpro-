@@ -9,10 +9,10 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { DateRangeFilter, calculatePresetDates } from '../components/common/DateRangeFilter';
 import { PaginationBar } from '../components/common/PaginationBar';
 import { PaymentMobileCard } from '../components/mobile/PaymentMobileCard';
-import { MobileFilterChips, FilterChipOption } from '../components/mobile/MobileFilterChips';
 import { PaymentReceiptModal, PaymentReceiptData } from '../components/payments/PaymentReceiptModal';
 import { nativeBackButton } from '../../platform/nativeBackButton';
 import { useConfirm } from '../context/ConfirmContext';
+import { Badge, Button, Card, DataTable, EmptyState, Input, PageHeader, Select, Tabs, Textarea, TabItem } from '../components/ui';
 
 export const PaymentsPage: React.FC = () => {
   const { confirm } = useConfirm();
@@ -159,18 +159,10 @@ export const PaymentsPage: React.FC = () => {
 
   const filteredPayments = payments;
 
-  const paymentFilterChips: FilterChipOption<'ALL' | 'RECEIPT' | 'PAYMENT'>[] = [
+  const paymentTabs: TabItem[] = [
     { id: 'ALL', label: 'جميع السندات', count: meta?.total ?? payments.length },
-    {
-      id: 'RECEIPT',
-      label: 'سندات قبض',
-      icon: ArrowDownLeft,
-    },
-    {
-      id: 'PAYMENT',
-      label: 'سندات صرف',
-      icon: ArrowUpRight,
-    },
+    { id: 'RECEIPT', label: 'سندات قبض' },
+    { id: 'PAYMENT', label: 'سندات صرف' },
   ];
 
   const totalReceiptsAmount = summary?.total_receipts ?? filteredPayments
@@ -184,61 +176,67 @@ export const PaymentsPage: React.FC = () => {
   return (
     <div className="space-y-6 flex flex-col h-full">
       {/* Desktop Header (hidden on mobile) */}
-      <div className="hidden md:flex sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-slate-900">
-            {isOwner ? 'سندات القبض والدفع' : 'سندات القبض (التحصيل)'}
-          </h2>
-          <p className="text-sm text-slate-500">
-            {isOwner
+      <div className="hidden md:block">
+        <PageHeader
+          title={isOwner ? 'سندات القبض والدفع' : 'سندات القبض (التحصيل)'}
+          description={
+            isOwner
               ? 'إدارة المقبوضات النقدية من العملاء والمدفوعات للموردين لتسوية الأرصدة والمديونيات'
-              : 'إدارة المقبوضات والتحصيلات النقدية من العملاء وتحديث حساباتهم بدقة'}
-          </p>
-        </div>
-        <button
-          onClick={() => {
-            reset({
-              type: 'RECEIPT',
-              amount: 0,
-              method: PaymentMethod.CASH,
-              date: new Date().toISOString().split('T')[0],
-              notes: '',
-            });
-            setIsModalOpen(true);
-          }}
-          className="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          {!isOwner ? 'إضافة سند قبض جديد' : 'إضافة سند جديد'}
-        </button>
+              : 'إدارة المقبوضات والتحصيلات النقدية من العملاء وتحديث حساباتهم بدقة'
+          }
+          className="mb-0"
+          actions={
+            <Button
+              variant="primary"
+              size="md"
+              leftIcon={<Plus className="w-4 h-4" />}
+              onClick={() => {
+                reset({
+                  type: 'RECEIPT',
+                  amount: 0,
+                  method: PaymentMethod.CASH,
+                  date: new Date().toISOString().split('T')[0],
+                  notes: '',
+                });
+                setIsModalOpen(true);
+              }}
+              className="text-sm font-bold"
+            >
+              {!isOwner ? 'إضافة سند قبض جديد' : 'إضافة سند جديد'}
+            </Button>
+          }
+        />
       </div>
 
       {/* Mobile Compact Hero Bar (md:hidden) */}
-      <div className="md:hidden bg-gradient-to-l from-emerald-600 to-teal-700 rounded-2xl p-3.5 text-white shadow-md flex items-center justify-between">
+      <Card className="md:hidden p-3.5 flex items-center justify-between border-ok/30 bg-ok-soft/40">
         <div>
-          <div className="flex items-center gap-1 text-[11px] font-bold opacity-90">
-            <Receipt className="w-3.5 h-3.5" />
+          <div className="flex items-center gap-1 text-[11px] font-bold text-muted">
+            <Receipt className="w-3.5 h-3.5 text-ok" />
             <span>سندات الحركة ({meta?.total ?? filteredPayments.length})</span>
           </div>
           <div className="flex items-center gap-3 mt-0.5">
             <div>
-              <span className="text-2xs text-emerald-200 block">المقبوض</span>
-              <span className="text-lg font-black tracking-tight">
+              <span className="text-[10px] text-muted block">المقبوض</span>
+              <span className="text-lg font-black tracking-tight tabular-nums text-ok">
                 {formatCurrency(totalReceiptsAmount)}
               </span>
             </div>
             {isOwner && (
-              <div className="border-r border-white/20 pr-3">
-                <span className="text-2xs text-rose-200 block">المنصرف</span>
-                <span className="text-base font-bold text-rose-100">
+              <div className="border-r border-line pr-3">
+                <span className="text-[10px] text-muted block">المنصرف</span>
+                <span className="text-base font-bold tabular-nums text-bad">
                   {formatCurrency(totalPaymentsAmount)}
                 </span>
               </div>
             )}
           </div>
         </div>
-        <button
+        <Button
           type="button"
+          variant="primary"
+          size="md"
+          leftIcon={<Plus className="w-4 h-4" />}
           onClick={() => {
             reset({
               type: 'RECEIPT',
@@ -249,111 +247,64 @@ export const PaymentsPage: React.FC = () => {
             });
             setIsModalOpen(true);
           }}
-          className="px-3 py-2 bg-white text-emerald-700 hover:bg-emerald-50 rounded-xl font-black text-xs shadow-sm flex items-center gap-1 active:scale-95"
+          className="text-xs font-black px-3"
         >
-          <Plus className="w-4 h-4" />
-          <span>سند جديد</span>
-        </button>
-      </div>
+          سند جديد
+        </Button>
+      </Card>
 
       {errorMessage && (
-        <div className="p-4 bg-rose-50 border border-rose-200 text-rose-800 text-sm rounded-xl flex items-center gap-2">
-          <AlertCircle className="w-5 h-5 text-rose-600 flex-shrink-0" />
+        <div className="p-4 bg-bad-soft border border-bad/20 text-bad text-sm rounded-xl flex items-center gap-2">
+          <AlertCircle className="w-5 h-5 text-bad flex-shrink-0" />
           <span>{errorMessage}</span>
         </div>
       )}
 
       {/* Tabs, Search & Date Filters */}
-      <div className="flex flex-col gap-2.5 bg-white p-3 sm:p-4 rounded-2xl border border-slate-200 shadow-sm w-full min-w-0 max-w-full overflow-hidden">
+      <Card className="flex flex-col gap-2.5 p-3 sm:p-4 rounded-2xl w-full min-w-0 max-w-full overflow-hidden">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          {/* Tabs (Horizontal scroll on mobile) */}
+          {/* Tabs */}
           {isOwner ? (
-            <>
-              {/* Mobile Filter Chips */}
-              <div className="md:hidden w-full overflow-hidden">
-                <MobileFilterChips
-                  options={paymentFilterChips}
-                  selectedId={activeTab}
-                  onSelect={(id) => {
-                    setActiveTab(id);
-                    setPage(1);
-                  }}
-                />
-              </div>
-
-              {/* Desktop Tabs */}
-              <div className="hidden md:flex items-center gap-1 bg-slate-100 p-1 rounded-xl w-full sm:w-auto overflow-x-auto no-scrollbar scroll-smooth">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveTab('ALL');
-                    setPage(1);
-                  }}
-                  className={`flex-shrink-0 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
-                    activeTab === 'ALL' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  جميع السندات
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveTab('RECEIPT');
-                    setPage(1);
-                  }}
-                  className={`flex-shrink-0 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 whitespace-nowrap ${
-                    activeTab === 'RECEIPT' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <ArrowDownLeft className="w-3.5 h-3.5" />
-                  سندات قبض
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveTab('PAYMENT');
-                    setPage(1);
-                  }}
-                  className={`flex-shrink-0 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 whitespace-nowrap ${
-                    activeTab === 'PAYMENT' ? 'bg-rose-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <ArrowUpRight className="w-3.5 h-3.5" />
-                  سندات صرف
-                </button>
-              </div>
-            </>
-          ) : (
-            <div className="flex items-center gap-2 text-xs font-bold text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200">
-              <ArrowDownLeft className="w-4 h-4 text-emerald-600" />
-              <span>سندات قبض وتحصيل من العملاء فقط</span>
+            <div className="w-full sm:w-auto min-w-0">
+              <Tabs
+                tabs={paymentTabs}
+                activeTab={activeTab}
+                onChange={(id) => {
+                  setActiveTab(id as 'ALL' | 'RECEIPT' | 'PAYMENT');
+                  setPage(1);
+                }}
+              />
             </div>
+          ) : (
+            <Badge tone="ok" className="px-3 py-2 text-xs rounded-xl">
+              <ArrowDownLeft className="w-4 h-4" />
+              <span>سندات قبض وتحصيل من العملاء فقط</span>
+            </Badge>
           )}
 
           {/* Search Input */}
-          <div className="relative flex-1 sm:max-w-xs">
-            <Search className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
+          <div className="flex-1 sm:max-w-xs">
+            <Input
               type="text"
               placeholder="بحث بالاسم أو البيان أو رقم السند..."
               value={search}
+              leftIcon={<Search className="w-4 h-4" />}
               onChange={(e) => {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="w-full pl-3 pr-9 py-1.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
 
           {isOwner && (
             <div className="sm:w-52">
-              <select
+              <Select
                 value={selectedEmployeeId}
                 onChange={(e) => {
                   setSelectedEmployeeId(e.target.value);
                   setPage(1);
                 }}
-                className="w-full border border-slate-200 rounded-lg text-xs px-2.5 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500 font-medium"
+                className="text-xs font-medium"
               >
                 <option value="">جميع المحصلين (الكل)</option>
                 {employeesData?.map((emp: any) => (
@@ -361,13 +312,13 @@ export const PaymentsPage: React.FC = () => {
                     {emp.name} ({emp.role === 'MANDOB' ? 'مندوب' : emp.role === 'CASHIER' ? 'كاشير' : emp.role === 'MANAGER' ? 'مدير' : 'مشرف'})
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
           )}
         </div>
 
         {/* Date Range Filter Bar */}
-        <div className="pt-2 border-t border-slate-100 w-full min-w-0 max-w-full overflow-hidden">
+        <div className="pt-2 border-t border-line w-full min-w-0 max-w-full overflow-hidden">
           <DateRangeFilter
             fromDate={fromDate}
             toDate={toDate}
@@ -379,25 +330,25 @@ export const PaymentsPage: React.FC = () => {
             }}
           />
         </div>
-      </div>
+      </Card>
 
       {/* Table */}
-      <div className="bg-white flex-1 rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+      <Card className="flex-1 rounded-xl p-0 overflow-hidden flex flex-col">
         {isLoading ? (
-          <div className="text-center py-12 text-sm text-slate-400 font-medium flex-1">جاري التحميل...</div>
+          <div className="text-center py-12 text-sm text-muted font-medium flex-1">جاري التحميل...</div>
         ) : filteredPayments.length === 0 ? (
-          <div className="text-center py-16 flex-1 flex flex-col justify-center items-center">
-            <h3 className="text-base font-bold text-slate-700">لا توجد سندات مسجلة</h3>
-            <p className="text-xs text-slate-400 max-w-sm mx-auto mt-1">
-              انقر فوق زر "إضافة سند جديد" لتسجيل سند قبض أو صرف وتحديث الحسابات.
-            </p>
-          </div>
+          <EmptyState
+            icon={<Receipt className="w-6 h-6" />}
+            title="لا توجد سندات مسجلة"
+            description={'انقر فوق زر "إضافة سند جديد" لتسجيل سند قبض أو صرف وتحديث الحسابات.'}
+            className="flex-1 border-0 rounded-none py-16"
+          />
         ) : (
           <>
             {/* Desktop Table View (Hidden on Mobile) */}
-            <div className="hidden md:block overflow-x-auto flex-1">
-              <table className="w-full text-right text-sm">
-                <thead className="bg-slate-50 text-slate-600 text-xs font-bold border-b border-slate-200">
+            <div className="hidden md:block flex-1">
+              <DataTable className="border-0 rounded-none shadow-none">
+                <thead className="bg-surface-2 text-muted text-xs font-bold border-b border-line">
                   <tr>
                     <th className="py-3.5 px-4">رقم السند</th>
                     <th className="py-3.5 px-4">التاريخ</th>
@@ -410,30 +361,26 @@ export const PaymentsPage: React.FC = () => {
                     <th className="py-3.5 px-4 text-center">الإجراءات</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-line">
                   {filteredPayments.map((p: any) => {
                     const isReceipt = p.type === 'RECEIPT';
                     return (
-                      <tr key={p.id} className="hover:bg-slate-50/70 transition-colors">
-                        <td className="py-3.5 px-4 font-mono font-bold text-slate-700">#{p.id}</td>
-                        <td className="py-3.5 px-4 text-slate-600">{p.date}</td>
+                      <tr key={p.id} className="hover:bg-surface-2/60 transition-colors">
+                        <td className="py-3.5 px-4 tabular-nums font-bold text-ink">#{p.id}</td>
+                        <td className="py-3.5 px-4 text-muted tabular-nums">{p.date}</td>
                         <td className="py-3.5 px-4">
-                          <span
-                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                              isReceipt ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
-                            }`}
-                          >
+                          <Badge tone={isReceipt ? 'ok' : 'bad'}>
                             {isReceipt ? <ArrowDownLeft className="w-3 h-3" /> : <ArrowUpRight className="w-3 h-3" />}
-                            {isReceipt ? 'سند قبض' : 'سند صرف'}
-                          </span>
+                            <span>{isReceipt ? 'سند قبض' : 'سند صرف'}</span>
+                          </Badge>
                         </td>
-                        <td className="py-3.5 px-4 font-bold text-slate-900">{p.party_name || 'بدون طرف'}</td>
+                        <td className="py-3.5 px-4 font-bold text-ink">{p.party_name || 'بدون طرف'}</td>
                         {isOwner && (
                           <td className="py-3.5 px-4 text-xs">
                             {p.created_by_name ? (
                               <div className="flex flex-col">
-                                <span className="font-bold text-slate-800">{p.created_by_name}</span>
-                                <span className="text-2xs text-slate-500 font-medium">
+                                <span className="font-bold text-ink">{p.created_by_name}</span>
+                                <span className="text-[10px] text-muted font-medium">
                                   {p.created_by_role === 'MANDOB' ? 'مندوب مبيعات' :
                                    p.created_by_role === 'CASHIER' ? 'كاشير' :
                                    p.created_by_role === 'MANAGER' ? 'مدير الفرع' :
@@ -441,34 +388,36 @@ export const PaymentsPage: React.FC = () => {
                                 </span>
                               </div>
                             ) : (
-                              <span className="text-slate-400">-</span>
+                              <span className="text-muted">-</span>
                             )}
                           </td>
                         )}
-                        <td className={`py-3.5 px-4 font-black ${isReceipt ? 'text-emerald-600' : 'text-rose-600'}`}>
+                        <td className={`py-3.5 px-4 font-black tabular-nums ${isReceipt ? 'text-ok' : 'text-bad'}`}>
                           {formatCurrency(p.amount)}
                         </td>
-                        <td className="py-3.5 px-4 text-slate-600">
+                        <td className="py-3.5 px-4 text-muted">
                           {p.method === 'CASH' ? 'كاش' :
                            p.method === 'CARD' ? 'بطاقة / فيزا' :
                            p.method === 'INSTAPAY' ? 'إنستاباي' :
                            p.method === 'VODAFONE_CASH' ? 'فودافون كاش' :
                            p.method === 'TRANSFER' ? 'تحويل بنكي' : p.method}
                         </td>
-                        <td className="py-3.5 px-4 text-slate-500 max-w-xs truncate">{p.notes || '-'}</td>
+                        <td className="py-3.5 px-4 text-muted max-w-xs truncate">{p.notes || '-'}</td>
                         <td className="py-3.5 px-4 text-center">
                           <div className="flex items-center justify-center gap-1">
                             <button
+                              type="button"
                               onClick={() => setSelectedPrintPayment(p)}
-                              className="p-1.5 text-slate-500 hover:text-primary-600 rounded-lg hover:bg-slate-100 transition-colors"
+                              className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center text-muted hover:text-brand rounded-xl hover:bg-surface-2 transition-colors"
                               title="طباعة / مشاركة إيصال السند"
                             >
                               <Printer className="w-4 h-4" />
                             </button>
                             {canDeletePayment && (
                               <button
+                                type="button"
                                 onClick={() => handleDelete(p.id)}
-                                className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-slate-100 transition-colors"
+                                className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center text-muted hover:text-bad rounded-xl hover:bg-bad-soft transition-colors"
                                 title="إلغاء السند"
                               >
                                 <Trash2 className="w-4 h-4" />
@@ -480,11 +429,11 @@ export const PaymentsPage: React.FC = () => {
                     );
                   })}
                 </tbody>
-              </table>
+              </DataTable>
             </div>
 
             {/* Mobile Cards View (Touch-Optimized) */}
-            <div className="md:hidden overflow-y-auto flex-1 p-3 space-y-3">
+            <div className="md:hidden overflow-y-auto flex-1 p-3 space-y-3 bg-surface-2">
               {filteredPayments.map((p: any) => (
                 <PaymentMobileCard
                   key={p.id}
@@ -507,19 +456,20 @@ export const PaymentsPage: React.FC = () => {
             />
           </>
         )}
-      </div>
+      </Card>
 
       {/* Add Voucher Modal - Responsive Bottom Sheet on Mobile */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150">
-          <div className="bg-white w-full sm:max-w-md rounded-t-[2.5rem] sm:rounded-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom sm:zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 bg-ink/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150">
+          <div className="bg-panel border border-line w-full sm:max-w-md rounded-t-[2.5rem] sm:rounded-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom sm:zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
             {/* Sheet Handle for Mobile */}
-            <div className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mt-3 sm:hidden" />
-            <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="font-bold text-base text-slate-900">تسجيل سند جديد</h3>
+            <div className="w-12 h-1.5 bg-line rounded-full mx-auto mt-3 sm:hidden" />
+            <div className="p-5 border-b border-line flex items-center justify-between bg-surface">
+              <h3 className="font-bold text-base text-ink">تسجيل سند جديد</h3>
               <button
+                type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg"
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted hover:text-ink rounded-xl hover:bg-surface-2"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -528,7 +478,7 @@ export const PaymentsPage: React.FC = () => {
             <form onSubmit={handleSubmit(onSubmit)} className="p-5 space-y-4 overflow-y-auto">
               {/* Type Switcher */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">نوع السند</label>
+                <label className="block text-xs font-bold text-ink mb-1.5">نوع السند</label>
                 {isOwner ? (
                   <div className="grid grid-cols-2 gap-2">
                     <button
@@ -537,10 +487,10 @@ export const PaymentsPage: React.FC = () => {
                         setValue('type', 'RECEIPT');
                         setValue('party_id', undefined as any);
                       }}
-                      className={`py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                      className={`min-h-[44px] py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
                         selectedType === 'RECEIPT'
-                          ? 'bg-emerald-50 border-emerald-500 text-emerald-800'
-                          : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                          ? 'bg-ok-soft border-ok text-ok'
+                          : 'border-line text-muted hover:bg-surface-2 hover:text-ink'
                       }`}
                     >
                       <ArrowDownLeft className="w-4 h-4" />
@@ -552,10 +502,10 @@ export const PaymentsPage: React.FC = () => {
                         setValue('type', 'PAYMENT');
                         setValue('party_id', undefined as any);
                       }}
-                      className={`py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                      className={`min-h-[44px] py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
                         selectedType === 'PAYMENT'
-                          ? 'bg-rose-50 border-rose-500 text-rose-800'
-                          : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                          ? 'bg-bad-soft border-bad text-bad'
+                          : 'border-line text-muted hover:bg-surface-2 hover:text-ink'
                       }`}
                     >
                       <ArrowUpRight className="w-4 h-4" />
@@ -563,98 +513,86 @@ export const PaymentsPage: React.FC = () => {
                     </button>
                   </div>
                 ) : (
-                  <div className="py-2.5 px-3 rounded-xl bg-emerald-50 border border-emerald-300 text-xs font-bold text-emerald-800 flex items-center gap-1.5">
-                    <ArrowDownLeft className="w-4 h-4 text-emerald-600" />
+                  <div className="py-2.5 px-3 rounded-xl bg-ok-soft border border-ok/30 text-xs font-bold text-ok flex items-center gap-1.5">
+                    <ArrowDownLeft className="w-4 h-4 text-ok" />
                     <span>سند قبض وتحصيل من عميل 🟢</span>
                   </div>
                 )}
               </div>
 
               {/* Party Select */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  {selectedType === 'RECEIPT' ? 'العميل المستلم منه *' : 'المورد المدفوع له *'}
-                </label>
-                <select
-                  {...register('party_id', { valueAsNumber: true })}
-                  className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white"
-                >
-                  <option value="">-- اختر الطرف --</option>
-                  {availableParties.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} ({p.balance > 0 ? (selectedType === 'RECEIPT' ? `مديونية: ${formatCurrency(p.balance)}` : `مستحق: ${formatCurrency(p.balance)}`) : 'رصيد خالص'})
-                    </option>
-                  ))}
-                </select>
-                {errors.party_id && <p className="text-xs text-rose-500 mt-1">{errors.party_id.message}</p>}
-              </div>
+              <Select
+                label={selectedType === 'RECEIPT' ? 'العميل المستلم منه *' : 'المورد المدفوع له *'}
+                error={errors.party_id?.message}
+                {...register('party_id', { valueAsNumber: true })}
+              >
+                <option value="">-- اختر الطرف --</option>
+                {availableParties.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} ({p.balance > 0 ? (selectedType === 'RECEIPT' ? `مديونية: ${formatCurrency(p.balance)}` : `مستحق: ${formatCurrency(p.balance)}`) : 'رصيد خالص'})
+                  </option>
+                ))}
+              </Select>
 
               {/* Amount & Method */}
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">المبلغ (ج.م) *</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0.01"
-                    placeholder="0.00"
-                    {...register('amount', { valueAsNumber: true })}
-                    className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  />
-                  {errors.amount && <p className="text-xs text-rose-500 mt-1">{errors.amount.message}</p>}
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">طريقة الدفع</label>
-                  <select
-                    {...register('method')}
-                    className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white"
-                  >
-                    <option value={PaymentMethod.CASH}>نقدًا (كاش)</option>
-                    <option value={PaymentMethod.CARD}>بطاقة / فيزا</option>
-                    <option value={PaymentMethod.INSTAPAY}>إنستاباي (InstaPay)</option>
-                    <option value={PaymentMethod.VODAFONE_CASH}>فودافون كاش ومحافظ إلكترونية</option>
-                    <option value={PaymentMethod.TRANSFER}>تحويل بنكي</option>
-                  </select>
-                </div>
+                <Input
+                  label="المبلغ (ج.م) *"
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  placeholder="0.00"
+                  error={errors.amount?.message}
+                  className="font-bold tabular-nums"
+                  {...register('amount', { valueAsNumber: true })}
+                />
+                <Select
+                  label="طريقة الدفع"
+                  {...register('method')}
+                >
+                  <option value={PaymentMethod.CASH}>نقدًا (كاش)</option>
+                  <option value={PaymentMethod.CARD}>بطاقة / فيزا</option>
+                  <option value={PaymentMethod.INSTAPAY}>إنستاباي (InstaPay)</option>
+                  <option value={PaymentMethod.VODAFONE_CASH}>فودافون كاش ومحافظ إلكترونية</option>
+                  <option value={PaymentMethod.TRANSFER}>تحويل بنكي</option>
+                </Select>
               </div>
 
               {/* Date */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">التاريخ *</label>
-                <input
-                  type="date"
-                  {...register('date')}
-                  className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                />
-              </div>
+              <Input
+                label="التاريخ *"
+                type="date"
+                {...register('date')}
+              />
 
               {/* Notes */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">البيان / ملاحظات (اختياري)</label>
-                <textarea
-                  rows={2}
-                  placeholder="مثال: دفعة تحت الحساب عن فاتورة رقم..."
-                  {...register('notes')}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                />
-              </div>
+              <Textarea
+                label="البيان / ملاحظات (اختياري)"
+                rows={2}
+                placeholder="مثال: دفعة تحت الحساب عن فاتورة رقم..."
+                {...register('notes')}
+              />
 
               <div className="pt-2 flex justify-end gap-2">
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
+                  size="md"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-50"
+                  className="text-sm font-bold"
                 >
                   إلغاء
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
-                  disabled={createMutation.isPending}
-                  className="px-5 py-2 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white rounded-xl text-sm font-bold shadow-sm flex items-center gap-1.5"
+                  variant="primary"
+                  size="md"
+                  isLoading={createMutation.isPending}
+                  leftIcon={<CheckCircle2 className="w-4 h-4" />}
+                  className="text-sm font-bold"
                 >
-                  <CheckCircle2 className="w-4 h-4" />
                   {createMutation.isPending ? 'جاري الحفظ...' : 'حفظ السند'}
-                </button>
+                </Button>
               </div>
             </form>
           </div>

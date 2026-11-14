@@ -95,16 +95,8 @@
     "raw": 98,
     "hex": 0
   },
-  "src/presentation/components/mobile/ExpenseMobileCard.tsx": {
-    "raw": 37,
-    "hex": 0
-  },
   "src/presentation/components/mobile/InvoiceMobileCard.tsx": {
     "raw": 44,
-    "hex": 0
-  },
-  "src/presentation/components/mobile/LedgerEntryMobileCard.tsx": {
-    "raw": 15,
     "hex": 0
   },
   "src/presentation/components/mobile/MobileBottomSheet.tsx": {
@@ -127,16 +119,12 @@
     "raw": 61,
     "hex": 0
   },
-  "src/presentation/components/mobile/PaymentMobileCard.tsx": {
-    "raw": 40,
-    "hex": 0
-  },
   "src/presentation/components/mobile/RecentActivityMobileCard.tsx": {
     "raw": 35,
     "hex": 0
   },
   "src/presentation/components/payments/PaymentReceiptModal.tsx": {
-    "raw": 66,
+    "raw": 41,
     "hex": 1
   },
   "src/presentation/components/pos/PosReceiptModal.tsx": {
@@ -195,49 +183,9 @@
     "raw": 41,
     "hex": 0
   },
-  "src/presentation/components/shifts/ActiveShiftBanner.tsx": {
-    "raw": 27,
-    "hex": 0
-  },
-  "src/presentation/components/shifts/CloseShiftModal.tsx": {
-    "raw": 67,
-    "hex": 0
-  },
-  "src/presentation/components/shifts/OpenShiftModal.tsx": {
-    "raw": 33,
-    "hex": 0
-  },
   "src/presentation/components/shifts/ShiftZReportModal.tsx": {
-    "raw": 77,
+    "raw": 54,
     "hex": 1
-  },
-  "src/presentation/components/treasuries/TreasuriesCreateModal.tsx": {
-    "raw": 31,
-    "hex": 0
-  },
-  "src/presentation/components/treasuries/TreasuriesDetailTab.tsx": {
-    "raw": 101,
-    "hex": 0
-  },
-  "src/presentation/components/treasuries/TreasuriesHeader.tsx": {
-    "raw": 93,
-    "hex": 0
-  },
-  "src/presentation/components/treasuries/TreasuriesPendingTab.tsx": {
-    "raw": 51,
-    "hex": 0
-  },
-  "src/presentation/components/treasuries/TreasuriesSettleModal.tsx": {
-    "raw": 26,
-    "hex": 0
-  },
-  "src/presentation/components/treasuries/TreasuriesShiftsTab.tsx": {
-    "raw": 82,
-    "hex": 0
-  },
-  "src/presentation/components/treasuries/TreasuriesTransferModal.tsx": {
-    "raw": 29,
-    "hex": 0
   },
   "src/presentation/context/ConfirmContext.tsx": {
     "raw": 24,
@@ -263,10 +211,6 @@
     "raw": 131,
     "hex": 0
   },
-  "src/presentation/pages/ExpensesPage.tsx": {
-    "raw": 147,
-    "hex": 0
-  },
   "src/presentation/pages/InvoiceFormPage.tsx": {
     "raw": 28,
     "hex": 0
@@ -279,20 +223,12 @@
     "raw": 259,
     "hex": 143
   },
-  "src/presentation/pages/LedgerPage.tsx": {
-    "raw": 149,
-    "hex": 0
-  },
   "src/presentation/pages/LoginPage.tsx": {
     "raw": 89,
     "hex": 1
   },
   "src/presentation/pages/PartiesPage.tsx": {
     "raw": 100,
-    "hex": 0
-  },
-  "src/presentation/pages/PaymentsPage.tsx": {
-    "raw": 113,
     "hex": 0
   },
   "src/presentation/pages/RegisterPage.tsx": {
