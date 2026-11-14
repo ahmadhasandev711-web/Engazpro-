@@ -106,7 +106,9 @@ export const RegisterPage: React.FC = () => {
         />
 
         <Input
-          {...register('email')}
+          {...register('email', {
+            setValueAs: (v: string) => (typeof v === 'string' && v.trim() === '' ? null : v),
+          })}
           type="email"
           label="البريد الإلكتروني (اختياري)"
           placeholder="name@example.com"
