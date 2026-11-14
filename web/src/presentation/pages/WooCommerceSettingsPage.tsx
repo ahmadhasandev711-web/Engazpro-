@@ -16,9 +16,11 @@ import {
   X,
   AlertTriangle,
 } from 'lucide-react';
+import clsx from 'clsx';
 import { apiClient } from '../../data/api/client';
 import { useHaptic } from '../hooks/useHaptic';
 import { useConfirm } from '../context/ConfirmContext';
+import { Badge, Button, Card, Input, PageHeader, Select } from '../components/ui';
 
 export const WooCommerceSettingsPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -45,7 +47,7 @@ export const WooCommerceSettingsPage: React.FC = () => {
     if (params.get('auth') === 'success') {
       setFeedback({
         type: 'success',
-        message: 'تم ربط متجر ووكومرس بنجاح وتفعيل المزامنة التلقائية! 🎉',
+        message: 'تم ربط متجر ووكومرس بنجاح وتفعيل المزامنة التلقائية!',
       });
       queryClient.invalidateQueries({ queryKey: ['woocommerce-settings'] });
       window.history.replaceState({}, document.title, window.location.pathname);
@@ -188,7 +190,7 @@ export const WooCommerceSettingsPage: React.FC = () => {
       return apiClient.post('/woocommerce/push-all-stocks');
     },
     onSuccess: (res) => {
-      setFeedback({ type: 'success', message: res.data?.message || 'تم تحديث أرصدة كافة المنتجات في متجرك بنجاح 🟢' });
+      setFeedback({ type: 'success', message: res.data?.message || 'تم تحديث أرصدة كافة المنتجات في متجرك بنجاح' });
       setTimeout(() => setFeedback(null), 5000);
     },
     onError: (err: any) => {
@@ -266,7 +268,8 @@ export const WooCommerceSettingsPage: React.FC = () => {
   const handleDisconnectAnoofy = async () => {
     const ok = await confirm({
       title: 'فصل ربط إضافة Anoofy',
-      message: 'هل أنت متأكد من رغبتك في فصل الربط مع إضافة كول سنتر Anoofy؟ لن يتم استقبال أي أحداث من الإضافة حتى يتم الربط بمفتاح جديد.',
+      message:
+        'هل أنت متأكد من رغبتك في فصل الربط مع إضافة كول سنتر Anoofy؟ لن يتم استقبال أي أحداث من الإضافة حتى يتم الربط بمفتاح جديد.',
       type: 'danger',
       confirmText: 'فصل الربط',
       cancelText: 'إلغاء',
@@ -279,68 +282,99 @@ export const WooCommerceSettingsPage: React.FC = () => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <RefreshCw className="w-8 h-8 text-primary-600 animate-spin" />
+        <RefreshCw className="w-8 h-8 text-brand animate-spin" />
       </div>
     );
   }
 
   const isConnected = Boolean(settingsData?.is_active && settingsData?.store_url);
 
+  const branchOptions = [
+    { value: '', label: '-- الفرع الرئيسي الافتراضي --' },
+    ...branches.map((b: any) => ({
+      value: String(b.id),
+      label: `${b.name} (${b.type === 'WAREHOUSE' ? 'مستودع' : b.type === 'STORE' ? 'متجر' : 'سيارة'})`,
+    })),
+  ];
+
+  const quickSyncActions = [
+    {
+      key: 'customers',
+      title: 'استيراد عملاء المتجر إلى إنجاز برو',
+      subtitle: 'سحب عملاء ووكومرس لبناء قاعدة بيانات تسويقية',
+      icon: Users,
+      isPending: syncCustomersMutation.isPending,
+      onClick: () => syncCustomersMutation.mutate(),
+      cardClass: 'bg-ok-soft/60 border-ok/30 hover:bg-ok-soft',
+      iconClass: 'bg-ok text-on-brand',
+    },
+    {
+      key: 'stocks',
+      title: 'مزامنة أرصدة كافة المنتجات مع المتجر (Bulk Push)',
+      subtitle: 'إرسال وتحديث كميات كافة الأصناف المرتبطة مباشرة في ووردبريس فوراً',
+      icon: RefreshCw,
+      isPending: pushAllStocksMutation.isPending,
+      onClick: () => pushAllStocksMutation.mutate(),
+      cardClass: 'bg-brand-soft/60 border-brand/30 hover:bg-brand-soft',
+      iconClass: 'bg-brand text-on-brand',
+    },
+    {
+      key: 'webhooks',
+      title: 'تفعيل استقبال الطلبات اللحظية (Webhooks)',
+      subtitle: 'تسجيل الـ Webhook في وردبريس تلقائياً بدون تدخل يدوي',
+      icon: Zap,
+      isPending: registerWebhooksMutation.isPending,
+      onClick: () => registerWebhooksMutation.mutate(),
+      cardClass: 'bg-warn-soft/60 border-warn/30 hover:bg-warn-soft',
+      iconClass: 'bg-warn text-on-brand',
+    },
+  ];
+
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-12">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shadow-inner">
-            <Globe className="w-8 h-8" />
+      <PageHeader
+        title="ربط متجر ووكومرس (WooCommerce)"
+        description="إدارة الربط لمزامنة المنتجات وسحب الطلبات ومزامنة العملاء في الوقت الفعلي"
+        badge={
+          <div className="flex items-center gap-2">
+            <Globe className="w-4 h-4 text-brand hidden sm:inline" />
+            <Badge tone={isConnected ? 'ok' : 'neutral'} dot={isConnected}>
+              {isConnected ? 'متصل ونشط' : 'غير مربوط'}
+            </Badge>
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-black text-slate-900">ربط متجر ووكومرس (WooCommerce)</h1>
-              {isConnected ? (
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                  متصل ونشط
-                </span>
-              ) : (
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200">
-                  غير مربوط
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-slate-500 mt-1">
-              إدارة الربط لمزامنة المنتجات وسحب الطلبات ومزامنة العملاء في الوقت الفعلي
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {isConnected && (
-            <button
+        }
+        actions={
+          isConnected ? (
+            <Button
+              type="button"
+              variant="secondary"
+              size="md"
               onClick={() => testMutation.mutate()}
-              disabled={testMutation.isPending}
-              className="px-4 py-2.5 bg-slate-100 text-slate-700 rounded-2xl text-xs font-bold hover:bg-slate-200 transition-all flex items-center gap-1.5"
+              isLoading={testMutation.isPending}
+              leftIcon={<RefreshCw className="w-4 h-4" />}
             >
-              <RefreshCw className={`w-4 h-4 ${testMutation.isPending ? 'animate-spin' : ''}`} />
-              <span>فحص الاتصال بالمتجر</span>
-            </button>
-          )}
-        </div>
-      </div>
+              فحص الاتصال بالمتجر
+            </Button>
+          ) : undefined
+        }
+        className="mb-0"
+      />
 
       {/* Feedback Banner */}
       {feedback && (
         <div
-          className={`p-4 rounded-2xl border flex items-center gap-3 animate-in fade-in duration-150 ${
+          className={clsx(
+            'p-4 rounded-2xl border flex items-center gap-3 animate-in fade-in duration-150',
             feedback.type === 'success'
-              ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-              : 'bg-rose-50 border-rose-200 text-rose-800'
-          }`}
+              ? 'bg-ok-soft border-ok/30 text-ok'
+              : 'bg-bad-soft border-bad/30 text-bad'
+          )}
         >
           {feedback.type === 'success' ? (
-            <CheckCircle2 className="w-5 h-5 flex-shrink-0 text-emerald-600" />
+            <CheckCircle2 className="w-5 h-5 flex-shrink-0 text-ok" />
           ) : (
-            <AlertCircle className="w-5 h-5 flex-shrink-0 text-rose-600" />
+            <AlertCircle className="w-5 h-5 flex-shrink-0 text-bad" />
           )}
           <span className="text-xs font-bold">{feedback.message}</span>
         </div>
@@ -351,19 +385,19 @@ export const WooCommerceSettingsPage: React.FC = () => {
         {/* Left 2 Cols: Form & Configuration */}
         <div className="lg:col-span-2 space-y-6">
           {/* 1-Click WooCommerce Connect Card */}
-          <div className="bg-gradient-to-br from-indigo-900 via-indigo-800 to-slate-900 text-white p-6 rounded-3xl shadow-md space-y-4">
+          <Card className="bg-surface-2/80 border-2 border-brand/30 space-y-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-indigo-500/30 border border-indigo-400/30 flex items-center justify-center text-indigo-300">
-                <Zap className="w-5 h-5 text-amber-400" />
+              <div className="w-10 h-10 rounded-2xl bg-brand-soft border border-brand/30 flex items-center justify-center text-brand shrink-0">
+                <Zap className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-sm font-black text-white flex items-center gap-2">
+                <h2 className="text-sm font-black text-ink flex items-center gap-2 flex-wrap">
                   <span>الربط السريع بضغطة زر واحدة (1-Click Connect)</span>
-                  <span className="text-2xs bg-amber-400/20 text-amber-300 px-2 py-0.5 rounded-full border border-amber-400/30 font-bold">
+                  <Badge tone="warn" className="text-2xs">
                     موصى به
-                  </span>
+                  </Badge>
                 </h2>
-                <p className="text-xs text-indigo-200 mt-0.5">
+                <p className="text-xs text-muted mt-0.5">
                   لا حاجة لنسخ ولصق المفاتيح يدوياً! اكتب رابط متجرك واضغط للربط مباشرة عبر ووردبريس.
                 </p>
               </div>
@@ -376,116 +410,100 @@ export const WooCommerceSettingsPage: React.FC = () => {
                 onChange={(e) => setStoreUrl(e.target.value)}
                 placeholder="https://yourstore.com"
                 dir="ltr"
-                className="flex-1 bg-slate-950/70 border border-indigo-700/60 rounded-xl px-3.5 py-2.5 text-white placeholder-indigo-300/50 text-xs font-mono focus:outline-none focus:border-amber-400"
+                className="flex-1 min-h-[44px] bg-panel border border-line rounded-xl px-3.5 py-2.5 text-ink placeholder:text-muted text-xs tabular-nums focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand"
               />
-              <button
+              <Button
                 type="button"
+                variant="primary"
+                size="md"
                 onClick={handleOneClickConnect}
+                isLoading={isConnectingOneClick}
                 disabled={isConnectingOneClick || !storeUrl.trim()}
-                className="bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-slate-950 font-black px-5 py-2.5 rounded-xl text-xs transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-400/20 cursor-pointer shrink-0"
+                leftIcon={<Zap className="w-4 h-4" />}
+                className="shrink-0"
               >
-                <Zap className={`w-4 h-4 ${isConnectingOneClick ? 'animate-spin' : ''}`} />
-                <span>{isConnectingOneClick ? 'جاري التوجيه...' : 'ربط المتجر بضغطة واحدة 🚀'}</span>
-              </button>
+                {isConnectingOneClick ? 'جاري التوجيه...' : 'ربط المتجر بضغطة واحدة'}
+              </Button>
             </div>
-          </div>
+          </Card>
 
           {/* API Credentials Card (Manual / Advanced) */}
-          <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
-            <h2 className="text-sm font-black text-slate-900 flex items-center justify-between border-b border-slate-100 pb-3">
+          <Card className="space-y-4">
+            <h2 className="text-sm font-black text-ink flex items-center justify-between border-b border-line pb-3">
               <div className="flex items-center gap-2">
-                <Key className="w-4 h-4 text-indigo-600" />
+                <Key className="w-4 h-4 text-info" />
                 <span>الربط اليدوي المتقدم (API Keys)</span>
               </div>
-              <span className="text-[11px] text-slate-400 font-normal">خيار بديل</span>
+              <Badge tone="neutral" className="text-2xs font-normal">
+                خيار بديل
+              </Badge>
             </h2>
 
             <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  رابط المتجر الإلكتروني (Store URL) *
-                </label>
-                <input
-                  type="url"
-                  value={storeUrl}
-                  onChange={(e) => setStoreUrl(e.target.value)}
-                  placeholder="https://myfashionstore.com"
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-left focus:outline-none focus:ring-2 focus:ring-primary-500"
+              <Input
+                label="رابط المتجر الإلكتروني (Store URL) *"
+                type="url"
+                value={storeUrl}
+                onChange={(e) => setStoreUrl(e.target.value)}
+                placeholder="https://myfashionstore.com"
+                className="text-left tabular-nums text-xs"
+                dir="ltr"
+              />
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Input
+                  label="Consumer Key (مفتاح العميل)"
+                  type="password"
+                  value={consumerKey}
+                  onChange={(e) => setConsumerKey(e.target.value)}
+                  placeholder={settingsData?.consumer_key_preview || 'ck_xxxxxxxxxxxx'}
+                  className="text-left tabular-nums text-xs"
+                  dir="ltr"
+                />
+
+                <Input
+                  label="Consumer Secret (المفتاح السري)"
+                  type="password"
+                  value={consumerSecret}
+                  onChange={(e) => setConsumerSecret(e.target.value)}
+                  placeholder="cs_xxxxxxxxxxxx"
+                  className="text-left tabular-nums text-xs"
                   dir="ltr"
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Consumer Key (مفتاح العميل)
-                  </label>
-                  <input
-                    type="password"
-                    value={consumerKey}
-                    onChange={(e) => setConsumerKey(e.target.value)}
-                    placeholder={settingsData?.consumer_key_preview || 'ck_xxxxxxxxxxxx'}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-left focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    dir="ltr"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Consumer Secret (المفتاح السري)
-                  </label>
-                  <input
-                    type="password"
-                    value={consumerSecret}
-                    onChange={(e) => setConsumerSecret(e.target.value)}
-                    placeholder="cs_xxxxxxxxxxxx"
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-left focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    dir="ltr"
-                  />
-                </div>
-              </div>
-
-              <p className="text-[11px] text-slate-400">
-                💡 يمكنك توليد المفاتيح من لوحة تحكم ووردبريس: <span className="font-mono">WooCommerce &gt; Settings &gt; Advanced &gt; REST API</span> مع إعطاء صلاحيات <span className="font-bold">Read/Write</span>.
+              <p className="text-xs text-muted">
+                يمكنك توليد المفاتيح من لوحة تحكم ووردبريس:{' '}
+                <span className="font-bold text-ink tabular-nums" dir="ltr">
+                  WooCommerce &gt; Settings &gt; Advanced &gt; REST API
+                </span>{' '}
+                مع إعطاء صلاحيات <span className="font-bold text-ink">Read/Write</span>.
               </p>
             </div>
-          </div>
+          </Card>
 
           {/* Sync Rules Card */}
-          <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
-            <h2 className="text-sm font-black text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-              <Warehouse className="w-4 h-4 text-emerald-600" />
+          <Card className="space-y-4">
+            <h2 className="text-sm font-black text-ink flex items-center gap-2 border-b border-line pb-3">
+              <Warehouse className="w-4 h-4 text-ok" />
               <span>إعدادات الفروع وتوجيه المخزون</span>
             </h2>
 
             <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  الفرع أو المخزن الافتراضي للأونلاين:
-                </label>
-                <select
-                  value={onlineBranchId}
-                  onChange={(e) => setOnlineBranchId(e.target.value ? Number(e.target.value) : '')}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                >
-                  <option value="">-- الفرع الرئيسي الافتراضي --</option>
-                  {branches.map((b: any) => (
-                    <option key={b.id} value={b.id}>
-                      {b.name} ({b.type === 'WAREHOUSE' ? 'مستودع' : b.type === 'STORE' ? 'متجر' : 'سيارة'})
-                    </option>
-                  ))}
-                </select>
-                <p className="text-[11px] text-slate-400 mt-1">
-                  تُسند الطلبات الواردة إلى هذا المخزن لتجهيزها، ويمكن إعادة توجيه أي طلب لأي فرع لاحقاً.
-                </p>
-              </div>
+              <Select
+                label="الفرع أو المخزن الافتراضي للأونلاين:"
+                value={String(onlineBranchId)}
+                onChange={(e) => setOnlineBranchId(e.target.value ? Number(e.target.value) : '')}
+                options={branchOptions}
+                helperText="تُسند الطلبات الواردة إلى هذا المخزن لتجهيزها، ويمكن إعادة توجيه أي طلب لأي فرع لاحقاً."
+              />
 
-              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between">
+              <div className="p-4 bg-surface-2/60 border border-line rounded-2xl flex items-center justify-between gap-3">
                 <div>
-                  <span className="text-xs font-bold text-slate-900 block">
+                  <span className="text-xs font-bold text-ink block">
                     مزامنة المخزون تلقائياً لووكومرس (Auto Stock Push)
                   </span>
-                  <span className="text-[11px] text-slate-500 block mt-0.5">
+                  <span className="text-xs text-muted block mt-0.5">
                     عند حدوث أي عملية بيع في المحل أو الكاشير، يتم تحديث رصيد الصنف والمتغير على ووكومرس فورياً.
                   </span>
                 </div>
@@ -493,105 +511,99 @@ export const WooCommerceSettingsPage: React.FC = () => {
                   type="checkbox"
                   checked={autoSyncStock}
                   onChange={(e) => setAutoSyncStock(e.target.checked)}
-                  className="w-5 h-5 text-primary-600 rounded-lg focus:ring-primary-500"
+                  className="w-5 h-5 text-brand rounded-lg focus:ring-brand accent-brand cursor-pointer shrink-0"
                 />
               </div>
 
-              <button
+              <Button
+                type="button"
+                variant="primary"
+                size="lg"
                 onClick={() => saveMutation.mutate()}
+                isLoading={saveMutation.isPending}
                 disabled={saveMutation.isPending || !storeUrl}
-                className="w-full py-3 bg-primary-600 text-slate-950 font-black rounded-xl text-xs hover:bg-primary-500 transition-all shadow-sm flex items-center justify-center gap-2"
+                className="w-full"
               >
-                {saveMutation.isPending ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>جاري الحفظ...</span>
-                  </>
-                ) : (
-                  <span>حفظ وتفعيل إعدادات الربط</span>
-                )}
-              </button>
+                {saveMutation.isPending ? 'جاري الحفظ...' : 'حفظ وتفعيل إعدادات الربط'}
+              </Button>
             </div>
-          </div>
+          </Card>
 
           {/* Anoofy-Woo Call Center Card */}
-          <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <Card className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3">
               <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-2xl bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-600">
+                <div className="w-10 h-10 rounded-2xl bg-ok-soft border border-ok/30 flex items-center justify-center text-ok shrink-0">
                   <Headphones className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-sm font-black text-slate-900">ربط إضافة كول سنتر Anoofy (Anoofy-Woo)</h2>
-                  <p className="text-2xs text-slate-500">استقبال تأكيدات الكول سنتر وتعديل الأصناف والعناوين مباشرة</p>
+                  <h2 className="text-sm font-black text-ink">ربط إضافة كول سنتر Anoofy (Anoofy-Woo)</h2>
+                  <p className="text-2xs text-muted">استقبال تأكيدات الكول سنتر وتعديل الأصناف والعناوين مباشرة</p>
                 </div>
               </div>
-              <div>
-                {settingsData?.anoofy_connected ? (
-                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                    متصل
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200">
-                    غير متصل
-                  </span>
-                )}
-              </div>
+              <Badge tone={settingsData?.anoofy_connected ? 'ok' : 'neutral'} dot={settingsData?.anoofy_connected}>
+                {settingsData?.anoofy_connected ? 'متصل' : 'غير متصل'}
+              </Badge>
             </div>
 
-            <p className="text-xs text-slate-600 leading-relaxed">
+            <p className="text-xs text-muted leading-relaxed">
               عند توليد مفتاح الربط، قم بنسخه ولصقه في إعدادات إضافة Anoofy في ووردبريس للتحقق من الاتصال واستقبال أحداث تأكيد الطلبات تلقائياً.
             </p>
 
             <div className="flex flex-wrap items-center gap-3 pt-2">
-              <button
+              <Button
                 type="button"
+                variant="primary"
+                size="md"
                 onClick={() => generateAnoofyKeyMutation.mutate()}
+                isLoading={generateAnoofyKeyMutation.isPending}
                 disabled={generateAnoofyKeyMutation.isPending}
-                className="px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-black shadow-sm transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                leftIcon={<Key className="w-4 h-4" />}
               >
-                <Key className={`w-4 h-4 ${generateAnoofyKeyMutation.isPending ? 'animate-spin' : ''}`} />
-                <span>{settingsData?.anoofy_connected ? 'توليد مفتاح ربط جديد (إعادة ربط)' : 'توليد مفتاح ربط جديد'}</span>
-              </button>
+                {settingsData?.anoofy_connected ? 'توليد مفتاح ربط جديد (إعادة ربط)' : 'توليد مفتاح ربط جديد'}
+              </Button>
 
               {settingsData?.anoofy_connected && (
-                <button
+                <Button
                   type="button"
+                  variant="danger"
+                  size="md"
                   onClick={handleDisconnectAnoofy}
+                  isLoading={disconnectAnoofyMutation.isPending}
                   disabled={disconnectAnoofyMutation.isPending}
-                  className="px-4 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
                 >
-                  <span>{disconnectAnoofyMutation.isPending ? 'جاري الفصل...' : 'فصل الربط'}</span>
-                </button>
+                  {disconnectAnoofyMutation.isPending ? 'جاري الفصل...' : 'فصل الربط'}
+                </Button>
               )}
             </div>
-          </div>
+          </Card>
         </div>
 
         {/* Right 1 Col: Quick Actions & Webhook Setup */}
         <div className="space-y-6">
           {/* Quick Actions Card */}
-          <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
-            <h2 className="text-sm font-black text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-              <Zap className="w-4 h-4 text-amber-500" />
+          <Card className="space-y-4">
+            <h2 className="text-sm font-black text-ink flex items-center gap-2 border-b border-line pb-3">
+              <Zap className="w-4 h-4 text-warn" />
               <span>إجراءات المزامنة الفورية</span>
             </h2>
 
             <div className="space-y-2.5">
-              <div className="p-3 bg-indigo-50/60 border border-indigo-100 rounded-2xl space-y-2.5">
+              {/* Primary Import Products Box */}
+              <div className="p-3 bg-info-soft/60 border border-info/25 rounded-2xl space-y-2.5">
                 <button
+                  type="button"
                   onClick={() => importProductsMutation.mutate()}
                   disabled={importProductsMutation.isPending || !isConnected}
-                  className="w-full p-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-right transition-all group disabled:opacity-50"
+                  className="w-full min-h-[44px] p-2.5 bg-brand hover:bg-brand/90 text-on-brand rounded-xl text-right transition-all disabled:opacity-50 cursor-pointer"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-white/20 text-white flex items-center justify-center">
+                    <div className="w-8 h-8 rounded-lg bg-panel/20 text-on-brand flex items-center justify-center shrink-0">
                       <Download className={`w-4 h-4 ${importProductsMutation.isPending ? 'animate-bounce' : ''}`} />
                     </div>
                     <div>
-                      <span className="text-xs font-black text-white block">استيراد الأصناف من ووكومرس</span>
-                      <span className="text-2xs text-indigo-100 block">سحب المنتجات والمقاسات والألوان لإنجاز برو</span>
+                      <span className="text-xs font-black block">استيراد الأصناف من ووكومرس</span>
+                      <span className="text-2xs opacity-90 block">سحب المنتجات والمقاسات والألوان لإنجاز برو</span>
                     </div>
                   </div>
                 </button>
@@ -601,163 +613,159 @@ export const WooCommerceSettingsPage: React.FC = () => {
                     type="checkbox"
                     checked={importStockWithProducts}
                     onChange={(e) => setImportStockWithProducts(e.target.checked)}
-                    className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300"
+                    className="w-4 h-4 rounded text-brand focus:ring-brand border-line-2 accent-brand cursor-pointer"
                   />
-                  <span className="text-[11px] font-bold text-slate-700 select-none">
+                  <span className="text-xs font-bold text-ink select-none">
                     استيراد كميات المخزون كرصيد أول مدة (INITIAL)
                   </span>
                 </label>
               </div>
 
-              <button
-                onClick={() => syncCustomersMutation.mutate()}
-                disabled={syncCustomersMutation.isPending || !isConnected}
-                className="w-full p-3.5 bg-emerald-50 border border-emerald-100 rounded-2xl text-right hover:bg-emerald-100/70 transition-all group disabled:opacity-50"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center">
-                    <Users className={`w-4 h-4 ${syncCustomersMutation.isPending ? 'animate-spin' : ''}`} />
-                  </div>
-                  <div>
-                    <span className="text-xs font-black text-emerald-950 block">استيراد عملاء المتجر إلى إنجاز برو</span>
-                    <span className="text-2xs text-slate-500 block">سحب عملاء ووكومرس لبناء قاعدة بيانات تسويقية</span>
-                  </div>
-                </div>
-              </button>
-
-              <button
-                onClick={() => pushAllStocksMutation.mutate()}
-                disabled={pushAllStocksMutation.isPending || !isConnected}
-                className="w-full p-3.5 bg-purple-50 border border-purple-200/80 rounded-2xl text-right hover:bg-purple-100/70 transition-all group disabled:opacity-50 cursor-pointer"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-purple-600 text-white flex items-center justify-center">
-                    <RefreshCw className={`w-4 h-4 ${pushAllStocksMutation.isPending ? 'animate-spin' : ''}`} />
-                  </div>
-                  <div>
-                    <span className="text-xs font-black text-purple-950 block">مزامنة أرصدة كافة المنتجات مع المتجر (Bulk Push)</span>
-                    <span className="text-2xs text-slate-500 block">إرسال وتحديث كميات كافة الأصناف المرتبطة مباشرة في ووردبريس فوراً</span>
-                  </div>
-                </div>
-              </button>
-
-              <button
-                onClick={() => registerWebhooksMutation.mutate()}
-                disabled={registerWebhooksMutation.isPending || !isConnected}
-                className="w-full p-3.5 bg-amber-50 border border-amber-200/80 rounded-2xl text-right hover:bg-amber-100/70 transition-all group disabled:opacity-50 cursor-pointer"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-amber-600 text-white flex items-center justify-center">
-                    <Zap className={`w-4 h-4 ${registerWebhooksMutation.isPending ? 'animate-spin' : ''}`} />
-                  </div>
-                  <div>
-                    <span className="text-xs font-black text-amber-950 block">تفعيل استقبال الطلبات اللحظية (Webhooks)</span>
-                    <span className="text-2xs text-slate-500 block">تسجيل الـ Webhook في وردبريس تلقائياً بدون تدخل يدوي</span>
-                  </div>
-                </div>
-              </button>
+              {quickSyncActions.map((action) => {
+                const Icon = action.icon;
+                return (
+                  <button
+                    key={action.key}
+                    type="button"
+                    onClick={action.onClick}
+                    disabled={action.isPending || !isConnected}
+                    className={clsx(
+                      'w-full min-h-[44px] p-3.5 border rounded-2xl text-right transition-all disabled:opacity-50 cursor-pointer',
+                      action.cardClass
+                    )}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={clsx(
+                          'w-8 h-8 rounded-xl flex items-center justify-center shrink-0',
+                          action.iconClass
+                        )}
+                      >
+                        <Icon className={`w-4 h-4 ${action.isPending ? 'animate-spin' : ''}`} />
+                      </div>
+                      <div>
+                        <span className="text-xs font-black text-ink block">{action.title}</span>
+                        <span className="text-2xs text-muted block">{action.subtitle}</span>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
-          </div>
+          </Card>
 
           {/* Webhooks Setup Guide Card */}
           {settingsData?.webhook_url && (
-            <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white p-6 rounded-3xl shadow-sm space-y-3">
+            <Card className="bg-surface-2/80 border-2 border-ok/25 space-y-3">
               <div className="flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-emerald-400" />
-                <h3 className="text-xs font-black">الاستقبال اللحظي للطلبيات (Webhooks)</h3>
+                <ShieldCheck className="w-5 h-5 text-ok" />
+                <h3 className="text-xs font-black text-ink">الاستقبال اللحظي للطلبيات (Webhooks)</h3>
               </div>
 
-              <div className="bg-emerald-500/15 border border-emerald-500/30 rounded-xl p-3 flex items-start gap-2.5 text-emerald-300 text-[11px] leading-relaxed">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+              <div className="bg-ok-soft border border-ok/30 rounded-xl p-3 flex items-start gap-2.5 text-ok text-xs leading-relaxed">
+                <CheckCircle2 className="w-4 h-4 text-ok shrink-0 mt-0.5" />
                 <span>
-                  <strong>مفعل تلقائياً ⚡:</strong> يتم تسجيل وتفعيل خطاف الويب في متجرك بوردبريس أوتوماتيكياً بمجرد ربط المتجر. لا يحتاج العميل لنسخ أو لصق أي بيانات يدوياً.
+                  <strong>مفعل تلقائياً:</strong> يتم تسجيل وتفعيل خطاف الويب في متجرك بوردبريس أوتوماتيكياً بمجرد ربط المتجر. لا يحتاج العميل لنسخ أو لصق أي بيانات يدوياً.
                 </span>
               </div>
 
-              <p className="text-2xs text-slate-400 leading-relaxed pt-1">
+              <p className="text-2xs text-muted leading-relaxed pt-1">
                 البيانات أدناه للمطورين أو للربط اليدوي البديل فقط (اختياري):
               </p>
 
               <div className="space-y-2 pt-1 text-xs">
                 <div>
-                  <span className="text-2xs text-slate-400 block mb-0.5">Webhook URL:</span>
-                  <div className="flex items-center gap-1 bg-slate-800/80 p-2 rounded-xl border border-slate-700">
-                    <span className="font-mono text-2xs text-slate-200 truncate flex-1" dir="ltr">
+                  <span className="text-2xs text-muted block mb-0.5">Webhook URL:</span>
+                  <div className="flex items-center gap-1 bg-panel p-2 rounded-xl border border-line">
+                    <span className="tabular-nums text-2xs text-ink truncate flex-1" dir="ltr">
                       {settingsData.webhook_url}
                     </span>
                     <button
+                      type="button"
                       onClick={() => copyToClipboard(settingsData.webhook_url, 'webhook')}
-                      className="p-1 hover:bg-slate-700 rounded text-slate-300"
+                      aria-label="نسخ رابط Webhook"
+                      className="min-w-[36px] min-h-[36px] flex items-center justify-center hover:bg-surface-2 rounded-lg text-muted hover:text-ink cursor-pointer"
                     >
-                      {copiedWebhook ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                      {copiedWebhook ? <CheckCircle2 className="w-3.5 h-3.5 text-ok" /> : <Copy className="w-3.5 h-3.5" />}
                     </button>
                   </div>
                 </div>
 
                 <div>
-                  <span className="text-2xs text-slate-400 block mb-0.5">Secret:</span>
-                  <div className="flex items-center gap-1 bg-slate-800/80 p-2 rounded-xl border border-slate-700">
-                    <span className="font-mono text-2xs text-slate-200 truncate flex-1" dir="ltr">
+                  <span className="text-2xs text-muted block mb-0.5">Secret:</span>
+                  <div className="flex items-center gap-1 bg-panel p-2 rounded-xl border border-line">
+                    <span className="tabular-nums text-2xs text-ink truncate flex-1" dir="ltr">
                       {settingsData.webhook_secret}
                     </span>
                     <button
+                      type="button"
                       onClick={() => copyToClipboard(settingsData.webhook_secret, 'secret')}
-                      className="p-1 hover:bg-slate-700 rounded text-slate-300"
+                      aria-label="نسخ المفتاح السري"
+                      className="min-w-[36px] min-h-[36px] flex items-center justify-center hover:bg-surface-2 rounded-lg text-muted hover:text-ink cursor-pointer"
                     >
-                      {copiedSecret ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                      {copiedSecret ? <CheckCircle2 className="w-3.5 h-3.5 text-ok" /> : <Copy className="w-3.5 h-3.5" />}
                     </button>
                   </div>
                 </div>
 
                 <div className="pt-1">
-                  <span className="text-2xs text-amber-300 block">
-                    ⚡ الحدث في ووكومرس (Topic): <span className="font-mono font-bold">Order created</span> و <span className="font-mono font-bold">Order updated</span>
+                  <span className="text-2xs text-warn font-bold block">
+                    الحدث في ووكومرس (Topic): <span className="tabular-nums">Order created</span> و{' '}
+                    <span className="tabular-nums">Order updated</span>
                   </span>
                 </div>
               </div>
-            </div>
+            </Card>
           )}
         </div>
       </div>
 
       {/* Modal: Anoofy Connection Key Dialog */}
       {anoofyModalKey && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs animate-in fade-in duration-150" dir="rtl">
-          <div className="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl border border-slate-200/80 space-y-4 animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-canvas/80 p-4 backdrop-blur-sm animate-in fade-in duration-150"
+          dir="rtl"
+        >
+          <div className="bg-panel rounded-3xl p-6 max-w-lg w-full shadow-2xl border border-line space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-line pb-3">
               <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-2xl bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-600">
+                <div className="w-10 h-10 rounded-2xl bg-ok-soft border border-ok/30 flex items-center justify-center text-ok">
                   <Key className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-black text-slate-900">مفتاح ربط إضافة Anoofy</h3>
-                  <p className="text-2xs text-slate-500">انسخ المفتاح وضعه في إعدادات الإضافة في ووردبريس</p>
+                  <h3 className="text-sm font-black text-ink">مفتاح ربط إضافة Anoofy</h3>
+                  <p className="text-2xs text-muted">انسخ المفتاح وضعه في إعدادات الإضافة في ووردبريس</p>
                 </div>
               </div>
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
                 onClick={() => setAnoofyModalKey(null)}
-                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors"
+                aria-label="إغلاق"
+                className="p-2"
               >
                 <X className="w-4 h-4" />
-              </button>
+              </Button>
             </div>
 
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3.5 flex items-start gap-2.5 text-amber-800 text-xs leading-relaxed">
-              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <div className="bg-warn-soft border border-warn/30 rounded-2xl p-3.5 flex items-start gap-2.5 text-warn text-xs leading-relaxed">
+              <AlertTriangle className="w-4 h-4 text-warn shrink-0 mt-0.5" />
               <span>
                 <strong>تنبيه أمني هام:</strong> احفظ هذا المفتاح الآن في إعدادات إضافة Anoofy في ووردبريس. لن تتمكن من رؤيته مرة أخرى لأسباب أمنية بعد إغلاق هذه النافذة.
               </span>
             </div>
 
             <div className="space-y-1.5">
-              <span className="text-2xs font-bold text-slate-500">مفتاح الربط (Connection Key):</span>
-              <div className="bg-slate-900 text-slate-100 p-3 rounded-2xl border border-slate-800 flex items-center gap-2">
-                <span className="font-mono text-xs break-all flex-1 select-all" dir="ltr">
+              <span className="text-2xs font-bold text-muted">مفتاح الربط (Connection Key):</span>
+              <div className="bg-surface-2 text-ink p-3 rounded-2xl border border-line flex items-center gap-2">
+                <span className="tabular-nums text-xs break-all flex-1 select-all font-bold" dir="ltr">
                   {anoofyModalKey}
                 </span>
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
+                  size="sm"
                   onClick={() => {
                     if (anoofyModalKey) {
                       navigator.clipboard.writeText(anoofyModalKey);
@@ -766,22 +774,19 @@ export const WooCommerceSettingsPage: React.FC = () => {
                       setTimeout(() => setCopiedAnoofyKey(false), 3000);
                     }
                   }}
-                  className="p-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl transition-colors cursor-pointer shrink-0"
                   title="نسخ المفتاح"
+                  aria-label="نسخ المفتاح"
+                  className="shrink-0"
                 >
-                  {copiedAnoofyKey ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-                </button>
+                  {copiedAnoofyKey ? <CheckCircle2 className="w-4 h-4 text-ok" /> : <Copy className="w-4 h-4" />}
+                </Button>
               </div>
             </div>
 
-            <div className="flex items-center justify-end pt-2 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => setAnoofyModalKey(null)}
-                className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-black shadow-md transition-all cursor-pointer"
-              >
+            <div className="flex items-center justify-end pt-2 border-t border-line">
+              <Button type="button" variant="primary" size="md" onClick={() => setAnoofyModalKey(null)}>
                 تم النسخ والحفظ
-              </button>
+              </Button>
             </div>
           </div>
         </div>

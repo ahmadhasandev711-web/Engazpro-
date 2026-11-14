@@ -14,6 +14,7 @@ import {
   Receipt,
   Wallet,
 } from 'lucide-react';
+import clsx from 'clsx';
 import * as XLSX from 'xlsx';
 import { apiClient } from '../../data/api/client';
 import {
@@ -25,6 +26,7 @@ import {
 } from '../utils/excelExport';
 import { useToast } from '../context/ToastContext';
 import { useConfirm } from '../context/ConfirmContext';
+import { Badge, Button, Card, DataTable, PageHeader } from '../components/ui';
 
 interface PreviewRow {
   row_number: number;
@@ -60,6 +62,15 @@ interface PreviewResult {
   invalid_count: number;
   rows: PreviewRow[];
 }
+
+const EXPORT_ITEMS = [
+  { key: 'products', label: 'تصدير الأصناف والمخزون الحالي', icon: Package, iconClass: 'text-brand' },
+  { key: 'customers', label: 'تصدير قائمة وأرصدة العملاء', icon: Users, iconClass: 'text-info' },
+  { key: 'suppliers', label: 'تصدير قائمة وأرصدة الموردين', icon: Truck, iconClass: 'text-warn' },
+  { key: 'sales', label: 'تصدير فواتير المبيعات', icon: Receipt, iconClass: 'text-ok' },
+  { key: 'purchases', label: 'تصدير فواتير المشتريات', icon: Receipt, iconClass: 'text-brand' },
+  { key: 'expenses', label: 'تصدير سجل المصروفات', icon: Wallet, iconClass: 'text-bad' },
+] as const;
 
 export const ExcelPage: React.FC = () => {
   const toast = useToast();
@@ -199,38 +210,34 @@ export const ExcelPage: React.FC = () => {
   return (
     <div className="space-y-8" dir="rtl">
       {/* Page Header */}
-      <div>
-        <h2 className="text-xl font-bold text-slate-900">مركز استيراد وتصدير Excel</h2>
-        <p className="text-sm text-slate-500">
-          استيراد قائمة المنتجات مع المعاينة الفورية الذكية وتصدير كافة سجلات النظام بضغطة زر
-        </p>
-      </div>
+      <PageHeader
+        title="مركز استيراد وتصدير Excel"
+        description="استيراد قائمة المنتجات مع المعاينة الفورية الذكية وتصدير كافة سجلات النظام بضغطة زر"
+        className="mb-0"
+      />
 
       {/* Success Banner if committed */}
       {commitResult && (
-        <div className="p-5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-start gap-4">
-          <CheckCircle2 className="w-6 h-6 text-emerald-600 flex-shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <h3 className="font-bold text-emerald-900 text-base">تم الاستيراد بنجاح!</h3>
-            <p className="text-sm text-emerald-700 mt-1">{commitResult.message}</p>
-            <div className="flex items-center gap-4 mt-3">
-              <span className="text-xs bg-emerald-200 text-emerald-800 px-2.5 py-1 rounded-md font-bold">
+        <div className="p-5 bg-ok-soft border border-ok/30 rounded-xl flex flex-wrap items-start gap-4">
+          <CheckCircle2 className="w-6 h-6 text-ok flex-shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <h3 className="font-bold text-ink text-base">تم الاستيراد بنجاح!</h3>
+            <p className="text-sm text-ok mt-1 font-medium">{commitResult.message}</p>
+            <div className="flex flex-wrap items-center gap-3 mt-3">
+              <Badge tone="ok" className="rounded-md">
                 أصناف جديدة: {commitResult.created_count}
-              </span>
-              <span className="text-xs bg-amber-200 text-amber-800 px-2.5 py-1 rounded-md font-bold">
+              </Badge>
+              <Badge tone="warn" className="rounded-md">
                 أصناف محدثة: {commitResult.updated_count}
-              </span>
-              <span className="text-xs bg-slate-200 text-slate-700 px-2.5 py-1 rounded-md font-bold">
+              </Badge>
+              <Badge tone="neutral" className="rounded-md">
                 أصناف تم تخطيها: {commitResult.skipped_count}
-              </span>
+              </Badge>
             </div>
           </div>
-          <button
-            onClick={handleReset}
-            className="text-xs font-bold bg-white text-emerald-700 border border-emerald-300 px-3 py-1.5 rounded-lg hover:bg-emerald-100 transition-colors"
-          >
+          <Button type="button" variant="secondary" size="sm" onClick={handleReset}>
             استيراد ملف آخر
-          </button>
+          </Button>
         </div>
       )}
 
@@ -238,33 +245,35 @@ export const ExcelPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left / Main Column: Import Products with Preview */}
         <div className="lg:col-span-8 space-y-6">
-          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-6">
-            <div className="flex items-center justify-between">
+          <Card className="space-y-6">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-primary-50 text-primary-600 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-lg bg-brand-soft text-brand flex items-center justify-center shrink-0">
                   <Upload className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-base text-slate-900">استيراد الأصناف من ملف Excel</h3>
-                  <p className="text-xs text-slate-500">رفع الأصناف، الأسعار، والرصيد الافتتاحي مع المعاينة قبل الحفظ</p>
+                  <h3 className="font-bold text-base text-ink">استيراد الأصناف من ملف Excel</h3>
+                  <p className="text-xs text-muted">رفع الأصناف، الأسعار، والرصيد الافتتاحي مع المعاينة قبل الحفظ</p>
                 </div>
               </div>
 
               {/* Template Download Button */}
-              <button
+              <Button
+                type="button"
+                variant="secondary"
+                size="md"
                 onClick={downloadProductsTemplate}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors"
+                leftIcon={<Download className="w-4 h-4 text-muted" />}
               >
-                <Download className="w-4 h-4 text-slate-500" />
                 تحميل نموذج Excel جاهز
-              </button>
+              </Button>
             </div>
 
             {/* Drag & Drop Upload Zone */}
             {!previewResult && (
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-slate-200 hover:border-primary-500 rounded-xl p-8 text-center bg-slate-50/60 hover:bg-slate-50 transition-all cursor-pointer group"
+                className="border-2 border-dashed border-line-2 hover:border-brand rounded-xl p-8 text-center bg-surface-2/40 hover:bg-surface-2/70 transition-all cursor-pointer group"
               >
                 <input
                   type="file"
@@ -273,11 +282,11 @@ export const ExcelPage: React.FC = () => {
                   accept=".xlsx, .xls, .csv"
                   className="hidden"
                 />
-                <FileSpreadsheet className="w-12 h-12 text-slate-400 group-hover:text-primary-600 mx-auto mb-3 transition-colors" />
-                <h4 className="text-sm font-bold text-slate-800">
+                <FileSpreadsheet className="w-12 h-12 text-muted group-hover:text-brand mx-auto mb-3 transition-colors" />
+                <h4 className="text-sm font-bold text-ink">
                   {isReading || isPreviewing ? 'جارٍ قراءة وفحص الملف...' : 'اضغط لاختيار ملف Excel أو اسحبه هنا'}
                 </h4>
-                <p className="text-xs text-slate-400 mt-1">يدعم ملفات .xlsx و .xls و .csv حتى 10,000 صنف</p>
+                <p className="text-xs text-muted mt-1">يدعم ملفات .xlsx و .xls و .csv حتى 10,000 صنف</p>
               </div>
             )}
 
@@ -285,40 +294,44 @@ export const ExcelPage: React.FC = () => {
             {previewResult && (
               <div className="space-y-6">
                 {/* Stats Header */}
-                <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
-                  <div className="flex items-center gap-6">
+                <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-surface-2/60 rounded-xl border border-line">
+                  <div className="flex flex-wrap items-center gap-6">
                     {file && (
                       <div>
-                        <span className="text-xs text-slate-500 block">الملف الحالي</span>
-                        <span className="text-sm font-bold text-slate-800 font-mono truncate max-w-[150px] block" title={file.name}>
+                        <span className="text-xs text-muted block">الملف الحالي</span>
+                        <span
+                          className="text-sm font-bold text-ink tabular-nums truncate max-w-[150px] block"
+                          title={file.name}
+                        >
                           {file.name}
                         </span>
                       </div>
                     )}
                     <div>
-                      <span className="text-xs text-slate-500 block">إجمالي الصفوف</span>
-                      <span className="text-lg font-black text-slate-900">{previewResult.total_rows}</span>
+                      <span className="text-xs text-muted block">إجمالي الصفوف</span>
+                      <span className="text-lg font-black text-ink tabular-nums">{previewResult.total_rows}</span>
                     </div>
-                    <div className="h-8 w-px bg-slate-200" />
+                    <div className="h-8 w-px bg-line hidden sm:block" />
                     <div>
-                      <span className="text-xs text-emerald-600 block font-medium">جاهز للاستيراد 🟢</span>
-                      <span className="text-lg font-black text-emerald-700">{previewResult.valid_count}</span>
+                      <span className="text-xs text-ok block font-medium">جاهز للاستيراد</span>
+                      <span className="text-lg font-black text-ok tabular-nums">{previewResult.valid_count}</span>
                     </div>
-                    <div className="h-8 w-px bg-slate-200" />
+                    <div className="h-8 w-px bg-line hidden sm:block" />
                     <div>
-                      <span className="text-xs text-amber-600 block font-medium">مكرر 🟡</span>
-                      <span className="text-lg font-black text-amber-700">{previewResult.duplicate_count}</span>
+                      <span className="text-xs text-warn block font-medium">مكرر</span>
+                      <span className="text-lg font-black text-warn tabular-nums">{previewResult.duplicate_count}</span>
                     </div>
-                    <div className="h-8 w-px bg-slate-200" />
+                    <div className="h-8 w-px bg-line hidden sm:block" />
                     <div>
-                      <span className="text-xs text-rose-600 block font-medium">غير صالح 🔴</span>
-                      <span className="text-lg font-black text-rose-700">{previewResult.invalid_count}</span>
+                      <span className="text-xs text-bad block font-medium">غير صالح</span>
+                      <span className="text-lg font-black text-bad tabular-nums">{previewResult.invalid_count}</span>
                     </div>
                   </div>
 
                   <button
+                    type="button"
                     onClick={handleReset}
-                    className="text-xs text-slate-500 hover:text-slate-800 font-bold underline"
+                    className="min-h-[44px] px-2 text-xs text-muted hover:text-ink font-bold underline cursor-pointer"
                   >
                     إلغاء واختيار ملف آخر
                   </button>
@@ -326,31 +339,31 @@ export const ExcelPage: React.FC = () => {
 
                 {/* Duplicate Action Config */}
                 {previewResult.duplicate_count > 0 && (
-                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-2">
-                    <div className="flex items-center gap-2 text-amber-900 font-bold text-xs">
-                      <AlertTriangle className="w-4 h-4 text-amber-600" />
+                  <div className="p-4 bg-warn-soft/70 border border-warn/30 rounded-xl space-y-2">
+                    <div className="flex items-center gap-2 text-warn font-bold text-xs">
+                      <AlertTriangle className="w-4 h-4 text-warn" />
                       <span>تحديد طريقة التعامل مع الأصناف المكررة ({previewResult.duplicate_count} صنف):</span>
                     </div>
-                    <div className="flex items-center gap-6 pt-1">
-                      <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-800 font-medium">
+                    <div className="flex flex-wrap items-center gap-6 pt-1">
+                      <label className="min-h-[44px] flex items-center gap-2 cursor-pointer text-xs text-ink font-medium">
                         <input
                           type="radio"
                           name="duplicateAction"
                           value="skip"
                           checked={duplicateAction === 'skip'}
                           onChange={() => setDuplicateAction('skip')}
-                          className="text-primary-600 focus:ring-primary-500"
+                          className="text-brand focus:ring-brand accent-brand"
                         />
                         <span>تخطي الأصناف المكررة (إبقاء البيانات الحالية دون تعديل)</span>
                       </label>
-                      <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-800 font-medium">
+                      <label className="min-h-[44px] flex items-center gap-2 cursor-pointer text-xs text-ink font-medium">
                         <input
                           type="radio"
                           name="duplicateAction"
                           value="update"
                           checked={duplicateAction === 'update'}
                           onChange={() => setDuplicateAction('update')}
-                          className="text-primary-600 focus:ring-primary-500"
+                          className="text-brand focus:ring-brand accent-brand"
                         />
                         <span>تحديث البيانات (تعديل الأسعار وإضافة الكمية للمخزون)</span>
                       </label>
@@ -359,132 +372,127 @@ export const ExcelPage: React.FC = () => {
                 )}
 
                 {/* Preview Table */}
-                <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                  <div className="max-h-96 overflow-y-auto">
-                    <table className="w-full text-right text-xs">
-                      <thead className="bg-slate-100 text-slate-700 sticky top-0 font-bold border-b border-slate-200">
-                        <tr>
-                          <th className="p-2.5">#</th>
-                          <th className="p-2.5">الصنف</th>
-                          <th className="p-2.5">التصنيف</th>
-                          <th className="p-2.5">الكود / الباركود</th>
-                          <th className="p-2.5">سعر الشراء</th>
-                          <th className="p-2.5">سعر البيع</th>
-                          <th className="p-2.5">الكمية</th>
-                          <th className="p-2.5">حالة المعاينة والتحقق</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {previewResult.rows.map((row) => {
-                          const isValid = row.status === 'VALID';
-                          const isDup = row.status === 'DUPLICATE' || row.status === 'DUPLICATE_IN_FILE';
-                          const isInvalid = row.status === 'INVALID';
+                <div className="max-h-96 overflow-y-auto rounded-xl border border-line">
+                  <DataTable className="border-0 rounded-none shadow-none">
+                    <thead className="bg-surface-2 text-muted sticky top-0 font-bold border-b border-line text-xs">
+                      <tr>
+                        <th className="p-2.5">#</th>
+                        <th className="p-2.5">الصنف</th>
+                        <th className="p-2.5">التصنيف</th>
+                        <th className="p-2.5">الكود / الباركود</th>
+                        <th className="p-2.5">سعر الشراء</th>
+                        <th className="p-2.5">سعر البيع</th>
+                        <th className="p-2.5">الكمية</th>
+                        <th className="p-2.5">حالة المعاينة والتحقق</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-line text-xs text-ink">
+                      {previewResult.rows.map((row) => {
+                        const isValid = row.status === 'VALID';
+                        const isDup = row.status === 'DUPLICATE' || row.status === 'DUPLICATE_IN_FILE';
+                        const isInvalid = row.status === 'INVALID';
 
-                          return (
-                            <tr
-                              key={row.row_number}
-                              className={
-                                isInvalid
-                                  ? 'bg-rose-50/60'
-                                  : isDup
-                                  ? 'bg-amber-50/40'
-                                  : 'hover:bg-slate-50'
-                              }
-                            >
-                              <td className="p-2.5 font-bold text-slate-500">{row.row_number}</td>
-                              <td className="p-2.5 font-bold text-slate-900">
-                                {row.data.name || <span className="text-rose-500">فارغ</span>}
-                              </td>
-                              <td className="p-2.5 text-slate-600">{row.data.category_name || '-'}</td>
-                              <td className="p-2.5 font-mono text-slate-600">
-                                {row.data.barcode || row.data.code || '-'}
-                              </td>
-                              <td className="p-2.5 font-bold text-slate-700">
-                                {row.data.purchase_price !== null ? `${row.data.purchase_price} ج` : '-'}
-                              </td>
-                              <td className="p-2.5 font-bold text-emerald-700">
-                                {row.data.sale_price !== null ? `${row.data.sale_price} ج` : '-'}
-                              </td>
-                              <td className="p-2.5 font-bold text-slate-900">
-                                {row.data.quantity > 0 ? (
-                                  <span className="text-blue-700 bg-blue-50 px-2 py-0.5 rounded">
-                                    {row.data.quantity} {row.data.unit}
-                                  </span>
-                                ) : (
-                                  '0'
-                                )}
-                              </td>
-                              <td className="p-2.5">
-                                {isValid && (
-                                  <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded text-[11px] font-bold">
-                                    <CheckCircle2 className="w-3.5 h-3.5" /> سليم
-                                  </span>
-                                )}
-                                {isDup && (
-                                  <div className="space-y-0.5">
-                                    <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-100 px-2 py-0.5 rounded text-[11px] font-bold">
-                                      <AlertTriangle className="w-3.5 h-3.5" /> صنف مكرر
-                                    </span>
-                                    <p className="text-2xs text-amber-800">
-                                      {row.duplicate_info?.reason || row.errors[0]}
-                                    </p>
-                                  </div>
-                                )}
-                                {isInvalid && (
-                                  <div className="space-y-0.5">
-                                    <span className="inline-flex items-center gap-1 text-rose-700 bg-rose-100 px-2 py-0.5 rounded text-[11px] font-bold">
-                                      <XCircle className="w-3.5 h-3.5" /> خطأ
-                                    </span>
-                                    <p className="text-2xs text-rose-700 font-medium">
-                                      {row.errors.join(' | ')}
-                                    </p>
-                                  </div>
-                                )}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
+                        return (
+                          <tr
+                            key={row.row_number}
+                            className={
+                              isInvalid
+                                ? 'bg-bad-soft/40'
+                                : isDup
+                                ? 'bg-warn-soft/30'
+                                : 'hover:bg-surface-2/50'
+                            }
+                          >
+                            <td className="p-2.5 font-bold text-muted tabular-nums">{row.row_number}</td>
+                            <td className="p-2.5 font-bold text-ink">
+                              {row.data.name || <span className="text-bad">فارغ</span>}
+                            </td>
+                            <td className="p-2.5 text-muted">{row.data.category_name || '-'}</td>
+                            <td className="p-2.5 tabular-nums text-muted">
+                              {row.data.barcode || row.data.code || '-'}
+                            </td>
+                            <td className="p-2.5 font-bold text-ink tabular-nums">
+                              {row.data.purchase_price !== null ? `${row.data.purchase_price} ج` : '-'}
+                            </td>
+                            <td className="p-2.5 font-bold text-ok tabular-nums">
+                              {row.data.sale_price !== null ? `${row.data.sale_price} ج` : '-'}
+                            </td>
+                            <td className="p-2.5 font-bold text-ink tabular-nums">
+                              {row.data.quantity > 0 ? (
+                                <Badge tone="info" className="rounded text-xs">
+                                  {row.data.quantity} {row.data.unit}
+                                </Badge>
+                              ) : (
+                                '0'
+                              )}
+                            </td>
+                            <td className="p-2.5">
+                              {isValid && (
+                                <Badge tone="ok" className="rounded text-xs">
+                                  <CheckCircle2 className="w-3.5 h-3.5" /> سليم
+                                </Badge>
+                              )}
+                              {isDup && (
+                                <div className="space-y-0.5">
+                                  <Badge tone="warn" className="rounded text-xs">
+                                    <AlertTriangle className="w-3.5 h-3.5" /> صنف مكرر
+                                  </Badge>
+                                  <p className="text-2xs text-warn font-medium">
+                                    {row.duplicate_info?.reason || row.errors[0]}
+                                  </p>
+                                </div>
+                              )}
+                              {isInvalid && (
+                                <div className="space-y-0.5">
+                                  <Badge tone="bad" className="rounded text-xs">
+                                    <XCircle className="w-3.5 h-3.5" /> خطأ
+                                  </Badge>
+                                  <p className="text-2xs text-bad font-medium">
+                                    {row.errors.join(' | ')}
+                                  </p>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </DataTable>
                 </div>
 
                 {/* Commit Action Buttons */}
-                <div className="flex items-center justify-between pt-2">
-                  <button
-                    onClick={handleReset}
-                    className="px-4 py-2 border border-slate-200 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-100"
-                  >
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
+                  <Button type="button" variant="secondary" size="md" onClick={handleReset}>
                     إلغاء المعاينة
-                  </button>
+                  </Button>
 
-                  <button
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="md"
                     onClick={handleCommit}
-                    disabled={isCommitting || (previewResult.valid_count === 0 && (previewResult.duplicate_count === 0 || duplicateAction === 'skip'))}
-                    className="flex items-center gap-2 px-6 py-2.5 bg-primary-600 hover:bg-primary-700 disabled:bg-slate-300 text-white rounded-lg text-xs font-black shadow-sm transition-colors"
+                    isLoading={isCommitting}
+                    disabled={
+                      isCommitting ||
+                      (previewResult.valid_count === 0 &&
+                        (previewResult.duplicate_count === 0 || duplicateAction === 'skip'))
+                    }
+                    leftIcon={<CheckCircle2 className="w-4 h-4" />}
                   >
-                    {isCommitting ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                        جارٍ حفظ البيانات وتوثيق المخزون...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="w-4 h-4" />
-                        تأكيد واعتماد الاستيراد في النظام
-                      </>
-                    )}
-                  </button>
+                    {isCommitting
+                      ? 'جارٍ حفظ البيانات وتوثيق المخزون...'
+                      : 'تأكيد واعتماد الاستيراد في النظام'}
+                  </Button>
                 </div>
               </div>
             )}
-          </div>
+          </Card>
 
           {/* Quick Info & Constitution Rules Card */}
-          <div className="p-4 bg-slate-100/80 rounded-xl border border-slate-200 flex items-start gap-3">
-            <HelpCircle className="w-5 h-5 text-slate-500 flex-shrink-0 mt-0.5" />
-            <div className="text-xs text-slate-600 space-y-1">
-              <strong className="text-slate-800 block">ضمان سلامة المخزون والدقة المحاسبية:</strong>
+          <div className="p-4 bg-surface-2/60 rounded-xl border border-line flex items-start gap-3">
+            <HelpCircle className="w-5 h-5 text-muted flex-shrink-0 mt-0.5" />
+            <div className="text-xs text-muted space-y-1">
+              <strong className="text-ink block">ضمان سلامة المخزون والدقة المحاسبية:</strong>
               <p>
                 - أي صنف يتم إدخال رصيد أولي له سيتم توثيقه فوراً في سجل حركات المخزون كـ (رصيد افتتاحي) لضمان عدم التلاعب.
               </p>
@@ -497,115 +505,43 @@ export const ExcelPage: React.FC = () => {
 
         {/* Right Column: One-Click Excel Export Hub */}
         <div className="lg:col-span-4 space-y-6">
-          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+          <Card className="space-y-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-lg bg-info-soft text-info flex items-center justify-center shrink-0">
                 <Download className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="font-bold text-base text-slate-900">تصدير سجلات النظام</h3>
-                <p className="text-xs text-slate-500">تنزيل شيتات Excel فورية لكافة العمليات</p>
+                <h3 className="font-bold text-base text-ink">تصدير سجلات النظام</h3>
+                <p className="text-xs text-muted">تنزيل شيتات Excel فورية لكافة العمليات</p>
               </div>
             </div>
 
             <div className="space-y-2 pt-2">
-              <button
-                onClick={() => handleExport('products')}
-                disabled={exportLoading !== null}
-                className="w-full flex items-center justify-between p-3 border border-slate-200 rounded-lg hover:bg-slate-50 text-xs font-bold text-slate-700 transition-colors"
-              >
-                <span className="flex items-center gap-2">
-                  <Package className="w-4 h-4 text-primary-600" />
-                  تصدير الأصناف والمخزون الحالي
-                </span>
-                {exportLoading === 'products' ? (
-                  <RefreshCw className="w-4 h-4 animate-spin text-slate-400" />
-                ) : (
-                  <Download className="w-4 h-4 text-slate-400" />
-                )}
-              </button>
-
-              <button
-                onClick={() => handleExport('customers')}
-                disabled={exportLoading !== null}
-                className="w-full flex items-center justify-between p-3 border border-slate-200 rounded-lg hover:bg-slate-50 text-xs font-bold text-slate-700 transition-colors"
-              >
-                <span className="flex items-center gap-2">
-                  <Users className="w-4 h-4 text-blue-600" />
-                  تصدير قائمة وأرصدة العملاء
-                </span>
-                {exportLoading === 'customers' ? (
-                  <RefreshCw className="w-4 h-4 animate-spin text-slate-400" />
-                ) : (
-                  <Download className="w-4 h-4 text-slate-400" />
-                )}
-              </button>
-
-              <button
-                onClick={() => handleExport('suppliers')}
-                disabled={exportLoading !== null}
-                className="w-full flex items-center justify-between p-3 border border-slate-200 rounded-lg hover:bg-slate-50 text-xs font-bold text-slate-700 transition-colors"
-              >
-                <span className="flex items-center gap-2">
-                  <Truck className="w-4 h-4 text-amber-600" />
-                  تصدير قائمة وأرصدة الموردين
-                </span>
-                {exportLoading === 'suppliers' ? (
-                  <RefreshCw className="w-4 h-4 animate-spin text-slate-400" />
-                ) : (
-                  <Download className="w-4 h-4 text-slate-400" />
-                )}
-              </button>
-
-              <button
-                onClick={() => handleExport('sales')}
-                disabled={exportLoading !== null}
-                className="w-full flex items-center justify-between p-3 border border-slate-200 rounded-lg hover:bg-slate-50 text-xs font-bold text-slate-700 transition-colors"
-              >
-                <span className="flex items-center gap-2">
-                  <Receipt className="w-4 h-4 text-emerald-600" />
-                  تصدير فواتير المبيعات
-                </span>
-                {exportLoading === 'sales' ? (
-                  <RefreshCw className="w-4 h-4 animate-spin text-slate-400" />
-                ) : (
-                  <Download className="w-4 h-4 text-slate-400" />
-                )}
-              </button>
-
-              <button
-                onClick={() => handleExport('purchases')}
-                disabled={exportLoading !== null}
-                className="w-full flex items-center justify-between p-3 border border-slate-200 rounded-lg hover:bg-slate-50 text-xs font-bold text-slate-700 transition-colors"
-              >
-                <span className="flex items-center gap-2">
-                  <Receipt className="w-4 h-4 text-indigo-600" />
-                  تصدير فواتير المشتريات
-                </span>
-                {exportLoading === 'purchases' ? (
-                  <RefreshCw className="w-4 h-4 animate-spin text-slate-400" />
-                ) : (
-                  <Download className="w-4 h-4 text-slate-400" />
-                )}
-              </button>
-
-              <button
-                onClick={() => handleExport('expenses')}
-                disabled={exportLoading !== null}
-                className="w-full flex items-center justify-between p-3 border border-slate-200 rounded-lg hover:bg-slate-50 text-xs font-bold text-slate-700 transition-colors"
-              >
-                <span className="flex items-center gap-2">
-                  <Wallet className="w-4 h-4 text-rose-600" />
-                  تصدير سجل المصروفات
-                </span>
-                {exportLoading === 'expenses' ? (
-                  <RefreshCw className="w-4 h-4 animate-spin text-slate-400" />
-                ) : (
-                  <Download className="w-4 h-4 text-slate-400" />
-                )}
-              </button>
+              {EXPORT_ITEMS.map((item) => {
+                const Icon = item.icon;
+                const isItemLoading = exportLoading === item.key;
+                return (
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={() => handleExport(item.key)}
+                    disabled={exportLoading !== null}
+                    className="w-full min-h-[44px] flex items-center justify-between p-3 border border-line rounded-xl hover:bg-surface-2/60 text-xs font-bold text-ink transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Icon className={clsx('w-4 h-4', item.iconClass)} />
+                      {item.label}
+                    </span>
+                    {isItemLoading ? (
+                      <RefreshCw className="w-4 h-4 animate-spin text-muted" />
+                    ) : (
+                      <Download className="w-4 h-4 text-muted" />
+                    )}
+                  </button>
+                );
+              })}
             </div>
-          </div>
+          </Card>
         </div>
       </div>
     </div>

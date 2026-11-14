@@ -16,6 +16,8 @@ import clsx from 'clsx';
 import { apiClient } from '../../../data/api/client';
 import { formatCurrency, PaymentMethod } from '@pos-mandob/shared';
 import { useConfirm } from '../../context/ConfirmContext';
+import { Badge, Button, Input, Select } from '../ui';
+import { getEmployeeRoleMeta } from './employeeRoleMap';
 
 interface PayrollModalProps {
   isOpen: boolean;
@@ -137,7 +139,7 @@ export const PayrollModal: React.FC<PayrollModalProps> = ({
       queryClient.invalidateQueries({ queryKey: ['treasuries'] });
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       setIsDisburseOpen(false);
-      setFeedback({ type: 'success', message: 'تم صرف الراتب وخصمه من الخزينة بنجاح! 🎉' });
+      setFeedback({ type: 'success', message: 'تم صرف الراتب وخصمه من الخزينة بنجاح!' });
       setTimeout(() => setFeedback(null), 4000);
     },
     onError: (err: any) => {
@@ -152,48 +154,53 @@ export const PayrollModal: React.FC<PayrollModalProps> = ({
 
   const isPaid = Boolean(payroll?.is_paid);
   const netPayable = payroll?.net_payable || 0;
+  const roleMeta = getEmployeeRoleMeta(employee.role);
+
+  const treasuryOptions = [
+    { value: '', label: '-- اختر الخزينة أو الحساب البنكي --' },
+    ...treasuries
+      .filter((t: any) => t.is_active)
+      .map((t: any) => ({
+        value: String(t.id),
+        label: `${t.name} (${formatCurrency(t.balance)})`,
+      })),
+  ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white rounded-3xl w-full max-w-2xl shadow-2xl border border-slate-100 flex flex-col max-h-[92vh] overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-canvas/80 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-panel rounded-3xl w-full max-w-2xl shadow-2xl border border-line flex flex-col max-h-[92vh] overflow-hidden">
         {/* Header */}
-        <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-slate-50 via-white to-slate-50">
+        <div className="p-5 border-b border-line flex items-center justify-between bg-surface-2/60">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-emerald-100/80 text-emerald-800 flex items-center justify-center font-black text-lg shadow-inner">
+            <div className="w-11 h-11 rounded-2xl bg-ok-soft text-ok border border-ok/20 flex items-center justify-center font-black text-lg">
               <DollarSign className="w-6 h-6" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base font-black text-slate-900">{employee.name}</h3>
-                <span className="text-2xs font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full border border-slate-200">
-                  {employee.role === 'SALES'
-                    ? 'بائع صالة / سيلز'
-                    : employee.role === 'CASHIER'
-                    ? 'كاشير'
-                    : employee.role === 'MANDOB'
-                    ? 'مندوب مبيعات'
-                    : employee.role === 'MANAGER'
-                    ? 'مدير فرع'
-                    : 'مشرف'}
-                </span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-base font-black text-ink">{employee.name}</h3>
+                <Badge tone={roleMeta.tone} className="text-2xs">
+                  {roleMeta.label}
+                </Badge>
                 {employee.branch && (
-                  <span className="text-2xs font-bold bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full border border-purple-200">
+                  <Badge tone="brand" className="text-2xs">
                     {employee.branch.name}
-                  </span>
+                  </Badge>
                 )}
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">مسير الراتب الشهري وعمولات المبيعات والتسويات</p>
+              <p className="text-xs text-muted mt-0.5">مسير الراتب الشهري وعمولات المبيعات والتسويات</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onClose}
-              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            aria-label="إغلاق"
+            className="p-2"
+          >
+            <X className="w-5 h-5" />
+          </Button>
         </div>
 
         {/* Feedback Banner */}
@@ -202,43 +209,42 @@ export const PayrollModal: React.FC<PayrollModalProps> = ({
             className={clsx(
               'px-5 py-2.5 text-xs font-bold flex items-center gap-2 border-b',
               feedback.type === 'success'
-                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                : 'bg-rose-50 text-rose-800 border-rose-200'
+                ? 'bg-ok-soft text-ok border-ok/30'
+                : 'bg-bad-soft text-bad border-bad/30'
             )}
           >
             {feedback.type === 'success' ? (
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+              <CheckCircle2 className="w-4 h-4 text-ok flex-shrink-0" />
             ) : (
-              <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+              <AlertCircle className="w-4 h-4 text-bad flex-shrink-0" />
             )}
             <span>{feedback.message}</span>
           </div>
         )}
 
         {/* Month Selector Bar */}
-        <div className="px-5 py-3 bg-slate-50/80 border-b border-slate-200/60 flex items-center justify-between gap-3">
+        <div className="px-5 py-3 bg-surface-2/40 border-b border-line flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-slate-500" />
-            <span className="text-xs font-bold text-slate-700">شهر المسير:</span>
+            <Calendar className="w-4 h-4 text-muted" />
+            <span className="text-xs font-bold text-ink">شهر المسير:</span>
             <input
               type="month"
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
-              className="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold bg-white text-slate-800 focus:outline-none focus:ring-1 focus:ring-primary-500"
+              className="min-h-[44px] sm:min-h-[38px] px-3 py-1.5 rounded-xl border border-line text-xs font-bold bg-panel text-ink focus:outline-none focus:ring-1 focus:ring-brand focus:border-brand"
             />
           </div>
 
           <div>
             {isPaid ? (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-xs">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                <span>تم صرف الراتب ✓</span>
-              </span>
+              <Badge tone="ok" className="px-3 py-1">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>تم صرف الراتب</span>
+              </Badge>
             ) : (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+              <Badge tone="warn" dot className="px-3 py-1">
                 <span>معلق (بانتظار الصرف)</span>
-              </span>
+              </Badge>
             )}
           </div>
         </div>
@@ -246,48 +252,45 @@ export const PayrollModal: React.FC<PayrollModalProps> = ({
         {/* Modal Body */}
         <div className="p-5 overflow-y-auto space-y-5 flex-1">
           {isLoading ? (
-            <div className="p-12 flex flex-col items-center justify-center text-slate-400 gap-2">
-              <RefreshCw className="w-6 h-6 animate-spin text-primary-600" />
+            <div className="p-12 flex flex-col items-center justify-center text-muted gap-2">
+              <RefreshCw className="w-6 h-6 animate-spin text-brand" />
               <span className="text-xs font-bold">جاري احتساب المسير والعمولات...</span>
             </div>
           ) : (
             <>
               {/* Financial Capsules Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                {/* Base Salary */}
-                <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/70 text-center">
-                  <span className="text-[11px] text-slate-500 font-bold block">الراتب الأساسي</span>
-                  <span className="text-base font-black text-slate-900 font-mono block mt-0.5">
+                <div className="bg-surface-2/60 p-3 rounded-2xl border border-line text-center">
+                  <span className="text-xs text-muted font-bold block">الراتب الأساسي</span>
+                  <span className="text-base font-black text-ink tabular-nums block mt-0.5">
                     {formatCurrency(payroll?.base_salary || 0)}
                   </span>
                 </div>
 
-                {/* Commission */}
-                <div className="bg-primary-50/60 p-3 rounded-2xl border border-primary-100 text-center relative overflow-hidden">
-                  <span className="text-[11px] text-primary-700 font-bold block flex items-center justify-center gap-1">
+                <div className="bg-brand-soft/60 p-3 rounded-2xl border border-brand/25 text-center relative overflow-hidden">
+                  <span className="text-xs text-brand-ink font-bold flex items-center justify-center gap-1">
                     <Award className="w-3.5 h-3.5" />
                     <span>العمولة المستحقة</span>
                   </span>
-                  <span className="text-base font-black text-primary-900 font-mono block mt-0.5">
+                  <span className="text-base font-black text-brand tabular-nums block mt-0.5">
                     +{formatCurrency(payroll?.commission_amount || 0)}
                   </span>
-                  <span className="text-2xs text-primary-600/80 block mt-0.5">
-                    {payroll?.is_manager_scope ? 'مبيعات الفرع المباشرة' : 'المبيعات الشخصية'}: {formatCurrency(payroll?.total_sales || 0)}
+                  <span className="text-2xs text-muted block mt-0.5">
+                    {payroll?.is_manager_scope ? 'مبيعات الفرع المباشرة' : 'المبيعات الشخصية'}:{' '}
+                    {formatCurrency(payroll?.total_sales || 0)}
                   </span>
                 </div>
 
-                {/* Bonuses */}
-                <div className="bg-teal-50/60 p-3 rounded-2xl border border-teal-100 text-center">
-                  <span className="text-[11px] text-teal-700 font-bold block">إضافي ومكافآت</span>
-                  <span className="text-base font-black text-teal-900 font-mono block mt-0.5">
+                <div className="bg-ok-soft/60 p-3 rounded-2xl border border-ok/25 text-center">
+                  <span className="text-xs text-ok font-bold block">إضافي ومكافآت</span>
+                  <span className="text-base font-black text-ok tabular-nums block mt-0.5">
                     +{formatCurrency(payroll?.total_bonuses || 0)}
                   </span>
                 </div>
 
-                {/* Deductions */}
-                <div className="bg-rose-50/60 p-3 rounded-2xl border border-rose-100 text-center">
-                  <span className="text-[11px] text-rose-700 font-bold block">خصومات وسلف</span>
-                  <span className="text-base font-black text-rose-900 font-mono block mt-0.5">
+                <div className="bg-bad-soft/60 p-3 rounded-2xl border border-bad/25 text-center">
+                  <span className="text-xs text-bad font-bold block">خصومات وسلف</span>
+                  <span className="text-base font-black text-bad tabular-nums block mt-0.5">
                     -{formatCurrency(payroll?.total_deductions || 0)}
                   </span>
                 </div>
@@ -296,19 +299,21 @@ export const PayrollModal: React.FC<PayrollModalProps> = ({
               {/* Grand Total Capsule (Net Payable) */}
               <div
                 className={clsx(
-                  'p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 text-white shadow-sm',
-                  isPaid ? 'bg-gradient-to-r from-slate-900 to-slate-800' : 'bg-gradient-to-r from-emerald-900 via-emerald-800 to-slate-900'
+                  'p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 border shadow-xs',
+                  isPaid
+                    ? 'bg-surface-2 border-line text-ink'
+                    : 'bg-ok-soft/70 border-ok/40 text-ink'
                 )}
               >
                 <div>
-                  <span className="text-xs text-emerald-200/90 block">
+                  <span className="text-xs text-muted font-bold block">
                     {isPaid ? 'المبلغ الذي تم صرفه فعلياً:' : 'صافي الراتب المستحق للصرف:'}
                   </span>
-                  <div className="flex items-baseline gap-2 mt-0.5">
-                    <span className="text-3xl font-black font-mono tracking-tight text-white">
+                  <div className="flex flex-wrap items-baseline gap-2 mt-0.5">
+                    <span className="text-3xl font-black tabular-nums tracking-tight text-ok">
                       {formatCurrency(netPayable)}
                     </span>
-                    <span className="text-xs text-emerald-300 font-bold">
+                    <span className="text-xs text-muted font-bold">
                       {isPaid ? '(تم الصرف)' : '(الأساسي + العمولة + الإضافي - الخصم)'}
                     </span>
                   </div>
@@ -316,73 +321,85 @@ export const PayrollModal: React.FC<PayrollModalProps> = ({
 
                 <div>
                   {!isPaid ? (
-                    <button
+                    <Button
                       type="button"
+                      variant="primary"
+                      size="md"
                       onClick={() => setIsDisburseOpen(true)}
                       disabled={netPayable <= 0}
-                      className="px-5 py-2.5 rounded-xl bg-emerald-400 hover:bg-emerald-300 active:scale-95 disabled:opacity-50 text-slate-950 font-black text-xs transition-all flex items-center gap-2 shadow-md cursor-pointer"
+                      leftIcon={<Coins className="w-4 h-4" />}
                     >
-                      <Coins className="w-4 h-4" />
-                      <span>صرف الراتب الآن 💸</span>
-                    </button>
+                      صرف الراتب الآن
+                    </Button>
                   ) : (
-                    <div className="text-right text-xs text-emerald-200">
-                      <div>طريقة الصرف: <strong className="text-white">{payroll?.payout?.payment_method}</strong></div>
-                      <div>الخزينة: <strong className="text-white">{payroll?.payout?.treasury?.name || 'الخزينة العامة'}</strong></div>
-                      <div className="text-[11px] text-slate-300 mt-0.5">بواسطة: {payroll?.payout?.paid_by_name}</div>
+                    <div className="text-right text-xs text-muted space-y-0.5">
+                      <div>
+                        طريقة الصرف: <strong className="text-ink">{payroll?.payout?.payment_method}</strong>
+                      </div>
+                      <div>
+                        الخزينة:{' '}
+                        <strong className="text-ink">{payroll?.payout?.treasury?.name || 'الخزينة العامة'}</strong>
+                      </div>
+                      <div className="text-xs text-muted mt-0.5">
+                        بواسطة: {payroll?.payout?.paid_by_name}
+                      </div>
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Adjustments Section (الخصومات والمكافآت) */}
+              {/* Adjustments Section */}
               <div className="space-y-3 pt-2">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <h4 className="text-xs font-black text-slate-900">سجل التسويات والبدلات لهذا الشهر</h4>
-                    <span className="text-2xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-bold">
+                    <h4 className="text-xs font-black text-ink">سجل التسويات والبدلات لهذا الشهر</h4>
+                    <Badge tone="neutral" className="text-2xs">
                       {payroll?.adjustments?.length || 0}
-                    </span>
+                    </Badge>
                   </div>
 
                   {!isPaid && (
-                    <button
+                    <Button
                       type="button"
+                      variant="secondary"
+                      size="sm"
                       onClick={() => setIsAddAdjustmentOpen(true)}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-primary-50 text-primary-700 hover:bg-primary-100 text-xs font-bold transition-all"
+                      leftIcon={<Plus className="w-3.5 h-3.5" />}
                     >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>إضافة مكافأة أو خصم</span>
-                    </button>
+                      إضافة مكافأة أو خصم
+                    </Button>
                   )}
                 </div>
 
                 {payroll?.adjustments?.length === 0 ? (
-                  <div className="p-6 text-center bg-slate-50/60 rounded-2xl border border-dashed border-slate-200 text-slate-400 text-xs font-medium">
+                  <div className="p-6 text-center bg-surface-2/40 rounded-2xl border border-dashed border-line text-muted text-xs font-medium">
                     لا توجد أي خصومات أو مكافآت مسجلة لهذا الموظف في هذا الشهر.
                   </div>
                 ) : (
-                  <div className="divide-y divide-slate-100 border border-slate-200/80 rounded-2xl overflow-hidden bg-white shadow-xs">
+                  <div className="divide-y divide-line border border-line rounded-2xl overflow-hidden bg-panel shadow-xs">
                     {payroll?.adjustments?.map((adj: any) => (
-                      <div key={adj.id} className="p-3 flex items-center justify-between text-xs hover:bg-slate-50/60 transition-colors">
+                      <div
+                        key={adj.id}
+                        className="p-3 flex items-center justify-between text-xs hover:bg-surface-2/50 transition-colors"
+                      >
                         <div className="flex items-center gap-2.5">
-                          <span
-                            className={clsx(
-                              'px-2 py-0.5 rounded-full text-2xs font-black',
+                          <Badge
+                            tone={
                               adj.type === 'BONUS'
-                                ? 'bg-teal-100 text-teal-800'
+                                ? 'ok'
                                 : adj.type === 'ADVANCE'
-                                ? 'bg-amber-100 text-amber-800'
-                                : 'bg-rose-100 text-rose-800'
-                            )}
+                                ? 'warn'
+                                : 'bad'
+                            }
+                            className="text-2xs"
                           >
                             {adj.type === 'BONUS' ? 'مكافأة / إضافي' : adj.type === 'ADVANCE' ? 'سلفة' : 'خصم / جزاء'}
-                          </span>
+                          </Badge>
                           <div>
-                            <span className="font-bold text-slate-800 block">
+                            <span className="font-bold text-ink block">
                               {adj.reason || (adj.type === 'BONUS' ? 'إضافي بدون سبب' : 'خصم بدون سبب')}
                             </span>
-                            <span className="text-2xs text-slate-400 block mt-0.5">
+                            <span className="text-2xs text-muted block mt-0.5">
                               {adj.date} • بواسطة: {adj.created_by_name}
                             </span>
                           </div>
@@ -391,16 +408,19 @@ export const PayrollModal: React.FC<PayrollModalProps> = ({
                         <div className="flex items-center gap-3">
                           <span
                             className={clsx(
-                              'font-black font-mono text-sm',
-                              adj.type === 'BONUS' ? 'text-teal-700' : 'text-rose-700'
+                              'font-black tabular-nums text-sm',
+                              adj.type === 'BONUS' ? 'text-ok' : 'text-bad'
                             )}
                           >
-                            {adj.type === 'BONUS' ? '+' : '-'}{formatCurrency(adj.amount)}
+                            {adj.type === 'BONUS' ? '+' : '-'}
+                            {formatCurrency(adj.amount)}
                           </span>
 
                           {!isPaid && (
-                            <button
+                            <Button
                               type="button"
+                              variant="ghost"
+                              size="sm"
                               onClick={async () => {
                                 const ok = await confirm({
                                   title: 'تأكيد الحذف',
@@ -411,11 +431,12 @@ export const PayrollModal: React.FC<PayrollModalProps> = ({
                                   deleteAdjustmentMutation.mutate(adj.id);
                                 }
                               }}
-                              className="p-1 text-slate-300 hover:text-rose-600 transition-colors"
+                              className="p-2 text-muted hover:text-bad hover:bg-bad-soft"
                               title="حذف التسوية"
+                              aria-label="حذف التسوية"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            </Button>
                           )}
                         </div>
                       </div>
@@ -430,27 +451,34 @@ export const PayrollModal: React.FC<PayrollModalProps> = ({
 
       {/* Sub-Modal: Add Adjustment */}
       {isAddAdjustmentOpen && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl w-full max-w-sm p-5 shadow-2xl border border-slate-100 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h4 className="text-sm font-black text-slate-900">تسجيل تسوية مالية</h4>
-              <button onClick={() => setIsAddAdjustmentOpen(false)} className="text-slate-400 hover:text-slate-600">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-canvas/80 backdrop-blur-sm">
+          <div className="bg-panel rounded-3xl w-full max-w-sm p-5 shadow-2xl border border-line space-y-4">
+            <div className="flex items-center justify-between border-b border-line pb-3">
+              <h4 className="text-sm font-black text-ink">تسجيل تسوية مالية</h4>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsAddAdjustmentOpen(false)}
+                aria-label="إغلاق"
+                className="p-2"
+              >
                 <X className="w-4 h-4" />
-              </button>
+              </Button>
             </div>
 
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">نوع التسوية:</label>
+                <label className="block text-xs font-bold text-ink mb-1.5">نوع التسوية:</label>
                 <div className="grid grid-cols-3 gap-1.5">
                   <button
                     type="button"
                     onClick={() => setAdjType('BONUS')}
                     className={clsx(
-                      'py-2 rounded-xl text-xs font-bold border transition-all',
+                      'min-h-[44px] py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer',
                       adjType === 'BONUS'
-                        ? 'bg-teal-50 border-teal-500 text-teal-800 ring-1 ring-teal-500/30'
-                        : 'bg-slate-50 border-slate-200 text-slate-600'
+                        ? 'bg-ok-soft border-ok text-ok ring-1 ring-ok/30'
+                        : 'bg-surface-2 border-line text-muted hover:text-ink'
                     )}
                   >
                     مكافأة (+)
@@ -459,10 +487,10 @@ export const PayrollModal: React.FC<PayrollModalProps> = ({
                     type="button"
                     onClick={() => setAdjType('DEDUCTION')}
                     className={clsx(
-                      'py-2 rounded-xl text-xs font-bold border transition-all',
+                      'min-h-[44px] py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer',
                       adjType === 'DEDUCTION'
-                        ? 'bg-rose-50 border-rose-500 text-rose-800 ring-1 ring-rose-500/30'
-                        : 'bg-slate-50 border-slate-200 text-slate-600'
+                        ? 'bg-bad-soft border-bad text-bad ring-1 ring-bad/30'
+                        : 'bg-surface-2 border-line text-muted hover:text-ink'
                     )}
                   >
                     خصم (-)
@@ -471,10 +499,10 @@ export const PayrollModal: React.FC<PayrollModalProps> = ({
                     type="button"
                     onClick={() => setAdjType('ADVANCE')}
                     className={clsx(
-                      'py-2 rounded-xl text-xs font-bold border transition-all',
+                      'min-h-[44px] py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer',
                       adjType === 'ADVANCE'
-                        ? 'bg-amber-50 border-amber-500 text-amber-800 ring-1 ring-amber-500/30'
-                        : 'bg-slate-50 border-slate-200 text-slate-600'
+                        ? 'bg-warn-soft border-warn text-warn ring-1 ring-warn/30'
+                        : 'bg-surface-2 border-line text-muted hover:text-ink'
                     )}
                   >
                     سلفة (-)
@@ -482,100 +510,97 @@ export const PayrollModal: React.FC<PayrollModalProps> = ({
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">المبلغ (ج.م) *</label>
-                <input
-                  type="number"
-                  min="1"
-                  step="any"
-                  placeholder="0.00"
-                  value={adjAmount}
-                  onChange={(e) => setAdjAmount(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-primary-500"
-                />
-              </div>
+              <Input
+                label="المبلغ (ج.م) *"
+                type="number"
+                min="1"
+                step="any"
+                placeholder="0.00"
+                value={adjAmount}
+                onChange={(e) => setAdjAmount(e.target.value)}
+                className="tabular-nums font-bold"
+              />
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">التاريخ *</label>
-                <input
-                  type="date"
-                  value={adjDate}
-                  onChange={(e) => setAdjDate(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500"
-                />
-              </div>
+              <Input
+                label="التاريخ *"
+                type="date"
+                value={adjDate}
+                onChange={(e) => setAdjDate(e.target.value)}
+              />
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">السبب / البيان</label>
-                <input
-                  type="text"
-                  placeholder="مثال: حافز تميز في مبيعات نهاية الأسبوع"
-                  value={adjReason}
-                  onChange={(e) => setAdjReason(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500"
-                />
-              </div>
+              <Input
+                label="السبب / البيان"
+                type="text"
+                placeholder="مثال: حافز تميز في مبيعات نهاية الأسبوع"
+                value={adjReason}
+                onChange={(e) => setAdjReason(e.target.value)}
+              />
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setIsAddAdjustmentOpen(false)}
-                  className="px-4 py-2 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-xl"
-                >
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-line">
+                <Button type="button" variant="ghost" size="md" onClick={() => setIsAddAdjustmentOpen(false)}>
                   إلغاء
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
+                  variant="primary"
+                  size="md"
                   onClick={() => addAdjustmentMutation.mutate()}
+                  isLoading={addAdjustmentMutation.isPending}
                   disabled={addAdjustmentMutation.isPending || !adjAmount}
-                  className="px-5 py-2 bg-primary-600 text-white rounded-xl text-xs font-bold hover:bg-primary-700 disabled:opacity-50"
                 >
-                  {addAdjustmentMutation.isPending ? 'جاري الحفظ...' : 'حفظ التسوية'}
-                </button>
+                  حفظ التسوية
+                </Button>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Sub-Modal: Disburse Payroll (صرف الراتب بمرونة الدفع) */}
+      {/* Sub-Modal: Disburse Payroll */}
       {isDisburseOpen && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl border border-slate-100 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-canvas/80 backdrop-blur-sm">
+          <div className="bg-panel rounded-3xl w-full max-w-md p-6 shadow-2xl border border-line space-y-4">
+            <div className="flex items-center justify-between border-b border-line pb-3">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 bg-emerald-100 text-emerald-800 rounded-xl">
+                <div className="p-1.5 bg-ok-soft text-ok rounded-xl">
                   <Coins className="w-5 h-5" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-black text-slate-900">تأكيد صرف راتب شهر {selectedMonth}</h4>
-                  <span className="text-xs text-slate-400">للموظف: {employee.name}</span>
+                  <h4 className="text-sm font-black text-ink">تأكيد صرف راتب شهر {selectedMonth}</h4>
+                  <span className="text-xs text-muted">للموظف: {employee.name}</span>
                 </div>
               </div>
-              <button onClick={() => setIsDisburseOpen(false)} className="text-slate-400 hover:text-slate-600">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsDisburseOpen(false)}
+                aria-label="إغلاق"
+                className="p-2"
+              >
                 <X className="w-4 h-4" />
-              </button>
+              </Button>
             </div>
 
             {/* Total to pay banner */}
-            <div className="bg-emerald-900 text-white p-3.5 rounded-2xl flex items-center justify-between">
-              <span className="text-xs text-emerald-200">إجمالي المبلغ المصروف:</span>
-              <span className="text-xl font-black font-mono">{formatCurrency(netPayable)}</span>
+            <div className="bg-ok-soft border border-ok/30 text-ink p-3.5 rounded-2xl flex items-center justify-between">
+              <span className="text-xs text-muted font-bold">إجمالي المبلغ المصروف:</span>
+              <span className="text-xl font-black text-ok tabular-nums">{formatCurrency(netPayable)}</span>
             </div>
 
             <div className="space-y-3">
               {/* Payment Method Selector */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">طريقة الدفع والتسليم:</label>
+                <label className="block text-xs font-bold text-ink mb-1.5">طريقة الدفع والتسليم:</label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                   <button
                     type="button"
                     onClick={() => setDisburseMethod(PaymentMethod.CASH)}
                     className={clsx(
-                      'py-2 px-1 rounded-xl text-xs font-bold border transition-all text-center',
+                      'min-h-[44px] py-2 px-1 rounded-xl text-xs font-bold border transition-all text-center cursor-pointer',
                       disburseMethod === PaymentMethod.CASH
-                        ? 'bg-emerald-50 border-emerald-500 text-emerald-800 ring-1 ring-emerald-500/30'
-                        : 'bg-slate-50 border-slate-200 text-slate-600'
+                        ? 'bg-ok-soft border-ok text-ok ring-1 ring-ok/30'
+                        : 'bg-surface-2 border-line text-muted hover:text-ink'
                     )}
                   >
                     نقدي (كاش)
@@ -584,10 +609,10 @@ export const PayrollModal: React.FC<PayrollModalProps> = ({
                     type="button"
                     onClick={() => setDisburseMethod(PaymentMethod.TRANSFER)}
                     className={clsx(
-                      'py-2 px-1 rounded-xl text-xs font-bold border transition-all text-center',
+                      'min-h-[44px] py-2 px-1 rounded-xl text-xs font-bold border transition-all text-center cursor-pointer',
                       disburseMethod === PaymentMethod.TRANSFER
-                        ? 'bg-blue-50 border-blue-500 text-blue-800 ring-1 ring-blue-500/30'
-                        : 'bg-slate-50 border-slate-200 text-slate-600'
+                        ? 'bg-info-soft border-info text-info ring-1 ring-info/30'
+                        : 'bg-surface-2 border-line text-muted hover:text-ink'
                     )}
                   >
                     تحويل بنكي
@@ -596,22 +621,22 @@ export const PayrollModal: React.FC<PayrollModalProps> = ({
                     type="button"
                     onClick={() => setDisburseMethod(PaymentMethod.INSTAPAY)}
                     className={clsx(
-                      'py-2 px-1 rounded-xl text-xs font-bold border transition-all text-center',
+                      'min-h-[44px] py-2 px-1 rounded-xl text-xs font-bold border transition-all text-center cursor-pointer',
                       disburseMethod === PaymentMethod.INSTAPAY
-                        ? 'bg-purple-50 border-purple-500 text-purple-800 ring-1 ring-purple-500/30'
-                        : 'bg-slate-50 border-slate-200 text-slate-600'
+                        ? 'bg-brand-soft border-brand text-brand-ink ring-1 ring-brand/30'
+                        : 'bg-surface-2 border-line text-muted hover:text-ink'
                     )}
                   >
-                    إنستاباي ⚡
+                    إنستاباي
                   </button>
                   <button
                     type="button"
                     onClick={() => setDisburseMethod(PaymentMethod.VODAFONE_CASH)}
                     className={clsx(
-                      'py-2 px-1 rounded-xl text-xs font-bold border transition-all text-center',
+                      'min-h-[44px] py-2 px-1 rounded-xl text-xs font-bold border transition-all text-center cursor-pointer',
                       disburseMethod === PaymentMethod.VODAFONE_CASH
-                        ? 'bg-rose-50 border-rose-500 text-rose-800 ring-1 ring-rose-500/30'
-                        : 'bg-slate-50 border-slate-200 text-slate-600'
+                        ? 'bg-bad-soft border-bad text-bad ring-1 ring-bad/30'
+                        : 'bg-surface-2 border-line text-muted hover:text-ink'
                     )}
                   >
                     محفظة كاش
@@ -619,58 +644,36 @@ export const PayrollModal: React.FC<PayrollModalProps> = ({
                 </div>
               </div>
 
-              {/* Treasury Selector */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  الخزينة أو الحساب المالي المراد الخصم منه: *
-                </label>
-                <select
-                  value={disburseTreasuryId}
-                  onChange={(e) => setDisburseTreasuryId(e.target.value ? Number(e.target.value) : '')}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold bg-slate-50 text-slate-800 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                >
-                  <option value="">-- اختر الخزينة أو الحساب البنكي --</option>
-                  {treasuries
-                    .filter((t: any) => t.is_active)
-                    .map((t: any) => (
-                      <option key={t.id} value={t.id}>
-                        {t.name} ({formatCurrency(t.balance)})
-                      </option>
-                    ))}
-                </select>
-                <p className="text-2xs text-slate-400 mt-1">
-                  سيتم تسجيل عملية صرف رسمية وخصم المبلغ فورياً من رصيد الخزينة، وتسجيل قيد مصروف تحت بند "رواتب وأجور".
-                </p>
-              </div>
+              <Select
+                label="الخزينة أو الحساب المالي المراد الخصم منه: *"
+                value={String(disburseTreasuryId)}
+                onChange={(e) => setDisburseTreasuryId(e.target.value ? Number(e.target.value) : '')}
+                options={treasuryOptions}
+                helperText='سيتم تسجيل عملية صرف رسمية وخصم المبلغ فورياً من رصيد الخزينة، وتسجيل قيد مصروف تحت بند "رواتب وأجور".'
+              />
 
-              {/* Notes */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">ملاحظات الصرف (اختياري)</label>
-                <input
-                  type="text"
-                  placeholder="مثال: تم تسليم الراتب يداً بيد / إيصال تحويل رقم 123"
-                  value={disburseNotes}
-                  onChange={(e) => setDisburseNotes(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500"
-                />
-              </div>
+              <Input
+                label="ملاحظات الصرف (اختياري)"
+                type="text"
+                placeholder="مثال: تم تسليم الراتب يداً بيد / إيصال تحويل رقم 123"
+                value={disburseNotes}
+                onChange={(e) => setDisburseNotes(e.target.value)}
+              />
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setIsDisburseOpen(false)}
-                  className="px-4 py-2 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-xl"
-                >
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-line">
+                <Button type="button" variant="ghost" size="md" onClick={() => setIsDisburseOpen(false)}>
                   إلغاء
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
+                  variant="primary"
+                  size="md"
                   onClick={() => disburseMutation.mutate()}
+                  isLoading={disburseMutation.isPending}
                   disabled={disburseMutation.isPending || !disburseTreasuryId}
-                  className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black shadow-md flex items-center gap-1.5 disabled:opacity-50"
                 >
-                  {disburseMutation.isPending ? 'جاري تسجيل الصرف...' : 'تأكيد الصرف وتنزيل الرصيد ✓'}
-                </button>
+                  تأكيد الصرف وتنزيل الرصيد
+                </Button>
               </div>
             </div>
           </div>

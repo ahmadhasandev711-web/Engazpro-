@@ -31,10 +31,6 @@
     "raw": 59,
     "hex": 0
   },
-  "src/presentation/components/employees/PayrollModal.tsx": {
-    "raw": 188,
-    "hex": 0
-  },
   "src/presentation/components/landing/StoreDesignSection.tsx": {
     "raw": 133,
     "hex": 29
@@ -42,14 +38,6 @@
   "src/presentation/components/landing/StoreInquiryModal.tsx": {
     "raw": 53,
     "hex": 22
-  },
-  "src/presentation/components/mobile/CourierMobileCard.tsx": {
-    "raw": 56,
-    "hex": 0
-  },
-  "src/presentation/components/mobile/EmployeeMobileCard.tsx": {
-    "raw": 98,
-    "hex": 0
   },
   "src/presentation/components/payments/PaymentReceiptModal.tsx": {
     "raw": 41,
@@ -72,15 +60,7 @@
     "hex": 0
   },
   "src/presentation/pages/CouriersPage.tsx": {
-    "raw": 369,
-    "hex": 0
-  },
-  "src/presentation/pages/EmployeesPage.tsx": {
-    "raw": 270,
-    "hex": 0
-  },
-  "src/presentation/pages/ExcelPage.tsx": {
-    "raw": 131,
+    "raw": 57,
     "hex": 0
   },
   "src/presentation/pages/InvoicesPage.tsx": {
@@ -101,14 +81,6 @@
   },
   "src/presentation/pages/ReportsPage.tsx": {
     "raw": 165,
-    "hex": 0
-  },
-  "src/presentation/pages/SettingsPage.tsx": {
-    "raw": 183,
-    "hex": 0
-  },
-  "src/presentation/pages/WooCommerceSettingsPage.tsx": {
-    "raw": 192,
     "hex": 0
   },
   "src/presentation/utils/barcodeSvgRenderer.ts": {

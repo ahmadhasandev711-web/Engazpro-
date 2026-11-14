@@ -1,18 +1,59 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, Database, Calendar, CheckCircle2, AlertCircle, KeyRound, MessageCircle, Smartphone, Send, Store, Save, Lock, Eye, EyeOff } from 'lucide-react';
+import {
+  ShieldCheck,
+  Database,
+  Calendar,
+  CheckCircle2,
+  AlertCircle,
+  KeyRound,
+  MessageCircle,
+  Smartphone,
+  Send,
+  Store,
+  Save,
+  Lock,
+  Eye,
+  EyeOff,
+} from 'lucide-react';
 import clsx from 'clsx';
 import { useAuthStore } from '../../data/store/useAuthStore';
 import { apiClient } from '../../data/api/client';
 import { usePermissions } from '../../hooks/usePermissions';
 import { formatDate } from '@pos-mandob/shared';
 import { MobileFilterChips, FilterChipOption } from '../components/mobile/MobileFilterChips';
+import { Badge, Button, Card, Input, PageHeader } from '../components/ui';
+
+interface FeedbackState {
+  type: 'success' | 'error';
+  message: string;
+}
+
+const FeedbackBanner: React.FC<{ feedback: FeedbackState | null }> = ({ feedback }) => {
+  if (!feedback) return null;
+  const isOk = feedback.type === 'success';
+  return (
+    <div
+      className={clsx(
+        'p-3.5 rounded-xl border flex items-center gap-2.5 text-xs sm:text-sm font-bold',
+        isOk ? 'bg-ok-soft border-ok/30 text-ok' : 'bg-bad-soft border-bad/30 text-bad'
+      )}
+    >
+      {isOk ? (
+        <CheckCircle2 className="w-4 h-4 text-ok shrink-0" />
+      ) : (
+        <AlertCircle className="w-4 h-4 text-bad shrink-0" />
+      )}
+      <span>{feedback.message}</span>
+    </div>
+  );
+};
 
 export const SettingsPage: React.FC = () => {
   const { user, activateSubscriptionCode, fetchMe } = useAuthStore();
   const { isOwnerOrAdmin } = usePermissions();
   const [activationCode, setActivationCode] = useState('');
   const [isActivating, setIsActivating] = useState(false);
-  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [feedback, setFeedback] = useState<FeedbackState | null>(null);
 
   // Store Identity & Currency state
   const [storeData, setStoreData] = useState({
@@ -25,7 +66,7 @@ export const SettingsPage: React.FC = () => {
   });
   const [loadingStore, setLoadingStore] = useState(false);
   const [savingStore, setSavingStore] = useState(false);
-  const [storeFeedback, setStoreFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [storeFeedback, setStoreFeedback] = useState<FeedbackState | null>(null);
 
   useEffect(() => {
     const loadStoreIdentity = async () => {
@@ -59,7 +100,7 @@ export const SettingsPage: React.FC = () => {
     try {
       const res = await apiClient.put('/settings/store-identity', storeData);
       if (res.data?.success) {
-        setStoreFeedback({ type: 'success', message: 'تم حفظ بيانات المنشأة والعملة بنجاح ✅' });
+        setStoreFeedback({ type: 'success', message: 'تم حفظ بيانات المنشأة والعملة بنجاح' });
         await fetchMe();
       }
     } catch (err: any) {
@@ -106,7 +147,7 @@ export const SettingsPage: React.FC = () => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
-  const [passwordFeedback, setPasswordFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [passwordFeedback, setPasswordFeedback] = useState<FeedbackState | null>(null);
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,7 +169,7 @@ export const SettingsPage: React.FC = () => {
     try {
       const res = await apiClient.post('/auth/change-password', passwordForm);
       if (res.data?.success) {
-        setPasswordFeedback({ type: 'success', message: res.data.message || 'تم تغيير كلمة المرور بنجاح ✅' });
+        setPasswordFeedback({ type: 'success', message: res.data.message || 'تم تغيير كلمة المرور بنجاح' });
         setPasswordForm({
           current_password: '',
           new_password: '',
@@ -158,10 +199,11 @@ export const SettingsPage: React.FC = () => {
 
   return (
     <div className="space-y-6 max-w-4xl">
-      <div>
-        <h2 className="text-xl font-bold text-slate-900">الإعدادات وتفعيل الاشتراك</h2>
-        <p className="text-sm text-slate-500">بيانات الحساب، حالة الاشتراك السنوي، وتفعيل الباقات الآمنة</p>
-      </div>
+      <PageHeader
+        title="الإعدادات وتفعيل الاشتراك"
+        description="بيانات الحساب، حالة الاشتراك السنوي، وتفعيل الباقات الآمنة"
+        className="mb-0"
+      />
 
       {/* Mobile Filter Chips */}
       <div className="md:hidden w-full overflow-hidden">
@@ -172,83 +214,52 @@ export const SettingsPage: React.FC = () => {
         />
       </div>
 
-      {feedback && (
-        <div
-          className={`p-4 rounded-xl border flex items-center gap-3 text-sm font-medium ${feedback.type === 'success'
-            ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-            : 'bg-rose-50 border-rose-200 text-rose-800'
-            }`}
-        >
-          {feedback.type === 'success' ? (
-            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-          ) : (
-            <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
-          )}
-          <span>{feedback.message}</span>
-        </div>
-      )}
+      <FeedbackBanner feedback={feedback} />
 
       {/* Store Identity & Currency Card */}
-      <div className={clsx("bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-5", activeSection !== 'ALL' && activeSection !== 'STORE' && 'hidden md:block')}>
-        <div className="flex items-center justify-between">
+      <Card
+        className={clsx(
+          'space-y-5',
+          activeSection !== 'ALL' && activeSection !== 'STORE' && 'hidden md:block'
+        )}
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+            <div className="w-11 h-11 rounded-xl bg-info-soft text-info flex items-center justify-center shrink-0">
               <Store className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="font-bold text-base text-slate-900">هوية المنشأة التجارية والعملة</h3>
-              <p className="text-xs text-slate-500">اسم المتجر، رقم الهاتف، العنوان المطبوع على الفواتير والإيصالات الحرارية، ورمز العملة</p>
+              <h3 className="font-bold text-base text-ink">هوية المنشأة التجارية والعملة</h3>
+              <p className="text-xs text-muted">
+                اسم المتجر، رقم الهاتف، العنوان المطبوع على الفواتير والإيصالات الحرارية، ورمز العملة
+              </p>
             </div>
           </div>
           {!isOwnerOrAdmin && (
-            <span className="text-xs font-bold px-3 py-1 bg-amber-50 text-amber-700 rounded-full border border-amber-200">
-              للعرض فقط (صلاحية الإدارة)
-            </span>
+            <Badge tone="warn">للعرض فقط (صلاحية الإدارة)</Badge>
           )}
         </div>
 
-        {storeFeedback && (
-          <div
-            className={`p-3 rounded-xl border flex items-center gap-2 text-xs font-bold ${
-              storeFeedback.type === 'success'
-                ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                : 'bg-rose-50 border-rose-200 text-rose-800'
-            }`}
-          >
-            {storeFeedback.type === 'success' ? (
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-            ) : (
-              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-            )}
-            <span>{storeFeedback.message}</span>
-          </div>
-        )}
+        <FeedbackBanner feedback={storeFeedback} />
 
         <form onSubmit={handleSaveStore} className="space-y-4 pt-1">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1.5">
-                اسم المنشأة / المحل التجاري <span className="text-rose-500">*</span>
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  required
-                  disabled={!isOwnerOrAdmin || loadingStore}
-                  value={storeData.business_name}
-                  onChange={(e) => setStoreData({ ...storeData, business_name: e.target.value })}
-                  placeholder="مثال: براند فاشون للملابس"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900 text-sm focus:outline-none focus:border-blue-500 disabled:opacity-60"
-                />
-              </div>
-              <p className="text-2xs text-slate-400 mt-1">يظهر بخط بارز في ترويسة الفاتورة والإيصال الحراري</p>
-            </div>
+            <Input
+              label="اسم المنشأة / المحل التجاري *"
+              type="text"
+              required
+              disabled={!isOwnerOrAdmin || loadingStore}
+              value={storeData.business_name}
+              onChange={(e) => setStoreData({ ...storeData, business_name: e.target.value })}
+              placeholder="مثال: براند فاشون للملابس"
+              helperText="يظهر بخط بارز في ترويسة الفاتورة والإيصال الحراري"
+            />
 
             <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1.5">
-                رمز العملة المعتمد <span className="text-rose-500">*</span>
+              <label className="text-xs font-bold text-ink block mb-1.5">
+                رمز العملة المعتمد <span className="text-bad">*</span>
               </label>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <input
                   type="text"
                   required
@@ -256,7 +267,7 @@ export const SettingsPage: React.FC = () => {
                   value={storeData.currency}
                   onChange={(e) => setStoreData({ ...storeData, currency: e.target.value })}
                   placeholder="ج.م"
-                  className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900 text-sm font-bold focus:outline-none focus:border-blue-500 disabled:opacity-60"
+                  className="flex-1 min-w-[100px] min-h-[44px] bg-panel border border-line rounded-xl px-3.5 py-2.5 text-ink text-sm font-bold focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand disabled:opacity-60"
                 />
                 {['ج.م', 'ر.س', 'د.إ', '$'].map((curr) => (
                   <button
@@ -264,50 +275,42 @@ export const SettingsPage: React.FC = () => {
                     type="button"
                     disabled={!isOwnerOrAdmin}
                     onClick={() => setStoreData({ ...storeData, currency: curr })}
-                    className={`px-2.5 py-2 rounded-xl text-xs font-bold border transition-all ${
+                    className={clsx(
+                      'min-h-[44px] min-w-[44px] px-2.5 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer disabled:opacity-60',
                       storeData.currency === curr
-                        ? 'bg-blue-600 border-blue-600 text-white'
-                        : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
-                    }`}
+                        ? 'bg-brand border-brand text-on-brand'
+                        : 'bg-surface-2 border-line text-muted hover:text-ink'
+                    )}
                   >
                     {curr}
                   </button>
                 ))}
               </div>
-              <p className="text-2xs text-slate-400 mt-1">يُطبع بجوار كافة الأسعار والمجاميع في نقاط البيع والفواتير</p>
+              <p className="text-xs text-muted mt-1.5">يُطبع بجوار كافة الأسعار والمجاميع في نقاط البيع والفواتير</p>
             </div>
 
-            <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1.5">
-                هاتف المنشأة المطبوع
-              </label>
-              <input
-                type="text"
-                disabled={!isOwnerOrAdmin || loadingStore}
-                value={storeData.store_phone}
-                onChange={(e) => setStoreData({ ...storeData, store_phone: e.target.value })}
-                placeholder="010XXXXXXXX"
-                dir="ltr"
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900 text-sm focus:outline-none focus:border-blue-500 disabled:opacity-60 text-right"
-              />
-            </div>
+            <Input
+              label="هاتف المنشأة المطبوع"
+              type="text"
+              disabled={!isOwnerOrAdmin || loadingStore}
+              value={storeData.store_phone}
+              onChange={(e) => setStoreData({ ...storeData, store_phone: e.target.value })}
+              placeholder="010XXXXXXXX"
+              dir="ltr"
+              className="text-right tabular-nums"
+            />
+
+            <Input
+              label="عنوان المنشأة أو الفرع"
+              type="text"
+              disabled={!isOwnerOrAdmin || loadingStore}
+              value={storeData.store_address}
+              onChange={(e) => setStoreData({ ...storeData, store_address: e.target.value })}
+              placeholder="مثال: القاهرة - المعادي - شارع 9"
+            />
 
             <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1.5">
-                عنوان المنشأة أو الفرع
-              </label>
-              <input
-                type="text"
-                disabled={!isOwnerOrAdmin || loadingStore}
-                value={storeData.store_address}
-                onChange={(e) => setStoreData({ ...storeData, store_address: e.target.value })}
-                placeholder="مثال: القاهرة - المعادي - شارع 9"
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900 text-sm focus:outline-none focus:border-blue-500 disabled:opacity-60"
-              />
-            </div>
-
-            <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1.5">
+              <label className="text-xs font-bold text-ink block mb-1.5">
                 أقصى نسبة خصم لموظفي البيع
               </label>
               <div className="relative">
@@ -319,34 +322,36 @@ export const SettingsPage: React.FC = () => {
                   value={storeData.max_discount_percent}
                   onChange={(e) => setStoreData({ ...storeData, max_discount_percent: e.target.value })}
                   placeholder="100"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 pl-10 text-slate-900 text-sm font-bold focus:outline-none focus:border-blue-500 disabled:opacity-60"
+                  className="w-full min-h-[44px] bg-panel border border-line rounded-xl px-3.5 py-2.5 pl-10 text-ink text-sm font-bold tabular-nums focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand disabled:opacity-60"
                 />
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">%</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-muted">%</span>
               </div>
-              <p className="text-2xs text-slate-400 mt-1">
+              <p className="text-xs text-muted mt-1.5">
                 100 يعني بلا سقف. أصغر قيمة تمنع الكاشير والمندوب من تجاوزها (الإدارة والمديرون متجاوزون دائماً)
               </p>
             </div>
 
             <div className="flex flex-col justify-start">
-              <label className="text-xs font-bold text-slate-700 block mb-1.5">
+              <label className="text-xs font-bold text-ink block mb-1.5">
                 البيع على المكشوف
               </label>
-              <div className="bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5">
-                <label className="inline-flex items-center gap-2 cursor-pointer">
+              <div className="min-h-[44px] flex items-center bg-surface-2/60 border border-line rounded-xl px-3.5 py-2.5">
+                <label className="inline-flex items-center gap-2.5 cursor-pointer">
                   <input
                     type="checkbox"
                     disabled={!isOwnerOrAdmin || loadingStore}
                     checked={storeData.allow_negative_branch_stock}
-                    onChange={(e) => setStoreData({ ...storeData, allow_negative_branch_stock: e.target.checked })}
-                    className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                    onChange={(e) =>
+                      setStoreData({ ...storeData, allow_negative_branch_stock: e.target.checked })
+                    }
+                    className="rounded border-line-2 text-brand focus:ring-brand w-4 h-4 cursor-pointer accent-brand"
                   />
-                  <span className="text-xs font-bold text-slate-700">
+                  <span className="text-xs font-bold text-ink">
                     السماح بنزول رصيد الفرع بالسالب
                   </span>
                 </label>
               </div>
-              <p className="text-2xs text-slate-400 mt-1">
+              <p className="text-xs text-muted mt-1.5">
                 عند التفعيل، يُسمح بالبيع حتى لو رصيد الفرع غير كافٍ وتُوسم الحركة بـ [بيع على المكشوف].
               </p>
             </div>
@@ -354,178 +359,192 @@ export const SettingsPage: React.FC = () => {
 
           {isOwnerOrAdmin && (
             <div className="flex justify-end pt-2">
-              <button
+              <Button
                 type="submit"
+                variant="primary"
+                size="md"
+                isLoading={savingStore}
                 disabled={savingStore || loadingStore}
-                className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-2 shadow-sm cursor-pointer"
+                leftIcon={<Save className="w-4 h-4" />}
               >
-                <Save className="w-4 h-4" />
-                <span>{savingStore ? 'جاري الحفظ...' : 'حفظ بيانات المنشأة'}</span>
-              </button>
+                حفظ بيانات المنشأة
+              </Button>
             </div>
           )}
         </form>
-      </div>
+      </Card>
 
       {/* Subscription Section Container */}
-      <div className={clsx("space-y-6", activeSection !== 'ALL' && activeSection !== 'SUBSCRIPTION' && 'hidden md:block')}>
+      <div
+        className={clsx(
+          'space-y-6',
+          activeSection !== 'ALL' && activeSection !== 'SUBSCRIPTION' && 'hidden md:block'
+        )}
+      >
         {/* Subscription Status Card */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-          <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <ShieldCheck className="w-6 h-6" />
-            </div>
-            <div>
-              <h3 className="font-bold text-base text-slate-900">الاشتراك السنوي - إنجاز برو</h3>
-              <p className="text-xs text-slate-500">خطة المنظومة السحابية وإدارة المبيعات الشاملة</p>
-            </div>
-          </div>
-          <span
-            className={`text-xs font-bold px-3.5 py-1.5 rounded-full ${isSubscriptionValid
-              ? 'bg-emerald-100 text-emerald-800'
-              : 'bg-rose-100 text-rose-800'
-              }`}
-          >
-            {isSubscriptionValid ? 'نشط ومفعل 🟢' : 'منتهي الصلاحية 🔴'}
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 text-sm border-t border-slate-100">
-          <div className="flex items-center gap-2 text-slate-600">
-            <Calendar className="w-4 h-4 text-slate-400" />
-            <span>
-              تاريخ نهاية الاشتراك:{' '}
-              <strong className="text-slate-800">{subscription?.end_date ? formatDate(subscription.end_date) : 'غير محدد'}</strong>
-            </span>
-          </div>
-          <div className="text-left sm:text-right font-bold text-emerald-700">
-            {isSubscriptionValid ? `متبقي ${daysRemaining} يوم في خطتك` : 'يرجى تجديد الاشتراك لاستئناف كافة العمليات'}
-          </div>
-        </div>
-      </div>
-
-      {/* Activation Code Redemption Card */}
-      <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white p-6 rounded-2xl shadow-md space-y-5">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/30">
-            <KeyRound className="w-5 h-5" />
-          </div>
-          <div>
-            <h3 className="font-bold text-base text-white">تفعيل أو تجديد الاشتراك بكود آمن</h3>
-            <p className="text-xs text-slate-300">أدخل كود التفعيل المرسل إليك عبر واتساب لتجديد حسابك لمدة سنة كاملة</p>
-          </div>
-        </div>
-
-        <form onSubmit={handleActivate} className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <input
-              type="text"
-              value={activationCode}
-              onChange={(e) => setActivationCode(e.target.value.toUpperCase())}
-              placeholder="مثال: KASH-XXXX-XXXX-XXXX"
-              className="w-full bg-slate-950/80 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 text-sm font-mono tracking-widest focus:outline-none focus:border-amber-400"
-              dir="ltr"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={isActivating || !activationCode.trim()}
-            className="bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-slate-950 px-6 py-3 rounded-xl text-sm font-black transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 cursor-pointer"
-          >
-            <Send className={`w-4 h-4 ${isActivating ? 'animate-spin' : ''}`} />
-            {isActivating ? 'جاري التحقق...' : 'تفعيل الكود الآن 🚀'}
-          </button>
-        </form>
-
-        {/* Payment Methods & WhatsApp Contact Instructions */}
-        <div className="pt-4 border-t border-slate-700/80 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-          <div className="bg-slate-800/80 p-3.5 rounded-xl border border-slate-700 space-y-2">
-            <div className="flex items-center gap-2 text-amber-300 font-bold">
-              <Smartphone className="w-4 h-4" />
-              <span>طرق الدفع والتحويل المعتمدة:</span>
-            </div>
-            <ul className="space-y-1 text-slate-300">
-              <li>• <strong>فودافون كاش / اتصالات / أورنج:</strong> <span className="font-mono text-white" dir="ltr">01125030642</span></li>
-              <li>• <strong>إنستاباي (InstaPay):</strong> <span className="font-mono text-white" dir="ltr">01125030642</span></li>
-            </ul>
-          </div>
-
-          <div className="bg-slate-800/80 p-3.5 rounded-xl border border-slate-700 flex flex-col justify-between space-y-2">
-            <div>
-              <div className="flex items-center gap-2 text-emerald-400 font-bold mb-1">
-                <MessageCircle className="w-4 h-4" />
-                <span>استلام كود التفعيل فوراً:</span>
+        <Card className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl bg-ok-soft text-ok flex items-center justify-center shrink-0">
+                <ShieldCheck className="w-6 h-6" />
               </div>
-              <p className="text-slate-300">بعد إتمام التحويل، أرسل صورة الإشعار عبر واتساب لاستلام كود التفعيل الخاص بك في ثوانٍ.</p>
+              <div>
+                <h3 className="font-bold text-base text-ink">الاشتراك السنوي - إنجاز برو</h3>
+                <p className="text-xs text-muted">خطة المنظومة السحابية وإدارة المبيعات الشاملة</p>
+              </div>
             </div>
-            <a
-              href="https://wa.me/201125030642?text=مرحباً،%20قمت%20بتحويل%20رسوم%20اشتراك%20إنجاز%20برو%20وأريد%20كود%20التفعيل"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-3 rounded-lg transition-colors text-xs"
-            >
-              <MessageCircle className="w-3.5 h-3.5" />
-              تواصل عبر واتساب للتجديد
-            </a>
+            <Badge tone={isSubscriptionValid ? 'ok' : 'bad'} dot className="px-3.5 py-1.5">
+              {isSubscriptionValid ? 'نشط ومفعل' : 'منتهي الصلاحية'}
+            </Badge>
           </div>
-        </div>
-      </div>
 
-      {/* Account Info Card */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-        <h3 className="font-bold text-base text-slate-900">بيانات الحساب الشخصي</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-          <div>
-            <span className="text-xs text-slate-400 block">الاسم:</span>
-            <span className="font-medium text-slate-800">{user?.name || 'غير مسجل'}</span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 text-sm border-t border-line">
+            <div className="flex items-center gap-2 text-muted">
+              <Calendar className="w-4 h-4 text-muted" />
+              <span>
+                تاريخ نهاية الاشتراك:{' '}
+                <strong className="text-ink tabular-nums">
+                  {subscription?.end_date ? formatDate(subscription.end_date) : 'غير محدد'}
+                </strong>
+              </span>
+            </div>
+            <div className="text-left sm:text-right font-bold text-ok tabular-nums">
+              {isSubscriptionValid
+                ? `متبقي ${daysRemaining} يوم في خطتك`
+                : 'يرجى تجديد الاشتراك لاستئناف كافة العمليات'}
+            </div>
           </div>
-          <div>
-            <span className="text-xs text-slate-400 block">رقم الهاتف:</span>
-            <span className="font-medium text-slate-800" dir="ltr">{user?.phone || 'غير مسجل'}</span>
+        </Card>
+
+        {/* Activation Code Redemption Card */}
+        <Card className="bg-surface-2/80 border-2 border-warn/30 space-y-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-warn-soft text-warn flex items-center justify-center border border-warn/30 shrink-0">
+              <KeyRound className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-bold text-base text-ink">تفعيل أو تجديد الاشتراك بكود آمن</h3>
+              <p className="text-xs text-muted">
+                أدخل كود التفعيل المرسل إليك عبر واتساب لتجديد حسابك لمدة سنة كاملة
+              </p>
+            </div>
           </div>
-          <div>
-            <span className="text-xs text-slate-400 block">البريد الإلكتروني:</span>
-            <span className="font-medium text-slate-800">{user?.email || 'لا يوجد بريد مسجل'}</span>
+
+          <form onSubmit={handleActivate} className="flex flex-col sm:flex-row gap-3">
+            <div className="flex-1">
+              <input
+                type="text"
+                value={activationCode}
+                onChange={(e) => setActivationCode(e.target.value.toUpperCase())}
+                placeholder="مثال: KASH-XXXX-XXXX-XXXX"
+                className="w-full min-h-[44px] bg-panel border border-line rounded-xl px-4 py-3 text-ink placeholder:text-muted text-sm tabular-nums tracking-widest focus:outline-none focus:border-warn focus:ring-1 focus:ring-warn"
+                dir="ltr"
+              />
+            </div>
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              isLoading={isActivating}
+              disabled={isActivating || !activationCode.trim()}
+              leftIcon={<Send className="w-4 h-4" />}
+            >
+              تفعيل الكود الآن
+            </Button>
+          </form>
+
+          {/* Payment Methods & WhatsApp Contact Instructions */}
+          <div className="pt-4 border-t border-line grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+            <div className="bg-panel p-3.5 rounded-xl border border-line space-y-2">
+              <div className="flex items-center gap-2 text-warn font-bold">
+                <Smartphone className="w-4 h-4" />
+                <span>طرق الدفع والتحويل المعتمدة:</span>
+              </div>
+              <ul className="space-y-1 text-muted">
+                <li>
+                  • <strong>فودافون كاش / اتصالات / أورنج:</strong>{' '}
+                  <span className="tabular-nums font-bold text-ink" dir="ltr">
+                    01125030642
+                  </span>
+                </li>
+                <li>
+                  • <strong>إنستاباي (InstaPay):</strong>{' '}
+                  <span className="tabular-nums font-bold text-ink" dir="ltr">
+                    01125030642
+                  </span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="bg-panel p-3.5 rounded-xl border border-line flex flex-col justify-between space-y-2">
+              <div>
+                <div className="flex items-center gap-2 text-ok font-bold mb-1">
+                  <MessageCircle className="w-4 h-4" />
+                  <span>استلام كود التفعيل فوراً:</span>
+                </div>
+                <p className="text-muted">
+                  بعد إتمام التحويل، أرسل صورة الإشعار عبر واتساب لاستلام كود التفعيل الخاص بك في ثوانٍ.
+                </p>
+              </div>
+              <a
+                href="https://wa.me/201125030642?text=مرحباً،%20قمت%20بتحويل%20رسوم%20اشتراك%20إنجاز%20برو%20وأريد%20كود%20التفعيل"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="min-h-[44px] inline-flex items-center justify-center gap-2 bg-ok-soft hover:bg-ok-soft/80 text-ok border border-ok/30 font-bold py-2 px-3 rounded-xl transition-colors text-xs"
+              >
+                <MessageCircle className="w-4 h-4" />
+                تواصل عبر واتساب للتجديد
+              </a>
+            </div>
           </div>
-        </div>
-      </div>
+        </Card>
+
+        {/* Account Info Card */}
+        <Card className="space-y-4">
+          <h3 className="font-bold text-base text-ink">بيانات الحساب الشخصي</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+            <div>
+              <span className="text-xs text-muted block">الاسم:</span>
+              <span className="font-bold text-ink">{user?.name || 'غير مسجل'}</span>
+            </div>
+            <div>
+              <span className="text-xs text-muted block">رقم الهاتف:</span>
+              <span className="font-bold text-ink tabular-nums" dir="ltr">
+                {user?.phone || 'غير مسجل'}
+              </span>
+            </div>
+            <div>
+              <span className="text-xs text-muted block">البريد الإلكتروني:</span>
+              <span className="font-bold text-ink">{user?.email || 'لا يوجد بريد مسجل'}</span>
+            </div>
+          </div>
+        </Card>
       </div>
 
       {/* Change Password Card */}
-      <div className={clsx("bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-5", activeSection !== 'ALL' && activeSection !== 'SECURITY' && 'hidden md:block')}>
+      <Card
+        className={clsx(
+          'space-y-5',
+          activeSection !== 'ALL' && activeSection !== 'SECURITY' && 'hidden md:block'
+        )}
+      >
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+          <div className="w-11 h-11 rounded-xl bg-warn-soft text-warn flex items-center justify-center shrink-0">
             <Lock className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="font-bold text-base text-slate-900">أمان الحساب وتغيير كلمة المرور</h3>
-            <p className="text-xs text-slate-500">قم بتحديث كلمة المرور لحماية حسابك وبيانات متجرك</p>
+            <h3 className="font-bold text-base text-ink">أمان الحساب وتغيير كلمة المرور</h3>
+            <p className="text-xs text-muted">قم بتحديث كلمة المرور لحماية حسابك وبيانات متجرك</p>
           </div>
         </div>
 
-        {passwordFeedback && (
-          <div
-            className={`p-3.5 rounded-xl border flex items-center gap-2.5 text-xs font-bold ${
-              passwordFeedback.type === 'success'
-                ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                : 'bg-rose-50 border-rose-200 text-rose-800'
-            }`}
-          >
-            {passwordFeedback.type === 'success' ? (
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-            ) : (
-              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-            )}
-            <span>{passwordFeedback.message}</span>
-          </div>
-        )}
+        <FeedbackBanner feedback={passwordFeedback} />
 
         <form onSubmit={handleChangePassword} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1.5">
-                كلمة المرور الحالية <span className="text-rose-500">*</span>
+              <label className="text-xs font-bold text-ink block mb-1.5">
+                كلمة المرور الحالية <span className="text-bad">*</span>
               </label>
               <div className="relative">
                 <input
@@ -534,12 +553,13 @@ export const SettingsPage: React.FC = () => {
                   value={passwordForm.current_password}
                   onChange={(e) => setPasswordForm({ ...passwordForm, current_password: e.target.value })}
                   placeholder="••••••••"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900 text-sm focus:outline-none focus:border-amber-500 pr-10"
+                  className="w-full min-h-[44px] bg-panel border border-line rounded-xl px-3.5 py-2.5 pl-11 text-ink text-sm focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand"
                 />
                 <button
                   type="button"
                   onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                  aria-label="إظهار أو إخفاء كلمة المرور الحالية"
+                  className="min-w-[40px] min-h-[40px] flex items-center justify-center absolute left-1 top-1/2 -translate-y-1/2 text-muted hover:text-ink cursor-pointer"
                 >
                   {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -547,8 +567,8 @@ export const SettingsPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1.5">
-                كلمة المرور الجديدة <span className="text-rose-500">*</span>
+              <label className="text-xs font-bold text-ink block mb-1.5">
+                كلمة المرور الجديدة <span className="text-bad">*</span>
               </label>
               <div className="relative">
                 <input
@@ -558,12 +578,13 @@ export const SettingsPage: React.FC = () => {
                   value={passwordForm.new_password}
                   onChange={(e) => setPasswordForm({ ...passwordForm, new_password: e.target.value })}
                   placeholder="6 أحرف أو أكثر"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900 text-sm focus:outline-none focus:border-amber-500 pr-10"
+                  className="w-full min-h-[44px] bg-panel border border-line rounded-xl px-3.5 py-2.5 pl-11 text-ink text-sm focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand"
                 />
                 <button
                   type="button"
                   onClick={() => setShowNewPassword(!showNewPassword)}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                  aria-label="إظهار أو إخفاء كلمة المرور الجديدة"
+                  className="min-w-[40px] min-h-[40px] flex items-center justify-center absolute left-1 top-1/2 -translate-y-1/2 text-muted hover:text-ink cursor-pointer"
                 >
                   {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -571,8 +592,8 @@ export const SettingsPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1.5">
-                تأكيد كلمة المرور الجديدة <span className="text-rose-500">*</span>
+              <label className="text-xs font-bold text-ink block mb-1.5">
+                تأكيد كلمة المرور الجديدة <span className="text-bad">*</span>
               </label>
               <div className="relative">
                 <input
@@ -580,14 +601,17 @@ export const SettingsPage: React.FC = () => {
                   required
                   minLength={6}
                   value={passwordForm.new_password_confirmation}
-                  onChange={(e) => setPasswordForm({ ...passwordForm, new_password_confirmation: e.target.value })}
+                  onChange={(e) =>
+                    setPasswordForm({ ...passwordForm, new_password_confirmation: e.target.value })
+                  }
                   placeholder="أعد كتابة الكلمة"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900 text-sm focus:outline-none focus:border-amber-500 pr-10"
+                  className="w-full min-h-[44px] bg-panel border border-line rounded-xl px-3.5 py-2.5 pl-11 text-ink text-sm focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand"
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                  aria-label="إظهار أو إخفاء تأكيد كلمة المرور"
+                  className="min-w-[40px] min-h-[40px] flex items-center justify-center absolute left-1 top-1/2 -translate-y-1/2 text-muted hover:text-ink cursor-pointer"
                 >
                   {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -596,38 +620,45 @@ export const SettingsPage: React.FC = () => {
           </div>
 
           <div className="flex justify-end pt-1">
-            <button
+            <Button
               type="submit"
+              variant="primary"
+              size="md"
+              isLoading={isChangingPassword}
               disabled={isChangingPassword}
-              className="bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-slate-950 font-bold px-5 py-2.5 rounded-xl text-xs transition-colors flex items-center gap-2 shadow-sm cursor-pointer"
+              leftIcon={<Lock className="w-4 h-4" />}
             >
-              <Lock className="w-4 h-4" />
-              <span>{isChangingPassword ? 'جاري التحديث...' : 'تحديث كلمة المرور 🔐'}</span>
-            </button>
+              تحديث كلمة المرور
+            </Button>
           </div>
         </form>
-      </div>
+      </Card>
 
       {/* Backup Card */}
-      <div className={clsx("bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4", activeSection !== 'ALL' && activeSection !== 'BACKUP' && 'hidden md:block')}>
-        <div className="flex items-center justify-between">
+      <Card
+        className={clsx(
+          'space-y-4',
+          activeSection !== 'ALL' && activeSection !== 'BACKUP' && 'hidden md:block'
+        )}
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-info-soft text-info flex items-center justify-center shrink-0">
               <Database className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-base text-slate-900">النسخ الاحتياطي (Backup & Restore)</h3>
-              <p className="text-xs text-slate-500">حفظ نسخة احتياطية من قاعدة البيانات لضمان أمان البيانات</p>
+              <h3 className="font-bold text-base text-ink">النسخ الاحتياطي (Backup & Restore)</h3>
+              <p className="text-xs text-muted">حفظ نسخة احتياطية من قاعدة البيانات لضمان أمان البيانات</p>
             </div>
           </div>
-          <button className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-4 py-2 rounded-lg shadow-sm transition-colors">
+          <Button type="button" variant="secondary" size="md">
             إنشاء نسخة احتياطية الآن
-          </button>
+          </Button>
         </div>
-        <p className="text-xs text-slate-500 pt-2 border-t border-slate-100">
+        <p className="text-xs text-muted pt-2 border-t border-line">
           البيانات محفوظة ومؤمنة في قاعدة البيانات السحابية
         </p>
-      </div>
+      </Card>
     </div>
   );
 };
