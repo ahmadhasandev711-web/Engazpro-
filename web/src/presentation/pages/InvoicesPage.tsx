@@ -1,7 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Receipt, Plus, Search, Trash2, Eye, AlertCircle, RotateCcw, Download, X, Printer, Calendar, User, CreditCard, UserCheck, Edit2, Save, Share2 } from 'lucide-react';
+import {
+  Receipt,
+  Plus,
+  Search,
+  Trash2,
+  Eye,
+  AlertCircle,
+  RotateCcw,
+  Download,
+  X,
+  Printer,
+  Calendar,
+  User,
+  CreditCard,
+  UserCheck,
+  Edit2,
+  Save,
+  Share2,
+} from 'lucide-react';
 import { InvoiceType, formatCurrency } from '@pos-mandob/shared';
 import { apiClient } from '../../data/api/client';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -14,6 +32,16 @@ import { InvoiceMobileCard } from '../components/mobile/InvoiceMobileCard';
 import { nativeBackButton } from '../../platform/nativeBackButton';
 import { useAuthStore } from '../../data/store/useAuthStore';
 import { webShareService, formatInvoiceWhatsAppText } from '../../infrastructure/pwa/webShareService';
+import {
+  Badge,
+  Button,
+  Card,
+  DataTable,
+  EmptyState,
+  Input,
+  PageHeader,
+  Select,
+} from '../components/ui';
 
 export const InvoicesPage: React.FC = () => {
   const { confirm } = useConfirm();
@@ -99,7 +127,9 @@ export const InvoicesPage: React.FC = () => {
 
   const invoices = data?.data || [];
   const meta = data?.meta;
-  const totalInvoicesAmount = data?.summary?.total_amount ?? invoices.reduce((sum: number, inv: any) => sum + (Number(inv.total) || 0), 0);
+  const totalInvoicesAmount =
+    data?.summary?.total_amount ??
+    invoices.reduce((sum: number, inv: any) => sum + (Number(inv.total) || 0), 0);
 
   // Query for single invoice details
   const { data: invoiceDetails, isLoading: isDetailsLoading } = useQuery({
@@ -129,7 +159,11 @@ export const InvoicesPage: React.FC = () => {
   useEffect(() => {
     if (invoiceDetails) {
       setSelectedSalespersonId(
-        invoiceDetails.salesperson_id ? String(invoiceDetails.salesperson_id) : (invoiceDetails.created_by ? String(invoiceDetails.created_by) : '')
+        invoiceDetails.salesperson_id
+          ? String(invoiceDetails.salesperson_id)
+          : invoiceDetails.created_by
+            ? String(invoiceDetails.created_by)
+            : ''
       );
       setIsEditingSalesperson(false);
     }
@@ -202,7 +236,8 @@ export const InvoicesPage: React.FC = () => {
   const handleShareWhatsApp = async () => {
     if (!invoiceDetails) return;
     const storeIdentity = user?.store_identity;
-    const storeName = storeIdentity?.business_name || (user as any)?.store_name || user?.name || 'المتجر';
+    const storeName =
+      storeIdentity?.business_name || (user as any)?.store_name || user?.name || 'المتجر';
     const storePhone = storeIdentity?.store_phone || user?.phone;
     const currencySymbol = storeIdentity?.currency || 'ج.م';
     const text = formatInvoiceWhatsAppText(invoiceDetails, {
@@ -211,7 +246,10 @@ export const InvoicesPage: React.FC = () => {
       currencySymbol,
     });
     const invoiceNo = invoiceDetails.invoice_number || `#${invoiceDetails.id}`;
-    const customerPhone = invoiceDetails.party?.phone || (invoiceDetails as any).party_phone || (invoiceDetails as any).customer_phone;
+    const customerPhone =
+      invoiceDetails.party?.phone ||
+      (invoiceDetails as any).party_phone ||
+      (invoiceDetails as any).customer_phone;
 
     await webShareService.shareInvoice({
       title: `فاتورة ${invoiceNo} - ${storeName}`,
@@ -220,75 +258,85 @@ export const InvoicesPage: React.FC = () => {
     });
   };
 
+  const mobileHeroTone = isReturn
+    ? 'bg-warn text-on-brand'
+    : isPurchase
+      ? 'bg-info text-on-brand'
+      : 'bg-ok text-on-brand';
+
   return (
     <div className="space-y-6 flex flex-col h-full">
       {/* Desktop Header (hidden on mobile) */}
-      <div className="hidden md:flex sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-xl font-bold text-slate-900">{pageTitle}</h2>
-            {isReturn && (
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-amber-100 text-amber-800">
-                مرتجع
-              </span>
-            )}
-          </div>
-          <p className="text-sm text-slate-500">{pageSub}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleExportExcel}
-            disabled={invoices.length === 0}
-            className="inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3.5 py-2.5 rounded-xl text-xs font-bold shadow-sm transition-colors disabled:opacity-50"
-            title={`تصدير ${pageTitle} إلى Excel`}
-          >
-            <Download className="w-4 h-4 text-emerald-600" />
-            تصدير Excel
-          </button>
-          {!isReturn && (
-            <Link
-              to={isPurchase ? '/purchases/returns' : '/sales/returns'}
-              className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3.5 py-2.5 rounded-xl text-sm font-bold transition-colors"
+      <PageHeader
+        title={pageTitle}
+        description={pageSub}
+        badge={isReturn ? <Badge tone="warn">مرتجع</Badge> : undefined}
+        className="hidden md:flex mb-0"
+        actions={
+          <>
+            <Button
+              type="button"
+              variant="secondary"
+              size="md"
+              onClick={handleExportExcel}
+              disabled={invoices.length === 0}
+              leftIcon={<Download className="w-4 h-4 text-ok" />}
+              title={`تصدير ${pageTitle} إلى Excel`}
+              className="text-xs font-bold"
             >
-              <RotateCcw className="w-4 h-4 text-slate-500" />
-              سجل المرتجعات
+              تصدير Excel
+            </Button>
+            {!isReturn && (
+              <Link
+                to={isPurchase ? '/purchases/returns' : '/sales/returns'}
+                className="inline-flex items-center justify-center gap-1.5 min-h-[44px] bg-surface-2 hover:bg-line text-ink border border-line px-3.5 py-2.5 rounded-xl text-sm font-bold transition-colors"
+              >
+                <RotateCcw className="w-4 h-4 text-muted" />
+                سجل المرتجعات
+              </Link>
+            )}
+            <Link
+              to={newLink}
+              className={`inline-flex items-center justify-center gap-2 min-h-[44px] ${
+                isReturn ? 'bg-warn text-on-brand' : 'bg-brand text-on-brand'
+              } hover:opacity-95 px-4 py-2.5 rounded-xl text-sm font-bold shadow-xs transition-colors`}
+            >
+              <Plus className="w-4 h-4" />
+              {newBtnText}
             </Link>
-          )}
-          <Link
-            to={newLink}
-            className={`inline-flex items-center gap-2 ${isReturn ? 'bg-amber-600 hover:bg-amber-700' : 'bg-primary-600 hover:bg-primary-700'} text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-colors`}
-          >
-            <Plus className="w-4 h-4" />
-            {newBtnText}
-          </Link>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {/* Mobile Compact Hero Bar (md:hidden) */}
-      <div className={`md:hidden ${isReturn ? 'bg-gradient-to-l from-amber-600 to-orange-600' : isPurchase ? 'bg-gradient-to-l from-blue-600 to-indigo-700' : 'bg-gradient-to-l from-emerald-600 to-teal-700'} rounded-2xl p-3.5 text-white shadow-md flex items-center justify-between`}>
+      <div className={`md:hidden ${mobileHeroTone} rounded-2xl p-3.5 shadow-md flex items-center justify-between gap-2`}>
         <div>
           <div className="flex items-center gap-1 text-[11px] font-bold opacity-90">
             <Receipt className="w-3.5 h-3.5" />
-            <span>{pageTitle} ({meta?.total ?? invoices.length})</span>
+            <span className="tabular-nums">
+              {pageTitle} ({meta?.total ?? invoices.length})
+            </span>
           </div>
-          <h3 className="text-xl font-black mt-0.5 tracking-tight">
+          <h3 className="text-xl font-black mt-0.5 tracking-tight tabular-nums">
             {formatCurrency(totalInvoicesAmount)}
           </h3>
         </div>
         <div className="flex items-center gap-1.5">
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="md"
             onClick={handleExportExcel}
             disabled={invoices.length === 0}
-            className="p-2 bg-white/20 hover:bg-white/30 text-white rounded-xl backdrop-blur-sm transition-colors disabled:opacity-40"
+            className="min-w-[44px] px-2.5 bg-canvas/20 hover:bg-canvas/30 text-on-brand"
             title={`تصدير ${pageTitle} إلى Excel`}
           >
             <Download className="w-4 h-4" />
-          </button>
+          </Button>
           {!isReturn && (
             <Link
               to={isPurchase ? '/purchases/returns' : '/sales/returns'}
-              className="p-2 bg-white/20 hover:bg-white/30 text-white rounded-xl backdrop-blur-sm transition-colors"
+              className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center bg-canvas/20 hover:bg-canvas/30 text-on-brand rounded-xl transition-colors"
               title="سجل المرتجعات"
             >
               <RotateCcw className="w-4 h-4" />
@@ -296,27 +344,26 @@ export const InvoicesPage: React.FC = () => {
           )}
           <Link
             to={newLink}
-            className="px-3 py-2 bg-white text-slate-900 hover:bg-slate-50 rounded-xl font-black text-xs shadow-sm flex items-center gap-1 active:scale-95"
+            className="min-h-[44px] px-3 py-2 bg-panel text-ink hover:bg-surface-2 rounded-xl font-black text-xs shadow-xs inline-flex items-center gap-1 active:scale-95 transition-transform"
           >
-            <Plus className="w-4 h-4 text-emerald-600" />
+            <Plus className="w-4 h-4 text-ok" />
             <span>{isReturn ? 'مرتجع' : 'جديد'}</span>
           </Link>
         </div>
       </div>
 
       {errorMessage && (
-        <div className="p-4 bg-rose-50 border border-rose-200 text-rose-800 text-sm rounded-xl flex items-center gap-2">
-          <AlertCircle className="w-5 h-5 text-rose-600 flex-shrink-0" />
+        <div className="p-4 bg-bad-soft border border-bad/30 text-bad text-sm rounded-xl flex items-center gap-2">
+          <AlertCircle className="w-5 h-5 text-bad flex-shrink-0" />
           <span>{errorMessage}</span>
         </div>
       )}
 
       {/* Search & Filters */}
-      <div className="bg-white p-3 sm:p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-2.5 w-full min-w-0 max-w-full overflow-hidden">
+      <Card className="p-3 sm:p-4 flex flex-col gap-2.5 w-full min-w-0 max-w-full overflow-hidden">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          <div className="relative flex-1">
-            <Search className="w-5 h-5 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
+          <div className="flex-1">
+            <Input
               type="text"
               placeholder="البحث برقم المستند أو اسم الطرف..."
               value={search}
@@ -324,33 +371,42 @@ export const InvoicesPage: React.FC = () => {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="w-full pl-4 pr-10 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              leftIcon={<Search className="w-5 h-5" />}
             />
           </div>
 
           {(isOwnerOrAdmin || isManager) && (
             <div className="sm:w-56">
-              <select
+              <Select
                 value={selectedEmployeeId}
                 onChange={(e) => {
                   setSelectedEmployeeId(e.target.value);
                   setPage(1);
                 }}
-                className="w-full border border-slate-200 rounded-lg text-sm px-3 py-2 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500 font-medium"
               >
                 <option value="">جميع الموظفين (الكل)</option>
                 {employeesData?.map((emp: any) => (
                   <option key={emp.id} value={emp.id}>
-                    {emp.name} ({emp.role === 'SALES' ? 'بائع / سيلز' : emp.role === 'MANDOB' ? 'مندوب' : emp.role === 'CASHIER' ? 'كاشير' : emp.role === 'MANAGER' ? 'مدير' : 'مشرف'})
+                    {emp.name} (
+                    {emp.role === 'SALES'
+                      ? 'بائع / سيلز'
+                      : emp.role === 'MANDOB'
+                        ? 'مندوب'
+                        : emp.role === 'CASHIER'
+                          ? 'كاشير'
+                          : emp.role === 'MANAGER'
+                            ? 'مدير'
+                            : 'مشرف'}
+                    )
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
           )}
         </div>
 
         {/* Date Range Filter Bar */}
-        <div className="pt-2 border-t border-slate-100 w-full min-w-0 max-w-full overflow-hidden">
+        <div className="pt-2 border-t border-line w-full min-w-0 max-w-full overflow-hidden">
           <DateRangeFilter
             fromDate={fromDate}
             toDate={toDate}
@@ -362,129 +418,160 @@ export const InvoicesPage: React.FC = () => {
             }}
           />
         </div>
-      </div>
+      </Card>
 
       {/* Table */}
-      <div className="bg-white flex-1 rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+      <Card className="p-0 sm:p-0 flex-1 overflow-hidden flex flex-col">
         {isLoading ? (
-          <div className="text-center py-12 text-sm text-slate-400 font-medium flex-1">جاري التحميل...</div>
+          <div className="text-center py-12 text-sm text-muted font-medium flex-1">جاري التحميل...</div>
         ) : invoices.length === 0 ? (
-          <div className="text-center py-16 flex-1 flex flex-col justify-center items-center">
-            <Receipt className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-            <h3 className="text-base font-bold text-slate-700">لا توجد سجلات مسجلة</h3>
-            <p className="text-xs text-slate-400 max-w-sm mx-auto mt-1">
-              انقر فوق زر الإضافة بالأعلى لإنشاء مستند جديد وحفظه في الحسابات والمخزون.
-            </p>
-          </div>
+          <EmptyState
+            icon={<Receipt className="w-6 h-6" />}
+            title="لا توجد سجلات مسجلة"
+            description="انقر فوق زر الإضافة بالأعلى لإنشاء مستند جديد وحفظه في الحسابات والمخزون."
+            className="border-0 rounded-none flex-1 py-16"
+          />
         ) : (
           <>
             {/* Desktop & Tablet Table (md and above) */}
-            <div className="hidden md:block overflow-x-auto flex-1">
-              <table className="w-full text-right text-sm min-w-[750px]">
-                <thead className="bg-slate-50 text-slate-600 text-xs font-bold border-b border-slate-200">
-                  <tr>
-                    <th className="py-3.5 px-4">رقم المستند</th>
-                    <th className="py-3.5 px-4">التاريخ</th>
-                    <th className="py-3.5 px-4">الطرف</th>
-                    {(isOwnerOrAdmin || isManager) && <th className="py-3.5 px-4">مسؤول البيع / المنشئ</th>}
-                    <th className="py-3.5 px-4">الإجمالي</th>
-                    <th className="py-3.5 px-4">{isReturn ? 'المسترد نقداً' : 'المدفوع'}</th>
-                    <th className="py-3.5 px-4">{isReturn ? 'المخصوم من الحساب' : 'الباقي'}</th>
-                    <th className="py-3.5 px-4 text-center">الإجراءات</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {invoices.map((inv: any) => (
-                    <tr 
-                      key={inv.id} 
-                      onClick={() => setSelectedInvoiceId(inv.id)}
-                      className="hover:bg-slate-50/80 cursor-pointer transition-colors"
-                    >
-                      <td className="py-3.5 px-4 font-mono font-bold text-primary-600">{inv.invoice_number}</td>
-                      <td className="py-3.5 px-4 text-slate-600 font-mono text-xs">{inv.date}</td>
-                      <td className="py-3.5 px-4 font-bold text-slate-800">{inv.party_name || 'نقدي (بدون حساب)'}</td>
-                      {(isOwnerOrAdmin || isManager) && (
-                        <td className="py-3.5 px-4 text-xs">
-                          {inv.salesperson_name || inv.created_by_name ? (
-                            <div className="flex flex-col">
-                              <span className="font-bold text-slate-800">
-                                {inv.salesperson_name || inv.created_by_name}
-                              </span>
-                              <span className="text-2xs text-slate-500 font-medium">
-                                {inv.salesperson_role ? (
-                                  inv.salesperson_role === 'SALES' ? 'بائع / سيلز' :
-                                  inv.salesperson_role === 'MANDOB' ? 'مندوب مبيعات' :
-                                  inv.salesperson_role === 'CASHIER' ? 'كاشير' :
-                                  inv.salesperson_role === 'MANAGER' ? 'مدير' : inv.salesperson_role
-                                ) : (
-                                  inv.created_by_role === 'MANDOB' ? 'مندوب مبيعات' :
-                                  inv.created_by_role === 'CASHIER' ? 'كاشير' :
-                                  inv.created_by_role === 'SALES' ? 'بائع / سيلز' :
-                                  inv.created_by_role === 'MANAGER' ? 'مدير' :
-                                  inv.created_by_role === 'SUPERVISOR' ? 'مشرف' : 'المالك'
-                                )}
-                              </span>
-                              {inv.salesperson_name && inv.created_by_name && inv.salesperson_name !== inv.created_by_name && (
-                                <span className="text-2xs text-slate-400">
+            <DataTable
+              className="hidden md:block flex-1 border-0 rounded-none shadow-none"
+              tableClassName="min-w-[750px]"
+            >
+              <thead className="bg-surface-2 text-muted text-xs font-bold border-b border-line">
+                <tr>
+                  <th className="py-3.5 px-4">رقم المستند</th>
+                  <th className="py-3.5 px-4">التاريخ</th>
+                  <th className="py-3.5 px-4">الطرف</th>
+                  {(isOwnerOrAdmin || isManager) && (
+                    <th className="py-3.5 px-4">مسؤول البيع / المنشئ</th>
+                  )}
+                  <th className="py-3.5 px-4">الإجمالي</th>
+                  <th className="py-3.5 px-4">{isReturn ? 'المسترد نقداً' : 'المدفوع'}</th>
+                  <th className="py-3.5 px-4">{isReturn ? 'المخصوم من الحساب' : 'الباقي'}</th>
+                  <th className="py-3.5 px-4 text-center">الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {invoices.map((inv: any) => (
+                  <tr
+                    key={inv.id}
+                    onClick={() => setSelectedInvoiceId(inv.id)}
+                    className="hover:bg-surface-2/60 cursor-pointer transition-colors"
+                  >
+                    <td className="py-3.5 px-4 tabular-nums font-bold text-brand">
+                      {inv.invoice_number}
+                    </td>
+                    <td className="py-3.5 px-4 text-muted tabular-nums text-xs">{inv.date}</td>
+                    <td className="py-3.5 px-4 font-bold text-ink">
+                      {inv.party_name || 'نقدي (بدون حساب)'}
+                    </td>
+                    {(isOwnerOrAdmin || isManager) && (
+                      <td className="py-3.5 px-4 text-xs">
+                        {inv.salesperson_name || inv.created_by_name ? (
+                          <div className="flex flex-col">
+                            <span className="font-bold text-ink">
+                              {inv.salesperson_name || inv.created_by_name}
+                            </span>
+                            <span className="text-[11px] text-muted font-medium">
+                              {inv.salesperson_role
+                                ? inv.salesperson_role === 'SALES'
+                                  ? 'بائع / سيلز'
+                                  : inv.salesperson_role === 'MANDOB'
+                                    ? 'مندوب مبيعات'
+                                    : inv.salesperson_role === 'CASHIER'
+                                      ? 'كاشير'
+                                      : inv.salesperson_role === 'MANAGER'
+                                        ? 'مدير'
+                                        : inv.salesperson_role
+                                : inv.created_by_role === 'MANDOB'
+                                  ? 'مندوب مبيعات'
+                                  : inv.created_by_role === 'CASHIER'
+                                    ? 'كاشير'
+                                    : inv.created_by_role === 'SALES'
+                                      ? 'بائع / سيلز'
+                                      : inv.created_by_role === 'MANAGER'
+                                        ? 'مدير'
+                                        : inv.created_by_role === 'SUPERVISOR'
+                                          ? 'مشرف'
+                                          : 'المالك'}
+                            </span>
+                            {inv.salesperson_name &&
+                              inv.created_by_name &&
+                              inv.salesperson_name !== inv.created_by_name && (
+                                <span className="text-[11px] text-muted">
                                   منشئ: {inv.created_by_name}
                                 </span>
                               )}
-                            </div>
-                          ) : (
-                            <span className="text-slate-400">-</span>
-                          )}
-                        </td>
-                      )}
-                      <td className={`py-3.5 px-4 font-black ${isReturn ? 'text-amber-600' : 'text-emerald-600'}`}>
-                        {formatCurrency(inv.total)}
-                      </td>
-                      <td className="py-3.5 px-4 text-slate-600 font-medium">{formatCurrency(inv.paid_amount)}</td>
-                      <td className="py-3.5 px-4">
-                        {inv.due_amount > 0 ? (
-                          <span className="text-rose-600 font-bold">{formatCurrency(inv.due_amount)}</span>
+                          </div>
                         ) : (
-                          <span className="text-slate-400">0.00</span>
+                          <span className="text-muted">-</span>
                         )}
                       </td>
-                      <td className="py-3.5 px-4 text-center" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-center gap-1.5">
-                          <button
+                    )}
+                    <td
+                      className={`py-3.5 px-4 font-black tabular-nums ${
+                        isReturn ? 'text-bad' : 'text-ok'
+                      }`}
+                    >
+                      {formatCurrency(inv.total)}
+                    </td>
+                    <td className="py-3.5 px-4 text-muted font-medium tabular-nums">
+                      {formatCurrency(inv.paid_amount)}
+                    </td>
+                    <td className="py-3.5 px-4 tabular-nums">
+                      {inv.due_amount > 0 ? (
+                        <span className="text-bad font-bold">{formatCurrency(inv.due_amount)}</span>
+                      ) : (
+                        <span className="text-muted">0.00</span>
+                      )}
+                    </td>
+                    <td className="py-3.5 px-4 text-center" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-center gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="md"
+                          onClick={() => {
+                            setSelectedInvoiceId(inv.id);
+                            setIsReceiptModalOpen(true);
+                          }}
+                          className="text-muted hover:text-ok px-2.5"
+                          title="طباعة إيصال كاشير حراري (80mm)"
+                        >
+                          <Printer className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="md"
+                          onClick={() => setSelectedInvoiceId(inv.id)}
+                          className="text-muted hover:text-brand px-2.5"
+                          title="عرض تفاصيل الفاتورة"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        {canDeleteInvoice && (
+                          <Button
                             type="button"
-                            onClick={() => {
-                              setSelectedInvoiceId(inv.id);
-                              setIsReceiptModalOpen(true);
-                            }}
-                            className="p-1.5 text-slate-400 hover:text-emerald-600 rounded-lg hover:bg-emerald-50 transition-colors"
-                            title="طباعة إيصال كاشير حراري (80mm)"
+                            variant="ghost"
+                            size="md"
+                            onClick={() => handleDelete(inv.id, inv.invoice_number)}
+                            className="text-muted hover:text-bad px-2.5"
+                            title="إلغاء المستند"
                           >
-                            <Printer className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => setSelectedInvoiceId(inv.id)}
-                            className="p-1.5 text-slate-400 hover:text-primary-600 rounded-lg hover:bg-slate-100 transition-colors"
-                            title="عرض تفاصيل الفاتورة"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          {canDeleteInvoice && (
-                            <button
-                              onClick={() => handleDelete(inv.id, inv.invoice_number)}
-                              className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-slate-100 transition-colors"
-                              title="إلغاء المستند"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </DataTable>
 
             {/* Mobile Touch-Friendly Cards (md:hidden) */}
-            <div className="md:hidden overflow-y-auto flex-1 p-3 space-y-3 bg-slate-50/60">
+            <div className="md:hidden overflow-y-auto flex-1 p-3 space-y-3 bg-surface-2/50">
               {invoices.map((inv: any) => (
                 <InvoiceMobileCard
                   key={inv.id}
@@ -513,48 +600,66 @@ export const InvoicesPage: React.FC = () => {
             />
           </>
         )}
-      </div>
+      </Card>
 
       {/* Invoice Details Modal - Responsive Bottom Sheet on Mobile */}
       {selectedInvoiceId && (
-        <div className={`fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150 ${isReceiptModalOpen ? 'print:hidden' : ''}`}>
-          <div className="bg-white rounded-t-[2.5rem] sm:rounded-3xl shadow-2xl max-w-2xl w-full max-h-[92vh] sm:max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 animate-in slide-in-from-bottom sm:zoom-in duration-200">
+        <div
+          className={`fixed inset-0 z-50 bg-ink/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150 ${
+            isReceiptModalOpen ? 'print:hidden' : ''
+          }`}
+        >
+          <div className="bg-panel text-ink rounded-t-[2.5rem] sm:rounded-3xl shadow-2xl max-w-2xl w-full max-h-[92vh] sm:max-h-[90vh] flex flex-col overflow-hidden border border-line animate-in slide-in-from-bottom sm:zoom-in duration-200">
             {/* Sheet Handle for Mobile */}
-            <div className="w-12 h-1.5 bg-slate-400/60 rounded-full mx-auto mt-3 mb-1 sm:hidden no-print" />
+            <div className="w-12 h-1.5 bg-line-2 rounded-full mx-auto mt-3 mb-1 sm:hidden no-print" />
 
             {/* Modal Header */}
-            <div className="p-5 sm:p-6 bg-slate-900 text-white flex items-center justify-between no-print">
+            <div className="p-5 sm:p-6 bg-surface-2 border-b border-line text-ink flex items-center justify-between no-print">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-white/10 rounded-xl">
-                  <Receipt className="w-6 h-6 text-primary-400" />
+                <div className="p-2.5 bg-brand-soft rounded-xl">
+                  <Receipt className="w-6 h-6 text-brand" />
                 </div>
                 <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-black font-mono">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-lg font-black tabular-nums">
                       {invoiceDetails?.invoice_number || 'جاري التحميل...'}
                     </h3>
                     {invoiceDetails?.type && (
-                      <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-white/20 text-white">
-                        {invoiceDetails.type === 'SALE' ? 'فاتورة بيع' :
-                         invoiceDetails.type === 'PURCHASE' ? 'فاتورة شراء' :
-                         invoiceDetails.type === 'SALE_RETURN' ? 'مرتجع بيع' : 'مرتجع شراء'}
-                      </span>
+                      <Badge tone="brand">
+                        {invoiceDetails.type === 'SALE'
+                          ? 'فاتورة بيع'
+                          : invoiceDetails.type === 'PURCHASE'
+                            ? 'فاتورة شراء'
+                            : invoiceDetails.type === 'SALE_RETURN'
+                              ? 'مرتجع بيع'
+                              : 'مرتجع شراء'}
+                      </Badge>
                     )}
                   </div>
-                  <p className="text-xs text-slate-400 mt-0.5">تفاصيل بنود الفاتورة والمدفوعات والمخزون</p>
+                  <p className="text-xs text-muted mt-0.5">
+                    تفاصيل بنود الفاتورة والمدفوعات والمخزون
+                  </p>
                 </div>
               </div>
-              <button
+              <Button
+                type="button"
+                variant="ghost"
+                size="md"
                 onClick={() => setSelectedInvoiceId(null)}
-                className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-white/10 transition-colors"
+                className="text-muted hover:text-ink px-2.5"
+                aria-label="إغلاق"
               >
                 <X className="w-5 h-5" />
-              </button>
+              </Button>
             </div>
 
             {/* Modal Body */}
-            <div className={`p-6 overflow-y-auto flex-1 space-y-6 ${isReceiptModalOpen ? 'print:hidden' : 'printable-area'}`}>
-              {/* Print Header for Physical Printouts */}
+            <div
+              className={`p-6 overflow-y-auto flex-1 space-y-6 ${
+                isReceiptModalOpen ? 'print:hidden' : 'printable-area'
+              }`}
+            >
+              {/* Print Header for Physical Printouts (untouched print area) */}
               <div className="hidden print:block border-b-2 border-slate-900 pb-3 mb-4">
                 <div className="flex justify-between items-center">
                   <div>
@@ -574,48 +679,64 @@ export const InvoicesPage: React.FC = () => {
                 </div>
               </div>
               {isDetailsLoading || !invoiceDetails ? (
-                <div className="text-center py-12 text-slate-400 font-medium">جاري جلب تفاصيل الفاتورة...</div>
+                <div className="text-center py-12 text-muted font-medium">
+                  جاري جلب تفاصيل الفاتورة...
+                </div>
               ) : (
                 <>
                   {/* Meta Details */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100 text-xs">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 bg-surface-2 rounded-2xl border border-line text-xs">
                     <div className="space-y-1">
-                      <span className="text-slate-400 flex items-center gap-1 font-medium">
+                      <span className="text-muted flex items-center gap-1 font-medium">
                         <Calendar className="w-3.5 h-3.5" /> التاريخ
                       </span>
-                      <p className="font-bold text-slate-800 font-mono">{invoiceDetails.date}</p>
+                      <p className="font-bold text-ink tabular-nums">{invoiceDetails.date}</p>
                     </div>
                     <div className="space-y-1">
-                      <span className="text-slate-400 flex items-center gap-1 font-medium">
+                      <span className="text-muted flex items-center gap-1 font-medium">
                         <User className="w-3.5 h-3.5" /> الطرف
                       </span>
-                      <p className="font-bold text-slate-800">{invoiceDetails.party_name || 'نقدي (بدون حساب)'}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <span className="text-slate-400 flex items-center gap-1 font-medium">
-                        <CreditCard className="w-3.5 h-3.5" /> طريقة الدفع
-                      </span>
-                      <p className="font-bold text-slate-800">
-                        {invoiceDetails.payment_method === 'CASH' ? 'نقدي (كاش)' :
-                         invoiceDetails.payment_method === 'CREDIT' ? 'آجل (على الحساب)' :
-                         invoiceDetails.payment_method === 'CARD' ? 'فيزا / بطاقة' :
-                         invoiceDetails.payment_method === 'INSTAPAY' ? 'إنستاباي' :
-                         invoiceDetails.payment_method === 'VODAFONE_CASH' ? 'فودافون كاش' :
-                         invoiceDetails.payment_method === 'SPLIT' ? 'دفع مجزأ' : 'تحويل بنكي'}
+                      <p className="font-bold text-ink">
+                        {invoiceDetails.party_name || 'نقدي (بدون حساب)'}
                       </p>
                     </div>
                     <div className="space-y-1">
-                      <span className="text-slate-400 flex items-center gap-1 font-medium">
-                        <User className="w-3.5 h-3.5 text-primary-500" /> المنشئ / المحرر
+                      <span className="text-muted flex items-center gap-1 font-medium">
+                        <CreditCard className="w-3.5 h-3.5" /> طريقة الدفع
                       </span>
-                      <p className="font-bold text-slate-800">
+                      <p className="font-bold text-ink">
+                        {invoiceDetails.payment_method === 'CASH'
+                          ? 'نقدي (كاش)'
+                          : invoiceDetails.payment_method === 'CREDIT'
+                            ? 'آجل (على الحساب)'
+                            : invoiceDetails.payment_method === 'CARD'
+                              ? 'فيزا / بطاقة'
+                              : invoiceDetails.payment_method === 'INSTAPAY'
+                                ? 'إنستاباي'
+                                : invoiceDetails.payment_method === 'VODAFONE_CASH'
+                                  ? 'فودافون كاش'
+                                  : invoiceDetails.payment_method === 'SPLIT'
+                                    ? 'دفع مجزأ'
+                                    : 'تحويل بنكي'}
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-muted flex items-center gap-1 font-medium">
+                        <User className="w-3.5 h-3.5 text-brand" /> المنشئ / المحرر
+                      </span>
+                      <p className="font-bold text-ink">
                         {invoiceDetails.created_by_name || 'المالك'}
                         {invoiceDetails.created_by_role && (
-                          <span className="block text-2xs text-slate-500 font-normal">
-                            {invoiceDetails.created_by_role === 'MANDOB' ? 'مندوب مبيعات' :
-                             invoiceDetails.created_by_role === 'CASHIER' ? 'كاشير' :
-                             invoiceDetails.created_by_role === 'MANAGER' ? 'مدير الفرع' :
-                             invoiceDetails.created_by_role === 'SUPERVISOR' ? 'مشرف' : 'صاحب العمل'}
+                          <span className="block text-[11px] text-muted font-normal">
+                            {invoiceDetails.created_by_role === 'MANDOB'
+                              ? 'مندوب مبيعات'
+                              : invoiceDetails.created_by_role === 'CASHIER'
+                                ? 'كاشير'
+                                : invoiceDetails.created_by_role === 'MANAGER'
+                                  ? 'مدير الفرع'
+                                  : invoiceDetails.created_by_role === 'SUPERVISOR'
+                                    ? 'مشرف'
+                                    : 'صاحب العمل'}
                           </span>
                         )}
                       </p>
@@ -624,55 +745,78 @@ export const InvoicesPage: React.FC = () => {
 
                   {/* Salesperson Attribution & Reassignment Card (Only for SALE and SALE_RETURN) */}
                   {(invoiceDetails.type === 'SALE' || invoiceDetails.type === 'SALE_RETURN') && (
-                    <div className="p-4 bg-gradient-to-r from-slate-50 to-indigo-50/40 rounded-2xl border border-indigo-100/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 text-xs">
+                    <div className="p-4 bg-info-soft/40 rounded-2xl border border-info/20 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 text-xs">
                       <div className="flex items-center gap-3">
-                        <div className="p-2.5 bg-indigo-100/80 text-indigo-700 rounded-xl flex-shrink-0">
+                        <div className="p-2.5 bg-info-soft text-info rounded-xl flex-shrink-0">
                           <UserCheck className="w-5 h-5" />
                         </div>
                         <div>
-                          <span className="text-slate-500 font-medium block text-[11px]">
+                          <span className="text-muted font-medium block text-[11px]">
                             مسؤول المبيعات المعتمد (لحساب العمولات والأرباح):
                           </span>
                           {!isEditingSalesperson ? (
                             <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                              <span className="font-black text-slate-900 text-sm">
-                                {invoiceDetails.salesperson_name || invoiceDetails.created_by_name || 'المالك / المنشئ'}
+                              <span className="font-black text-ink text-sm">
+                                {invoiceDetails.salesperson_name ||
+                                  invoiceDetails.created_by_name ||
+                                  'المالك / المنشئ'}
                               </span>
                               {invoiceDetails.salesperson_role ? (
-                                <span className="px-2 py-0.5 rounded-md text-2xs font-bold bg-indigo-100 text-indigo-800">
-                                  {invoiceDetails.salesperson_role === 'SALES' ? 'بائع / سيلز' :
-                                   invoiceDetails.salesperson_role === 'MANDOB' ? 'مندوب مبيعات' :
-                                   invoiceDetails.salesperson_role === 'CASHIER' ? 'كاشير' :
-                                   invoiceDetails.salesperson_role === 'MANAGER' ? 'مدير' : invoiceDetails.salesperson_role}
-                                </span>
-                              ) : invoiceDetails.created_by_role && (
-                                <span className="px-2 py-0.5 rounded-md text-2xs font-medium bg-slate-200 text-slate-700">
-                                  {invoiceDetails.created_by_role === 'MANDOB' ? 'مندوب' :
-                                   invoiceDetails.created_by_role === 'CASHIER' ? 'كاشير' :
-                                   invoiceDetails.created_by_role === 'SALES' ? 'بائع / سيلز' :
-                                   invoiceDetails.created_by_role === 'MANAGER' ? 'مدير' : 'المنشئ'}
-                                </span>
+                                <Badge tone="info" className="text-[11px]">
+                                  {invoiceDetails.salesperson_role === 'SALES'
+                                    ? 'بائع / سيلز'
+                                    : invoiceDetails.salesperson_role === 'MANDOB'
+                                      ? 'مندوب مبيعات'
+                                      : invoiceDetails.salesperson_role === 'CASHIER'
+                                        ? 'كاشير'
+                                        : invoiceDetails.salesperson_role === 'MANAGER'
+                                          ? 'مدير'
+                                          : invoiceDetails.salesperson_role}
+                                </Badge>
+                              ) : (
+                                invoiceDetails.created_by_role && (
+                                  <Badge tone="neutral" className="text-[11px]">
+                                    {invoiceDetails.created_by_role === 'MANDOB'
+                                      ? 'مندوب'
+                                      : invoiceDetails.created_by_role === 'CASHIER'
+                                        ? 'كاشير'
+                                        : invoiceDetails.created_by_role === 'SALES'
+                                          ? 'بائع / سيلز'
+                                          : invoiceDetails.created_by_role === 'MANAGER'
+                                            ? 'مدير'
+                                            : 'المنشئ'}
+                                  </Badge>
+                                )
                               )}
                               {!invoiceDetails.salesperson_id && invoiceDetails.created_by_name && (
-                                <span className="text-2xs text-slate-400 font-normal">
+                                <span className="text-[11px] text-muted font-normal">
                                   (تلقائياً حسب منشئ الفاتورة)
                                 </span>
                               )}
                             </div>
                           ) : (
-                            <div className="mt-1">
-                              <select
+                            <div className="mt-1 sm:w-64">
+                              <Select
                                 value={selectedSalespersonId}
                                 onChange={(e) => setSelectedSalespersonId(e.target.value)}
-                                className="w-full sm:w-64 border border-indigo-300 rounded-xl text-xs px-3 py-1.5 bg-white text-slate-800 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500"
                               >
                                 <option value="">-- تلقائياً (المنشئ / بدون تحديد) --</option>
                                 {employeesData?.map((emp: any) => (
                                   <option key={emp.id} value={emp.id}>
-                                    {emp.name} ({emp.role === 'SALES' ? 'بائع / سيلز' : emp.role === 'MANDOB' ? 'مندوب' : emp.role === 'CASHIER' ? 'كاشير' : emp.role === 'MANAGER' ? 'مدير' : 'مشرف'})
+                                    {emp.name} (
+                                    {emp.role === 'SALES'
+                                      ? 'بائع / سيلز'
+                                      : emp.role === 'MANDOB'
+                                        ? 'مندوب'
+                                        : emp.role === 'CASHIER'
+                                          ? 'كاشير'
+                                          : emp.role === 'MANAGER'
+                                            ? 'مدير'
+                                            : 'مشرف'}
+                                    )
                                   </option>
                                 ))}
-                              </select>
+                              </Select>
                             </div>
                           )}
                         </div>
@@ -682,43 +826,55 @@ export const InvoicesPage: React.FC = () => {
                         <div className="flex items-center gap-2 self-end sm:self-center flex-shrink-0">
                           {isEditingSalesperson ? (
                             <>
-                              <button
+                              <Button
                                 type="button"
+                                variant="primary"
+                                size="md"
                                 onClick={() => {
                                   updateSalespersonMutation.mutate({
                                     invoiceId: invoiceDetails.id,
-                                    salespersonId: selectedSalespersonId ? Number(selectedSalespersonId) : null,
+                                    salespersonId: selectedSalespersonId
+                                      ? Number(selectedSalespersonId)
+                                      : null,
                                   });
                                 }}
                                 disabled={updateSalespersonMutation.isPending}
-                                className="inline-flex items-center gap-1 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-xl font-bold text-xs shadow-sm transition-colors disabled:opacity-50"
+                                leftIcon={<Save className="w-3.5 h-3.5" />}
+                                className="text-xs font-bold"
                               >
-                                <Save className="w-3.5 h-3.5" />
                                 {updateSalespersonMutation.isPending ? 'جاري الحفظ...' : 'حفظ'}
-                              </button>
-                              <button
+                              </Button>
+                              <Button
                                 type="button"
+                                variant="secondary"
+                                size="md"
                                 onClick={() => setIsEditingSalesperson(false)}
-                                className="inline-flex items-center gap-1 bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-xl font-bold text-xs transition-colors"
+                                className="text-xs font-bold"
                               >
                                 إلغاء
-                              </button>
+                              </Button>
                             </>
                           ) : (
-                            <button
+                            <Button
                               type="button"
+                              variant="secondary"
+                              size="md"
                               onClick={() => {
                                 setSelectedSalespersonId(
-                                  invoiceDetails.salesperson_id ? String(invoiceDetails.salesperson_id) : (invoiceDetails.created_by ? String(invoiceDetails.created_by) : '')
+                                  invoiceDetails.salesperson_id
+                                    ? String(invoiceDetails.salesperson_id)
+                                    : invoiceDetails.created_by
+                                      ? String(invoiceDetails.created_by)
+                                      : ''
                                 );
                                 setIsEditingSalesperson(true);
                               }}
-                              className="inline-flex items-center gap-1.5 text-indigo-700 bg-indigo-100 hover:bg-indigo-200 px-3 py-1.5 rounded-xl font-bold text-xs transition-colors"
+                              leftIcon={<Edit2 className="w-3.5 h-3.5 text-info" />}
+                              className="text-info border-info/30 bg-info-soft hover:bg-info-soft/80 text-xs font-bold"
                               title="تعديل مسؤول البيع لتصحيح عمولة الموظف"
                             >
-                              <Edit2 className="w-3.5 h-3.5" />
                               تعديل مسؤول البيع
-                            </button>
+                            </Button>
                           )}
                         </div>
                       )}
@@ -727,78 +883,92 @@ export const InvoicesPage: React.FC = () => {
 
                   {/* Items Table */}
                   <div>
-                    <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">بنود الفاتورة</h4>
-                    <div className="border border-slate-200 rounded-2xl overflow-hidden">
-                      <table className="w-full text-right text-xs">
-                        <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
-                          <tr>
-                            <th className="py-2.5 px-3">#</th>
-                            <th className="py-2.5 px-3">اسم الصنف</th>
-                            <th className="py-2.5 px-3 text-center">الكمية</th>
-                            <th className="py-2.5 px-3 text-left">السعر</th>
-                            <th className="py-2.5 px-3 text-left">الإجمالي</th>
+                    <h4 className="text-xs font-bold text-muted uppercase tracking-wider mb-2">
+                      بنود الفاتورة
+                    </h4>
+                    <DataTable>
+                      <thead className="bg-surface-2 text-muted font-bold border-b border-line text-xs">
+                        <tr>
+                          <th className="py-2.5 px-3">#</th>
+                          <th className="py-2.5 px-3">اسم الصنف</th>
+                          <th className="py-2.5 px-3 text-center">الكمية</th>
+                          <th className="py-2.5 px-3 text-left">السعر</th>
+                          <th className="py-2.5 px-3 text-left">الإجمالي</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-line text-xs">
+                        {invoiceDetails.items?.map((item: any, idx: number) => (
+                          <tr key={item.id || idx} className="hover:bg-surface-2/50">
+                            <td className="py-2.5 px-3 tabular-nums text-muted">{idx + 1}</td>
+                            <td className="py-2.5 px-3 font-bold text-ink">{item.product_name}</td>
+                            <td className="py-2.5 px-3 text-center font-bold tabular-nums">
+                              {item.quantity}
+                            </td>
+                            <td className="py-2.5 px-3 text-left tabular-nums">
+                              {formatCurrency(item.unit_price)}
+                            </td>
+                            <td className="py-2.5 px-3 text-left font-bold tabular-nums text-ink">
+                              {formatCurrency(item.total)}
+                            </td>
                           </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                          {invoiceDetails.items?.map((item: any, idx: number) => (
-                            <tr key={item.id || idx} className="hover:bg-slate-50/50">
-                              <td className="py-2.5 px-3 font-mono text-slate-400">{idx + 1}</td>
-                              <td className="py-2.5 px-3 font-bold text-slate-800">{item.product_name}</td>
-                              <td className="py-2.5 px-3 text-center font-bold font-mono">{item.quantity}</td>
-                              <td className="py-2.5 px-3 text-left font-mono">{formatCurrency(item.unit_price)}</td>
-                              <td className="py-2.5 px-3 text-left font-bold font-mono text-slate-900">
-                                {formatCurrency(item.total)}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                        ))}
+                      </tbody>
+                    </DataTable>
                   </div>
 
                   {/* Financial Summary */}
-                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2 text-sm">
-                    <div className="flex justify-between text-slate-600 text-xs">
+                  <div className="bg-surface-2 p-4 rounded-2xl border border-line space-y-2 text-sm">
+                    <div className="flex justify-between text-muted text-xs">
                       <span>الإجمالي الفرعي:</span>
-                      <span className="font-mono font-bold">{formatCurrency(invoiceDetails.subtotal)}</span>
+                      <span className="tabular-nums font-bold text-ink">
+                        {formatCurrency(invoiceDetails.subtotal)}
+                      </span>
                     </div>
                     {invoiceDetails.discount > 0 && (
-                      <div className="flex justify-between text-rose-600 text-xs">
+                      <div className="flex justify-between text-bad text-xs">
                         <span>الخصم:</span>
-                        <span className="font-mono font-bold">- {formatCurrency(invoiceDetails.discount)}</span>
+                        <span className="tabular-nums font-bold">
+                          - {formatCurrency(invoiceDetails.discount)}
+                        </span>
                       </div>
                     )}
                     {Number(invoiceDetails.shipping_amount) > 0 && (
-                      <div className="flex justify-between text-blue-600 text-xs font-medium">
+                      <div className="flex justify-between text-info text-xs font-medium">
                         <span>خدمة التوصيل / الشحن:</span>
-                        <span className="font-mono font-bold">+ {formatCurrency(invoiceDetails.shipping_amount)}</span>
+                        <span className="tabular-nums font-bold">
+                          + {formatCurrency(invoiceDetails.shipping_amount)}
+                        </span>
                       </div>
                     )}
                     {invoiceDetails.tax > 0 && (
-                      <div className="flex justify-between text-slate-600 text-xs">
+                      <div className="flex justify-between text-muted text-xs">
                         <span>الضريبة:</span>
-                        <span className="font-mono font-bold">+ {formatCurrency(invoiceDetails.tax)}</span>
+                        <span className="tabular-nums font-bold text-ink">
+                          + {formatCurrency(invoiceDetails.tax)}
+                        </span>
                       </div>
                     )}
-                    <div className="flex justify-between text-base font-black text-slate-900 pt-2 border-t border-slate-200">
+                    <div className="flex justify-between text-base font-black text-ink pt-2 border-t border-line">
                       <span>الصافي الإجمالي:</span>
-                      <span className="text-primary-600 font-mono">{formatCurrency(invoiceDetails.total)}</span>
+                      <span className="text-brand tabular-nums">
+                        {formatCurrency(invoiceDetails.total)}
+                      </span>
                     </div>
-                    <div className="flex justify-between text-xs font-bold text-emerald-700 pt-1">
+                    <div className="flex justify-between text-xs font-bold text-ok pt-1">
                       <span>المدفوع:</span>
-                      <span className="font-mono">{formatCurrency(invoiceDetails.paid_amount)}</span>
+                      <span className="tabular-nums">{formatCurrency(invoiceDetails.paid_amount)}</span>
                     </div>
                     {invoiceDetails.due_amount > 0 && (
-                      <div className="flex justify-between text-xs font-black text-rose-600">
+                      <div className="flex justify-between text-xs font-black text-bad">
                         <span>المتبقي (آجل):</span>
-                        <span className="font-mono">{formatCurrency(invoiceDetails.due_amount)}</span>
+                        <span className="tabular-nums">{formatCurrency(invoiceDetails.due_amount)}</span>
                       </div>
                     )}
                   </div>
 
                   {invoiceDetails.notes && (
-                    <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900">
-                      <span className="font-bold">ملاحظات: </span>
+                    <div className="p-3 bg-warn-soft rounded-xl border border-warn/30 text-xs text-ink">
+                      <span className="font-bold text-warn">ملاحظات: </span>
                       {invoiceDetails.notes}
                     </div>
                   )}
@@ -807,41 +977,49 @@ export const InvoicesPage: React.FC = () => {
             </div>
 
             {/* Modal Footer */}
-            <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 no-print">
+            <div className="p-4 bg-surface-2 border-t border-line flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 no-print">
               <div className="flex flex-wrap items-stretch sm:items-center gap-2 flex-1">
-                <button
+                <Button
                   type="button"
+                  variant="primary"
+                  size="md"
                   onClick={() => setIsReceiptModalOpen(true)}
-                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white rounded-xl text-xs font-bold transition-all shadow-sm shadow-emerald-700/20"
+                  leftIcon={<Printer className="w-4 h-4" />}
+                  className="bg-ok text-on-brand hover:opacity-95 text-xs font-bold"
                 >
-                  <Printer className="w-4 h-4" />
-                  <span>طباعة إيصال كاشير (حراري 80mm)</span>
-                </button>
-                <button
+                  طباعة إيصال كاشير (حراري 80mm)
+                </Button>
+                <Button
                   type="button"
+                  variant="secondary"
+                  size="md"
                   onClick={handleShareWhatsApp}
-                  className="inline-flex items-center justify-center gap-2 px-3.5 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl text-xs font-bold transition-all active:scale-98"
+                  leftIcon={<Share2 className="w-3.5 h-3.5 text-ok" />}
+                  className="bg-ok-soft text-ok border-ok/30 hover:bg-ok-soft/80 text-xs font-bold"
                   title="مشاركة الفاتورة عبر واتساب"
                 >
-                  <Share2 className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>إرسال واتساب</span>
-                </button>
-                <button
+                  إرسال واتساب
+                </Button>
+                <Button
                   type="button"
+                  variant="secondary"
+                  size="md"
                   onClick={handlePrint}
-                  className="inline-flex items-center justify-center gap-2 px-3.5 py-2.5 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-bold transition-colors"
+                  leftIcon={<Printer className="w-3.5 h-3.5 text-muted" />}
+                  className="text-xs font-bold"
                 >
-                  <Printer className="w-3.5 h-3.5 text-slate-500" />
-                  <span>طباعة تقرير (A4)</span>
-                </button>
+                  طباعة تقرير (A4)
+                </Button>
               </div>
-              <button
+              <Button
                 type="button"
+                variant="secondary"
+                size="md"
                 onClick={() => setSelectedInvoiceId(null)}
-                className="px-5 py-2.5 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-bold transition-colors text-center"
+                className="text-xs font-bold"
               >
                 إغلاق
-              </button>
+              </Button>
             </div>
           </div>
         </div>

@@ -22,6 +22,7 @@ import { InvoiceSummaryPanel } from '../components/invoice/InvoiceSummaryPanel';
 import { ProductVariantModal, VariantSelectionPayload } from '../components/products/ProductVariantModal';
 import { usePermissions } from '../../hooks/usePermissions';
 import { nativeBackButton } from '../../platform/nativeBackButton';
+import { Badge, Button, Card, Input, PageHeader } from '../components/ui';
 
 export const InvoiceFormPage: React.FC = () => {
   const location = useLocation();
@@ -306,34 +307,39 @@ export const InvoiceFormPage: React.FC = () => {
   return (
     <div className="space-y-6 h-full flex flex-col pb-24 lg:pb-0">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => navigate(-1)}
-            className="p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"
-          >
-            <ArrowRight className="w-5 h-5 text-slate-600" />
-          </button>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl font-bold text-slate-900">{pageTitle}</h2>
-              {isReturn && (
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-amber-100 text-amber-800 flex items-center gap-1">
-                  <RotateCcw className="w-3 h-3" /> مرتجع
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-slate-500 mt-0.5">
-              {isReturn
-                ? 'إرجاع بضاعة وضبط حركة المخزون والمديونية فورياً'
-                : 'إنشاء فاتورة سريعة مع تحديث المخزون والحسابات'}
-            </p>
-          </div>
-        </div>
+      <div className="flex items-start sm:items-center gap-3">
+        <Button
+          type="button"
+          variant="secondary"
+          size="md"
+          onClick={() => navigate(-1)}
+          className="px-3 shrink-0"
+          title="رجوع"
+          aria-label="رجوع"
+        >
+          <ArrowRight className="w-5 h-5" />
+        </Button>
+        <PageHeader
+          title={pageTitle}
+          description={
+            isReturn
+              ? 'إرجاع بضاعة وضبط حركة المخزون والمديونية فورياً'
+              : 'إنشاء فاتورة سريعة مع تحديث المخزون والحسابات'
+          }
+          badge={
+            isReturn ? (
+              <Badge tone="warn">
+                <RotateCcw className="w-3 h-3" />
+                مرتجع
+              </Badge>
+            ) : undefined
+          }
+          className="mb-0 flex-1"
+        />
       </div>
 
       {errorMessage && (
-        <div className="p-4 bg-rose-50 border border-rose-200 text-rose-800 text-sm rounded-xl flex items-center gap-2">
+        <div className="p-4 bg-bad-soft border border-bad/30 text-bad text-sm rounded-xl flex items-center gap-2">
           <AlertCircle className="w-5 h-5 flex-shrink-0" />
           <span>{errorMessage}</span>
         </div>
@@ -360,21 +366,19 @@ export const InvoiceFormPage: React.FC = () => {
           )}
 
           {/* Product Free Search */}
-          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-            <div className="relative">
-              <Search className="w-5 h-5 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                placeholder={
-                  isReturn
-                    ? 'إضافة أصناف حرة للمرتجع (بحث بالاسم أو الباركود)...'
-                    : 'ابحث عن صنف بالاسم أو الباركود لإضافته...'
-                }
-                value={searchProduct}
-                onChange={(e) => setSearchProduct(e.target.value)}
-                className="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-              />
-            </div>
+          <Card className="p-4 space-y-4">
+            <Input
+              type="text"
+              placeholder={
+                isReturn
+                  ? 'إضافة أصناف حرة للمرتجع (بحث بالاسم أو الباركود)...'
+                  : 'ابحث عن صنف بالاسم أو الباركود لإضافته...'
+              }
+              value={searchProduct}
+              onChange={(e) => setSearchProduct(e.target.value)}
+              leftIcon={<Search className="w-5 h-5" />}
+              className="bg-surface-2/60"
+            />
 
             {searchProduct && productsData && productsData.length > 0 && (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -383,25 +387,27 @@ export const InvoiceFormPage: React.FC = () => {
                     key={product.id}
                     type="button"
                     onClick={() => handleProductClick(product)}
-                    className="flex flex-col items-center justify-center p-3 border border-slate-200 rounded-xl hover:border-primary-500 hover:bg-primary-50 transition-colors gap-1 text-center"
+                    className="min-h-[44px] flex flex-col items-center justify-center p-3 bg-panel border border-line rounded-xl hover:border-brand hover:bg-brand-soft/40 transition-colors gap-1 text-center cursor-pointer"
                   >
-                    <span className="font-bold text-sm text-slate-800 truncate w-full">{product.name}</span>
+                    <span className="font-bold text-sm text-ink truncate w-full">{product.name}</span>
                     {product.variants && product.variants.length > 0 && (
-                      <span className="text-2xs bg-indigo-50 text-indigo-700 border border-indigo-100 px-2 py-0.5 rounded-full font-bold">
+                      <Badge tone="info" className="text-[11px]">
                         {product.variants.length} مقاسات / ألوان
-                      </span>
+                      </Badge>
                     )}
-                    <span className="text-xs text-primary-600 font-black">
+                    <span className="text-xs text-brand font-black tabular-nums">
                       {formatCurrency(
                         Number(isPurchase || isPurchaseReturn ? product.purchase_price ?? 0 : product.sale_price)
                       )}
                     </span>
-                    <span className="text-2xs text-slate-400">المخزون الحالي: {product.quantity}</span>
+                    <span className="text-[11px] text-muted tabular-nums">
+                      المخزون الحالي: {product.quantity}
+                    </span>
                   </button>
                 ))}
               </div>
             )}
-          </div>
+          </Card>
 
           {/* Items Table */}
           <InvoiceItemsTable
@@ -435,23 +441,26 @@ export const InvoiceFormPage: React.FC = () => {
 
       {/* Mobile Sticky Action Bar */}
       {fields.length > 0 && (
-        <div className="lg:hidden fixed bottom-[calc(4.2rem+env(safe-area-inset-bottom,0px))] left-3 right-3 z-30 bg-slate-900/95 backdrop-blur-md text-white px-4 py-3 rounded-2xl shadow-2xl border border-slate-700/50 flex items-center justify-between gap-3 animate-in slide-in-from-bottom duration-200">
+        <div className="lg:hidden fixed bottom-[calc(4.2rem+env(safe-area-inset-bottom,0px))] left-3 right-3 z-30 bg-panel/95 backdrop-blur-md text-ink px-4 py-3 rounded-2xl shadow-2xl border border-line flex items-center justify-between gap-3">
           <div className="flex flex-col">
-            <span className="text-2xs text-slate-300 font-medium">
+            <span className="text-[11px] text-muted font-medium tabular-nums">
               {fields.length} أصناف • الإجمالي
             </span>
-            <span className="text-base font-black text-emerald-400 font-mono">
+            <span className="text-base font-black text-ok tabular-nums">
               {formatCurrency(total)}
             </span>
           </div>
-          <button
+          <Button
             type="button"
+            variant="primary"
+            size="md"
             disabled={saveMutation.isPending}
+            isLoading={saveMutation.isPending}
             onClick={handleSubmit(onSubmit)}
-            className="px-5 py-2.5 bg-primary-600 hover:bg-primary-500 disabled:opacity-50 text-white rounded-xl text-xs font-black shadow-md flex items-center gap-1.5 active:scale-95 transition-all"
+            className="text-xs font-black"
           >
             {saveMutation.isPending ? 'جاري الحفظ...' : isReturn ? 'تأكيد المرتجع' : 'حفظ الفاتورة'}
-          </button>
+          </Button>
         </div>
       )}
 

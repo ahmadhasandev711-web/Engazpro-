@@ -1,6 +1,7 @@
 import React from 'react';
 import { Phone, MapPin, Receipt, FileText, Edit2, Trash2, User, Truck } from 'lucide-react';
 import { Party, formatCurrency } from '@pos-mandob/shared';
+import { Badge, BadgeTone, Button, Card } from '../ui';
 
 interface PartyMobileCardProps {
   party: Party;
@@ -22,64 +23,62 @@ export const PartyMobileCard: React.FC<PartyMobileCardProps> = ({
   const isPositive = Number(party.balance) > 0;
   const isNegative = Number(party.balance) < 0;
 
-  // Stripe & Badge Config
-  let stripeClass = 'border-r-4 border-r-slate-300';
-  let badgeClass = 'bg-slate-100 text-slate-700 border-slate-200';
+  let stripeClass = 'border-r-line-2';
+  let badgeTone: BadgeTone = 'neutral';
   let balanceLabel = 'خالص';
 
   if (isPositive) {
     if (isSupplier) {
-      stripeClass = 'border-r-4 border-r-rose-500';
-      badgeClass = 'bg-rose-100 text-rose-800 border-rose-200';
+      stripeClass = 'border-r-bad';
+      badgeTone = 'bad';
       balanceLabel = 'مستحق له';
     } else {
-      stripeClass = 'border-r-4 border-r-emerald-500';
-      badgeClass = 'bg-emerald-100 text-emerald-800 border-emerald-200';
+      stripeClass = 'border-r-ok';
+      badgeTone = 'ok';
       balanceLabel = 'مديونية عليه';
     }
   } else if (isNegative) {
-    stripeClass = 'border-r-4 border-r-blue-500';
-    badgeClass = 'bg-blue-100 text-blue-800 border-blue-200';
+    stripeClass = 'border-r-info';
+    badgeTone = 'info';
     balanceLabel = isSupplier ? 'رصيد دائن لنا' : 'رصيد دائن له';
   }
 
   const cleanPhone = party.phone ? party.phone.replace(/\D/g, '') : '';
 
   return (
-    <div
-      className={`bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden transition-all duration-200 ${stripeClass}`}
+    <Card
+      className={`p-0 sm:p-0 border-r-4 ${stripeClass} overflow-hidden transition-all duration-200`}
+      dir="rtl"
     >
       {/* Header: Name, Address, Balance Badge */}
-      <div className="p-3.5 pb-2.5 flex items-start justify-between gap-2 border-b border-slate-100">
+      <div className="p-3.5 pb-2.5 flex items-start justify-between gap-2 border-b border-line">
         <div className="min-w-0 flex items-start gap-2.5">
           <div
             className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
-              isSupplier ? 'bg-amber-50 text-amber-600' : 'bg-primary-50 text-primary-600'
+              isSupplier ? 'bg-warn-soft text-warn' : 'bg-brand-soft text-brand'
             }`}
           >
             {isSupplier ? <Truck className="w-5 h-5" /> : <User className="w-5 h-5" />}
           </div>
           <div className="min-w-0">
-            <h4 className="font-black text-slate-900 text-sm truncate">{party.name}</h4>
+            <h4 className="font-black text-ink text-sm truncate">{party.name}</h4>
             {party.address ? (
-              <p className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5 truncate">
-                <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+              <p className="text-[11px] text-muted flex items-center gap-1 mt-0.5 truncate">
+                <MapPin className="w-3 h-3 text-muted shrink-0" />
                 <span className="truncate">{party.address}</span>
               </p>
             ) : (
-              <p className="text-[11px] text-slate-400 mt-0.5">بدون عنوان مسجل</p>
+              <p className="text-[11px] text-muted mt-0.5">بدون عنوان مسجل</p>
             )}
           </div>
         </div>
 
         {/* Financial Badge */}
         <div className="text-left shrink-0">
-          <span
-            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black border font-mono ${badgeClass}`}
-          >
+          <Badge tone={badgeTone} className="font-black tabular-nums">
             {formatCurrency(party.balance)}
-          </span>
-          <span className="block text-2xs text-slate-400 font-medium text-center mt-0.5">
+          </Badge>
+          <span className="block text-[11px] text-muted font-medium text-center mt-0.5">
             {balanceLabel}
           </span>
         </div>
@@ -92,10 +91,12 @@ export const PartyMobileCard: React.FC<PartyMobileCardProps> = ({
             {/* Direct Phone Call Button */}
             <a
               href={`tel:${party.phone}`}
-              className="flex-1 min-h-[44px] px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 active:bg-emerald-200 text-emerald-800 font-bold rounded-xl text-xs flex items-center justify-center gap-2 border border-emerald-200/80 active:scale-98 transition-all"
+              className="flex-1 min-h-[44px] px-3.5 py-2 bg-ok-soft hover:bg-ok-soft/80 text-ok font-bold rounded-xl text-xs flex items-center justify-center gap-2 border border-ok/30 active:scale-[0.98] transition-all"
             >
-              <Phone className="w-4 h-4 text-emerald-600" />
-              <span dir="ltr" className="font-mono text-xs">{party.phone}</span>
+              <Phone className="w-4 h-4 text-ok" />
+              <span dir="ltr" className="tabular-nums text-xs">
+                {party.phone}
+              </span>
             </a>
 
             {/* Direct WhatsApp Button */}
@@ -103,7 +104,7 @@ export const PartyMobileCard: React.FC<PartyMobileCardProps> = ({
               href={`https://wa.me/${cleanPhone}`}
               target="_blank"
               rel="noreferrer"
-              className="min-h-[44px] px-3.5 bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-white rounded-xl flex items-center justify-center active:scale-95 transition-all shadow-2xs"
+              className="min-h-[44px] min-w-[44px] px-3.5 bg-ok hover:opacity-95 text-on-brand rounded-xl flex items-center justify-center active:scale-95 transition-all shadow-xs"
               title="مراسلة واتساب"
             >
               <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
@@ -115,30 +116,30 @@ export const PartyMobileCard: React.FC<PartyMobileCardProps> = ({
             {party.phone2 && (
               <a
                 href={`tel:${party.phone2}`}
-                className="min-h-[44px] px-3 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 rounded-xl flex items-center justify-center active:scale-95 transition-all text-xs font-bold"
+                className="min-h-[44px] min-w-[44px] px-3 bg-surface-2 hover:bg-line text-ink rounded-xl flex items-center justify-center active:scale-95 transition-all text-xs font-bold border border-line"
                 title={`هاتف إضافي: ${party.phone2}`}
               >
-                <Phone className="w-3.5 h-3.5 text-slate-500 ml-1" />
-                <span dir="ltr" className="font-mono text-[11px]">2</span>
+                <Phone className="w-3.5 h-3.5 text-muted ml-1" />
+                <span dir="ltr" className="tabular-nums text-[11px]">
+                  2
+                </span>
               </a>
             )}
           </div>
         ) : (
-          <div className="py-1 text-center text-slate-400 text-xs">
-            لا يوجد رقم هاتف مسجل
-          </div>
+          <div className="py-1 text-center text-muted text-xs">لا يوجد رقم هاتف مسجل</div>
         )}
 
         {/* Invoices Count & Notes */}
-        <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
+        <div className="flex items-center justify-between text-xs text-muted pt-1">
           <span className="flex items-center gap-1 font-medium">
-            <Receipt className="w-3.5 h-3.5 text-slate-400" />
+            <Receipt className="w-3.5 h-3.5 text-muted" />
             <span>عدد الفواتير:</span>
-            <span className="font-bold text-slate-800 font-mono">{party.invoices_count || 0}</span>
+            <span className="font-bold text-ink tabular-nums">{party.invoices_count || 0}</span>
           </span>
 
           {party.notes && (
-            <span className="text-[11px] text-slate-400 truncate max-w-[180px]" title={party.notes}>
+            <span className="text-[11px] text-muted truncate max-w-[180px]" title={party.notes}>
               {party.notes}
             </span>
           )}
@@ -146,39 +147,45 @@ export const PartyMobileCard: React.FC<PartyMobileCardProps> = ({
       </div>
 
       {/* Action Footer: 44px Touch Targets */}
-      <div className="p-2.5 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between gap-2">
+      <div className="p-2.5 bg-surface-2/60 border-t border-line flex items-center justify-between gap-2">
         {/* Ledger button */}
-        <button
+        <Button
           type="button"
+          variant="secondary"
+          size="md"
           onClick={() => onLedger(party)}
-          className="min-h-[44px] flex-1 px-3 py-2 rounded-xl bg-white border border-slate-200 text-emerald-700 hover:bg-emerald-50 active:bg-emerald-100 text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs active:scale-95 transition-all"
+          leftIcon={<FileText className="w-4 h-4 text-ok" />}
+          className="flex-1 bg-panel text-ok border-ok/30 hover:bg-ok-soft text-xs font-bold"
         >
-          <FileText className="w-4 h-4 text-emerald-600" />
-          <span>كشف الحساب</span>
-        </button>
+          كشف الحساب
+        </Button>
 
         {/* Edit button */}
-        <button
+        <Button
           type="button"
+          variant="secondary"
+          size="md"
           onClick={() => onEdit(party)}
-          className="min-h-[44px] px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 active:bg-slate-100 text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs active:scale-95 transition-all"
+          leftIcon={<Edit2 className="w-3.5 h-3.5 text-muted" />}
+          className="bg-panel text-xs font-bold px-3.5"
         >
-          <Edit2 className="w-3.5 h-3.5 text-slate-500" />
-          <span>تعديل</span>
-        </button>
+          تعديل
+        </Button>
 
         {/* Delete button (if permitted) */}
         {canDelete && (
-          <button
+          <Button
             type="button"
+            variant="secondary"
+            size="md"
             onClick={() => onDelete(party)}
-            className="min-h-[44px] px-3 py-2 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 active:bg-rose-200 text-xs font-bold flex items-center justify-center active:scale-95 transition-all"
+            className="bg-bad-soft border-bad/30 text-bad hover:bg-bad-soft/80 text-xs font-bold px-3"
             title="حذف جهة التعامل"
           >
             <Trash2 className="w-4 h-4" />
-          </button>
+          </Button>
         )}
       </div>
-    </div>
+    </Card>
   );
 };

@@ -102,7 +102,7 @@ export const CashFlowTab: React.FC<CashFlowTabProps> = ({
 
   if (isLoading) {
     return (
-      <div className="text-center py-16 text-sm text-slate-400 font-medium">
+      <div className="text-center py-16 text-sm text-muted font-medium">
         جاري احتساب حركة الخزن والنقدية...
       </div>
     );

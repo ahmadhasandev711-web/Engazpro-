@@ -17,6 +17,16 @@ import { formatCurrency } from '@pos-mandob/shared';
 import { PWAInstallBanner } from '../pwa/PWAInstallBanner';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { RecentActivityMobileCard } from '../mobile/RecentActivityMobileCard';
+import {
+  Badge,
+  BadgeTone,
+  Button,
+  Card,
+  DataTable,
+  EmptyState,
+  PageHeader,
+  StatCard,
+} from '../ui';
 
 export interface DashboardData {
   today: string;
@@ -72,6 +82,15 @@ interface OwnerDashboardProps {
   refetch: () => void;
 }
 
+const getActivityBadgeTone = (type: string): BadgeTone => {
+  if (type === 'SALE') return 'info';
+  if (type === 'PURCHASE') return 'brand';
+  if (type === 'SALE_RETURN' || type === 'PURCHASE_RETURN') return 'warn';
+  if (type === 'RECEIPT') return 'ok';
+  if (type === 'PAYMENT' || type === 'EXPENSE') return 'bad';
+  return 'neutral';
+};
+
 export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
   data,
   isLoading,
@@ -81,7 +100,8 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
   const navigate = useNavigate();
   const { isManager, canViewProfitReport } = usePermissions();
   const kpis = data?.kpis;
-  const showProfitCard = canViewProfitReport && kpis?.today_profit !== null && kpis?.today_profit !== undefined;
+  const showProfitCard =
+    canViewProfitReport && kpis?.today_profit !== null && kpis?.today_profit !== undefined;
   const cashFlow = data?.cash_flow;
   const recentActivities = data?.recent_activities || [];
 
@@ -91,204 +111,206 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
       <PWAInstallBanner />
 
       {/* Header & Quick Action Buttons */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
-            <span>لوحة المتابعة الشاملة</span>
-            <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-primary-100 text-primary-800">
-              {data?.today || new Date().toISOString().split('T')[0]}
-            </span>
-          </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            {isManager
-              ? 'ملخص فوري لمبيعات وحصيلة اليوم النقدية ومصروفات الفرع'
-              : 'ملخص فوري لمبيعات وأرباح وحصيلة اليوم النقدية الصافية للمتجر'}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => refetch()}
-            disabled={isFetching}
-            className="p-2 text-slate-600 hover:text-slate-900 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors shadow-sm"
-            title="تحديث البيانات"
-          >
-            <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin text-primary-600' : ''}`} />
-          </button>
-          <button
-            onClick={() => navigate('/sales/new')}
-            className="hidden sm:flex items-center gap-1.5 px-3.5 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-xs font-bold shadow-sm transition-colors"
-          >
-            <PlusCircle className="w-4 h-4" />
-            <span>فاتورة جديدة</span>
-          </button>
-          <button
-            onClick={() => navigate('/payments')}
-            className="hidden sm:flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-sm transition-colors"
-          >
-            <CreditCard className="w-4 h-4" />
-            <span>سند قبض / صرف</span>
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title="لوحة المتابعة الشاملة"
+        description={
+          isManager
+            ? 'ملخص فوري لمبيعات وحصيلة اليوم النقدية ومصروفات الفرع'
+            : 'ملخص فوري لمبيعات وأرباح وحصيلة اليوم النقدية الصافية للمتجر'
+        }
+        badge={
+          <Badge tone="brand" className="tabular-nums">
+            {data?.today || new Date().toISOString().split('T')[0]}
+          </Badge>
+        }
+        className="mb-0"
+        actions={
+          <>
+            <Button
+              variant="secondary"
+              size="md"
+              onClick={() => refetch()}
+              disabled={isFetching}
+              title="تحديث البيانات"
+              aria-label="تحديث البيانات"
+              className="px-3"
+            >
+              <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin text-brand' : ''}`} />
+            </Button>
+            <Button
+              variant="primary"
+              size="md"
+              onClick={() => navigate('/sales/new')}
+              leftIcon={<PlusCircle className="w-4 h-4" />}
+              className="hidden sm:inline-flex"
+            >
+              فاتورة جديدة
+            </Button>
+            <Button
+              variant="secondary"
+              size="md"
+              onClick={() => navigate('/payments')}
+              leftIcon={<CreditCard className="w-4 h-4 text-ok" />}
+              className="hidden sm:inline-flex border-ok/30 bg-ok-soft text-ok hover:bg-ok-soft/80"
+            >
+              سند قبض / صرف
+            </Button>
+          </>
+        }
+      />
 
       {/* Mobile Quick Action Buttons (sm:hidden) */}
       <div className="sm:hidden grid grid-cols-2 gap-2">
-        <button
+        <Button
+          variant="primary"
+          size="md"
           onClick={() => navigate('/sales/new')}
-          className="min-h-[44px] flex items-center justify-center gap-1.5 px-3 py-2 bg-primary-600 active:bg-primary-700 text-white rounded-xl text-xs font-bold shadow-xs active:scale-95 transition-all"
+          leftIcon={<PlusCircle className="w-4 h-4" />}
+          className="w-full text-xs font-bold"
         >
-          <PlusCircle className="w-4 h-4" />
-          <span>فاتورة جديدة</span>
-        </button>
-        <button
+          فاتورة جديدة
+        </Button>
+        <Button
+          variant="secondary"
+          size="md"
           onClick={() => navigate('/payments')}
-          className="min-h-[44px] flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-600 active:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs active:scale-95 transition-all"
+          leftIcon={<CreditCard className="w-4 h-4 text-ok" />}
+          className="w-full text-xs font-bold border-ok/30 bg-ok-soft text-ok hover:bg-ok-soft/80"
         >
-          <CreditCard className="w-4 h-4" />
-          <span>سند قبض / صرف</span>
-        </button>
+          سند قبض / صرف
+        </Button>
       </div>
 
       {/* Main KPI Cards Grid */}
-      <div className={`grid grid-cols-2 ${showProfitCard ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-2.5 sm:gap-4`}>
+      <div
+        className={`grid grid-cols-2 ${showProfitCard ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-2.5 sm:gap-4`}
+      >
         {/* 1. مبيعات اليوم الصافية */}
-        <div className="bg-white p-3.5 sm:p-5 rounded-2xl sm:rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
-          <div className="flex items-center justify-between mb-1.5 sm:mb-2">
-            <span className="text-[11px] sm:text-xs font-bold text-slate-500 truncate">
-              {isManager ? 'مبيعات الفرع اليوم' : 'مبيعات اليوم الصافية'}
-            </span>
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-              <ShoppingBag className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+        <StatCard
+          label={isManager ? 'مبيعات الفرع اليوم' : 'مبيعات اليوم الصافية'}
+          value={isLoading ? '...' : formatCurrency(kpis?.today_sales ?? 0)}
+          tone="info"
+          icon={<ShoppingBag className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+          hint={
+            <div className="flex items-center justify-between gap-1 truncate">
+              <span>الشهر:</span>
+              <span className="font-bold text-ink tabular-nums">
+                {formatCurrency(kpis?.month_sales ?? 0)}
+              </span>
             </div>
-          </div>
-          <div className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight font-mono">
-            {isLoading ? '...' : formatCurrency(kpis?.today_sales ?? 0)}
-          </div>
-          <div className="text-2xs sm:text-[11px] text-slate-400 mt-1 flex items-center justify-between gap-1 truncate">
-            <span>الشهر:</span>
-            <span className="font-bold text-slate-600 font-mono">{formatCurrency(kpis?.month_sales ?? 0)}</span>
-          </div>
-          {(Number(kpis?.today_courier_pending_sales) > 0 || Number(kpis?.today_electronic_sales) > 0) && (
-            <div className="mt-2 pt-2 border-t border-slate-100 space-y-0.5 text-2xs sm:text-2xs">
+          }
+        >
+          {(Number(kpis?.today_courier_pending_sales) > 0 ||
+            Number(kpis?.today_electronic_sales) > 0) && (
+            <div className="mt-2 pt-2 border-t border-line space-y-0.5 text-[11px]">
               {Number(kpis?.today_cash_sales) > 0 && (
-                <div className="flex justify-between text-slate-500">
+                <div className="flex justify-between text-muted">
                   <span>كاش بالخزينة:</span>
-                  <span className="font-mono font-bold text-emerald-700">{formatCurrency(kpis?.today_cash_sales ?? 0)}</span>
+                  <span className="font-bold text-ok tabular-nums">
+                    {formatCurrency(kpis?.today_cash_sales ?? 0)}
+                  </span>
                 </div>
               )}
               {Number(kpis?.today_courier_pending_sales) > 0 && (
-                <div className="flex justify-between text-purple-700">
+                <div className="flex justify-between text-brand">
                   <span>معلق شحن:</span>
-                  <span className="font-mono font-bold">{formatCurrency(kpis?.today_courier_pending_sales ?? 0)}</span>
+                  <span className="font-bold tabular-nums">
+                    {formatCurrency(kpis?.today_courier_pending_sales ?? 0)}
+                  </span>
                 </div>
               )}
               {Number(kpis?.today_electronic_sales) > 0 && (
-                <div className="flex justify-between text-blue-700">
+                <div className="flex justify-between text-info">
                   <span>إلكتروني:</span>
-                  <span className="font-mono font-bold">{formatCurrency(kpis?.today_electronic_sales ?? 0)}</span>
+                  <span className="font-bold tabular-nums">
+                    {formatCurrency(kpis?.today_electronic_sales ?? 0)}
+                  </span>
                 </div>
               )}
             </div>
           )}
-        </div>
+        </StatCard>
 
         {/* 2. صافي أرباح اليوم - للمالك ومدير النظام فقط */}
         {showProfitCard && (
-          <div className="bg-white p-3.5 sm:p-5 rounded-2xl sm:rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
-            <div className="flex items-center justify-between mb-1.5 sm:mb-2">
-              <span className="text-[11px] sm:text-xs font-bold text-slate-500 truncate">صافي أرباح اليوم</span>
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              </div>
-            </div>
-            <div className="text-lg sm:text-2xl font-black text-emerald-600 tracking-tight font-mono">
-              {isLoading ? '...' : formatCurrency(kpis?.today_profit ?? 0)}
-            </div>
-            <div className="text-2xs sm:text-[11px] text-slate-400 mt-1 truncate">
-              بعد التكلفة والمصروفات
-            </div>
-          </div>
+          <StatCard
+            label="صافي أرباح اليوم"
+            value={isLoading ? '...' : formatCurrency(kpis?.today_profit ?? 0)}
+            tone="ok"
+            icon={<TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+            hint="بعد التكلفة والمصروفات"
+          />
         )}
 
         {/* 3. الحصيلة النقدية الصافية لليوم (Cash Flow) */}
-        <div className="bg-white p-3.5 sm:p-5 rounded-2xl sm:rounded-xl border-2 border-amber-400 shadow-sm relative overflow-hidden bg-gradient-to-br from-amber-50/40 to-white">
-          <div className="flex items-center justify-between mb-1.5 sm:mb-2">
-            <span className="text-[11px] sm:text-xs font-black text-amber-900 truncate">نقدية الخزينة</span>
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
-              <Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            </div>
-          </div>
-          <div className="text-lg sm:text-2xl font-black text-amber-800 tracking-tight font-mono">
-            {isLoading ? '...' : formatCurrency(kpis?.today_cash_flow ?? 0)}
-          </div>
-          <div className="text-2xs sm:text-[11px] font-medium text-amber-700 mt-1 truncate">
-            المبلغ الفعلي بالخزينة
-          </div>
-        </div>
+        <StatCard
+          label="نقدية الخزينة"
+          value={isLoading ? '...' : formatCurrency(kpis?.today_cash_flow ?? 0)}
+          tone="warn"
+          highlight
+          icon={<Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+          hint="المبلغ الفعلي بالخزينة"
+        />
 
         {/* 4. مصروفات اليوم */}
-        <div className="bg-white p-3.5 sm:p-5 rounded-2xl sm:rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
-          <div className="flex items-center justify-between mb-1.5 sm:mb-2">
-            <span className="text-[11px] sm:text-xs font-bold text-slate-500 truncate">مصروفات اليوم</span>
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
-              <Receipt className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            </div>
-          </div>
-          <div className="text-lg sm:text-2xl font-black text-rose-600 tracking-tight font-mono">
-            {isLoading ? '...' : formatCurrency(kpis?.today_expenses ?? 0)}
-          </div>
-          <div className="text-2xs sm:text-[11px] text-slate-400 mt-1 truncate">
-            إجمالي المنصرف
-          </div>
-        </div>
+        <StatCard
+          label="مصروفات اليوم"
+          value={isLoading ? '...' : formatCurrency(kpis?.today_expenses ?? 0)}
+          tone="bad"
+          icon={<Receipt className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+          hint="إجمالي المنصرف"
+        />
       </div>
 
       {/* Cash Flow Breakdown & Quick Actions Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* تفصيل حركة النقدية لليوم */}
-        <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <Card className="lg:col-span-2 p-5 space-y-4">
+          <div className="flex items-center justify-between gap-2 border-b border-line pb-3">
             <div className="flex items-center gap-2">
-              <Wallet className="w-5 h-5 text-amber-600" />
-              <h3 className="font-black text-slate-900 text-base">
-                {isManager ? 'تفصيل حركة النقدية لليوم (خزينة الفرع)' : 'تفصيل حركة النقدية لليوم (الخزينة العامة)'}
+              <Wallet className="w-5 h-5 text-warn" />
+              <h3 className="font-black text-ink text-base">
+                {isManager
+                  ? 'تفصيل حركة النقدية لليوم (خزينة الفرع)'
+                  : 'تفصيل حركة النقدية لليوم (الخزينة العامة)'}
               </h3>
             </div>
-            <button
+            <Button
+              variant="ghost"
+              size="md"
               onClick={() => navigate('/reports')}
-              className="text-xs font-bold text-primary-600 hover:text-primary-800 hover:underline"
+              className="text-xs font-bold text-brand hover:underline px-2"
             >
               عرض تقرير الخزينة المفصل &larr;
-            </button>
+            </Button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* الداخل (Inflow) */}
-            <div className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-100 space-y-2.5">
-              <div className="flex items-center justify-between text-xs font-black text-emerald-800 border-b border-emerald-200/60 pb-2">
+            <div className="p-4 rounded-xl bg-ok-soft/50 border border-ok/20 space-y-2.5">
+              <div className="flex items-center justify-between text-xs font-black text-ok border-b border-ok/20 pb-2">
                 <span className="flex items-center gap-1">
-                  <ArrowDownLeft className="w-4 h-4 text-emerald-600" />
+                  <ArrowDownLeft className="w-4 h-4 text-ok" />
                   المقبوضات النقدية الداخلة (+)
                 </span>
-                <span>{formatCurrency(cashFlow?.inflow.total ?? 0)}</span>
+                <span className="tabular-nums">{formatCurrency(cashFlow?.inflow.total ?? 0)}</span>
               </div>
-              <div className="space-y-1.5 text-xs text-slate-600">
+              <div className="space-y-1.5 text-xs text-muted">
                 <div className="flex justify-between">
                   <span>مبيعات نقدية:</span>
-                  <span className="font-bold text-slate-900">
+                  <span className="font-bold text-ink tabular-nums">
                     {formatCurrency(cashFlow?.inflow.cash_sales ?? 0)}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span>سندات قبض من عملاء:</span>
-                  <span className="font-bold text-slate-900">
+                  <span className="font-bold text-ink tabular-nums">
                     {formatCurrency(cashFlow?.inflow.receipt_vouchers ?? 0)}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span>مرتجعات شراء مستردة:</span>
-                  <span className="font-bold text-slate-900">
+                  <span className="font-bold text-ink tabular-nums">
                     {formatCurrency(cashFlow?.inflow.purchase_returns ?? 0)}
                   </span>
                 </div>
@@ -296,36 +318,36 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
             </div>
 
             {/* الخارج (Outflow) */}
-            <div className="p-4 rounded-xl bg-rose-50/50 border border-rose-100 space-y-2.5">
-              <div className="flex items-center justify-between text-xs font-black text-rose-800 border-b border-rose-200/60 pb-2">
+            <div className="p-4 rounded-xl bg-bad-soft/50 border border-bad/20 space-y-2.5">
+              <div className="flex items-center justify-between text-xs font-black text-bad border-b border-bad/20 pb-2">
                 <span className="flex items-center gap-1">
-                  <ArrowUpRight className="w-4 h-4 text-rose-600" />
+                  <ArrowUpRight className="w-4 h-4 text-bad" />
                   المدفوعات النقدية الخارجة (-)
                 </span>
-                <span>{formatCurrency(cashFlow?.outflow.total ?? 0)}</span>
+                <span className="tabular-nums">{formatCurrency(cashFlow?.outflow.total ?? 0)}</span>
               </div>
-              <div className="space-y-1.5 text-xs text-slate-600">
+              <div className="space-y-1.5 text-xs text-muted">
                 <div className="flex justify-between">
                   <span>مشتريات نقدية:</span>
-                  <span className="font-bold text-slate-900">
+                  <span className="font-bold text-ink tabular-nums">
                     {formatCurrency(cashFlow?.outflow.cash_purchases ?? 0)}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span>سندات صرف لموردين:</span>
-                  <span className="font-bold text-slate-900">
+                  <span className="font-bold text-ink tabular-nums">
                     {formatCurrency(cashFlow?.outflow.payment_vouchers ?? 0)}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span>مرتجعات بيع مردودة للعملاء:</span>
-                  <span className="font-bold text-slate-900">
+                  <span className="font-bold text-ink tabular-nums">
                     {formatCurrency(cashFlow?.outflow.sale_returns ?? 0)}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span>مصروفات اليوم:</span>
-                  <span className="font-bold text-slate-900">
+                  <span className="font-bold text-ink tabular-nums">
                     {formatCurrency(cashFlow?.outflow.expenses ?? 0)}
                   </span>
                 </div>
@@ -334,166 +356,165 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
           </div>
 
           {/* الخلاصة الصافية */}
-          <div className="p-3 bg-slate-900 text-white rounded-xl flex items-center justify-between">
-            <span className="text-xs font-bold">صافي النقدية الفعلية لليوم (الداخل - الخارج):</span>
-            <span className="text-lg font-black text-amber-400">
+          <div className="p-3.5 bg-warn-soft border border-warn/30 rounded-xl flex items-center justify-between gap-3">
+            <span className="text-xs font-bold text-ink">
+              صافي النقدية الفعلية لليوم (الداخل - الخارج):
+            </span>
+            <span className="text-lg font-black text-warn tabular-nums">
               {formatCurrency(cashFlow?.net_cash_flow ?? 0)}
             </span>
           </div>
-        </div>
+        </Card>
 
         {/* روابط سريعة */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-3">
-          <h3 className="font-black text-slate-900 text-base mb-3 flex items-center gap-2">
-            <FileText className="w-5 h-5 text-slate-700" />
+        <Card className="p-5 space-y-3">
+          <h3 className="font-black text-ink text-base mb-3 flex items-center gap-2">
+            <FileText className="w-5 h-5 text-muted" />
             روابط وتقارير سريعة
           </h3>
 
           <button
+            type="button"
             onClick={() => navigate('/sales')}
-            className="w-full text-right p-3 rounded-lg border border-slate-100 hover:border-primary-200 hover:bg-primary-50/50 flex items-center justify-between transition-all"
+            className="w-full min-h-[44px] text-right p-3 rounded-xl border border-line hover:border-brand/30 hover:bg-brand-soft/40 flex items-center justify-between transition-colors cursor-pointer"
           >
             <div>
-              <div className="text-xs font-bold text-slate-900">سجل فواتير البيع</div>
-              <div className="text-[11px] text-slate-500">متابعة الفواتير والتحصيلات</div>
+              <div className="text-xs font-bold text-ink">سجل فواتير البيع</div>
+              <div className="text-[11px] text-muted">متابعة الفواتير والتحصيلات</div>
             </div>
-            <span className="text-primary-600 font-bold">&larr;</span>
+            <span className="text-brand font-bold">&larr;</span>
           </button>
 
           <button
+            type="button"
             onClick={() => navigate('/customers')}
-            className="w-full text-right p-3 rounded-lg border border-slate-100 hover:border-primary-200 hover:bg-primary-50/50 flex items-center justify-between transition-all"
+            className="w-full min-h-[44px] text-right p-3 rounded-xl border border-line hover:border-brand/30 hover:bg-brand-soft/40 flex items-center justify-between transition-colors cursor-pointer"
           >
             <div>
-              <div className="text-xs font-bold text-slate-900">العملاء (كشف الحساب)</div>
-              <div className="text-[11px] text-slate-500">متابعة المديونيات والأرصدة</div>
+              <div className="text-xs font-bold text-ink">العملاء (كشف الحساب)</div>
+              <div className="text-[11px] text-muted">متابعة المديونيات والأرصدة</div>
             </div>
-            <span className="text-primary-600 font-bold">&larr;</span>
+            <span className="text-brand font-bold">&larr;</span>
           </button>
 
           {canViewProfitReport ? (
             <button
+              type="button"
               onClick={() => navigate('/reports')}
-              className="w-full text-right p-3 rounded-lg border border-slate-100 hover:border-primary-200 hover:bg-primary-50/50 flex items-center justify-between transition-all"
+              className="w-full min-h-[44px] text-right p-3 rounded-xl border border-line hover:border-brand/30 hover:bg-brand-soft/40 flex items-center justify-between transition-colors cursor-pointer"
             >
               <div>
-                <div className="text-xs font-bold text-slate-900">تقارير الأرباح والمخزون</div>
-                <div className="text-[11px] text-slate-500">حسابات الأرباح والنواقص</div>
+                <div className="text-xs font-bold text-ink">تقارير الأرباح والمخزون</div>
+                <div className="text-[11px] text-muted">حسابات الأرباح والنواقص</div>
               </div>
-              <span className="text-primary-600 font-bold">&larr;</span>
+              <span className="text-brand font-bold">&larr;</span>
             </button>
           ) : (
             <button
+              type="button"
               onClick={() => navigate('/reports')}
-              className="w-full text-right p-3 rounded-lg border border-slate-100 hover:border-primary-200 hover:bg-primary-50/50 flex items-center justify-between transition-all"
+              className="w-full min-h-[44px] text-right p-3 rounded-xl border border-line hover:border-brand/30 hover:bg-brand-soft/40 flex items-center justify-between transition-colors cursor-pointer"
             >
               <div>
-                <div className="text-xs font-bold text-slate-900">تقارير حركة ومبيعات الفرع</div>
-                <div className="text-[11px] text-slate-500">متابعة المبيعات وحركات الخزينة والمخزون</div>
+                <div className="text-xs font-bold text-ink">تقارير حركة ومبيعات الفرع</div>
+                <div className="text-[11px] text-muted">متابعة المبيعات وحركات الخزينة والمخزون</div>
               </div>
-              <span className="text-primary-600 font-bold">&larr;</span>
+              <span className="text-brand font-bold">&larr;</span>
             </button>
           )}
 
           <button
+            type="button"
             onClick={() => navigate('/expenses')}
-            className="w-full text-right p-3 rounded-lg border border-slate-100 hover:border-primary-200 hover:bg-primary-50/50 flex items-center justify-between transition-all"
+            className="w-full min-h-[44px] text-right p-3 rounded-xl border border-line hover:border-brand/30 hover:bg-brand-soft/40 flex items-center justify-between transition-colors cursor-pointer"
           >
             <div>
-              <div className="text-xs font-bold text-slate-900">سجل المصروفات</div>
-              <div className="text-[11px] text-slate-500">تسجيل وتصنيف المصاريف اليومية</div>
+              <div className="text-xs font-bold text-ink">سجل المصروفات</div>
+              <div className="text-[11px] text-muted">تسجيل وتصنيف المصاريف اليومية</div>
             </div>
-            <span className="text-primary-600 font-bold">&larr;</span>
+            <span className="text-brand font-bold">&larr;</span>
           </button>
-        </div>
+        </Card>
       </div>
 
       {/* جدول آخر 5 حركات مسجلة */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+      <Card className="p-0 sm:p-0 overflow-hidden">
+        <div className="p-4 border-b border-line flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Clock className="w-5 h-5 text-slate-700" />
-            <h3 className="font-black text-slate-900 text-base">آخر الحركات المسجلة في النظام</h3>
+            <Clock className="w-5 h-5 text-muted" />
+            <h3 className="font-black text-ink text-base">آخر الحركات المسجلة في النظام</h3>
           </div>
-          <span className="text-xs text-slate-400 font-medium">أحدث 5 عمليات</span>
+          <span className="text-xs text-muted font-medium">أحدث 5 عمليات</span>
         </div>
 
         {recentActivities.length === 0 ? (
-          <div className="py-10 text-center text-slate-400 text-xs">
-            لا توجد حركات مسجلة بعد في النظام
-          </div>
+          <EmptyState
+            icon={<Clock className="w-6 h-6" />}
+            title="لا توجد حركات مسجلة بعد في النظام"
+            className="border-0 rounded-none py-10"
+          />
         ) : (
           <>
             {/* Desktop Table View */}
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-right text-xs">
-                <thead className="bg-slate-50 text-slate-500 border-b border-slate-200 font-bold">
-                  <tr>
-                    <th className="p-3">نوع الحركة</th>
-                    <th className="p-3">المرجع / البيان</th>
-                    <th className="p-3">الطرف / الحساب</th>
-                    <th className="p-3">المسؤول / المنشئ</th>
-                    <th className="p-3">التاريخ والوقت</th>
-                    <th className="p-3 text-left">المبلغ</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {recentActivities.map((act, idx) => {
-                    let badgeStyle = 'bg-slate-100 text-slate-800';
-                    if (act.type === 'SALE') badgeStyle = 'bg-blue-100 text-blue-800';
-                    else if (act.type === 'PURCHASE') badgeStyle = 'bg-purple-100 text-purple-800';
-                    else if (act.type === 'SALE_RETURN' || act.type === 'PURCHASE_RETURN')
-                      badgeStyle = 'bg-amber-100 text-amber-800';
-                    else if (act.type === 'RECEIPT') badgeStyle = 'bg-emerald-100 text-emerald-800';
-                    else if (act.type === 'PAYMENT' || act.type === 'EXPENSE')
-                      badgeStyle = 'bg-rose-100 text-rose-800';
-
-                    return (
-                      <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="p-3">
-                          <span className={`px-2.5 py-1 rounded-md text-[11px] font-bold ${badgeStyle}`}>
-                            {act.type_label}
+            <DataTable className="hidden md:block border-0 rounded-none shadow-none">
+              <thead className="bg-surface-2 text-muted border-b border-line font-bold text-xs">
+                <tr>
+                  <th className="p-3">نوع الحركة</th>
+                  <th className="p-3">المرجع / البيان</th>
+                  <th className="p-3">الطرف / الحساب</th>
+                  <th className="p-3">المسؤول / المنشئ</th>
+                  <th className="p-3">التاريخ والوقت</th>
+                  <th className="p-3 text-left">المبلغ</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line text-xs">
+                {recentActivities.map((act, idx) => (
+                  <tr key={idx} className="hover:bg-surface-2/60 transition-colors">
+                    <td className="p-3">
+                      <Badge tone={getActivityBadgeTone(act.type)}>{act.type_label}</Badge>
+                    </td>
+                    <td className="p-3 font-bold text-ink">{act.reference}</td>
+                    <td className="p-3 text-muted">{act.party_name}</td>
+                    <td className="p-3">
+                      {act.created_by_name ? (
+                        <div className="flex flex-col">
+                          <span className="font-bold text-ink">{act.created_by_name}</span>
+                          <span className="text-[11px] text-muted">
+                            {act.created_by_role === 'MANDOB'
+                              ? 'مندوب مبيعات'
+                              : act.created_by_role === 'CASHIER'
+                                ? 'كاشير'
+                                : act.created_by_role === 'MANAGER'
+                                  ? 'مدير'
+                                  : act.created_by_role === 'SUPERVISOR'
+                                    ? 'مشرف'
+                                    : 'المالك'}
                           </span>
-                        </td>
-                        <td className="p-3 font-bold text-slate-900">{act.reference}</td>
-                        <td className="p-3 text-slate-600">{act.party_name}</td>
-                        <td className="p-3">
-                          {act.created_by_name ? (
-                            <div className="flex flex-col">
-                              <span className="font-bold text-slate-800">{act.created_by_name}</span>
-                              <span className="text-2xs text-slate-500">
-                                {act.created_by_role === 'MANDOB' ? 'مندوب مبيعات' :
-                                 act.created_by_role === 'CASHIER' ? 'كاشير' :
-                                 act.created_by_role === 'MANAGER' ? 'مدير' :
-                                 act.created_by_role === 'SUPERVISOR' ? 'مشرف' : 'المالك'}
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="text-slate-400">المالك</span>
-                          )}
-                        </td>
-                        <td className="p-3 text-slate-400 font-mono text-[11px]">
-                          {act.created_at || act.date}
-                        </td>
-                        <td className="p-3 text-left font-black text-slate-900 font-mono">
-                          {formatCurrency(act.amount)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                        </div>
+                      ) : (
+                        <span className="text-muted">المالك</span>
+                      )}
+                    </td>
+                    <td className="p-3 text-muted tabular-nums text-[11px]">
+                      {act.created_at || act.date}
+                    </td>
+                    <td className="p-3 text-left font-black text-ink tabular-nums">
+                      {formatCurrency(act.amount)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </DataTable>
 
             {/* Mobile Touch Cards View */}
-            <div className="md:hidden p-3 space-y-2.5 bg-slate-50/60">
+            <div className="md:hidden p-3 space-y-2.5 bg-surface-2/50">
               {recentActivities.map((act) => (
                 <RecentActivityMobileCard key={act.id} activity={act} />
               ))}
             </div>
           </>
         )}
-      </div>
+      </Card>
     </div>
   );
 };

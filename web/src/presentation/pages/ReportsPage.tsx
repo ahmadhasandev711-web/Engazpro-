@@ -23,8 +23,8 @@ import { SalesReportTab } from '../components/reports/SalesReportTab';
 import { CashFlowTab, CashFlowPrintData } from '../components/reports/CashFlowTab';
 import { StockReportTab } from '../components/reports/StockReportTab';
 import { DateRangeFilter, DatePreset, calculatePresetDates } from '../components/common/DateRangeFilter';
-import { MobileFilterChips, FilterChipOption } from '../components/mobile/MobileFilterChips';
 import { useToast } from '../context/ToastContext';
+import { Button, Card, PageHeader, Tabs } from '../components/ui';
 
 type ActiveTab = 'profit' | 'sales' | 'cash-flow' | 'stock';
 
@@ -165,155 +165,110 @@ export const ReportsPage: React.FC = () => {
   }
 };
 
-  const reportFilterChips: FilterChipOption<ActiveTab>[] = [
+  const reportTabs = [
     ...(canViewProfitReport
-      ? [{ id: 'profit' as const, label: 'الأرباح والخسائر', icon: TrendingUp }]
+      ? [{ id: 'profit', label: 'الأرباح والخسائر', icon: <TrendingUp className="w-4 h-4" /> }]
       : []),
-    { id: 'sales' as const, label: 'المبيعات', icon: Receipt },
-    { id: 'cash-flow' as const, label: 'الخزينة والنقدية', icon: Wallet },
-    { id: 'stock' as const, label: 'تقييم المخزون', icon: Package },
+    { id: 'sales', label: 'المبيعات', icon: <Receipt className="w-4 h-4" /> },
+    { id: 'cash-flow', label: 'الخزينة والنقدية', icon: <Wallet className="w-4 h-4" /> },
+    { id: 'stock', label: 'تقييم المخزون', icon: <Package className="w-4 h-4" /> },
   ];
 
   return (
     <>
       <div className="space-y-3 sm:space-y-6 no-print" dir="rtl">
       {/* Desktop Header */}
-      <div className="hidden md:flex flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-slate-900">
-            {canViewProfitReport ? 'التقارير والأرباح والمخزون' : 'تقارير المبيعات والخزينة والمخزون'}
-          </h2>
-          <p className="text-sm text-slate-500">
-            {canViewProfitReport
-              ? 'متابعة حركة المبيعات، تكلفة البضاعة المباعة، المصروفات، وصافي الأرباح الحقيقية'
-              : 'متابعة حركة المبيعات، المصروفات، حركة الخزينة، والمخزون'}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleExportCurrentTab}
-            className="inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3.5 py-2 rounded-xl text-xs font-bold shadow-sm transition-colors"
-            title="تصدير التقرير الحالي إلى Excel"
-          >
-            <Download className="w-4 h-4 text-emerald-600" />
-            تصدير Excel
-          </button>
-          <button
-            onClick={handlePrintReport}
-            disabled={isTopPrinting}
-            className="inline-flex items-center gap-2 bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition-colors disabled:opacity-60"
-          >
-            {isTopPrinting ? (
-              <span className="inline-block animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-            ) : (
-              <Printer className="w-4 h-4" />
-            )}
-            <span>طباعة التقرير</span>
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title={canViewProfitReport ? 'التقارير والأرباح والمخزون' : 'تقارير المبيعات والخزينة والمخزون'}
+        description={
+          canViewProfitReport
+            ? 'متابعة حركة المبيعات، تكلفة البضاعة المباعة، المصروفات، وصافي الأرباح الحقيقية'
+            : 'متابعة حركة المبيعات، المصروفات، حركة الخزينة، والمخزون'
+        }
+        className="hidden md:flex mb-0"
+        actions={
+          <>
+            <Button
+              type="button"
+              variant="secondary"
+              size="md"
+              onClick={handleExportCurrentTab}
+              leftIcon={<Download className="w-4 h-4 text-ok" />}
+              title="تصدير التقرير الحالي إلى Excel"
+              className="text-xs font-bold"
+            >
+              تصدير Excel
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              size="md"
+              onClick={handlePrintReport}
+              disabled={isTopPrinting}
+              isLoading={isTopPrinting}
+              leftIcon={!isTopPrinting ? <Printer className="w-4 h-4" /> : undefined}
+              className="text-xs font-bold"
+            >
+              طباعة التقرير
+            </Button>
+          </>
+        }
+      />
 
       {/* Mobile Compact Hero Bar (md:hidden) */}
-      <div className="md:hidden bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between gap-2">
+      <Card className="md:hidden p-3 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-black shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-ok-soft text-ok flex items-center justify-center font-black shrink-0">
             <TrendingUp className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <h2 className="text-sm font-black text-slate-900 truncate">
+            <h2 className="text-sm font-black text-ink truncate">
               {canViewProfitReport ? 'التقارير والأرباح' : 'تقارير المبيعات'}
             </h2>
-            <p className="text-[11px] text-slate-500 font-medium truncate">
+            <p className="text-[11px] text-muted font-medium truncate">
               متابعة الأداء والمؤشرات المالية
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
-          <button
+          <Button
+            type="button"
+            variant="secondary"
+            size="md"
             onClick={handleExportCurrentTab}
-            className="p-2 bg-slate-100 active:bg-slate-200 text-slate-700 rounded-xl active:scale-95 transition-all"
+            className="min-w-[44px] px-2.5"
             title="تصدير Excel"
+            aria-label="تصدير Excel"
           >
-            <Download className="w-4 h-4 text-emerald-600" />
-          </button>
-          <button
+            <Download className="w-4 h-4 text-ok" />
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            size="md"
             onClick={handlePrintReport}
             disabled={isTopPrinting}
-            className="p-2 bg-slate-800 active:bg-slate-900 text-white rounded-xl active:scale-95 transition-all disabled:opacity-60"
+            isLoading={isTopPrinting}
+            className="min-w-[44px] px-2.5"
             title="طباعة التقرير"
+            aria-label="طباعة التقرير"
           >
-            {isTopPrinting ? (
-              <span className="inline-block animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-            ) : (
-              <Printer className="w-4 h-4" />
-            )}
-          </button>
+            {!isTopPrinting && <Printer className="w-4 h-4" />}
+          </Button>
         </div>
-      </div>
+      </Card>
 
-      {/* Mobile Filter Chips */}
-      <div className="md:hidden w-full overflow-hidden">
-        <MobileFilterChips
-          options={reportFilterChips}
-          selectedId={activeTab}
-          onSelect={(id) => setActiveTab(id)}
-        />
-      </div>
-
-      {/* Desktop Tabs (Horizontal Scroll Track - hidden md:flex) */}
-      <div className="hidden md:flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar scroll-smooth flex-nowrap text-xs border-b border-slate-200">
-        {canViewProfitReport && (
-          <button
-            onClick={() => setActiveTab('profit')}
-            className={`px-3.5 py-2 rounded-xl font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
-              activeTab === 'profit'
-                ? 'bg-primary-600 text-white shadow-xs'
-                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-            }`}
-          >
-            <TrendingUp className="w-3.5 h-3.5" />
-            <span>الأرباح والخسائر</span>
-          </button>
-        )}
-        <button
-          onClick={() => setActiveTab('sales')}
-          className={`px-3.5 py-2 rounded-xl font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
-            activeTab === 'sales'
-              ? 'bg-primary-600 text-white shadow-xs'
-              : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-          }`}
-        >
-          <Receipt className="w-3.5 h-3.5" />
-          <span>المبيعات</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('cash-flow')}
-          className={`px-3.5 py-2 rounded-xl font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
-            activeTab === 'cash-flow'
-              ? 'bg-primary-600 text-white shadow-xs'
-              : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-          }`}
-        >
-          <Wallet className="w-3.5 h-3.5" />
-          <span>الخزينة والنقدية</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('stock')}
-          className={`px-3.5 py-2 rounded-xl font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
-            activeTab === 'stock'
-              ? 'bg-primary-600 text-white shadow-xs'
-              : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-          }`}
-        >
-          <Package className="w-3.5 h-3.5" />
-          <span>تقييم المخزون</span>
-        </button>
-      </div>
+      {/* Shared Navigation Tabs (Responsive Desktop & Mobile) */}
+      <Tabs
+        tabs={reportTabs}
+        activeTab={activeTab}
+        onChange={(id) => setActiveTab(id as ActiveTab)}
+      />
 
       {/* Date Filter Bar (Shown for Profit, Sales, CashFlow) */}
       {activeTab !== 'stock' && (
-        <div className="bg-white p-2.5 sm:p-4 rounded-2xl border border-slate-200 shadow-xs w-full min-w-0 max-w-full overflow-hidden">
+        <Card className="p-2.5 sm:p-4 w-full min-w-0 max-w-full overflow-hidden">
           <DateRangeFilter
             fromDate={fromDate}
             toDate={toDate}
@@ -324,7 +279,7 @@ export const ReportsPage: React.FC = () => {
               setPreset(newPreset);
             }}
           />
-        </div>
+        </Card>
       )}
 
       {/* Tab Panels */}

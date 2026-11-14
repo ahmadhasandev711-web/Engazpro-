@@ -28,6 +28,16 @@ import { PaginationBar } from '../components/common/PaginationBar';
 import { useConfirm } from '../context/ConfirmContext';
 import { useToast } from '../context/ToastContext';
 import { nativeBackButton } from '../../platform/nativeBackButton';
+import {
+  Badge,
+  Button,
+  Card,
+  DataTable,
+  EmptyState,
+  Input,
+  PageHeader,
+  Textarea,
+} from '../components/ui';
 
 export const PartiesPage: React.FC = () => {
   const { confirm } = useConfirm();
@@ -212,67 +222,74 @@ export const PartiesPage: React.FC = () => {
   return (
     <div className="space-y-3 sm:space-y-6" dir="rtl">
       {/* Desktop Header */}
-      <div className="hidden md:flex items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-slate-900">{pageTitle}</h2>
-          <p className="text-sm text-slate-500">{pageSub}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={async () => {
-              try {
-                const { exportPartiesToExcel } = await import('../utils/excelExport');
-                exportPartiesToExcel(parties, pageTitle);
-              } catch (err) {
-                console.error('Excel load failed:', err);
-                toast.error('تعذر تحميل أداة Excel، تأكد من الاتصال وحاول مرة أخرى');
-              }
-            }}
-            disabled={parties.length === 0}
-            className="inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3.5 py-2.5 rounded-xl text-xs font-bold shadow-sm transition-colors disabled:opacity-50"
-            title={`تصدير قائمة ${pageTitle} إلى Excel`}
-          >
-            <Download className="w-4 h-4 text-emerald-600" />
-            تصدير Excel
-          </button>
-          <button
-            onClick={openCreateModal}
-            className="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            {isSupplier ? 'إضافة مورد جديد' : 'إضافة عميل جديد'}
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title={pageTitle}
+        description={pageSub}
+        className="hidden md:flex mb-0"
+        actions={
+          <>
+            <Button
+              type="button"
+              variant="secondary"
+              size="md"
+              onClick={async () => {
+                try {
+                  const { exportPartiesToExcel } = await import('../utils/excelExport');
+                  exportPartiesToExcel(parties, pageTitle);
+                } catch (err) {
+                  console.error('Excel load failed:', err);
+                  toast.error('تعذر تحميل أداة Excel، تأكد من الاتصال وحاول مرة أخرى');
+                }
+              }}
+              disabled={parties.length === 0}
+              leftIcon={<Download className="w-4 h-4 text-ok" />}
+              title={`تصدير قائمة ${pageTitle} إلى Excel`}
+              className="text-xs font-bold"
+            >
+              تصدير Excel
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              size="md"
+              onClick={openCreateModal}
+              leftIcon={<Plus className="w-4 h-4" />}
+              className="font-bold"
+            >
+              {isSupplier ? 'إضافة مورد جديد' : 'إضافة عميل جديد'}
+            </Button>
+          </>
+        }
+      />
 
       {/* Mobile Compact Hero Bar (md:hidden) */}
-      <div className="md:hidden bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between gap-2">
+      <Card className="md:hidden p-3 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center font-black shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-brand-soft text-brand flex items-center justify-center font-black shrink-0">
             <Icon className="w-5 h-5" />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              <h2 className="text-sm font-black text-slate-900 truncate">{pageTitle}</h2>
-              <span className="bg-slate-100 text-slate-700 text-2xs font-black px-2 py-0.5 rounded-full shrink-0">
+              <h2 className="text-sm font-black text-ink truncate">{pageTitle}</h2>
+              <Badge tone="neutral" className="tabular-nums text-[11px] shrink-0">
                 {totalParties}
-              </span>
+              </Badge>
             </div>
-            <p className="text-[11px] text-slate-500 font-medium truncate">
+            <p className="text-[11px] text-muted font-medium truncate">
               {isSupplier ? 'المستحق: ' : 'المديونيات: '}
               <span
-                className={`font-black font-mono ${
+                className={`font-black tabular-nums ${
                   totalBalance > 0
                     ? isSupplier
-                      ? 'text-rose-600'
-                      : 'text-emerald-600'
-                    : 'text-slate-700'
+                      ? 'text-bad'
+                      : 'text-ok'
+                    : 'text-ink'
                 }`}
               >
                 {formatCurrency(totalBalance)}
               </span>
               {partiesWithBalance > 0 && (
-                <span className="text-slate-400 mr-1 font-normal">
+                <span className="text-muted mr-1 font-normal tabular-nums">
                   ({partiesWithBalance} {isSupplier ? 'مورد' : 'عميل'})
                 </span>
               )}
@@ -281,47 +298,48 @@ export const PartiesPage: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
-          <button
+          <Button
+            type="button"
+            variant="primary"
+            size="md"
             onClick={openCreateModal}
-            className="inline-flex items-center gap-1 bg-primary-600 active:bg-primary-700 text-white px-3 py-2 rounded-xl text-xs font-bold shadow-xs active:scale-95 transition-all"
+            leftIcon={<Plus className="w-4 h-4" />}
+            className="text-xs font-bold px-3"
           >
-            <Plus className="w-4 h-4" />
-            <span>إضافة</span>
-          </button>
+            إضافة
+          </Button>
         </div>
-      </div>
+      </Card>
 
       {/* Notifications */}
       {successMessage && (
-        <div className="p-3 sm:p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs sm:text-sm rounded-xl flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600 flex-shrink-0" />
+        <div className="p-3 sm:p-4 bg-ok-soft border border-ok/30 text-ok text-xs sm:text-sm rounded-xl flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-ok flex-shrink-0" />
           <span>{successMessage}</span>
         </div>
       )}
 
       {errorMessage && (
-        <div className="p-3 sm:p-4 bg-rose-50 border border-rose-200 text-rose-800 text-xs sm:text-sm rounded-xl flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-rose-600 flex-shrink-0" />
+        <div className="p-3 sm:p-4 bg-bad-soft border border-bad/30 text-bad text-xs sm:text-sm rounded-xl flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-bad flex-shrink-0" />
           <span>{errorMessage}</span>
         </div>
       )}
 
       {/* Search Bar */}
-      <div className="bg-white p-2.5 sm:p-4 rounded-xl border border-slate-200 shadow-xs flex items-center gap-3">
-        <div className="relative flex-1">
-          <Search className="w-4 h-4 sm:w-5 sm:h-5 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            placeholder={`البحث بالاسم أو رقم هاتف ${isSupplier ? 'المورد' : 'العميل'}...`}
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            className="w-full pl-4 pr-9 sm:pr-10 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:bg-white text-right"
-          />
-        </div>
-      </div>
+      <Card className="p-2.5 sm:p-4">
+        <Input
+          type="text"
+          placeholder={`البحث بالاسم أو رقم هاتف ${isSupplier ? 'المورد' : 'العميل'}...`}
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(1);
+          }}
+          leftIcon={<Search className="w-4 h-4 sm:w-5 sm:h-5" />}
+          className="bg-surface-2/60"
+        />
+      </Card>
 
       {/* Quick Filter Chips (Mobile & Desktop) */}
       <MobileFilterChips
@@ -331,117 +349,124 @@ export const PartiesPage: React.FC = () => {
       />
 
       {/* Table */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <Card className="p-0 sm:p-0 overflow-hidden">
         {isLoading ? (
-          <div className="text-center py-12 text-sm text-slate-400 font-medium">جاري التحميل...</div>
+          <div className="text-center py-12 text-sm text-muted font-medium">جاري التحميل...</div>
         ) : displayedParties.length === 0 ? (
-          <div className="text-center py-16">
-            <Icon className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-            <h3 className="text-base font-bold text-slate-700">لا يوجد {pageTitle} مسجلين</h3>
-            <p className="text-xs text-slate-400 max-w-sm mx-auto mt-1">
-              {search ? 'لم نجد أي نتائج تطابق البحث' : `ابدأ بإضافة أول ${isSupplier ? 'مورد' : 'عميل'} لحفظ العمليات وكشف الحساب`}
-            </p>
-          </div>
+          <EmptyState
+            icon={<Icon className="w-6 h-6" />}
+            title={`لا يوجد ${pageTitle} مسجلين`}
+            description={
+              search
+                ? 'لم نجد أي نتائج تطابق البحث'
+                : `ابدأ بإضافة أول ${isSupplier ? 'مورد' : 'عميل'} لحفظ العمليات وكشف الحساب`
+            }
+            className="border-0 rounded-none py-16"
+          />
         ) : (
           <>
             {/* Desktop Table View */}
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-right text-sm">
-                <thead className="bg-slate-50 text-slate-600 text-xs font-bold border-b border-slate-200">
-                  <tr>
-                    <th className="py-3.5 px-4">الاسم</th>
-                    <th className="py-3.5 px-4">الهاتف</th>
-                    <th className="py-3.5 px-4">العنوان</th>
-                    <th className="py-3.5 px-4">الرصيد الحالي</th>
-                    <th className="py-3.5 px-4">الفواتير</th>
-                    <th className="py-3.5 px-4 text-center">الإجراءات</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {displayedParties.map((p) => {
-                    const isPositive = p.balance > 0;
-                    const isZero = p.balance === 0;
+            <DataTable className="hidden md:block border-0 rounded-none shadow-none">
+              <thead className="bg-surface-2 text-muted text-xs font-bold border-b border-line">
+                <tr>
+                  <th className="py-3.5 px-4">الاسم</th>
+                  <th className="py-3.5 px-4">الهاتف</th>
+                  <th className="py-3.5 px-4">العنوان</th>
+                  <th className="py-3.5 px-4">الرصيد الحالي</th>
+                  <th className="py-3.5 px-4">الفواتير</th>
+                  <th className="py-3.5 px-4 text-center">الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {displayedParties.map((p) => {
+                  const isPositive = p.balance > 0;
+                  const isZero = p.balance === 0;
+                  const balanceTone = isZero
+                    ? 'neutral'
+                    : isPositive
+                      ? isSupplier
+                        ? 'bad'
+                        : 'ok'
+                      : 'info';
 
-                    return (
-                      <tr key={p.id} className="hover:bg-slate-50/70 transition-colors">
-                        <td className="py-3.5 px-4 font-bold text-slate-900">{p.name}</td>
-                        <td className="py-3.5 px-4 text-slate-600">
-                          {p.phone ? (
-                            <span className="inline-flex items-center gap-1.5 font-mono text-xs" dir="ltr">
-                              <Phone className="w-3.5 h-3.5 text-slate-400" />
-                              {p.phone}
-                            </span>
-                          ) : (
-                            '—'
-                          )}
-                        </td>
-                        <td className="py-3.5 px-4 text-slate-500 text-xs truncate max-w-[200px]">
-                          {p.address ? (
-                            <span className="inline-flex items-center gap-1">
-                              <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                              {p.address}
-                            </span>
-                          ) : (
-                            '—'
-                          )}
-                        </td>
-                        <td className="py-3.5 px-4">
-                          <span
-                            className={`font-black text-xs px-2.5 py-1 rounded-full ${
-                              isZero
-                                ? 'bg-slate-100 text-slate-700'
-                                : isPositive
-                                ? isSupplier
-                                  ? 'bg-rose-100 text-rose-800'
-                                  : 'bg-emerald-100 text-emerald-800'
-                                : 'bg-blue-100 text-blue-800'
-                            }`}
-                          >
-                            {formatCurrency(p.balance)}
+                  return (
+                    <tr key={p.id} className="hover:bg-surface-2/70 transition-colors">
+                      <td className="py-3.5 px-4 font-bold text-ink">{p.name}</td>
+                      <td className="py-3.5 px-4 text-muted">
+                        {p.phone ? (
+                          <span className="inline-flex items-center gap-1.5 tabular-nums text-xs" dir="ltr">
+                            <Phone className="w-3.5 h-3.5 text-muted" />
+                            {p.phone}
                           </span>
-                        </td>
-                        <td className="py-3.5 px-4 text-slate-600 text-xs">
+                        ) : (
+                          '—'
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4 text-muted text-xs truncate max-w-[200px]">
+                        {p.address ? (
                           <span className="inline-flex items-center gap-1">
-                            <Receipt className="w-3.5 h-3.5 text-slate-400" />
-                            {p.invoices_count || 0}
+                            <MapPin className="w-3.5 h-3.5 text-muted" />
+                            {p.address}
                           </span>
-                        </td>
-                        <td className="py-3.5 px-4 text-center">
-                          <div className="flex items-center justify-center gap-1.5">
-                            <button
-                              onClick={() => navigate(`/ledger/${p.id}`)}
-                              className="p-1.5 text-slate-400 hover:text-emerald-600 rounded-lg hover:bg-slate-100 transition-colors"
-                              title="كشف حساب تفصيلي"
+                        ) : (
+                          '—'
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <Badge tone={balanceTone} className="font-black tabular-nums">
+                          {formatCurrency(p.balance)}
+                        </Badge>
+                      </td>
+                      <td className="py-3.5 px-4 text-muted text-xs tabular-nums">
+                        <span className="inline-flex items-center gap-1">
+                          <Receipt className="w-3.5 h-3.5 text-muted" />
+                          {p.invoices_count || 0}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="md"
+                            onClick={() => navigate(`/ledger/${p.id}`)}
+                            className="text-muted hover:text-ok px-2.5"
+                            title="كشف حساب تفصيلي"
+                          >
+                            <FileText className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="md"
+                            onClick={() => openEditModal(p)}
+                            className="text-muted hover:text-brand px-2.5"
+                            title="تعديل البيانات"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </Button>
+                          {canDeleteParty && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="md"
+                              onClick={() => handleDelete(p)}
+                              className="text-muted hover:text-bad px-2.5"
+                              title="حذف"
                             >
-                              <FileText className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => openEditModal(p)}
-                              className="p-1.5 text-slate-400 hover:text-primary-600 rounded-lg hover:bg-slate-100 transition-colors"
-                              title="تعديل البيانات"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </button>
-                            {canDeleteParty && (
-                              <button
-                                onClick={() => handleDelete(p)}
-                                className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-slate-100 transition-colors"
-                                title="حذف"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </DataTable>
 
             {/* Mobile Contact Cards View (md:hidden) */}
-            <div className="md:hidden space-y-3 p-3 bg-slate-50/60">
+            <div className="md:hidden space-y-3 p-3 bg-surface-2/50">
               {displayedParties.map((p) => (
                 <PartyMobileCard
                   key={p.id}
@@ -465,113 +490,119 @@ export const PartiesPage: React.FC = () => {
             />
           </>
         )}
-      </div>
+      </Card>
 
       {/* Modal - Responsive Bottom Sheet */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-0 sm:p-4 animate-in fade-in duration-150" dir="rtl">
-          <div className="bg-white rounded-t-[2.5rem] sm:rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-slate-200 space-y-4 animate-in slide-in-from-bottom sm:zoom-in-95 duration-200 max-h-[92vh] flex flex-col overflow-y-auto">
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-ink/60 backdrop-blur-sm p-0 sm:p-4 animate-in fade-in duration-150"
+          dir="rtl"
+        >
+          <div className="bg-panel text-ink rounded-t-[2.5rem] sm:rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-line space-y-4 animate-in slide-in-from-bottom sm:zoom-in-95 duration-200 max-h-[92vh] flex flex-col overflow-y-auto">
             {/* Sheet Handle */}
-            <div className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-1 sm:hidden" />
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="font-bold text-lg text-slate-900">
-                {editingParty ? `تعديل بيانات ${isSupplier ? 'المورد' : 'العميل'}` : `إضافة ${isSupplier ? 'مورد' : 'عميل'} جديد`}
+            <div className="w-12 h-1.5 bg-line-2 rounded-full mx-auto mb-1 sm:hidden" />
+            <div className="flex items-center justify-between border-b border-line pb-3">
+              <h3 className="font-bold text-lg text-ink">
+                {editingParty
+                  ? `تعديل بيانات ${isSupplier ? 'المورد' : 'العميل'}`
+                  : `إضافة ${isSupplier ? 'مورد' : 'عميل'} جديد`}
               </h3>
-              <button
+              <Button
+                type="button"
+                variant="ghost"
+                size="md"
                 onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+                className="text-muted hover:text-ink px-2"
+                aria-label="إغلاق"
               >
                 <X className="w-5 h-5" />
-              </button>
+              </Button>
             </div>
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">الاسم *</label>
-                <input
-                  {...register('name')}
-                  type="text"
-                  placeholder={isSupplier ? 'مثال: شركة النصر للتوزيع' : 'مثال: سوبر ماركت الأمانة'}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 text-right"
-                />
-                {errors.name && <p className="text-xs text-rose-600 mt-1">{errors.name.message}</p>}
-              </div>
+              <Input
+                label="الاسم *"
+                {...register('name')}
+                type="text"
+                placeholder={isSupplier ? 'مثال: شركة النصر للتوزيع' : 'مثال: سوبر ماركت الأمانة'}
+                error={errors.name?.message}
+                className="bg-surface-2/60"
+              />
 
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">رقم الهاتف</label>
-                  <input
-                    {...register('phone')}
-                    type="tel"
-                    placeholder="01xxxxxxxxx"
-                    dir="ltr"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 text-right"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">هاتف إضافي</label>
-                  <input
-                    {...register('phone2')}
-                    type="tel"
-                    placeholder="01xxxxxxxxx"
-                    dir="ltr"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 text-right"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">العنوان / المنطقة</label>
-                <input
-                  {...register('address')}
-                  type="text"
-                  placeholder="مثال: المنصورة - شارع الجيش"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 text-right"
+                <Input
+                  label="رقم الهاتف"
+                  {...register('phone')}
+                  type="tel"
+                  placeholder="01xxxxxxxxx"
+                  dir="ltr"
+                  className="bg-surface-2/60 text-right tabular-nums"
+                />
+                <Input
+                  label="هاتف إضافي"
+                  {...register('phone2')}
+                  type="tel"
+                  placeholder="01xxxxxxxxx"
+                  dir="ltr"
+                  className="bg-surface-2/60 text-right tabular-nums"
                 />
               </div>
+
+              <Input
+                label="العنوان / المنطقة"
+                {...register('address')}
+                type="text"
+                placeholder="مثال: المنصورة - شارع الجيش"
+                className="bg-surface-2/60"
+              />
 
               {!editingParty && (
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">الرصيد الافتتاحي (ج.م)</label>
-                  <input
-                    {...register('initial_balance')}
-                    type="number"
-                    step="0.01"
-                    placeholder="0"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 text-right"
-                  />
-                  <p className="text-[11px] text-slate-400 mt-1">
-                    {isSupplier
+                <Input
+                  label="الرصيد الافتتاحي (ج.م)"
+                  {...register('initial_balance')}
+                  type="number"
+                  step="0.01"
+                  placeholder="0"
+                  helperText={
+                    isSupplier
                       ? 'موجب = مديونية علينا للمورد / سالب = دفعات مقدمة له'
-                      : 'موجب = مديونية على العميل لصالحنا / سالب = رصيد له'}
-                  </p>
-                </div>
+                      : 'موجب = مديونية على العميل لصالحنا / سالب = رصيد له'
+                  }
+                  className="bg-surface-2/60 tabular-nums"
+                />
               )}
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">ملاحظات</label>
-                <textarea
-                  {...register('notes')}
-                  rows={2}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 text-right"
-                />
-              </div>
+              <Textarea
+                label="ملاحظات"
+                {...register('notes')}
+                rows={2}
+                className="bg-surface-2/60"
+              />
 
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
-                <button
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-line">
+                <Button
                   type="button"
+                  variant="secondary"
+                  size="md"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+                  className="text-xs font-bold"
                 >
                   إلغاء
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
+                  variant="primary"
+                  size="md"
                   disabled={saveMutation.isPending}
-                  className="px-5 py-2.5 text-xs font-bold bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white rounded-xl shadow-sm transition-colors"
+                  isLoading={saveMutation.isPending}
+                  className="text-xs font-bold"
                 >
-                  {saveMutation.isPending ? 'جاري الحفظ...' : editingParty ? 'حفظ التعديلات' : 'إضافة وحفظ'}
-                </button>
+                  {saveMutation.isPending
+                    ? 'جاري الحفظ...'
+                    : editingParty
+                      ? 'حفظ التعديلات'
+                      : 'إضافة وحفظ'}
+                </Button>
               </div>
             </form>
           </div>

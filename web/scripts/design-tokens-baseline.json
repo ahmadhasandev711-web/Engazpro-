@@ -51,32 +51,8 @@
     "raw": 28,
     "hex": 0
   },
-  "src/presentation/components/dashboard/CashierDashboard.tsx": {
-    "raw": 130,
-    "hex": 0
-  },
-  "src/presentation/components/dashboard/MandobDashboard.tsx": {
-    "raw": 132,
-    "hex": 0
-  },
-  "src/presentation/components/dashboard/OwnerDashboard.tsx": {
-    "raw": 129,
-    "hex": 0
-  },
   "src/presentation/components/employees/PayrollModal.tsx": {
     "raw": 188,
-    "hex": 0
-  },
-  "src/presentation/components/invoice/InvoiceItemsTable.tsx": {
-    "raw": 41,
-    "hex": 0
-  },
-  "src/presentation/components/invoice/InvoiceParentLookup.tsx": {
-    "raw": 27,
-    "hex": 0
-  },
-  "src/presentation/components/invoice/InvoiceSummaryPanel.tsx": {
-    "raw": 40,
     "hex": 0
   },
   "src/presentation/components/landing/StoreDesignSection.tsx": {
@@ -95,10 +71,6 @@
     "raw": 98,
     "hex": 0
   },
-  "src/presentation/components/mobile/InvoiceMobileCard.tsx": {
-    "raw": 44,
-    "hex": 0
-  },
   "src/presentation/components/mobile/MobileBottomSheet.tsx": {
     "raw": 10,
     "hex": 0
@@ -113,10 +85,6 @@
   },
   "src/presentation/components/mobile/MobileFilterChips.tsx": {
     "raw": 11,
-    "hex": 0
-  },
-  "src/presentation/components/mobile/PartyMobileCard.tsx": {
-    "raw": 61,
     "hex": 0
   },
   "src/presentation/components/mobile/RecentActivityMobileCard.tsx": {
@@ -147,42 +115,6 @@
     "raw": 28,
     "hex": 0
   },
-  "src/presentation/components/reports/cash-flow/CashFlowBreakdownCards.tsx": {
-    "raw": 96,
-    "hex": 0
-  },
-  "src/presentation/components/reports/cash-flow/CashFlowChannelCards.tsx": {
-    "raw": 60,
-    "hex": 0
-  },
-  "src/presentation/components/reports/cash-flow/CashFlowGuidanceBanner.tsx": {
-    "raw": 8,
-    "hex": 0
-  },
-  "src/presentation/components/reports/cash-flow/CashFlowTotalBanner.tsx": {
-    "raw": 15,
-    "hex": 0
-  },
-  "src/presentation/components/reports/cash-flow/CashFlowTransactionsTable.tsx": {
-    "raw": 88,
-    "hex": 0
-  },
-  "src/presentation/components/reports/CashFlowTab.tsx": {
-    "raw": 1,
-    "hex": 0
-  },
-  "src/presentation/components/reports/ProfitReportTab.tsx": {
-    "raw": 55,
-    "hex": 0
-  },
-  "src/presentation/components/reports/SalesReportTab.tsx": {
-    "raw": 25,
-    "hex": 0
-  },
-  "src/presentation/components/reports/StockReportTab.tsx": {
-    "raw": 41,
-    "hex": 0
-  },
   "src/presentation/components/shifts/ShiftZReportModal.tsx": {
     "raw": 54,
     "hex": 1
@@ -211,12 +143,8 @@
     "raw": 131,
     "hex": 0
   },
-  "src/presentation/pages/InvoiceFormPage.tsx": {
-    "raw": 28,
-    "hex": 0
-  },
   "src/presentation/pages/InvoicesPage.tsx": {
-    "raw": 173,
+    "raw": 4,
     "hex": 0
   },
   "src/presentation/pages/LandingPage.tsx": {
@@ -227,16 +155,12 @@
     "raw": 89,
     "hex": 1
   },
-  "src/presentation/pages/PartiesPage.tsx": {
-    "raw": 100,
-    "hex": 0
-  },
   "src/presentation/pages/RegisterPage.tsx": {
     "raw": 107,
     "hex": 1
   },
   "src/presentation/pages/ReportsPage.tsx": {
-    "raw": 213,
+    "raw": 165,
     "hex": 0
   },
   "src/presentation/pages/SettingsPage.tsx": {
