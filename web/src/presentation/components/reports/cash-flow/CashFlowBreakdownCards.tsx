@@ -2,6 +2,7 @@ import React from 'react';
 import { ArrowDownLeft, ArrowUpRight, Wallet } from 'lucide-react';
 import { formatCurrency } from '@pos-mandob/shared';
 import type { SelectedTreasuryType } from './CashFlowChannelCards';
+import { Badge, Card } from '../../ui';
 
 interface CashFlowBreakdownCardsProps {
   treasuryName: string;
@@ -26,216 +27,225 @@ export const CashFlowBreakdownCards: React.FC<CashFlowBreakdownCardsProps> = ({
     <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Inflow Card */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <Card className="p-6 space-y-4">
+          <div className="flex items-center justify-between border-b border-line pb-3">
             <div className="flex items-center gap-2">
-              <ArrowDownLeft className="w-5 h-5 text-emerald-600" />
-              <h4 className="font-bold text-sm text-slate-900">الوارد إلى {treasuryName} (+)</h4>
+              <ArrowDownLeft className="w-5 h-5 text-ok" />
+              <h4 className="font-bold text-sm text-ink">الوارد إلى {treasuryName} (+)</h4>
             </div>
-            <span className="text-xs font-black text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+            <Badge tone="ok" className="font-black tabular-nums rounded-lg px-2.5 py-1">
               {formatCurrency(inflow?.total || inflow?.total_inflow || 0)}
-            </span>
+            </Badge>
           </div>
 
           <div className="space-y-2.5 text-xs">
             {/* Sales */}
-            <div
+            <button
+              type="button"
               onClick={() => onDrillDown('SALE', 'INFLOW')}
-              className={`flex justify-between items-center p-3 rounded-xl border transition-all cursor-pointer ${
+              className={`w-full min-h-[44px] flex justify-between items-center p-3 rounded-xl border transition-all cursor-pointer text-right ${
                 movementCategory === 'SALE'
-                  ? 'bg-emerald-50/90 border-emerald-500 shadow-xs ring-1 ring-emerald-500/30'
-                  : 'bg-slate-50/80 border-transparent hover:bg-slate-100/90 hover:border-slate-200'
+                  ? 'bg-ok-soft border-ok shadow-xs ring-1 ring-ok/30'
+                  : 'bg-surface-2/80 border-transparent hover:bg-surface-2 hover:border-line'
               }`}
               title="انقر لتصفية حركات المبيعات المحصلة في الجدول أدناه"
             >
               <div>
                 <div className="flex items-center gap-1.5">
-                  <p className="font-bold text-slate-800">مبيعات محصلة</p>
-                  <span className="text-2xs text-emerald-600 bg-emerald-100/70 px-1.5 py-0.5 rounded font-medium">
+                  <p className="font-bold text-ink">مبيعات محصلة</p>
+                  <Badge tone="ok" className="text-[10px] px-1.5 py-0">
                     تصفية 🔍
-                  </span>
+                  </Badge>
                 </div>
-                <p className="text-[11px] text-slate-400">إجمالي المبيعات المسددة عبر {treasuryName}</p>
+                <p className="text-[11px] text-muted">
+                  إجمالي المبيعات المسددة عبر {treasuryName}
+                </p>
               </div>
-              <span className="font-black text-slate-900 font-mono text-sm">
+              <span className="font-black text-ink tabular-nums text-sm">
                 {formatCurrency(inflow?.sales ?? inflow?.cash_sales ?? 0)}
               </span>
-            </div>
+            </button>
 
             {/* Receipt Vouchers */}
-            <div
+            <button
+              type="button"
               onClick={() => onDrillDown('RECEIPT_VOUCHER', 'INFLOW')}
-              className={`flex justify-between items-center p-3 rounded-xl border transition-all cursor-pointer ${
+              className={`w-full min-h-[44px] flex justify-between items-center p-3 rounded-xl border transition-all cursor-pointer text-right ${
                 movementCategory === 'RECEIPT_VOUCHER'
-                  ? 'bg-emerald-50/90 border-emerald-500 shadow-xs ring-1 ring-emerald-500/30'
-                  : 'bg-slate-50/80 border-transparent hover:bg-slate-100/90 hover:border-slate-200'
+                  ? 'bg-ok-soft border-ok shadow-xs ring-1 ring-ok/30'
+                  : 'bg-surface-2/80 border-transparent hover:bg-surface-2 hover:border-line'
               }`}
               title="انقر لتصفية سندات القبض في الجدول أدناه"
             >
               <div>
                 <div className="flex items-center gap-1.5">
-                  <p className="font-bold text-slate-800">سندات قبض</p>
-                  <span className="text-2xs text-emerald-600 bg-emerald-100/70 px-1.5 py-0.5 rounded font-medium">
+                  <p className="font-bold text-ink">سندات قبض</p>
+                  <Badge tone="ok" className="text-[10px] px-1.5 py-0">
                     تصفية 🔍
-                  </span>
+                  </Badge>
                 </div>
-                <p className="text-[11px] text-slate-400">مقبوضات سندات القبض من العملاء</p>
+                <p className="text-[11px] text-muted">مقبوضات سندات القبض من العملاء</p>
               </div>
-              <span className="font-black text-slate-900 font-mono text-sm">
+              <span className="font-black text-ink tabular-nums text-sm">
                 {formatCurrency(inflow?.receipt_vouchers ?? 0)}
               </span>
-            </div>
+            </button>
 
             {/* Purchase Returns */}
-            <div
+            <button
+              type="button"
               onClick={() => onDrillDown('PURCHASE_RETURN', 'INFLOW')}
-              className={`flex justify-between items-center p-3 rounded-xl border transition-all cursor-pointer ${
+              className={`w-full min-h-[44px] flex justify-between items-center p-3 rounded-xl border transition-all cursor-pointer text-right ${
                 movementCategory === 'PURCHASE_RETURN'
-                  ? 'bg-emerald-50/90 border-emerald-500 shadow-xs ring-1 ring-emerald-500/30'
-                  : 'bg-slate-50/80 border-transparent hover:bg-slate-100/90 hover:border-slate-200'
+                  ? 'bg-ok-soft border-ok shadow-xs ring-1 ring-ok/30'
+                  : 'bg-surface-2/80 border-transparent hover:bg-surface-2 hover:border-line'
               }`}
               title="انقر لتصفية مرتجعات الشراء في الجدول أدناه"
             >
               <div>
                 <div className="flex items-center gap-1.5">
-                  <p className="font-bold text-slate-800">مرتجعات شراء مستردة</p>
-                  <span className="text-2xs text-emerald-600 bg-emerald-100/70 px-1.5 py-0.5 rounded font-medium">
+                  <p className="font-bold text-ink">مرتجعات شراء مستردة</p>
+                  <Badge tone="ok" className="text-[10px] px-1.5 py-0">
                     تصفية 🔍
-                  </span>
+                  </Badge>
                 </div>
-                <p className="text-[11px] text-slate-400">المبالغ المستردة من الموردين</p>
+                <p className="text-[11px] text-muted">المبالغ المستردة من الموردين</p>
               </div>
-              <span className="font-black text-slate-900 font-mono text-sm">
+              <span className="font-black text-ink tabular-nums text-sm">
                 {formatCurrency(inflow?.purchase_returns ?? 0)}
               </span>
-            </div>
+            </button>
           </div>
-        </div>
+        </Card>
 
         {/* Outflow Card */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <Card className="p-6 space-y-4">
+          <div className="flex items-center justify-between border-b border-line pb-3">
             <div className="flex items-center gap-2">
-              <ArrowUpRight className="w-5 h-5 text-rose-600" />
-              <h4 className="font-bold text-sm text-slate-900">الصادر من {treasuryName} (-)</h4>
+              <ArrowUpRight className="w-5 h-5 text-bad" />
+              <h4 className="font-bold text-sm text-ink">الصادر من {treasuryName} (-)</h4>
             </div>
-            <span className="text-xs font-black text-rose-700 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200">
+            <Badge tone="bad" className="font-black tabular-nums rounded-lg px-2.5 py-1">
               {formatCurrency(outflow?.total || outflow?.total_outflow || 0)}
-            </span>
+            </Badge>
           </div>
 
           <div className="space-y-2.5 text-xs">
             {/* Purchases */}
-            <div
+            <button
+              type="button"
               onClick={() => onDrillDown('PURCHASE', 'OUTFLOW')}
-              className={`flex justify-between items-center p-3 rounded-xl border transition-all cursor-pointer ${
+              className={`w-full min-h-[44px] flex justify-between items-center p-3 rounded-xl border transition-all cursor-pointer text-right ${
                 movementCategory === 'PURCHASE'
-                  ? 'bg-rose-50/90 border-rose-500 shadow-xs ring-1 ring-rose-500/30'
-                  : 'bg-slate-50/80 border-transparent hover:bg-slate-100/90 hover:border-slate-200'
+                  ? 'bg-bad-soft border-bad shadow-xs ring-1 ring-bad/30'
+                  : 'bg-surface-2/80 border-transparent hover:bg-surface-2 hover:border-line'
               }`}
               title="انقر لتصفية المشتريات المدفوعة في الجدول أدناه"
             >
               <div>
                 <div className="flex items-center gap-1.5">
-                  <p className="font-bold text-slate-800">مشتريات مدفوعة</p>
-                  <span className="text-2xs text-rose-600 bg-rose-100/70 px-1.5 py-0.5 rounded font-medium">
+                  <p className="font-bold text-ink">مشتريات مدفوعة</p>
+                  <Badge tone="bad" className="text-[10px] px-1.5 py-0">
                     تصفية 🔍
-                  </span>
+                  </Badge>
                 </div>
-                <p className="text-[11px] text-slate-400">المدفوع للموردين لشراء بضاعة</p>
+                <p className="text-[11px] text-muted">المدفوع للموردين لشراء بضاعة</p>
               </div>
-              <span className="font-black text-slate-900 font-mono text-sm">
+              <span className="font-black text-ink tabular-nums text-sm">
                 {formatCurrency(outflow?.purchases ?? outflow?.cash_purchases ?? 0)}
               </span>
-            </div>
+            </button>
 
             {/* Payment Vouchers */}
-            <div
+            <button
+              type="button"
               onClick={() => onDrillDown('PAYMENT_VOUCHER', 'OUTFLOW')}
-              className={`flex justify-between items-center p-3 rounded-xl border transition-all cursor-pointer ${
+              className={`w-full min-h-[44px] flex justify-between items-center p-3 rounded-xl border transition-all cursor-pointer text-right ${
                 movementCategory === 'PAYMENT_VOUCHER'
-                  ? 'bg-rose-50/90 border-rose-500 shadow-xs ring-1 ring-rose-500/30'
-                  : 'bg-slate-50/80 border-transparent hover:bg-slate-100/90 hover:border-slate-200'
+                  ? 'bg-bad-soft border-bad shadow-xs ring-1 ring-bad/30'
+                  : 'bg-surface-2/80 border-transparent hover:bg-surface-2 hover:border-line'
               }`}
               title="انقر لتصفية سندات الصرف في الجدول أدناه"
             >
               <div>
                 <div className="flex items-center gap-1.5">
-                  <p className="font-bold text-slate-800">سندات صرف</p>
-                  <span className="text-2xs text-rose-600 bg-rose-100/70 px-1.5 py-0.5 rounded font-medium">
+                  <p className="font-bold text-ink">سندات صرف</p>
+                  <Badge tone="bad" className="text-[10px] px-1.5 py-0">
                     تصفية 🔍
-                  </span>
+                  </Badge>
                 </div>
-                <p className="text-[11px] text-slate-400">مدفوعات سندات الصرف للموردين</p>
+                <p className="text-[11px] text-muted">مدفوعات سندات الصرف للموردين</p>
               </div>
-              <span className="font-black text-slate-900 font-mono text-sm">
+              <span className="font-black text-ink tabular-nums text-sm">
                 {formatCurrency(outflow?.payment_vouchers ?? 0)}
               </span>
-            </div>
+            </button>
 
             {/* Sale Returns */}
-            <div
+            <button
+              type="button"
               onClick={() => onDrillDown('SALE_RETURN', 'OUTFLOW')}
-              className={`flex justify-between items-center p-3 rounded-xl border transition-all cursor-pointer ${
+              className={`w-full min-h-[44px] flex justify-between items-center p-3 rounded-xl border transition-all cursor-pointer text-right ${
                 movementCategory === 'SALE_RETURN'
-                  ? 'bg-rose-50/90 border-rose-500 shadow-xs ring-1 ring-rose-500/30'
-                  : 'bg-slate-50/80 border-transparent hover:bg-slate-100/90 hover:border-slate-200'
+                  ? 'bg-bad-soft border-bad shadow-xs ring-1 ring-bad/30'
+                  : 'bg-surface-2/80 border-transparent hover:bg-surface-2 hover:border-line'
               }`}
               title="انقر لتصفية مرتجعات البيع في الجدول أدناه"
             >
               <div>
                 <div className="flex items-center gap-1.5">
-                  <p className="font-bold text-slate-800">مرتجعات بيع مردودة</p>
-                  <span className="text-2xs text-rose-600 bg-rose-100/70 px-1.5 py-0.5 rounded font-medium">
+                  <p className="font-bold text-ink">مرتجعات بيع مردودة</p>
+                  <Badge tone="bad" className="text-[10px] px-1.5 py-0">
                     تصفية 🔍
-                  </span>
+                  </Badge>
                 </div>
-                <p className="text-[11px] text-slate-400">المبالغ المردودة للعملاء عند الإرجاع</p>
+                <p className="text-[11px] text-muted">المبالغ المردودة للعملاء عند الإرجاع</p>
               </div>
-              <span className="font-black text-slate-900 font-mono text-sm">
+              <span className="font-black text-ink tabular-nums text-sm">
                 {formatCurrency(outflow?.sale_returns ?? 0)}
               </span>
-            </div>
+            </button>
 
             {/* Cash Expenses */}
             {selectedTreasury === 'CASH' && (
-              <div
+              <button
+                type="button"
                 onClick={() => onDrillDown('EXPENSE', 'OUTFLOW')}
-                className={`flex justify-between items-center p-3 rounded-xl border transition-all cursor-pointer ${
+                className={`w-full min-h-[44px] flex justify-between items-center p-3 rounded-xl border transition-all cursor-pointer text-right ${
                   movementCategory === 'EXPENSE'
-                    ? 'bg-rose-50/90 border-rose-500 shadow-xs ring-1 ring-rose-500/30'
-                    : 'bg-slate-50/80 border-transparent hover:bg-slate-100/90 hover:border-slate-200'
+                    ? 'bg-bad-soft border-bad shadow-xs ring-1 ring-bad/30'
+                    : 'bg-surface-2/80 border-transparent hover:bg-surface-2 hover:border-line'
                 }`}
                 title="انقر لتصفية المصروفات النقدية في الجدول أدناه"
               >
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <p className="font-bold text-slate-800">المصروفات النقدية</p>
-                    <span className="text-2xs text-rose-600 bg-rose-100/70 px-1.5 py-0.5 rounded font-medium">
+                    <p className="font-bold text-ink">المصروفات النقدية</p>
+                    <Badge tone="bad" className="text-[10px] px-1.5 py-0">
                       تصفية 🔍
-                    </span>
+                    </Badge>
                   </div>
-                  <p className="text-[11px] text-slate-400">المصروفات المنصرفة نقدًا</p>
+                  <p className="text-[11px] text-muted">المصروفات المنصرفة نقدًا</p>
                 </div>
-                <span className="font-black text-slate-900 font-mono text-sm">
+                <span className="font-black text-ink tabular-nums text-sm">
                   {formatCurrency(outflow?.expenses ?? 0)}
                 </span>
-              </div>
+              </button>
             )}
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* Net Balance Footer Card */}
-      <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+      <Card className="p-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Wallet className="w-5 h-5 text-primary-600" />
-          <span className="font-bold text-sm text-slate-800">صافي رصيد {treasuryName}:</span>
+          <Wallet className="w-5 h-5 text-brand" />
+          <span className="font-bold text-sm text-ink">صافي رصيد {treasuryName}:</span>
         </div>
-        <span className="text-xl font-black font-mono text-primary-700">
+        <span className="text-xl font-black tabular-nums text-brand">
           {formatCurrency(netBalance)}
         </span>
-      </div>
+      </Card>
     </div>
   );
 };
