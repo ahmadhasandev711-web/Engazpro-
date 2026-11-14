@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useRef, useMemo } from 'react';
 import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
+import { Button } from '../components/ui';
 
 export type ToastType = 'success' | 'error' | 'info';
 
@@ -16,6 +17,27 @@ interface ToastContextType {
     info: (message: string) => void;
   };
 }
+
+const TOAST_STYLE_MAP: Record<
+  ToastType,
+  { container: string; iconBg: string; icon: React.ReactNode }
+> = {
+  success: {
+    container: 'border-ok/35 bg-panel/95 text-ink',
+    iconBg: 'bg-ok-soft text-ok',
+    icon: <CheckCircle2 className="w-4 h-4" />,
+  },
+  error: {
+    container: 'border-bad/35 bg-panel/95 text-ink',
+    iconBg: 'bg-bad-soft text-bad',
+    icon: <AlertCircle className="w-4 h-4" />,
+  },
+  info: {
+    container: 'border-info/35 bg-panel/95 text-ink',
+    iconBg: 'bg-info-soft text-info',
+    icon: <Info className="w-4 h-4" />,
+  },
+};
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
@@ -69,35 +91,27 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         className="fixed bottom-20 sm:bottom-6 right-3 sm:right-6 left-3 sm:left-auto z-50 flex flex-col gap-2 max-w-sm sm:w-96 pointer-events-none"
       >
         {toasts.map((t) => {
-          const styles = {
-            success: {
-              border: 'border-emerald-200 bg-emerald-50/95 text-emerald-950',
-              icon: <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />,
-            },
-            error: {
-              border: 'border-rose-200 bg-rose-50/95 text-rose-950',
-              icon: <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />,
-            },
-            info: {
-              border: 'border-blue-200 bg-blue-50/95 text-blue-950',
-              icon: <Info className="w-5 h-5 text-blue-600 shrink-0" />,
-            },
-          }[t.type];
+          const styles = TOAST_STYLE_MAP[t.type];
 
           return (
             <div
               key={t.id}
-              className={`pointer-events-auto p-3.5 rounded-2xl border shadow-lg backdrop-blur-md flex items-start gap-3 transition-all animate-in slide-in-from-bottom duration-200 ${styles.border}`}
+              className={`pointer-events-auto p-3.5 rounded-2xl border shadow-lg backdrop-blur-md flex items-center gap-3 transition-all animate-in slide-in-from-bottom duration-200 ${styles.container}`}
             >
-              {styles.icon}
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${styles.iconBg}`}>
+                {styles.icon}
+              </div>
               <p className="text-xs font-bold leading-relaxed flex-1 select-text">{t.message}</p>
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="md"
                 onClick={() => removeToast(t.id)}
-                className="text-slate-400 hover:text-slate-600 p-0.5 rounded-lg transition-colors cursor-pointer shrink-0"
+                aria-label="إغلاق التنبيه"
+                className="px-2 text-muted hover:text-ink shrink-0"
               >
                 <X className="w-4 h-4" />
-              </button>
+              </Button>
             </div>
           );
         })}

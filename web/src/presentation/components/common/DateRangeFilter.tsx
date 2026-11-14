@@ -104,6 +104,16 @@ export const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
     { id: 'this_month', label: 'هذا الشهر' },
   ];
 
+  const presetBtnClass = (isActive: boolean) =>
+    `flex-shrink-0 min-h-[44px] px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 touch-manipulation cursor-pointer ${
+      isActive
+        ? 'bg-brand text-on-brand shadow-sm ring-2 ring-brand/25'
+        : 'bg-surface-2 hover:bg-line text-muted hover:text-ink border border-line'
+    }`;
+
+  const dateInputClass =
+    'bg-panel border border-line rounded-lg px-2.5 py-1.5 text-xs font-medium text-ink focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand';
+
   return (
     <div className={`w-full max-w-full min-w-0 flex flex-col gap-2 ${className}`}>
       <div className="w-full min-w-0 flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
@@ -116,11 +126,7 @@ export const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
                 key={p.id}
                 type="button"
                 onClick={() => handleSelectPreset(p.id)}
-                className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 touch-manipulation ${
-                  isActive
-                    ? 'bg-primary-600 text-white shadow-sm ring-2 ring-primary-500/20'
-                    : 'bg-slate-100 hover:bg-slate-200/80 text-slate-600 hover:text-slate-900'
-                }`}
+                className={presetBtnClass(isActive)}
               >
                 {p.label}
               </button>
@@ -137,11 +143,9 @@ export const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
                 setActivePreset('custom');
               }
             }}
-            className={`flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 touch-manipulation ${
+            className={`inline-flex items-center gap-1.5 ${presetBtnClass(
               activePreset === 'custom' || isCustomOpen
-                ? 'bg-primary-600 text-white shadow-sm ring-2 ring-primary-500/20'
-                : 'bg-slate-100 hover:bg-slate-200/80 text-slate-600 hover:text-slate-900'
-            }`}
+            )}`}
           >
             <Calendar className="w-3.5 h-3.5" />
             <span>مخصص</span>
@@ -150,24 +154,24 @@ export const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
 
         {/* Desktop Inline Custom Date Inputs (hidden on mobile, shown on sm+) */}
         {(isCustomOpen || activePreset === 'custom') && (
-          <div className="hidden sm:flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1 rounded-xl text-xs shadow-sm animate-in fade-in duration-150 flex-shrink-0">
+          <div className="hidden sm:flex items-center gap-2 bg-surface-2 border border-line px-3 py-1 rounded-xl text-xs shadow-sm animate-in fade-in duration-150 flex-shrink-0">
             <div className="flex items-center gap-1.5">
-              <span className="text-slate-400 font-medium">من:</span>
+              <span className="text-muted font-medium">من:</span>
               <input
                 type="date"
                 value={internalFrom}
                 onChange={(e) => handleCustomDateChange(e.target.value, internalTo)}
-                className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs font-mono font-medium focus:outline-none focus:ring-1 focus:ring-primary-500"
+                className={dateInputClass}
               />
             </div>
 
             <div className="flex items-center gap-1.5">
-              <span className="text-slate-400 font-medium">إلى:</span>
+              <span className="text-muted font-medium">إلى:</span>
               <input
                 type="date"
                 value={internalTo}
                 onChange={(e) => handleCustomDateChange(internalFrom, e.target.value)}
-                className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs font-mono font-medium focus:outline-none focus:ring-1 focus:ring-primary-500"
+                className={dateInputClass}
               />
             </div>
 
@@ -175,7 +179,7 @@ export const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
               <button
                 type="button"
                 onClick={() => handleSelectPreset('all')}
-                className="p-1 text-slate-400 hover:text-rose-600 rounded-md transition-colors"
+                className="min-w-[36px] min-h-[36px] inline-flex items-center justify-center text-muted hover:text-bad rounded-lg transition-colors cursor-pointer"
                 title="إلغاء التصفية الزمنية"
               >
                 <X className="w-3.5 h-3.5" />
@@ -187,24 +191,24 @@ export const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
 
       {/* Mobile Dedicated Custom Date Panel (sm:hidden, perfectly fits mobile width) */}
       {(isCustomOpen || activePreset === 'custom') && (
-        <div className="sm:hidden w-full bg-slate-50 border border-slate-200/80 p-2.5 rounded-xl text-xs shadow-sm animate-in fade-in slide-in-from-top-1 duration-150 flex flex-col gap-2">
+        <div className="sm:hidden w-full bg-surface-2 border border-line p-2.5 rounded-xl text-xs shadow-sm animate-in fade-in slide-in-from-top-1 duration-150 flex flex-col gap-2">
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-2xs font-bold text-slate-500 mb-1 block">من تاريخ:</label>
+              <label className="text-2xs font-bold text-muted mb-1 block">من تاريخ:</label>
               <input
                 type="date"
                 value={internalFrom}
                 onChange={(e) => handleCustomDateChange(e.target.value, internalTo)}
-                className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className={`w-full font-bold ${dateInputClass}`}
               />
             </div>
             <div>
-              <label className="text-2xs font-bold text-slate-500 mb-1 block">إلى تاريخ:</label>
+              <label className="text-2xs font-bold text-muted mb-1 block">إلى تاريخ:</label>
               <input
                 type="date"
                 value={internalTo}
                 onChange={(e) => handleCustomDateChange(internalFrom, e.target.value)}
-                className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className={`w-full font-bold ${dateInputClass}`}
               />
             </div>
           </div>
@@ -213,7 +217,7 @@ export const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
             <button
               type="button"
               onClick={() => handleSelectPreset('all')}
-              className="w-full py-1 text-center text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-lg border border-rose-100 transition-colors flex items-center justify-center gap-1 active:scale-95"
+              className="w-full min-h-[44px] py-1.5 text-center text-xs font-bold text-bad hover:bg-bad-soft rounded-lg border border-bad/20 transition-colors flex items-center justify-center gap-1 active:scale-95 cursor-pointer"
             >
               <X className="w-3.5 h-3.5" />
               <span>إلغاء التصفية الزمنية والرجوع للكل</span>

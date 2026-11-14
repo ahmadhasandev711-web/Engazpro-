@@ -58,31 +58,31 @@ export const MobileBottomSheet: React.FC<MobileBottomSheetProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col justify-end bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex flex-col justify-end bg-canvas/80 backdrop-blur-sm animate-in fade-in duration-200"
       dir="rtl"
       onClick={onClose}
     >
       <div
         ref={sheetRef}
         onClick={(e) => e.stopPropagation()}
-        className={`w-full bg-white rounded-t-[2.2rem] shadow-2xl border-t border-slate-200/80 flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-300 ${maxHeight} pb-[calc(1rem+env(safe-area-inset-bottom,0px))]`}
+        className={`w-full bg-panel text-ink rounded-t-[2.2rem] shadow-2xl border-t border-line flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-300 ${maxHeight} pb-[calc(1rem+env(safe-area-inset-bottom,0px))]`}
       >
         {/* Top Handle / Grab Bar */}
         <div className="w-full pt-3 pb-1 flex justify-center cursor-grab active:cursor-grabbing">
-          <div className="w-12 h-1.5 bg-slate-300 rounded-full" />
+          <div className="w-12 h-1.5 bg-line-2 rounded-full" />
         </div>
 
         {/* Header */}
         {(title || subtitle) && (
-          <div className="px-5 py-3 flex items-center justify-between border-b border-slate-100">
+          <div className="px-5 py-3 flex items-center justify-between border-b border-line">
             <div>
               {title && (
-                <h3 className="text-base font-black text-slate-900">
+                <h3 className="text-base font-black text-ink">
                   {title}
                 </h3>
               )}
               {subtitle && (
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="text-xs text-muted mt-0.5">
                   {subtitle}
                 </p>
               )}
@@ -93,7 +93,8 @@ export const MobileBottomSheet: React.FC<MobileBottomSheetProps> = ({
                 selection();
                 onClose();
               }}
-              className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors"
+              aria-label="إغلاق"
+              className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center text-muted hover:text-ink rounded-full hover:bg-surface-2 transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>

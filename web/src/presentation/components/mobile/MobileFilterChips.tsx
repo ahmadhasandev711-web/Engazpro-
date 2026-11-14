@@ -51,10 +51,10 @@ export function MobileFilterChips<T extends string>({
             type="button"
             onClick={() => handleSelect(opt.id)}
             className={clsx(
-              'flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all shrink-0 active:scale-95 cursor-pointer',
+              'flex items-center gap-1.5 min-h-[44px] px-3.5 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all shrink-0 active:scale-95 cursor-pointer border',
               isSelected
-                ? 'bg-slate-900 text-white shadow-md shadow-slate-900/20'
-                : 'bg-white text-slate-600 border border-slate-200/80 hover:bg-slate-50'
+                ? 'bg-brand text-on-brand border-brand shadow-sm'
+                : 'bg-panel text-muted border-line hover:bg-surface-2 hover:text-ink'
             )}
           >
             {Icon && <Icon className="w-3.5 h-3.5" />}
@@ -64,8 +64,8 @@ export function MobileFilterChips<T extends string>({
                 className={clsx(
                   'px-1.5 py-0.5 rounded-full text-2xs font-black',
                   isSelected
-                    ? 'bg-white/20 text-white'
-                    : 'bg-slate-100 text-slate-500'
+                    ? 'bg-on-brand/20 text-on-brand'
+                    : 'bg-surface-2 text-muted'
                 )}
               >
                 {opt.count}
