@@ -225,7 +225,7 @@ export const ReportsPage: React.FC = () => {
             <h2 className="text-sm font-black text-ink truncate">
               {canViewProfitReport ? 'التقارير والأرباح' : 'تقارير المبيعات'}
             </h2>
-            <p className="text-[11px] text-muted font-medium truncate">
+            <p className="text-xs text-muted font-medium truncate">
               متابعة الأداء والمؤشرات المالية
             </p>
           </div>
