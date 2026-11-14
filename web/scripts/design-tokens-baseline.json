@@ -55,18 +55,6 @@
     "raw": 188,
     "hex": 0
   },
-  "src/presentation/components/invoice/InvoiceItemsTable.tsx": {
-    "raw": 41,
-    "hex": 0
-  },
-  "src/presentation/components/invoice/InvoiceParentLookup.tsx": {
-    "raw": 27,
-    "hex": 0
-  },
-  "src/presentation/components/invoice/InvoiceSummaryPanel.tsx": {
-    "raw": 40,
-    "hex": 0
-  },
   "src/presentation/components/landing/StoreDesignSection.tsx": {
     "raw": 133,
     "hex": 29
@@ -81,10 +69,6 @@
   },
   "src/presentation/components/mobile/EmployeeMobileCard.tsx": {
     "raw": 98,
-    "hex": 0
-  },
-  "src/presentation/components/mobile/InvoiceMobileCard.tsx": {
-    "raw": 44,
     "hex": 0
   },
   "src/presentation/components/mobile/MobileBottomSheet.tsx": {
@@ -199,12 +183,8 @@
     "raw": 131,
     "hex": 0
   },
-  "src/presentation/pages/InvoiceFormPage.tsx": {
-    "raw": 28,
-    "hex": 0
-  },
   "src/presentation/pages/InvoicesPage.tsx": {
-    "raw": 173,
+    "raw": 4,
     "hex": 0
   },
   "src/presentation/pages/LandingPage.tsx": {

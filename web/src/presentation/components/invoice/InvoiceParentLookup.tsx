@@ -1,6 +1,7 @@
 import React from 'react';
 import { FileSearch } from 'lucide-react';
 import { Invoice, formatCurrency } from '@pos-mandob/shared';
+import { Badge, Button, Card, Input } from '../ui';
 
 interface InvoiceParentLookupProps {
   parentInvoice: Invoice | null;
@@ -22,72 +23,82 @@ export const InvoiceParentLookup: React.FC<InvoiceParentLookupProps> = ({
   onAddItemToReturn,
 }) => {
   return (
-    <div className="bg-gradient-to-l from-amber-50 to-orange-50 p-4 rounded-2xl border border-amber-200 shadow-sm space-y-3">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
-          <FileSearch className="w-4 h-4 text-amber-600" />
+    <Card className="p-4 bg-warn-soft/50 border-warn/30 space-y-3">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <span className="text-xs font-bold text-ink flex items-center gap-1.5">
+          <FileSearch className="w-4 h-4 text-warn" />
           بحث برقم الفاتورة الأصلية (اختياري لجلب الأصناف والأسعار)
         </span>
         {parentInvoice && (
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="md"
             onClick={onClearParentInvoice}
-            className="text-xs text-rose-600 hover:underline font-bold"
+            className="text-xs text-bad hover:underline font-bold px-2"
           >
             إلغاء الربط والرجوع للمرتجع الحر
-          </button>
+          </Button>
         )}
       </div>
-      <div className="flex gap-2">
-        <input
-          type="text"
-          placeholder="أدخل رقم الفاتورة الأصلية (مثال: INV-00001)..."
-          value={invoiceLookupNumber}
-          onChange={(e) => onSearchNumberChange(e.target.value)}
-          className="flex-1 px-4 py-2.5 bg-white border border-amber-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 text-right font-mono"
-        />
-        <button
+      <div className="flex flex-col sm:flex-row gap-2">
+        <div className="flex-1">
+          <Input
+            type="text"
+            placeholder="أدخل رقم الفاتورة الأصلية (مثال: INV-00001)..."
+            value={invoiceLookupNumber}
+            onChange={(e) => onSearchNumberChange(e.target.value)}
+            className="tabular-nums text-right border-warn/40 focus:border-warn focus:ring-warn"
+          />
+        </div>
+        <Button
           type="button"
+          variant="primary"
+          size="md"
           onClick={onSearchInvoice}
           disabled={isSearchingInvoice || !invoiceLookupNumber.trim()}
-          className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-bold text-sm rounded-xl transition-colors"
+          isLoading={isSearchingInvoice}
+          className="bg-warn text-on-brand hover:opacity-95 shrink-0 font-bold"
         >
           {isSearchingInvoice ? 'جاري البحث...' : 'استيراد الفاتورة'}
-        </button>
+        </Button>
       </div>
 
       {parentInvoice && (
-        <div className="bg-white p-3 rounded-xl border border-amber-200 mt-2 space-y-2">
-          <div className="flex justify-between text-xs text-slate-600 pb-2 border-b border-slate-100 font-bold">
+        <Card className="p-3 border-warn/30 mt-2 space-y-2">
+          <div className="flex justify-between flex-wrap gap-2 text-xs text-muted pb-2 border-b border-line font-bold">
             <span>
-              فاتورة رقم: <span className="font-mono text-slate-900">{parentInvoice.invoice_number}</span>
+              فاتورة رقم:{' '}
+              <span className="tabular-nums text-ink">{parentInvoice.invoice_number}</span>
             </span>
-            <span>الطرف: <span className="text-slate-900">{parentInvoice.party?.name || 'نقدي'}</span></span>
-            <span>التاريخ: <span className="text-slate-900">{parentInvoice.date}</span></span>
+            <span>
+              الطرف: <span className="text-ink">{parentInvoice.party?.name || 'نقدي'}</span>
+            </span>
+            <span>
+              التاريخ: <span className="text-ink tabular-nums">{parentInvoice.date}</span>
+            </span>
           </div>
-          <div className="text-xs font-medium text-slate-500">اختر البنود المراد استرجاعها:</div>
+          <div className="text-xs font-medium text-muted">اختر البنود المراد استرجاعها:</div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {parentInvoice.items?.map((item: any) => (
               <button
                 key={item.id || item.product_id}
                 type="button"
                 onClick={() => onAddItemToReturn(item)}
-                className="flex justify-between items-center p-2.5 bg-slate-50 hover:bg-amber-100/50 border border-slate-200 rounded-lg text-right transition-colors"
+                className="min-h-[44px] flex justify-between items-center p-2.5 bg-surface-2 hover:bg-warn-soft/50 border border-line rounded-xl text-right transition-colors cursor-pointer"
               >
                 <div>
-                  <p className="font-bold text-slate-800 text-xs">{item.product_name}</p>
-                  <p className="text-[11px] text-slate-500">
+                  <p className="font-bold text-ink text-xs">{item.product_name}</p>
+                  <p className="text-[11px] text-muted tabular-nums">
                     الكمية الأصلية: {item.quantity} × {formatCurrency(item.unit_price)}
                   </p>
                 </div>
-                <span className="text-xs font-black text-amber-700 bg-amber-100 px-2 py-1 rounded">
-                  + استرجاع
-                </span>
+                <Badge tone="warn">+ استرجاع</Badge>
               </button>
             ))}
           </div>
-        </div>
+        </Card>
       )}
-    </div>
+    </Card>
   );
 };
