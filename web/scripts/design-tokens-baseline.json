@@ -63,10 +63,6 @@
     "raw": 57,
     "hex": 0
   },
-  "src/presentation/pages/ExcelPage.tsx": {
-    "raw": 131,
-    "hex": 0
-  },
   "src/presentation/pages/InvoicesPage.tsx": {
     "raw": 4,
     "hex": 0
@@ -85,10 +81,6 @@
   },
   "src/presentation/pages/ReportsPage.tsx": {
     "raw": 165,
-    "hex": 0
-  },
-  "src/presentation/pages/WooCommerceSettingsPage.tsx": {
-    "raw": 192,
     "hex": 0
   },
   "src/presentation/utils/barcodeSvgRenderer.ts": {
