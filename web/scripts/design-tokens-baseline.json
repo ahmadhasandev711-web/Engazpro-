@@ -87,10 +87,6 @@
     "raw": 11,
     "hex": 0
   },
-  "src/presentation/components/mobile/PartyMobileCard.tsx": {
-    "raw": 61,
-    "hex": 0
-  },
   "src/presentation/components/mobile/RecentActivityMobileCard.tsx": {
     "raw": 35,
     "hex": 0
@@ -194,10 +190,6 @@
   "src/presentation/pages/LoginPage.tsx": {
     "raw": 89,
     "hex": 1
-  },
-  "src/presentation/pages/PartiesPage.tsx": {
-    "raw": 100,
-    "hex": 0
   },
   "src/presentation/pages/RegisterPage.tsx": {
     "raw": 107,
