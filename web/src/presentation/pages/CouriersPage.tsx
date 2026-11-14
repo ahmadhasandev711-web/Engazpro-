@@ -8,29 +8,31 @@ import {
   Plus,
   Trash2,
   Edit2,
-  X,
   CheckCircle2,
   AlertCircle,
   Phone,
   MapPin,
   FileText,
-  Printer,
-  ArrowDownLeft,
-  ArrowUpRight,
   DollarSign,
   RefreshCw,
   Wallet,
-  Download,
 } from 'lucide-react';
 import { apiClient } from '../../data/api/client';
-import { formatCurrency, PartyType, WcOrderStatus, StockTransferStatus } from '@pos-mandob/shared';
+import { formatCurrency, PartyType } from '@pos-mandob/shared';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useAuthStore } from '../../data/store/useAuthStore';
 import { useConfirm } from '../context/ConfirmContext';
 import { useToast } from '../context/ToastContext';
 
+import { Badge, Button, DataTable, EmptyState, Input, PageHeader, StatCard } from '../components/ui';
 import { CourierMobileCard } from '../components/mobile/CourierMobileCard';
-import { PaginationBar } from '../components/common/PaginationBar';
+import {
+  CourierManifestModal,
+  type ManifestPaymentFilter,
+  type ManifestSourceFilter,
+} from '../components/couriers/CourierManifestModal';
+import { CourierSettleModal, type SettleMethod } from '../components/couriers/CourierSettleModal';
+import { CourierFormModal } from '../components/couriers/CourierFormModal';
 import { nativeBackButton } from '../../platform/nativeBackButton';
 
 export const CouriersPage: React.FC = () => {
@@ -57,8 +59,8 @@ export const CouriersPage: React.FC = () => {
   // Manifest Modal State
   const [manifestCourier, setManifestCourier] = useState<any | null>(null);
   const [manifestStatusFilter, setManifestStatusFilter] = useState<string>('ALL');
-  const [manifestPaymentFilter, setManifestPaymentFilter] = useState<'ALL' | 'COD' | 'PREPAID'>('ALL');
-  const [manifestSourceFilter, setManifestSourceFilter] = useState<'ALL' | 'WOOCOMMERCE' | 'DIRECT_SALE'>('ALL');
+  const [manifestPaymentFilter, setManifestPaymentFilter] = useState<ManifestPaymentFilter>('ALL');
+  const [manifestSourceFilter, setManifestSourceFilter] = useState<ManifestSourceFilter>('ALL');
   const [manifestSearch, setManifestSearch] = useState<string>('');
   const [manifestPage, setManifestPage] = useState<number>(1);
 
@@ -72,7 +74,7 @@ export const CouriersPage: React.FC = () => {
   const [settleCourier, setSettleCourier] = useState<any | null>(null);
   const [settleType, setSettleType] = useState<'RECEIPT' | 'PAYMENT'>('RECEIPT');
   const [settleAmount, setSettleAmount] = useState<number>(0);
-  const [settleMethod, setSettleMethod] = useState<'CASH' | 'CARD' | 'INSTAPAY' | 'VODAFONE_CASH' | 'TRANSFER'>('CASH');
+  const [settleMethod, setSettleMethod] = useState<SettleMethod>('CASH');
   const [settleNotes, setSettleNotes] = useState<string>('');
   const [settleError, setSettleError] = useState<string | null>(null);
 
@@ -265,6 +267,16 @@ export const CouriersPage: React.FC = () => {
     setSettleError(null);
   };
 
+  const handleExportManifest = async () => {
+    try {
+      const { exportManifestToExcel } = await import('../utils/excelExport');
+      exportManifestToExcel(filteredShipments, manifestCourier?.name || 'شركة_الشحن');
+    } catch (err) {
+      console.error('Excel load failed:', err);
+      toast.error('تعذر تحميل أداة Excel، تأكد من الاتصال وحاول مرة أخرى');
+    }
+  };
+
   return (
     <div className="space-y-4 sm:space-y-6" dir="rtl">
       {/* Feedback Toast Notification */}
@@ -272,268 +284,276 @@ export const CouriersPage: React.FC = () => {
         <div
           className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-3 rounded-2xl shadow-xl border flex items-center gap-2.5 text-xs font-black animate-in fade-in slide-in-from-top-4 duration-200 ${
             feedback.type === 'success'
-              ? 'bg-emerald-50 text-emerald-900 border-emerald-200'
-              : 'bg-red-50 text-red-900 border-red-200'
+              ? 'bg-ok-soft text-ok border-ok/30'
+              : 'bg-bad-soft text-bad border-bad/30'
           }`}
         >
-          {feedback.type === 'success' ? <CheckCircle2 className="w-4 h-4 text-emerald-600" /> : <AlertCircle className="w-4 h-4 text-red-600" />}
+          {feedback.type === 'success' ? (
+            <CheckCircle2 className="w-4 h-4 text-ok" />
+          ) : (
+            <AlertCircle className="w-4 h-4 text-bad" />
+          )}
           <span>{feedback.message}</span>
         </div>
       )}
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs">
-        <div>
-          <h2 className="text-lg sm:text-xl font-black text-slate-900 flex items-center gap-2">
-            <div className="p-2 bg-purple-50 rounded-xl text-purple-600">
-              <Truck className="w-5 h-5" />
-            </div>
-            <span>شركات الشحن والتوصيل</span>
-          </h2>
-          <p className="text-xs text-slate-500 mt-1">
-            إدارة حسابات شركات الشحن، متابعة تسليم الطرود، ومطابقة وتصفية مبالغ الدفع عند الاستلام (COD) مع الخزينة.
-          </p>
-        </div>
-
-        <button
-          onClick={openCreateModal}
-          className="inline-flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2.5 rounded-xl text-xs font-black shadow-sm transition-colors cursor-pointer"
-        >
-          <Plus className="w-4 h-4" />
-          <span>إضافة شركة شحن جديدة</span>
-        </button>
-      </div>
+      <PageHeader
+        title="شركات الشحن والتوصيل"
+        description="إدارة حسابات شركات الشحن، متابعة تسليم الطرود، ومطابقة وتصفية مبالغ الدفع عند الاستلام (COD) مع الخزينة."
+        badge={
+          <Badge tone="brand" className="hidden sm:inline-flex">
+            {summary.total_couriers} شركة
+          </Badge>
+        }
+        actions={
+          <Button
+            type="button"
+            variant="primary"
+            size="md"
+            onClick={openCreateModal}
+            leftIcon={<Plus className="w-4 h-4" />}
+          >
+            إضافة شركة شحن جديدة
+          </Button>
+        }
+        className="mb-0"
+      />
 
       {/* Quick Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">شركات الشحن</span>
-            <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
-              <Truck className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="text-xl font-black text-slate-900 mt-2">{summary.total_couriers}</div>
-          <span className="text-2xs text-slate-400 font-medium">شركة مسجلة بالدفاتر</span>
-        </div>
-
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-amber-600">طرود قيد التوصيل</span>
-            <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-              <Package className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="text-xl font-black text-amber-700 mt-2">{summary.global_active_shipments}</div>
-          <span className="text-2xs text-slate-400 font-medium">في عهدة شركات الشحن حالياً</span>
-        </div>
-
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-blue-600">مبالغ قيد التحصيل (COD)</span>
-            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-              <DollarSign className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="text-xl font-black text-blue-700 mt-2 font-mono">{formatCurrency(summary.global_pending_cod)}</div>
-          <span className="text-2xs text-slate-400 font-medium">مستحقات معلقة جاري تحصيلها</span>
-        </div>
-
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-emerald-600">صافي الأرصدة الدفترية</span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <Wallet className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="text-xl font-black text-emerald-700 mt-2 font-mono">{formatCurrency(summary.global_net_balance)}</div>
-          <span className="text-2xs text-slate-400 font-medium">رصيد شركات الشحن المالي</span>
-        </div>
+        <StatCard
+          label="شركات الشحن"
+          value={summary.total_couriers}
+          hint="شركة مسجلة بالدفاتر"
+          tone="brand"
+          icon={<Truck className="w-4 h-4" />}
+        />
+        <StatCard
+          label="طرود قيد التوصيل"
+          value={summary.global_active_shipments}
+          hint="في عهدة شركات الشحن حالياً"
+          tone="warn"
+          icon={<Package className="w-4 h-4" />}
+        />
+        <StatCard
+          label="مبالغ قيد التحصيل (COD)"
+          value={formatCurrency(summary.global_pending_cod)}
+          hint="مستحقات معلقة جاري تحصيلها"
+          tone="info"
+          icon={<DollarSign className="w-4 h-4" />}
+        />
+        <StatCard
+          label="صافي الأرصدة الدفترية"
+          value={formatCurrency(summary.global_net_balance)}
+          hint="رصيد شركات الشحن المالي"
+          tone="ok"
+          icon={<Wallet className="w-4 h-4" />}
+        />
       </div>
 
       {/* Main Couriers Table */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+      <div className="bg-panel rounded-2xl border border-line shadow-xs overflow-hidden transition-colors">
         {/* Search Bar */}
-        <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="relative w-full sm:max-w-xs">
-            <Search className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
+        <div className="p-4 border-b border-line flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="w-full sm:max-w-xs">
+            <Input
               type="text"
               placeholder="بحث باسم شركة الشحن أو الهاتف..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-3 pr-9 py-2 border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-purple-500 bg-slate-50 focus:bg-white"
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
+              leftIcon={<Search className="w-4 h-4" />}
             />
           </div>
-          <div className="text-xs text-slate-500 font-bold">
-            إجمالي الشركات: <span className="text-purple-700 font-black">{couriers.length}</span>
+          <div className="text-xs text-muted font-bold">
+            إجمالي الشركات: <span className="text-brand font-black tabular-nums">{couriers.length}</span>
           </div>
         </div>
 
         {/* Table View */}
         {isLoading ? (
-          <div className="p-12 text-center text-xs font-bold text-slate-400 flex items-center justify-center gap-2">
-            <RefreshCw className="w-4 h-4 animate-spin text-purple-600" />
+          <div className="p-12 text-center text-xs font-bold text-muted flex items-center justify-center gap-2">
+            <RefreshCw className="w-4 h-4 animate-spin text-brand" />
             <span>جاري تحميل بيانات شركات الشحن...</span>
           </div>
         ) : couriers.length === 0 ? (
-          <div className="p-12 text-center space-y-2">
-            <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-full mx-auto flex items-center justify-center">
-              <Truck className="w-6 h-6" />
-            </div>
-            <h3 className="text-sm font-bold text-slate-700">لا توجد شركات شحن مسجلة حتى الآن</h3>
-            <p className="text-xs text-slate-400 max-w-sm mx-auto">
-              اضغط على "إضافة شركة شحن جديدة" لتسجيل شركات الشحن المحلية أو الخارجية وبدء متابعة الشحنات وتسوية الكاش.
-            </p>
+          <div className="p-4">
+            <EmptyState
+              icon={<Truck className="w-6 h-6 text-brand" />}
+              title="لا توجد شركات شحن مسجلة حتى الآن"
+              description='اضغط على "إضافة شركة شحن جديدة" لتسجيل شركات الشحن المحلية أو الخارجية وبدء متابعة الشحنات وتسوية الكاش.'
+              action={
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="md"
+                  onClick={openCreateModal}
+                  leftIcon={<Plus className="w-4 h-4" />}
+                >
+                  إضافة شركة شحن جديدة
+                </Button>
+              }
+              className="border-0 py-10"
+            />
           </div>
         ) : (
           <>
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-right border-collapse">
-              <thead>
-                <tr className="bg-slate-50/75 border-b border-slate-200/80 text-[11px] font-black text-slate-600 uppercase tracking-wider">
-                  <th className="py-3 px-4">شركة الشحن</th>
-                  <th className="py-3 px-4">بيانات التواصل والعنوان</th>
-                  <th className="py-3 px-4 text-center">الطرود في العهدة</th>
-                  <th className="py-3 px-4 text-center">مبالغ قيد التحصيل (COD)</th>
-                  <th className="py-3 px-4 text-center">الرصيد المالي بالدفاتر</th>
-                  <th className="py-3 px-4 text-left">إجراءات المتابعة والتسوية</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-xs font-medium text-slate-700">
-                {couriers.map((c: any) => (
-                  <tr key={c.id} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-slate-900 text-xs">{c.name}</span>
-                        <span className="px-1.5 py-0.5 bg-purple-50 text-purple-700 text-2xs font-bold rounded border border-purple-200">
-                          شركة شحن
-                        </span>
-                      </div>
-                      {c.notes && <p className="text-[11px] text-slate-400 mt-0.5 max-w-xs truncate">{c.notes}</p>}
-                    </td>
-
-                    <td className="py-3 px-4">
-                      {c.phone ? (
-                        <div className="flex items-center gap-1 text-slate-700 font-mono text-xs">
-                          <Phone className="w-3 h-3 text-slate-400" />
-                          <span>{c.phone}</span>
-                        </div>
-                      ) : (
-                        <span className="text-slate-400 text-[11px]">بدون هاتف</span>
-                      )}
-                      {c.address && (
-                        <div className="flex items-center gap-1 text-slate-400 text-2xs mt-0.5">
-                          <MapPin className="w-3 h-3" />
-                          <span>{c.address}</span>
-                        </div>
-                      )}
-                    </td>
-
-                    <td className="py-3 px-4 text-center">
-                      {c.active_shipments_count > 0 ? (
-                        <button
-                          onClick={() => setManifestCourier(c)}
-                          className="px-2.5 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-lg text-[11px] font-bold hover:bg-amber-100 transition cursor-pointer inline-flex items-center gap-1"
-                        >
-                          <Package className="w-3 h-3 text-amber-600" />
-                          <span>{c.active_shipments_count} طرد قيد التوصيل</span>
-                        </button>
-                      ) : (
-                        <span className="text-[11px] text-slate-400 font-medium">لا توجد شحنات معلقة</span>
-                      )}
-                    </td>
-
-                    <td className="py-3 px-4 text-center">
-                      <span className="font-bold font-mono text-blue-700 text-xs">
-                        {formatCurrency(c.pending_cod_amount || 0)}
-                      </span>
-                    </td>
-
-                    <td className="py-3 px-4 text-center font-mono">
-                      {Number(c.balance) !== 0 ? (
-                        <span
-                          className={`font-black text-xs px-2 py-0.5 rounded-lg ${
-                            Number(c.balance) > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
-                          }`}
-                        >
-                          {formatCurrency(c.balance)}
-                        </span>
-                      ) : (
-                        <span className="text-slate-400 text-[11px]">0.00 (خالص)</span>
-                      )}
-                    </td>
-
-                    <td className="py-3 px-4 text-left">
-                      <div className="flex items-center justify-end gap-1.5">
-                        {/* Manifest Button */}
-                        <button
-                          onClick={() => setManifestCourier(c)}
-                          className="px-2 py-1.5 bg-slate-100 hover:bg-purple-50 text-slate-700 hover:text-purple-700 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer"
-                          title="كشف البوالص والشحنات التفصيلي (Manifest)"
-                        >
-                          <Package className="w-3.5 h-3.5" />
-                          <span className="hidden sm:inline">كشف الشحنات</span>
-                        </button>
-
-                        {/* Ledger Button */}
-                        <button
-                          onClick={() => navigate(`/ledger/${c.id}`)}
-                          className="px-2 py-1.5 bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer"
-                          title="كشف الحساب المالي التفصيلي"
-                        >
-                          <FileText className="w-3.5 h-3.5" />
-                          <span className="hidden sm:inline">كشف الحساب</span>
-                        </button>
-
-                        {/* Settle Net Balance Button */}
-                        <button
-                          onClick={() => openSettleModal(c)}
-                          className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-xs font-black transition flex items-center gap-1 cursor-pointer border border-emerald-200"
-                          title="تصفية واستلام صافي المستحقات"
-                        >
-                          <Wallet className="w-3.5 h-3.5 text-emerald-600" />
-                          <span>تصفية واستلام</span>
-                        </button>
-
-                        {/* Edit Button */}
-                        <button
-                          onClick={() => openEditModal(c)}
-                          className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition cursor-pointer"
-                          title="تعديل"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-
-                        {/* Delete Button */}
-                        {canDeleteParty && (
-                          <button
-                            onClick={async () => {
-                            const ok = await confirm({
-                              title: 'تأكيد حذف شركة الشحن',
-                              message: `هل أنت متأكد من حذف شركة الشحن "${c.name}"؟`,
-                              type: 'danger',
-                            });
-                            if (ok) {
-                              deleteCourierMutation.mutate(c.id);
-                            }
-                          }}
-                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"
-                            title="حذف"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </div>
-                    </td>
+            <div className="hidden md:block">
+              <DataTable className="border-0 rounded-none shadow-none">
+                <thead>
+                  <tr className="bg-surface-2/80 border-b border-line text-xs font-black text-muted">
+                    <th className="py-3 px-4">شركة الشحن</th>
+                    <th className="py-3 px-4">بيانات التواصل والعنوان</th>
+                    <th className="py-3 px-4 text-center">الطرود في العهدة</th>
+                    <th className="py-3 px-4 text-center">مبالغ قيد التحصيل (COD)</th>
+                    <th className="py-3 px-4 text-center">الرصيد المالي بالدفاتر</th>
+                    <th className="py-3 px-4 text-left">إجراءات المتابعة والتسوية</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-line text-xs font-medium text-ink">
+                  {couriers.map((c: any) => (
+                    <tr key={c.id} className="hover:bg-surface-2/50 transition-colors">
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-ink text-xs">{c.name}</span>
+                          <Badge tone="brand" className="text-2xs px-1.5 py-0">
+                            شركة شحن
+                          </Badge>
+                        </div>
+                        {c.notes && <p className="text-xs text-muted mt-0.5 max-w-xs truncate">{c.notes}</p>}
+                      </td>
+
+                      <td className="py-3 px-4">
+                        {c.phone ? (
+                          <div className="flex items-center gap-1 text-ink tabular-nums text-xs">
+                            <Phone className="w-3 h-3 text-muted" />
+                            <span>{c.phone}</span>
+                          </div>
+                        ) : (
+                          <span className="text-muted text-xs">بدون هاتف</span>
+                        )}
+                        {c.address && (
+                          <div className="flex items-center gap-1 text-muted text-2xs mt-0.5">
+                            <MapPin className="w-3 h-3" />
+                            <span>{c.address}</span>
+                          </div>
+                        )}
+                      </td>
+
+                      <td className="py-3 px-4 text-center">
+                        {c.active_shipments_count > 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => setManifestCourier(c)}
+                            className="min-h-[36px] px-2.5 py-1 bg-warn-soft text-warn border border-warn/30 rounded-lg text-xs font-bold hover:opacity-90 transition cursor-pointer inline-flex items-center gap-1 tabular-nums"
+                          >
+                            <Package className="w-3 h-3 text-warn" />
+                            <span>{c.active_shipments_count} طرد قيد التوصيل</span>
+                          </button>
+                        ) : (
+                          <span className="text-xs text-muted font-medium">لا توجد شحنات معلقة</span>
+                        )}
+                      </td>
+
+                      <td className="py-3 px-4 text-center">
+                        <span className="font-bold tabular-nums text-info text-xs">
+                          {formatCurrency(c.pending_cod_amount || 0)}
+                        </span>
+                      </td>
+
+                      <td className="py-3 px-4 text-center tabular-nums">
+                        {Number(c.balance) !== 0 ? (
+                          <Badge
+                            tone={Number(c.balance) > 0 ? 'ok' : 'bad'}
+                            className="font-black text-xs px-2 py-0.5 rounded-lg"
+                          >
+                            {formatCurrency(c.balance)}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted text-xs">0.00 (خالص)</span>
+                        )}
+                      </td>
+
+                      <td className="py-3 px-4 text-left">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => setManifestCourier(c)}
+                            leftIcon={<Package className="w-3.5 h-3.5" />}
+                            title="كشف البوالص والشحنات التفصيلي (Manifest)"
+                          >
+                            <span className="hidden sm:inline">كشف الشحنات</span>
+                          </Button>
+
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => navigate(`/ledger/${c.id}`)}
+                            leftIcon={<FileText className="w-3.5 h-3.5" />}
+                            title="كشف الحساب المالي التفصيلي"
+                          >
+                            <span className="hidden sm:inline">كشف الحساب</span>
+                          </Button>
+
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => openSettleModal(c)}
+                            leftIcon={<Wallet className="w-3.5 h-3.5 text-ok" />}
+                            className="bg-ok-soft text-ok border-ok/30 hover:bg-ok-soft/80 font-black"
+                            title="تصفية واستلام صافي المستحقات"
+                          >
+                            <span>تصفية واستلام</span>
+                          </Button>
+
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openEditModal(c)}
+                            title="تعديل"
+                            aria-label="تعديل"
+                            className="px-2"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </Button>
+
+                          {canDeleteParty && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={async () => {
+                                const ok = await confirm({
+                                  title: 'تأكيد حذف شركة الشحن',
+                                  message: `هل أنت متأكد من حذف شركة الشحن "${c.name}"؟`,
+                                  type: 'danger',
+                                });
+                                if (ok) {
+                                  deleteCourierMutation.mutate(c.id);
+                                }
+                              }}
+                              title="حذف"
+                              aria-label="حذف"
+                              className="px-2 text-bad hover:bg-bad-soft"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </DataTable>
+            </div>
 
             {/* Mobile Cards View (md:hidden) */}
-            <div className="md:hidden space-y-3 p-3 bg-slate-50/60">
+            <div className="md:hidden space-y-3 p-3 bg-canvas/60">
               {couriers.map((c: any) => (
                 <CourierMobileCard
                   key={c.id}
@@ -560,318 +580,42 @@ export const CouriersPage: React.FC = () => {
         )}
       </div>
 
-      {/* Modal 1: Manifest Modal (كشف الشحنات والبوالص التفصيلي لكل شركة شحن) */}
+      {/* Modal 1: Manifest Modal + Untouched Corporate A4 Printable Sheet */}
       {manifestCourier && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-3xl max-w-4xl w-full shadow-2xl overflow-hidden border border-slate-200 flex flex-col max-h-[92vh]">
-            {/* Header */}
-            <div className="p-4 sm:p-5 bg-slate-900 text-white flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-purple-500/20 text-purple-400 rounded-xl">
-                  <Package className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-sm sm:text-base font-black">
-                    كشف شحنات وبوالص: {manifestCourier.name}
-                  </h3>
-                  <p className="text-[11px] text-slate-400">
-                    متابعة كافة فواتير وأوردرات المتجر المسندة لشركة الشحن ومطابقة التحصيلات
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setManifestCourier(null)}
-                className="p-1.5 text-slate-400 hover:text-white rounded-lg cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Metrics Bar */}
-            <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 p-3 bg-slate-50 border-b border-slate-200 text-center">
-              <div className="p-2 bg-white rounded-xl border border-slate-200">
-                <span className="text-2xs text-slate-500 font-bold block">إجمالي الشحنات</span>
-                <span className="text-sm font-black text-slate-900">{manifestMetrics.total_shipments}</span>
-              </div>
-              <div className="p-2 bg-white rounded-xl border border-slate-200">
-                <span className="text-2xs text-amber-600 font-bold block">قيد التوصيل (عهدة)</span>
-                <span className="text-sm font-black text-amber-700">{manifestMetrics.in_transit_count}</span>
-              </div>
-              <div className="p-2 bg-white rounded-xl border border-slate-200">
-                <span className="text-2xs text-emerald-600 font-bold block">تم التسليم</span>
-                <span className="text-sm font-black text-emerald-700">{manifestMetrics.delivered_count}</span>
-              </div>
-              <div className="p-2 bg-white rounded-xl border border-slate-200">
-                <span className="text-2xs text-purple-600 font-bold block">مطلوب COD</span>
-                <span className="text-sm font-black text-purple-700 font-mono">
-                  {formatCurrency(manifestMetrics.total_cod_amount)}
-                </span>
-              </div>
-              <div className="p-2 bg-white rounded-xl border border-slate-200">
-                <span className="text-2xs text-indigo-600 font-bold block">أتعاب الشحن</span>
-                <span className="text-sm font-black text-indigo-700 font-mono">
-                  {formatCurrency(manifestMetrics.total_shipping_fees)}
-                </span>
-              </div>
-              <div className="p-2 bg-white rounded-xl border border-slate-200">
-                <span className="text-2xs text-teal-600 font-bold block">تحصيل معلق</span>
-                <span className="text-sm font-black text-teal-700 font-mono">
-                  {formatCurrency(manifestMetrics.pending_cod_amount)}
-                </span>
-              </div>
-            </div>
-
-            {/* Filter and Search Bar */}
-            <div className="p-3 border-b border-slate-100 space-y-2 bg-white">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                {/* Status Filter */}
-                <div className="flex items-center gap-1 overflow-x-auto">
-                  <span className="text-[11px] font-bold text-slate-400 ml-1">الحالة:</span>
-                  {[
-                    { key: 'ALL', label: 'الكل' },
-                    { key: StockTransferStatus.IN_TRANSIT, label: 'قيد التوصيل' },
-                    { key: WcOrderStatus.DELIVERED, label: 'تم التسليم' },
-                    { key: WcOrderStatus.RETURNED, label: 'مرتجع' },
-                  ].map((tab) => (
-                    <button
-                      key={tab.key}
-                      onClick={() => {
-                        setManifestStatusFilter(tab.key);
-                        setManifestPage(1);
-                      }}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-bold whitespace-nowrap cursor-pointer transition ${
-                        manifestStatusFilter === tab.key
-                          ? 'bg-purple-600 text-white shadow-2xs'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                      }`}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Payment Method Filter */}
-                <div className="flex items-center gap-1 overflow-x-auto">
-                  <span className="text-[11px] font-bold text-slate-400 ml-1">الدفع:</span>
-                  {[
-                    { key: 'ALL', label: 'الكل' },
-                    { key: 'COD', label: 'دفع عند الاستلام (COD)' },
-                    { key: 'PREPAID', label: 'مدفوع مسبقاً (أونلاين)' },
-                  ].map((tab) => (
-                    <button
-                      key={tab.key}
-                      onClick={() => {
-                        setManifestPaymentFilter(tab.key as any);
-                        setManifestPage(1);
-                      }}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-bold whitespace-nowrap cursor-pointer transition ${
-                        manifestPaymentFilter === tab.key
-                          ? 'bg-slate-900 text-white shadow-2xs'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                      }`}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Source Filter */}
-                <div className="flex items-center gap-1">
-                  <span className="text-[11px] font-bold text-slate-400 ml-1">المصدر:</span>
-                  {[
-                    { key: 'ALL', label: 'الكل' },
-                    { key: 'WOOCOMMERCE', label: 'ووكومرس' },
-                    { key: 'DIRECT_SALE', label: 'مباشر (POS)' },
-                  ].map((tab) => (
-                    <button
-                      key={tab.key}
-                      onClick={() => {
-                        setManifestSourceFilter(tab.key as any);
-                        setManifestPage(1);
-                      }}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-bold whitespace-nowrap cursor-pointer transition ${
-                        manifestSourceFilter === tab.key
-                          ? 'bg-slate-900 text-white shadow-2xs'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                      }`}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Search Bar */}
-              <div className="relative w-full">
-                <Search className="w-3.5 h-3.5 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="بحث سريع برقم الطلب، اسم العميل، رقم الهاتف، أو رقم البوليصة..."
-                  value={manifestSearch}
-                  onChange={(e) => {
-                    setManifestSearch(e.target.value);
-                    setManifestPage(1);
-                  }}
-                  className="w-full pl-3 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:bg-white transition"
-                />
-              </div>
-            </div>
-
-            {/* Shipments Table */}
-            <div className="flex-1 overflow-y-auto p-3">
-              {isManifestLoading ? (
-                <div className="p-8 text-center text-xs text-slate-400 font-bold">جاري تحميل كشف البوالص...</div>
-              ) : filteredShipments.length === 0 ? (
-                <div className="p-8 text-center text-xs text-slate-400 font-bold">لا توجد شحنات مطابقة للبحث أو الفلتر</div>
-              ) : (
-                <table className="w-full text-right border-collapse text-xs">
-                  <thead>
-                    <tr className="bg-slate-100 text-slate-600 text-[11px] font-black border-b border-slate-200">
-                      <th className="py-2.5 px-3 text-center w-8">م</th>
-                      <th className="py-2.5 px-3">رقم الطلب / المصدر</th>
-                      <th className="py-2.5 px-3">العميل والتوصيل</th>
-                      <th className="py-2.5 px-3">البوليصة</th>
-                      <th className="py-2.5 px-3 text-center">نوع التحصيل ومبلغ COD</th>
-                      <th className="py-2.5 px-3 text-center">أجرة الشحن</th>
-                      <th className="py-2.5 px-3 text-center">إجمالي الطلب</th>
-                      <th className="py-2.5 px-3 text-center">حالة الشحنة</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {filteredShipments.map((s: any, idx: number) => (
-                      <tr key={s.id + s.source} className="hover:bg-slate-50">
-                        <td className="py-2.5 px-3 text-center font-bold font-mono text-slate-400">
-                          {idx + 1}
-                        </td>
-
-                        <td className="py-2.5 px-3">
-                          <span className="font-bold font-mono text-purple-700 block">{s.reference}</span>
-                          <span className="inline-block px-1.5 py-0.5 rounded text-2xs font-bold bg-slate-100 text-slate-600">
-                            {s.source === 'WOOCOMMERCE' ? 'ووكومرس' : 'فاتورة مباشرة'}
-                          </span>
-                          {s.shipped_at && (
-                            <span className="block text-2xs text-slate-400 font-mono mt-0.5">{s.shipped_at}</span>
-                          )}
-                        </td>
-
-                        <td className="py-2.5 px-3">
-                          <span className="font-bold text-slate-900 block">{s.customer_name}</span>
-                          {s.customer_phone && (
-                            <span className="text-[11px] font-mono text-slate-500 block" dir="ltr">{s.customer_phone}</span>
-                          )}
-                          {s.customer_address && (
-                            <span className="text-2xs text-slate-400 block truncate max-w-xs">
-                              {s.city ? `${s.city} - ` : ''}
-                              {s.customer_address}
-                            </span>
-                          )}
-                        </td>
-
-                        <td className="py-2.5 px-3 font-mono text-slate-600">
-                          {s.tracking_number ? (
-                            <span className="px-1.5 py-0.5 bg-purple-50 text-purple-800 rounded text-[11px] font-bold border border-purple-200">
-                              {s.tracking_number}
-                            </span>
-                          ) : (
-                            <span className="text-slate-400 text-2xs">بدون بوليصة</span>
-                          )}
-                        </td>
-
-                        <td className="py-2.5 px-3 text-center">
-                          {s.is_paid_online ? (
-                            <span className="inline-block px-2 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded text-2xs font-black">
-                              مدفوع مسبقاً (تحصيل: 0 ج.م)
-                            </span>
-                          ) : (
-                            <div>
-                              <span className="font-mono font-black text-slate-900 text-sm block">
-                                {formatCurrency(s.cod_amount ?? s.total)}
-                              </span>
-                              <span className="text-2xs text-amber-700 font-bold bg-amber-50 px-1 rounded">
-                                دفع عند الاستلام (COD)
-                              </span>
-                            </div>
-                          )}
-                        </td>
-
-                        <td className="py-2.5 px-3 text-center font-mono font-bold text-indigo-700">
-                          {formatCurrency(s.shipping_cost || 0)}
-                        </td>
-
-                        <td className="py-2.5 px-3 text-center font-mono font-bold text-slate-800">
-                          {formatCurrency(s.total)}
-                        </td>
-
-                        <td className="py-2.5 px-3 text-center">
-                          <span
-                            className={`inline-block px-2 py-0.5 rounded text-2xs font-black border ${
-                              s.status === WcOrderStatus.DELIVERED
-                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                : s.status === WcOrderStatus.RETURNED
-                                ? 'bg-rose-50 text-rose-700 border-rose-200'
-                                : 'bg-amber-50 text-amber-700 border-amber-200'
-                            }`}
-                          >
-                            {s.status_label}
-                          </span>
-                          <span className="block text-2xs text-slate-400 mt-0.5 font-medium">
-                            {s.payment_status_label}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-              <PaginationBar
-                currentPage={manifestPagination?.current_page || manifestPage}
-                lastPage={manifestPagination?.last_page || 1}
-                total={manifestPagination?.total || filteredShipments.length}
-                perPage={manifestPagination?.per_page || 50}
-                onPageChange={(p) => setManifestPage(p)}
-                isFetching={isManifestFetching}
-                itemLabel="شحنة"
-              />
-            </div>
-
-            {/* Modal Footer */}
-            <div className="p-3 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={async () => {
-                    try {
-                      const { exportManifestToExcel } = await import('../utils/excelExport');
-                      exportManifestToExcel(filteredShipments, manifestCourier?.name || 'شركة_الشحن');
-                    } catch (err) {
-                      console.error('Excel load failed:', err);
-                      toast.error('تعذر تحميل أداة Excel، تأكد من الاتصال وحاول مرة أخرى');
-                    }
-                  }}
-                  disabled={filteredShipments.length === 0}
-                  className="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100 inline-flex items-center gap-1.5 cursor-pointer shadow-2xs disabled:opacity-50"
-                  title="تصدير الشحنات إلى ملف Excel"
-                >
-                  <Download className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>تصدير Excel</span>
-                </button>
-
-                <button
-                  onClick={() => window.print()}
-                  className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 rounded-xl text-xs font-bold text-white inline-flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                >
-                  <Printer className="w-3.5 h-3.5" />
-                  <span>طباعة كشف A4 رسمي</span>
-                </button>
-              </div>
-
-              <button
-                onClick={() => setManifestCourier(null)}
-                className="px-4 py-1.5 bg-slate-200 hover:bg-slate-300 rounded-xl text-xs font-bold text-slate-700 cursor-pointer"
-              >
-                إغلاق
-              </button>
-            </div>
-          </div>
+        <>
+          <CourierManifestModal
+            courier={manifestCourier}
+            shipments={filteredShipments}
+            metrics={manifestMetrics}
+            pagination={manifestPagination}
+            isLoading={isManifestLoading}
+            isFetching={isManifestFetching}
+            statusFilter={manifestStatusFilter}
+            onStatusFilterChange={(value) => {
+              setManifestStatusFilter(value);
+              setManifestPage(1);
+            }}
+            paymentFilter={manifestPaymentFilter}
+            onPaymentFilterChange={(value) => {
+              setManifestPaymentFilter(value);
+              setManifestPage(1);
+            }}
+            sourceFilter={manifestSourceFilter}
+            onSourceFilterChange={(value) => {
+              setManifestSourceFilter(value);
+              setManifestPage(1);
+            }}
+            search={manifestSearch}
+            onSearchChange={(value) => {
+              setManifestSearch(value);
+              setManifestPage(1);
+            }}
+            page={manifestPage}
+            onPageChange={setManifestPage}
+            onExportExcel={handleExportManifest}
+            onPrint={() => window.print()}
+            onClose={() => setManifestCourier(null)}
+          />
 
           {/* ========================================================================= */}
           {/* Dedicated Corporate Printable Manifest Sheet (A4 Print-Only)              */}
@@ -998,260 +742,49 @@ export const CouriersPage: React.FC = () => {
               </div>
             </div>
           </div>
-        </div>
+        </>
       )}
 
-      {/* Modal 2: Quick Cash Settlement (تصفية مستحقات شركة الشحن مع الخزينة/البنك) */}
+      {/* Modal 2: Quick Cash Settlement */}
       {settleCourier && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl overflow-hidden border border-slate-200 space-y-4 p-5">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="font-black text-sm text-slate-900 flex items-center gap-2">
-                <Wallet className="w-5 h-5 text-emerald-600" />
-                <span>تصفية مستحقات: {settleCourier.name}</span>
-              </h3>
-              <button onClick={() => setSettleCourier(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Current Balance Summary Box */}
-            <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-slate-500 font-bold">صافي رصيد الدفاتر:</span>
-                <span className={`font-mono font-black text-sm px-2 py-0.5 rounded-lg ${
-                  Number(settleCourier.balance) > 0
-                    ? 'bg-emerald-100 text-emerald-800'
-                    : Number(settleCourier.balance) < 0
-                    ? 'bg-rose-100 text-rose-800'
-                    : 'bg-slate-200 text-slate-700'
-                }`}>
-                  {formatCurrency(settleCourier.balance)}
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-[11px] text-slate-500 border-t border-slate-200 pt-1.5">
-                <span>معلق لدى الشركة (COD):</span>
-                <span className="font-mono font-bold text-blue-700">{formatCurrency(settleCourier.pending_cod_amount || 0)}</span>
-              </div>
-            </div>
-
-            {/* Type Toggle: Receipt (توريد كاش) vs Payment (صرف أتعاب) */}
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setSettleType('RECEIPT')}
-                className={`py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition ${
-                  settleType === 'RECEIPT'
-                    ? 'bg-emerald-50 border-emerald-500 text-emerald-800 shadow-2xs font-black'
-                    : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                }`}
-              >
-                <ArrowDownLeft className="w-4 h-4 text-emerald-600" />
-                <span>قبض وتوريد للخزينة 🟢</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setSettleType('PAYMENT')}
-                className={`py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition ${
-                  settleType === 'PAYMENT'
-                    ? 'bg-rose-50 border-rose-500 text-rose-800 shadow-2xs font-black'
-                    : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                }`}
-              >
-                <ArrowUpRight className="w-4 h-4 text-rose-600" />
-                <span>صرف أتعاب للشركة 🔴</span>
-              </button>
-            </div>
-
-            <p className="text-[11px] text-slate-500 leading-relaxed bg-slate-50 p-2.5 rounded-xl border border-slate-200">
-              {settleType === 'RECEIPT'
-                ? 'استلام صافي التحصيلات من شركة الشحن (COD مخصوماً منها أجور التوصيل) وإيداعها مباشرة بالخزينة/الحساب المالي.'
-                : 'صرف نقدية لشركة الشحن من الخزينة/الحساب المالي لتغطية تكاليف الشحن والتوصيل.'}
-            </p>
-
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">المبلغ المراد تسويته (ج.م) *</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={settleAmount}
-                  onChange={(e) => setSettleAmount(Number(e.target.value))}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono font-bold"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">طريقة الإيداع / الصرف:</label>
-                <select
-                  value={settleMethod}
-                  onChange={(e: any) => setSettleMethod(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold"
-                >
-                  <option value="CASH">نقدي (كاش بالخزينة)</option>
-                  <option value="INSTAPAY">تحويل إنستاباي (InstaPay)</option>
-                  <option value="VODAFONE_CASH">محفظة فودافون كاش ومحافظ</option>
-                  <option value="TRANSFER">تحويل بنكي</option>
-                  <option value="CARD">بطاقة بنكية / فيزا</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">ملاحظات أو رقم التحويل (اختياري):</label>
-                <input
-                  type="text"
-                  placeholder="مثال: تصفية طرود الأسبوع / تحويل إنستاباي..."
-                  value={settleNotes}
-                  onChange={(e) => setSettleNotes(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"
-                />
-              </div>
-            </div>
-
-            {settleError && (
-              <p className="text-xs text-rose-600 bg-rose-50 p-2 rounded-xl border border-rose-200 font-bold">
-                {settleError}
-              </p>
-            )}
-
-            <div className="flex items-center justify-end gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setSettleCourier(null)}
-                className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
-              >
-                إلغاء
-              </button>
-
-              <button
-                type="button"
-                disabled={settlementMutation.isPending || settleAmount <= 0}
-                onClick={() => settlementMutation.mutate()}
-                className="px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl hover:bg-emerald-700 transition cursor-pointer disabled:opacity-50 flex items-center gap-1.5 shadow-xs"
-              >
-                {settlementMutation.isPending && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
-                <span>تأكيد التصفية والتوريد</span>
-              </button>
-            </div>
-          </div>
-        </div>
+        <CourierSettleModal
+          courier={settleCourier}
+          settleType={settleType}
+          onSettleTypeChange={setSettleType}
+          settleAmount={settleAmount}
+          onSettleAmountChange={setSettleAmount}
+          settleMethod={settleMethod}
+          onSettleMethodChange={setSettleMethod}
+          settleNotes={settleNotes}
+          onSettleNotesChange={setSettleNotes}
+          settleError={settleError}
+          isPending={settlementMutation.isPending}
+          onSubmit={() => settlementMutation.mutate()}
+          onClose={() => setSettleCourier(null)}
+        />
       )}
 
       {/* Modal 3: Add / Edit Courier Modal */}
-      {isPartyModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl overflow-hidden border border-slate-200 p-5 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="font-black text-sm text-slate-900 flex items-center gap-2">
-                <Truck className="w-5 h-5 text-purple-600" />
-                <span>{editingCourier ? 'تعديل شركة شحن' : 'إضافة شركة شحن جديدة للدفاتر'}</span>
-              </h3>
-              <button onClick={() => setIsPartyModalOpen(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">اسم شركة الشحن / المندوب *</label>
-                <input
-                  type="text"
-                  value={courierName}
-                  onChange={(e) => setCourierName(e.target.value)}
-                  placeholder="مثال: شركة بوسطة / شركة طيارة / مندوب المحلة"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:bg-white"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">الهاتف الأساسي</label>
-                  <input
-                    type="text"
-                    value={courierPhone}
-                    onChange={(e) => setCourierPhone(e.target.value)}
-                    placeholder="01012345678"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:bg-white font-mono"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">هاتف إضافي</label>
-                  <input
-                    type="text"
-                    value={courierPhone2}
-                    onChange={(e) => setCourierPhone2(e.target.value)}
-                    placeholder="اختياري"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:bg-white font-mono"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">العنوان أو مناطق التغطية</label>
-                <input
-                  type="text"
-                  value={courierAddress}
-                  onChange={(e) => setCourierAddress(e.target.value)}
-                  placeholder="مثال: القاهرة والجيزة / طنطا والمحافظات"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">ملاحظات الحساب أو الاتفاق</label>
-                <input
-                  type="text"
-                  value={courierNotes}
-                  onChange={(e) => setCourierNotes(e.target.value)}
-                  placeholder="مثال: تصفية كاش كل يوم خميس / سعر البوليصة 45 ج"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white"
-                />
-              </div>
-
-              {!editingCourier && (
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">الرصيد الافتتاحي (إن وُجد)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={initialBalance}
-                    onChange={(e) => setInitialBalance(Number(e.target.value))}
-                    placeholder="0.00"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold font-mono"
-                  />
-                </div>
-              )}
-            </div>
-
-            {partyFormError && (
-              <p className="text-xs text-rose-600 bg-rose-50 p-2 rounded-xl border border-rose-200 font-bold">
-                {partyFormError}
-              </p>
-            )}
-
-            <div className="flex items-center justify-end gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setIsPartyModalOpen(false)}
-                className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
-              >
-                إلغاء
-              </button>
-
-              <button
-                type="button"
-                disabled={saveCourierMutation.isPending || !courierName.trim()}
-                onClick={() => saveCourierMutation.mutate()}
-                className="px-4 py-2 bg-purple-600 text-white text-xs font-bold rounded-xl hover:bg-purple-700 transition cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
-              >
-                {saveCourierMutation.isPending && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
-                <span>{editingCourier ? 'حفظ التعديلات' : 'إضافة الشركة'}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <CourierFormModal
+        isOpen={isPartyModalOpen}
+        isEditing={Boolean(editingCourier)}
+        courierName={courierName}
+        onNameChange={setCourierName}
+        courierPhone={courierPhone}
+        onPhoneChange={setCourierPhone}
+        courierPhone2={courierPhone2}
+        onPhone2Change={setCourierPhone2}
+        courierAddress={courierAddress}
+        onAddressChange={setCourierAddress}
+        courierNotes={courierNotes}
+        onNotesChange={setCourierNotes}
+        initialBalance={initialBalance}
+        onInitialBalanceChange={setInitialBalance}
+        error={partyFormError}
+        isPending={saveCourierMutation.isPending}
+        onSubmit={() => saveCourierMutation.mutate()}
+        onClose={() => setIsPartyModalOpen(false)}
+      />
     </div>
   );
 };

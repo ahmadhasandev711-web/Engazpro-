@@ -43,10 +43,6 @@
     "raw": 53,
     "hex": 22
   },
-  "src/presentation/components/mobile/CourierMobileCard.tsx": {
-    "raw": 56,
-    "hex": 0
-  },
   "src/presentation/components/mobile/EmployeeMobileCard.tsx": {
     "raw": 98,
     "hex": 0
@@ -72,7 +68,7 @@
     "hex": 0
   },
   "src/presentation/pages/CouriersPage.tsx": {
-    "raw": 369,
+    "raw": 57,
     "hex": 0
   },
   "src/presentation/pages/EmployeesPage.tsx": {
