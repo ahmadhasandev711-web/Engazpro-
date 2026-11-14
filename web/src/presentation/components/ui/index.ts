@@ -8,3 +8,4 @@ export * from './Tabs';
 export * from './DataTable';
 export * from './PageHeader';
 export * from './EmptyState';
+export * from './StatCard';
