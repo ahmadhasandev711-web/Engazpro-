@@ -1,8 +1,4 @@
 {
-  "src/App.tsx": {
-    "raw": 2,
-    "hex": 0
-  },
   "src/presentation/components/admin/AdminKPICards.tsx": {
     "raw": 41,
     "hex": 0
@@ -33,10 +29,6 @@
   },
   "src/presentation/components/admin/UsersManagementTab.tsx": {
     "raw": 59,
-    "hex": 0
-  },
-  "src/presentation/components/AuthHydrationGate.tsx": {
-    "raw": 3,
     "hex": 0
   },
   "src/presentation/components/employees/PayrollModal.tsx": {
@@ -74,14 +66,6 @@
   "src/presentation/components/shifts/ShiftZReportModal.tsx": {
     "raw": 54,
     "hex": 1
-  },
-  "src/presentation/context/ConfirmContext.tsx": {
-    "raw": 24,
-    "hex": 0
-  },
-  "src/presentation/context/ToastContext.tsx": {
-    "raw": 14,
-    "hex": 0
   },
   "src/presentation/pages/AdminDashboardPage.tsx": {
     "raw": 40,

@@ -12,6 +12,7 @@ import { AppErrorBoundary } from './presentation/components/common/AppErrorBound
 import { UserRole } from '@pos-mandob/shared';
 import { useAuthStore } from './data/store/useAuthStore';
 import { AuthHydrationGate } from './presentation/components/AuthHydrationGate';
+import { LoadingSpinnerView } from './presentation/components/common/LoadingSpinnerView';
 
 // Code-Splitting & Lazy Loading for blazing-fast POS initialization
 const LandingPage = lazy(() => import('./presentation/pages/LandingPage').then((m) => ({ default: m.LandingPage })));
@@ -68,10 +69,7 @@ if (typeof window !== 'undefined') {
 }
 
 const PageLoadingFallback: React.FC = () => (
-  <div className="min-h-[50vh] flex flex-col items-center justify-center p-8 text-center" dir="rtl">
-    <div className="w-10 h-10 border-3 border-emerald-500/20 border-t-emerald-600 rounded-full animate-spin" />
-    <span className="mt-3 text-xs font-bold text-slate-500 font-sans">جاري تحميل الصفحة...</span>
-  </div>
+  <LoadingSpinnerView message="جاري تحميل الصفحة..." />
 );
 
 const RootRouteHandler: React.FC = () => {

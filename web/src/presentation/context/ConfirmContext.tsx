@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
 import { AlertTriangle, AlertCircle, Info } from 'lucide-react';
+import { Button } from '../components/ui';
 
 export interface ConfirmOptions {
   title?: string;
@@ -80,19 +81,22 @@ export const ConfirmProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const typeStyles = {
     danger: {
-      icon: <AlertTriangle className="w-6 h-6 text-rose-600" />,
-      iconBg: 'bg-rose-100 border-rose-200',
-      confirmBtn: 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-600/20',
+      icon: <AlertTriangle className="w-6 h-6 text-bad" />,
+      iconBg: 'bg-bad-soft border-bad/25',
+      variant: 'danger' as const,
+      confirmClass: '',
     },
     warning: {
-      icon: <AlertCircle className="w-6 h-6 text-amber-600" />,
-      iconBg: 'bg-amber-100 border-amber-200',
-      confirmBtn: 'bg-amber-600 hover:bg-amber-700 text-white shadow-amber-600/20',
+      icon: <AlertCircle className="w-6 h-6 text-warn" />,
+      iconBg: 'bg-warn-soft border-warn/25',
+      variant: 'primary' as const,
+      confirmClass: 'bg-warn hover:bg-warn/90 text-on-brand',
     },
     info: {
-      icon: <Info className="w-6 h-6 text-primary-600" />,
-      iconBg: 'bg-primary-100 border-primary-200',
-      confirmBtn: 'bg-primary-600 hover:bg-primary-700 text-white shadow-primary-600/20',
+      icon: <Info className="w-6 h-6 text-brand" />,
+      iconBg: 'bg-brand-soft border-brand/25',
+      variant: 'primary' as const,
+      confirmClass: '',
     },
   }[type];
 
@@ -102,11 +106,11 @@ export const ConfirmProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       {isOpen && (
         <div
-          className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150"
+          className="fixed inset-0 z-50 bg-canvas/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150"
           dir="rtl"
         >
           <div
-            className="bg-white rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden border border-slate-200/80 animate-in zoom-in-95 duration-200 p-6 space-y-4"
+            className="bg-panel text-ink rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden border border-line animate-in zoom-in-95 duration-200 p-6 space-y-4"
             role="dialog"
             aria-modal="true"
           >
@@ -118,32 +122,36 @@ export const ConfirmProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 {typeStyles.icon}
               </div>
               <div className="flex-1 min-w-0 pt-0.5">
-                <h3 className="text-base font-black text-slate-900 leading-tight">
+                <h3 className="text-base font-black text-ink leading-tight">
                   {options.title}
                 </h3>
-                <p className="text-xs text-slate-500 mt-1 leading-relaxed whitespace-pre-line">
+                <p className="text-xs text-muted mt-1 leading-relaxed whitespace-pre-line">
                   {options.message}
                 </p>
               </div>
             </div>
 
             {/* Actions */}
-            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
-              <button
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-line">
+              <Button
                 type="button"
+                variant="secondary"
+                size="md"
                 onClick={() => handleClose(false)}
-                className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-800 hover:bg-slate-100 transition-colors"
+                className="text-xs font-bold"
               >
                 {options.cancelText}
-              </button>
-              <button
+              </Button>
+              <Button
                 ref={confirmButtonRef}
                 type="button"
+                variant={typeStyles.variant}
+                size="md"
                 onClick={() => handleClose(true)}
-                className={`px-5 py-2.5 rounded-xl text-xs font-black shadow-md transition-all active:scale-98 ${typeStyles.confirmBtn}`}
+                className={`text-xs font-black shadow-md ${typeStyles.confirmClass}`}
               >
                 {options.confirmText}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
