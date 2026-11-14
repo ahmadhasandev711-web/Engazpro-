@@ -71,18 +71,6 @@
     "raw": 0,
     "hex": 6
   },
-  "src/presentation/components/pwa/OfflineBanner.tsx": {
-    "raw": 5,
-    "hex": 0
-  },
-  "src/presentation/components/pwa/PWAInstallBanner.tsx": {
-    "raw": 54,
-    "hex": 0
-  },
-  "src/presentation/components/pwa/PWAInstallButton.tsx": {
-    "raw": 28,
-    "hex": 0
-  },
   "src/presentation/components/shifts/ShiftZReportModal.tsx": {
     "raw": 54,
     "hex": 1
