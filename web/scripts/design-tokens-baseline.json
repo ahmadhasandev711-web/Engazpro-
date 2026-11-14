@@ -95,16 +95,8 @@
     "raw": 98,
     "hex": 0
   },
-  "src/presentation/components/mobile/ExpenseMobileCard.tsx": {
-    "raw": 37,
-    "hex": 0
-  },
   "src/presentation/components/mobile/InvoiceMobileCard.tsx": {
     "raw": 44,
-    "hex": 0
-  },
-  "src/presentation/components/mobile/LedgerEntryMobileCard.tsx": {
-    "raw": 15,
     "hex": 0
   },
   "src/presentation/components/mobile/MobileBottomSheet.tsx": {
@@ -125,10 +117,6 @@
   },
   "src/presentation/components/mobile/PartyMobileCard.tsx": {
     "raw": 61,
-    "hex": 0
-  },
-  "src/presentation/components/mobile/PaymentMobileCard.tsx": {
-    "raw": 40,
     "hex": 0
   },
   "src/presentation/components/mobile/RecentActivityMobileCard.tsx": {
