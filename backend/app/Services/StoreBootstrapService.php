@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Enums\BranchType;
+use App\Enums\PartyType;
+use App\Enums\ProductType;
 use App\Enums\TreasuryType;
 use App\Models\Branch;
 use App\Models\Category;
@@ -33,7 +35,7 @@ class StoreBootstrapService
                 'is_main' => true,
             ], [
                 'name' => 'الفرع الرئيسي',
-                'code' => 'MAIN',
+                'code' => TreasuryType::MAIN->value,
                 'type' => BranchType::STORE,
                 'is_active' => true,
             ]);
@@ -72,7 +74,7 @@ class StoreBootstrapService
             // 4. عميل نقدي عام افتراضي لفواتير الكاشير الفورية
             Party::firstOrCreate([
                 'user_id' => $accountId,
-                'type' => 'CUSTOMER',
+                'type' => PartyType::CUSTOMER->value,
                 'name' => 'عميل نقدي عام',
             ], [
                 'phone' => null,
@@ -99,7 +101,7 @@ class StoreBootstrapService
                     $sampleData = [
                         'name' => 'تيشيرت كاجوال قطن (صنف تجريبي)',
                         'code' => 'DEMO-TSHIRT',
-                        'type' => 'VARIABLE',
+                        'type' => ProductType::VARIABLE->value,
                         'purchase_price' => 120,
                         'sale_price' => 220,
                         'unit' => 'قطعة',

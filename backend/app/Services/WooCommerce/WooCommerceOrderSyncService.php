@@ -2,6 +2,7 @@
 
 namespace App\Services\WooCommerce;
 
+use App\Enums\InvoiceType;
 use App\Enums\PartyType;
 use App\Enums\PaymentMethod;
 use App\Enums\WcOrderStatus;
@@ -190,7 +191,7 @@ class WooCommerceOrderSyncService
 
             $lockedOrder->update([
                 'branch_id' => $branchId,
-                'shipping_type' => 'COURIER',
+                'shipping_type' => PartyType::COURIER->value,
                 'courier_party_id' => $courierPartyId,
                 'courier_name' => $courierName ?: $lockedOrder->courier_name,
                 'tracking_number' => $trackingNumber,
@@ -273,7 +274,7 @@ class WooCommerceOrderSyncService
 
             if ($lockedOrder->courier_party_id) {
                 if ($isPaidOnline || $rawCollected->isZeroOrNegative()) {
-                    $paymentMethod = $deliveryData['payment_method'] ?? 'TRANSFER';
+                    $paymentMethod = $deliveryData['payment_method'] ?? PaymentMethod::TRANSFER->value;
                     $actualCollected = Money::zero();
                     $paidAmount = $orderTotal;
                 } else {
@@ -282,7 +283,7 @@ class WooCommerceOrderSyncService
                     $paidAmount = $rawCollected;
                 }
             } else {
-                $paymentMethod = $deliveryData['payment_method'] ?? ($isPaidOnline ? 'TRANSFER' : 'CASH');
+                $paymentMethod = $deliveryData['payment_method'] ?? ($isPaidOnline ? PaymentMethod::TRANSFER->value : PaymentMethod::CASH->value);
                 $actualCollected = $rawCollected;
                 $paidAmount = $rawCollected;
             }
@@ -303,7 +304,7 @@ class WooCommerceOrderSyncService
             $mandobShift = $mandob ? $this->shiftService->getActiveShift($mandob) : null;
 
             $invoiceData = [
-                'type' => 'SALE',
+                'type' => InvoiceType::SALE->value,
                 'party_id' => $lockedOrder->party_id,
                 'courier_party_id' => $lockedOrder->courier_party_id,
                 'branch_id' => $executingBranchId,
@@ -317,7 +318,7 @@ class WooCommerceOrderSyncService
             ];
 
             // إذا كان الطلب مسنداً لمندوب وكان التحصيل نقداً، تُنسب الفاتورة والخزينة لعهدة المندوب
-            if ($mandob && $paymentMethod === 'CASH') {
+            if ($mandob && $paymentMethod === PaymentMethod::CASH->value) {
                 $invoiceData['created_by'] = $mandob->id;
                 if ($mandobTreasury) {
                     $invoiceData['treasury_id'] = $mandobTreasury->id;

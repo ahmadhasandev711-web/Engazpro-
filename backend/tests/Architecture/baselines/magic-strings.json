@@ -6,10 +6,5 @@
     "Services/ProductService.php": 15,
     "Services/ReportService.php": 53,
     "Services/ShiftService.php": 16,
-    "Services/StockService.php": 10,
-    "Services/StockTransferService.php": 4,
-    "Services/StoreBootstrapService.php": 3,
-    "Services/WooCommerce/WooCommerceCustomerSyncService.php": 6,
-    "Services/WooCommerce/WooCommerceOrderSyncService.php": 6,
-    "Services/WooCommerce/WooCommerceProductImportService.php": 8
+    "Services/StockService.php": 10
 }

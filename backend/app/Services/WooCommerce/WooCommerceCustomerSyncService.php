@@ -2,6 +2,7 @@
 
 namespace App\Services\WooCommerce;
 
+use App\Enums\PartyType;
 use App\Models\Party;
 use App\Models\User;
 use App\Models\WooCommerceIntegration;
@@ -40,7 +41,7 @@ class WooCommerceCustomerSyncService
         if (($name === 'عميل أونلاين' || empty($name)) && empty($phone) && empty($email) && empty($wcCustomerId)) {
             return Party::firstOrCreate([
                 'user_id' => $accountId,
-                'type' => 'CUSTOMER',
+                'type' => PartyType::CUSTOMER->value,
                 'name' => 'عميل أونلاين',
             ], [
                 'phone' => null,
@@ -61,7 +62,7 @@ class WooCommerceCustomerSyncService
         $party = null;
         if ($wcCustomerId) {
             $party = Party::where('user_id', $accountId)
-                ->where('type', 'CUSTOMER')
+                ->where('type', PartyType::CUSTOMER->value)
                 ->where('wc_customer_id', $wcCustomerId)
                 ->first();
         }
@@ -69,7 +70,7 @@ class WooCommerceCustomerSyncService
         // 2. Search by normalized phone
         if (!$party && !empty($phone)) {
             $party = Party::where('user_id', $accountId)
-                ->where('type', 'CUSTOMER')
+                ->where('type', PartyType::CUSTOMER->value)
                 ->where(function ($q) use ($phone) {
                     $q->where('phone', $phone)->orWhere('phone2', $phone);
                 })
@@ -79,7 +80,7 @@ class WooCommerceCustomerSyncService
         // 3. Search by email
         if (!$party && !empty($email)) {
             $party = Party::where('user_id', $accountId)
-                ->where('type', 'CUSTOMER')
+                ->where('type', PartyType::CUSTOMER->value)
                 ->where('wc_email', $email)
                 ->first();
         }
@@ -87,7 +88,7 @@ class WooCommerceCustomerSyncService
         // 4. Search by exact customer name if unique
         if (!$party && !empty($name) && $name !== 'عميل أونلاين') {
             $party = Party::where('user_id', $accountId)
-                ->where('type', 'CUSTOMER')
+                ->where('type', PartyType::CUSTOMER->value)
                 ->where('name', $name)
                 ->first();
         }
@@ -116,7 +117,7 @@ class WooCommerceCustomerSyncService
         // 5. Create new customer party
         return Party::create([
             'user_id' => $accountId,
-            'type' => 'CUSTOMER',
+            'type' => PartyType::CUSTOMER->value,
             'name' => $name,
             'phone' => $phone ?: null,
             'wc_email' => $email,
