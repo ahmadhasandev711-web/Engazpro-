@@ -291,4 +291,20 @@ class ShiftService
         $perPage = min((int) ($filters['per_page'] ?? 20), 100);
         return $query->paginate($perPage);
     }
+
+    public function findForShowOrFail(User $user, int $id): Shift
+    {
+        return Shift::withoutGlobalScopes()
+            ->where('user_id', $user->getAccountId())
+            ->with(['creator', 'treasury', 'settledByUser', 'invoices.party', 'payments.party', 'expenseRecords'])
+            ->findOrFail($id);
+    }
+
+    public function findForSettleOrFail(User $user, int $id): Shift
+    {
+        return Shift::withoutGlobalScopes()
+            ->where('user_id', $user->getAccountId())
+            ->with(['treasury', 'creator'])
+            ->findOrFail($id);
+    }
 }

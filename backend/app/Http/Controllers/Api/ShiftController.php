@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\CloseShiftRequest;
+use App\Http\Requests\SettleShiftRequest;
 use App\Http\Resources\ShiftResource;
 use App\Http\Resources\TreasuryTransactionResource;
-use App\Models\Shift;
 use App\Services\ShiftService;
-use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -67,11 +67,9 @@ class ShiftController extends Controller
     /**
      * تقفيل الوردية الحالية وتسجيل الجرد الفعلي للنقدية
      */
-    public function close(Request $request): JsonResponse
+    public function close(CloseShiftRequest $request): JsonResponse
     {
-        $user = $request->user();
-        $activeShift = $this->shiftService->getActiveShift($user);
-
+        $activeShift = $this->shiftService->getActiveShift($request->user());
         if (!$activeShift) {
             return response()->json([
                 'success' => false,
@@ -79,14 +77,7 @@ class ShiftController extends Controller
             ], 422);
         }
 
-        $validated = $request->validate([
-            'actual_cash' => ['required', 'numeric', 'min:0'],
-            'notes' => ['nullable', 'string', 'max:1000'],
-        ], [
-            'actual_cash.required' => 'يرجى إدخال المبلغ الفعلي الموجود في الدرج / العهدة',
-            'actual_cash.min' => 'المبلغ الفعلي لا يمكن أن يكون سالباً',
-        ]);
-
+        $validated = $request->validated();
         $shift = $this->shiftService->closeShift(
             shift: $activeShift,
             actualCash: (float) $validated['actual_cash'],
@@ -125,12 +116,7 @@ class ShiftController extends Controller
     public function show(Request $request, int $id): JsonResponse
     {
         $user = $request->user();
-        $accountId = $user->getAccountId();
-
-        $shift = Shift::withoutGlobalScopes()
-            ->where('user_id', $accountId)
-            ->with(['creator', 'treasury', 'settledByUser', 'invoices.party', 'payments.party', 'expenseRecords'])
-            ->findOrFail($id);
+        $shift = $this->shiftService->findForShowOrFail($user, $id);
 
         if (($user->isMandob() || $user->isCashier()) && $shift->created_by !== $user->id) {
             return response()->json([
@@ -148,10 +134,9 @@ class ShiftController extends Controller
     /**
      * تأكيد استلام النقدية وتوريدها رسمياً للخزينة الرئيسية (صاحب العمل / المدير / المشرف)
      */
-    public function settle(Request $request, int $id): JsonResponse
+    public function settle(SettleShiftRequest $request, int $id): JsonResponse
     {
         $user = $request->user();
-
         if (!$user->canSettleShifts()) {
             return response()->json([
                 'success' => false,
@@ -159,17 +144,8 @@ class ShiftController extends Controller
             ], 403);
         }
 
-        $accountId = $user->getAccountId();
-        $shift = Shift::withoutGlobalScopes()
-            ->where('user_id', $accountId)
-            ->with(['treasury', 'creator'])
-            ->findOrFail($id);
-
-        $validated = $request->validate([
-            'target_treasury_id' => ['nullable', 'integer'],
-            'settlement_notes' => ['nullable', 'string', 'max:500'],
-        ]);
-
+        $shift = $this->shiftService->findForSettleOrFail($user, $id);
+        $validated = $request->validated();
         $transaction = $this->shiftService->settleAndHandover(
             shift: $shift,
             settledBy: $user,

@@ -1,22 +1,10 @@
 {
-    "Api/AuthController.php": {
-        "queries": 5,
-        "try": 0
-    },
-    "Api/EmployeeController.php": {
-        "queries": 4,
-        "try": 0
-    },
     "Api/InvoiceController.php": {
         "queries": 6,
         "try": 0
     },
     "Api/ProductController.php": {
         "queries": 5,
-        "try": 0
-    },
-    "Api/ShiftController.php": {
-        "queries": 4,
         "try": 0
     },
     "Api/StoreInquiryController.php": {
@@ -34,9 +22,5 @@
     "Api/WooCommerceSettingsController.php": {
         "queries": 7,
         "try": 2
-    },
-    "Api/WooCommerceWebhookController.php": {
-        "queries": 4,
-        "try": 0
     }
 }
