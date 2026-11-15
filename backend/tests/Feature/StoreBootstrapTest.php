@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\SubscriptionStatus;
 use App\Models\Branch;
 use App\Models\Category;
 use App\Models\Party;
@@ -35,7 +36,7 @@ class StoreBootstrapTest extends TestCase
 
         // 1. Check Trial Subscription
         $this->assertNotNull($user->subscription);
-        $this->assertEquals('ACTIVE', $user->subscription->status);
+        $this->assertEquals(SubscriptionStatus::ACTIVE, $user->subscription->status);
         $this->assertEquals('TRIAL', $user->subscription->plan);
 
         // 2. Check Main Branch

@@ -121,7 +121,9 @@ class AdminSecurityHardeningTest extends TestCase
         $this->assertTrue($afterFreeze['frozen']);
 
         // Token auth must now fail
+        $this->app['auth']->forgetGuards();
         $this->withToken($merchantToken)->getJson('/api/invoices')->assertUnauthorized();
+        $this->app['auth']->forgetGuards();
         $this->withToken($employeeToken)->getJson('/api/invoices')->assertUnauthorized();
 
         // Audit log recorded

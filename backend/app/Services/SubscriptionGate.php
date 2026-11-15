@@ -40,12 +40,12 @@ class SubscriptionGate
             $frozen = ($owner->status === UserStatus::INACTIVE);
             $subscription = $owner->subscription;
             $active = !$frozen && (bool) ($subscription && $subscription->isActive());
-            $subscriptionStatus = $subscription?->status ?? 'NONE';
+            $subscriptionStatus = $subscription?->status?->value ?? 'NONE';
 
             return [
                 'active' => $active,
                 'frozen' => $frozen,
-                'subscription_status' => (string) $subscriptionStatus,
+                'subscription_status' => $subscriptionStatus,
             ];
         });
     }

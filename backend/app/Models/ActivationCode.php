@@ -14,6 +14,7 @@ class ActivationCode extends Model
         'code',
         'duration_days',
         'plan',
+        'price',
         'is_used',
         'is_revoked',
         'used_by_user_id',
@@ -24,6 +25,7 @@ class ActivationCode extends Model
     ];
 
     protected $casts = [
+        'price' => 'decimal:2',
         'is_used' => 'boolean',
         'is_revoked' => 'boolean',
         'used_at' => 'datetime',

@@ -2,13 +2,16 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\AdminAuditAction;
 use App\Http\Controllers\Controller;
 use App\Models\StoreInquiry;
+use App\Services\AdminAuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class StoreInquiryController extends Controller
 {
+    public function __construct(protected AdminAuditService $auditService) {}
     /**
      * Submit a store creation inquiry from the public landing page.
      */
@@ -96,6 +99,14 @@ class StoreInquiryController extends Controller
 
         $inquiry->update($validated);
 
+        $this->auditService->record(
+            action: AdminAuditAction::INQUIRY_UPDATED,
+            summary: "تحديث طلب متجر ({$inquiry->name}) إلى {$inquiry->status}",
+            metadata: ['inquiry_id' => $inquiry->id, 'status' => $inquiry->status],
+            targetType: StoreInquiry::class,
+            targetId: $inquiry->id,
+        );
+
         return response()->json([
             'success' => true,
             'message' => 'تم تحديث حالة الطلب بنجاح.',
@@ -110,6 +121,14 @@ class StoreInquiryController extends Controller
     {
         $inquiry = StoreInquiry::findOrFail($id);
         $inquiry->delete();
+
+        $this->auditService->record(
+            action: AdminAuditAction::INQUIRY_DELETED,
+            summary: "حذف طلب متجر ({$inquiry->name})",
+            metadata: ['inquiry_id' => $id, 'phone' => $inquiry->phone],
+            targetType: StoreInquiry::class,
+            targetId: $id,
+        );
 
         return response()->json([
             'success' => true,

@@ -56,7 +56,7 @@ class AdminManagementTest extends TestCase
             ],
         ]);
 
-        $expectedRevenue = 1 * (float) config('pos.annual_subscription_price', 500);
+        $expectedRevenue = 1 * (float) config('pos.annual_subscription_price');
         $this->assertEquals($expectedRevenue, $response->json('data.financials.estimated_revenue_egp'));
     }
 

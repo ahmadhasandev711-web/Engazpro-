@@ -1,8 +1,4 @@
 {
-    "Api/AdminController.php": {
-        "queries": 0,
-        "try": 1
-    },
     "Api/AuthController.php": {
         "queries": 5,
         "try": 0
