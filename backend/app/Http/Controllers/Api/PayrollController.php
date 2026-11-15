@@ -87,9 +87,6 @@ class PayrollController extends Controller
 
     protected function findEmployee(Request $request, int $employeeId): User
     {
-        $accountId = $request->user()->getAccountId();
-        return User::where(function ($q) use ($accountId) {
-            $q->where('owner_id', $accountId)->orWhere('id', $accountId);
-        })->findOrFail($employeeId);
+        return $this->payrollService->findEmployeeForAccount($request->user(), $employeeId);
     }
 }

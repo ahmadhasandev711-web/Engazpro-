@@ -60,7 +60,7 @@ class PaymentController extends Controller
      */
     public function show(Request $request, int $id): JsonResponse
     {
-        $payment = Payment::with(['party', 'invoice', 'creator'])->findOrFail($id);
+        $payment = $this->paymentService->findForShowOrFail($id);
 
         Gate::authorize('view', $payment);
 
@@ -75,7 +75,7 @@ class PaymentController extends Controller
      */
     public function destroy(Request $request, int $id): JsonResponse
     {
-        $payment = Payment::findOrFail($id);
+        $payment = $this->paymentService->findOrFail($id);
 
         Gate::authorize('delete', $payment);
 

@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ExpenseCategoryResource;
-use App\Models\ExpenseCategory;
 use App\Services\ExpenseCategoryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -55,7 +54,7 @@ class ExpenseCategoryController extends Controller
     public function update(Request $request, int $id): JsonResponse
     {
         $user = $request->user();
-        $category = ExpenseCategory::where('user_id', $user->getAccountId())->findOrFail($id);
+        $category = $this->categoryService->findForUserOrFail($user, $id);
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100'],
@@ -79,7 +78,7 @@ class ExpenseCategoryController extends Controller
     public function destroy(Request $request, int $id): JsonResponse
     {
         $user = $request->user();
-        $category = ExpenseCategory::where('user_id', $user->getAccountId())->findOrFail($id);
+        $category = $this->categoryService->findForUserOrFail($user, $id);
 
         $this->categoryService->deleteCategory($user, $category);
 

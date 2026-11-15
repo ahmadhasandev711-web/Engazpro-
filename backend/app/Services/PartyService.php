@@ -127,4 +127,18 @@ class PartyService
         $perPage = min((int) ($filters['per_page'] ?? 50), 500);
         return $query->orderBy('name')->paginate($perPage);
     }
+
+    public function findForShowOrFail(int $id): Party
+    {
+        return Party::with(['ledgerEntries' => function ($q) {
+            $q->latest()->limit(50);
+        }])
+            ->withExists(['invoices', 'payments'])
+            ->findOrFail($id);
+    }
+
+    public function findOrFail(int $id): Party
+    {
+        return Party::findOrFail($id);
+    }
 }
