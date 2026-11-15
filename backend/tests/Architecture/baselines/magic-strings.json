@@ -1,5 +1,3 @@
 {
-    "Services/DashboardService.php": 56,
-    "Services/InvoiceService.php": 91,
-    "Services/ReportService.php": 53
+    "Services/InvoiceService.php": 91
 }
