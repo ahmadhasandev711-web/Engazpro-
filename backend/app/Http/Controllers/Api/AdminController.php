@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\ActivationCodeService;
+use App\Services\AdminAuditService;
 use App\Services\AdminStatsService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -14,7 +15,8 @@ class AdminController extends Controller
 {
     public function __construct(
         protected ActivationCodeService $codeService,
-        protected AdminStatsService $statsService
+        protected AdminStatsService $statsService,
+        protected AdminAuditService $auditService,
     ) {}
 
     /**
@@ -174,6 +176,21 @@ class AdminController extends Controller
         return response()->json([
             'success' => true,
             'message' => "تم تغيير كلمة المرور للمستخدم ({$user->name}) بنجاح.",
+        ]);
+    }
+
+    /**
+     * استعراض سجل التدقيق السيادي
+     */
+    public function auditLogs(Request $request): JsonResponse
+    {
+        $action = $request->query('action');
+        $search = $request->query('search');
+        $perPage = (int) $request->query('per_page', 30);
+
+        return response()->json([
+            'success' => true,
+            'data' => $this->auditService->getLogsPaginated($action, $search, $perPage),
         ]);
     }
 }
