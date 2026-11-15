@@ -1,6 +1,36 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../data/api/client';
-import { AdminStatsData, LicenseKey, User } from '@pos-mandob/shared';
+import { AdminAuditLogItem, AdminStatsData, LicenseKey, User } from '@pos-mandob/shared';
+
+export interface AdminPaginatedResponse<T> {
+  items: T[];
+  current_page: number;
+  last_page: number;
+  per_page: number;
+  total: number;
+}
+
+function normalizePaginated<T>(raw: any): AdminPaginatedResponse<T> {
+  if (Array.isArray(raw)) {
+    return {
+      items: raw,
+      current_page: 1,
+      last_page: 1,
+      per_page: raw.length || 30,
+      total: raw.length,
+    };
+  }
+  const items = Array.isArray(raw?.data) ? raw.data : [];
+  return {
+    items,
+    current_page: Number(raw?.current_page ?? 1),
+    last_page: Number(raw?.last_page ?? 1),
+    per_page: Number(raw?.per_page ?? 30),
+    total: Number(raw?.total ?? items.length),
+  };
+}
+
+export type AdminUserStatusFilter = 'all' | 'active' | 'inactive' | 'expired' | 'trial';
 
 export const useAdminStats = () => {
   return useQuery<AdminStatsData>({
@@ -12,33 +42,58 @@ export const useAdminStats = () => {
   });
 };
 
-export const useAdminLicenses = (statusFilter: 'all' | 'unused' | 'used' | 'revoked', search: string) => {
-  return useQuery<LicenseKey[]>({
-    queryKey: ['admin-licenses', statusFilter, search],
+export const useAdminLicenses = (
+  statusFilter: 'all' | 'unused' | 'used' | 'revoked',
+  search: string,
+  page: number = 1
+) => {
+  return useQuery<AdminPaginatedResponse<LicenseKey>>({
+    queryKey: ['admin-licenses', statusFilter, search, page],
     queryFn: async () => {
       const res = await apiClient.get('/admin/licenses', {
         params: {
           status: statusFilter,
           search: search || undefined,
+          page,
         },
       });
-      const data = res.data.data;
-      return Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
+      return normalizePaginated<LicenseKey>(res.data.data);
     },
   });
 };
 
-export const useAdminUsers = (search: string) => {
-  return useQuery<User[]>({
-    queryKey: ['admin-users', search],
+export const useAdminUsers = (
+  statusFilter: AdminUserStatusFilter,
+  search: string,
+  page: number = 1
+) => {
+  return useQuery<AdminPaginatedResponse<User>>({
+    queryKey: ['admin-users', statusFilter, search, page],
     queryFn: async () => {
       const res = await apiClient.get('/admin/users', {
         params: {
+          status: statusFilter !== 'all' ? statusFilter : undefined,
           search: search || undefined,
+          page,
         },
       });
-      const data = res.data.data;
-      return Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
+      return normalizePaginated<User>(res.data.data);
+    },
+  });
+};
+
+export const useAdminAuditLogs = (actionFilter: string, search: string, page: number = 1) => {
+  return useQuery<AdminPaginatedResponse<AdminAuditLogItem>>({
+    queryKey: ['admin-audit-logs', actionFilter, search, page],
+    queryFn: async () => {
+      const res = await apiClient.get('/admin/audit-logs', {
+        params: {
+          action: actionFilter !== 'all' ? actionFilter : undefined,
+          search: search || undefined,
+          page,
+        },
+      });
+      return normalizePaginated<AdminAuditLogItem>(res.data.data);
     },
   });
 };
@@ -47,13 +102,19 @@ export const useGenerateLicenses = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (payload: { count: number; duration_days: number; notes: string }) => {
+    mutationFn: async (payload: {
+      count: number;
+      duration_days: number;
+      notes: string;
+      price?: number | null;
+    }) => {
       const res = await apiClient.post('/admin/licenses/generate', payload);
       return res.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-licenses'] });
       queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-audit-logs'] });
     },
   });
 };
@@ -69,6 +130,7 @@ export const useRevokeLicense = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-licenses'] });
       queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-audit-logs'] });
     },
   });
 };
@@ -77,9 +139,38 @@ export const useExtendUserSubscription = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ userId, days, notes }: { userId: number; days: number; notes: string }) => {
+    mutationFn: async ({
+      userId,
+      days,
+      notes,
+      price,
+    }: {
+      userId: number;
+      days: number;
+      notes: string;
+      price?: number | null;
+    }) => {
       const res = await apiClient.post(`/admin/users/${userId}/extend`, {
         days,
+        notes,
+        price: price ?? undefined,
+      });
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-audit-logs'] });
+    },
+  });
+};
+
+export const useRevokeSubscription = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ userId, notes }: { userId: number; notes?: string }) => {
+      const res = await apiClient.post(`/admin/users/${userId}/revoke-subscription`, {
         notes,
       });
       return res.data;
@@ -87,6 +178,22 @@ export const useExtendUserSubscription = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
       queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-audit-logs'] });
+    },
+  });
+};
+
+export const useForceLogoutStore = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (userId: number) => {
+      const res = await apiClient.post(`/admin/users/${userId}/force-logout`);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-audit-logs'] });
     },
   });
 };
@@ -102,6 +209,7 @@ export const useToggleUserStatus = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
       queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-audit-logs'] });
     },
   });
 };
@@ -118,6 +226,7 @@ export const useResetUserPassword = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-audit-logs'] });
     },
   });
 };
@@ -219,6 +328,7 @@ export const useUpdateInquiryStatus = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-inquiries'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-audit-logs'] });
     },
   });
 };
@@ -233,7 +343,7 @@ export const useDeleteInquiry = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-inquiries'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-audit-logs'] });
     },
   });
 };
-

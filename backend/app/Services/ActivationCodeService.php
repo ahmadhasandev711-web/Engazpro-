@@ -2,9 +2,12 @@
 
 namespace App\Services;
 
+use App\Enums\AdminAuditAction;
+use App\Enums\SubscriptionStatus;
 use App\Models\ActivationCode;
 use App\Models\Subscription;
 use App\Models\User;
+use App\Support\Money;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -12,147 +15,140 @@ use Illuminate\Validation\ValidationException;
 
 class ActivationCodeService
 {
-    /**
-     * توليد كود تفعيل أو مجموعة أكواد تفعيل جديدة فريدة
-     */
-    public function generateCodes(int $count = 1, int $durationDays = 365, string $plan = 'BASIC', ?string $notes = null): array
+    public function __construct(protected AdminAuditService $auditService) {}
+
+    public function generateCodes(int $count = 1, int $durationDays = 365, string $plan = 'BASIC', ?string $notes = null, ?float $price = null): array
     {
         $batchRef = 'BATCH-' . strtoupper(Str::random(6));
-        $generated = [];
+        $resolvedPrice = $price !== null ? Money::of($price)->getAmount() : null;
 
-        for ($i = 0; $i < $count; $i++) {
-            $code = 'KASH-' . strtoupper(Str::random(4)) . '-' . strtoupper(Str::random(4)) . '-' . strtoupper(Str::random(4));
-
-            $activationCode = ActivationCode::create([
-                'code' => $code,
-                'duration_days' => $durationDays,
-                'plan' => $plan,
-                'is_used' => false,
-                'batch_reference' => $batchRef,
-                'notes' => $notes,
-            ]);
-
-            $generated[] = $activationCode;
-        }
-
-        return $generated;
+        return DB::transaction(function () use ($count, $durationDays, $plan, $notes, $batchRef, $resolvedPrice) {
+            $generated = [];
+            for ($i = 0; $i < $count; $i++) {
+                $generated[] = ActivationCode::create([
+                    'code' => 'KASH-' . strtoupper(Str::random(4)) . '-' . strtoupper(Str::random(4)) . '-' . strtoupper(Str::random(4)),
+                    'duration_days' => $durationDays,
+                    'plan' => $plan,
+                    'price' => $resolvedPrice,
+                    'is_used' => false,
+                    'batch_reference' => $batchRef,
+                    'notes' => $notes,
+                ]);
+            }
+            $this->auditService->record(AdminAuditAction::LICENSES_GENERATED, "توليد {$count} كود تفعيل ({$plan}) لمدة {$durationDays} يوم", null, compact('count', 'durationDays', 'plan', 'resolvedPrice', 'batchRef'));
+            return $generated;
+        });
     }
 
-    /**
-     * تفعيل كود الاشتراك ذرياً لمستخدم
-     */
     public function redeemCode(User $user, string $rawCode): array
     {
         $normalizedCode = strtoupper(trim($rawCode));
 
-        return DB::transaction(function () use ($user, $normalizedCode) {
-            if (!$user->isOwner()) {
-                throw ValidationException::withMessages([
-                    'code' => ['عذراً، تفعيل رخص الاشتراك متاح فقط لمالك المنشأة (Owner). يرجى مراجعة إدارة المتجر.'],
-                ]);
-            }
-
-            /** @var ActivationCode|null $activationCode */
-            $activationCode = ActivationCode::where('code', $normalizedCode)
-                ->lockForUpdate()
-                ->first();
-
-            if (!$activationCode) {
-                throw ValidationException::withMessages([
-                    'code' => ['كود التفعيل المدخل غير صحيح. يُرجى التأكد من كتابة الكود بشكل دقيق.'],
-                ]);
-            }
-
-            if ($activationCode->is_revoked) {
-                throw ValidationException::withMessages([
-                    'code' => ['كود التفعيل هذا تم إلغاؤه وإبطاله من قبل إدارة المنصة وغير صالح للاستخدام.'],
-                ]);
-            }
-
-            if ($activationCode->is_used) {
-                throw ValidationException::withMessages([
-                    'code' => ['عذراً، كود التفعيل هذا تم استخدامه مسبقاً وغير صالح للاستخدام مجدداً.'],
-                ]);
-            }
-
-            // حرق الكود وتسجيل بيانات المستخدم وتاريخ التفعيل
-            $activationCode->update([
-                'is_used' => true,
-                'used_by_user_id' => $user->id,
-                'used_at' => now(),
-            ]);
-
-            // تمديد أو إنشاء اشتراك المستخدم على حساب المتجر الرئيسي
-            $accountId = $user->getAccountId();
-            $subscription = Subscription::firstOrNew(['user_id' => $accountId]);
-
-            $currentEnd = ($subscription->exists && $subscription->end_date)
-                ? Carbon::parse($subscription->end_date)
-                : now();
-
-            $baseDate = $currentEnd->isFuture() ? $currentEnd : now();
-            $newEndDate = $baseDate->copy()->addDays($activationCode->duration_days);
-
-            $subscription->fill([
-                'status' => 'ACTIVE',
-                'plan' => $activationCode->plan ?? 'BASIC',
-                'start_date' => $subscription->start_date ?? now()->toDateString(),
-                'end_date' => $newEndDate->toDateString(),
-                'price' => (float) config('pos.annual_subscription_price', 500.00),
-                'notes' => 'تفعيل عبر كود: ' . $activationCode->code,
-            ]);
-
-            $subscription->save();
-
-            $daysRemaining = max(0, (int) ceil(now()->diffInDays($newEndDate, false)));
-
-            return [
-                'success' => true,
-                'message' => "تم تفعيل اشتراكك بنجاح لمدة {$activationCode->duration_days} يوم! 🎉",
-                'code' => $activationCode->code,
-                'duration_days' => $activationCode->duration_days,
-                'end_date' => $newEndDate->toDateString(),
-                'days_remaining' => $daysRemaining,
-                'subscription' => [
-                    'id' => $subscription->id,
-                    'status' => $subscription->status,
-                    'plan' => $subscription->plan,
-                    'end_date' => Carbon::parse($subscription->end_date)->format('Y-m-d'),
-                    'days_remaining' => $daysRemaining,
-                ],
-            ];
-        });
+        try {
+            return DB::transaction(fn () => $this->performRedeem($user, $normalizedCode));
+        } catch (ValidationException $e) {
+            $this->auditService->recordRedeemFailure($user, $normalizedCode, 'redeem_validation_failed');
+            throw $e;
+        }
     }
 
-    /**
-     * إلغاء وحرق كود تفعيل غير مستخدم
-     */
     public function revokeCode(int $codeId): ActivationCode
     {
         return DB::transaction(function () use ($codeId) {
             /** @var ActivationCode $activationCode */
-            $activationCode = ActivationCode::where('id', $codeId)
-                ->lockForUpdate()
-                ->firstOrFail();
+            $activationCode = ActivationCode::where('id', $codeId)->lockForUpdate()->firstOrFail();
 
             if ($activationCode->is_used) {
-                throw ValidationException::withMessages([
-                    'code' => ['لا يمكن إلغاء كود تفعيل تم استخدامه مسبقاً من قبل عميل.'],
-                ]);
+                throw ValidationException::withMessages(['code' => ['لا يمكن إلغاء كود تفعيل تم استخدامه مسبقاً من قبل عميل.']]);
             }
 
             if ($activationCode->is_revoked) {
-                throw ValidationException::withMessages([
-                    'code' => ['كود التفعيل هذا ملغي بالفعل مسبقاً.'],
-                ]);
+                throw ValidationException::withMessages(['code' => ['كود التفعيل هذا ملغي بالفعل مسبقاً.']]);
             }
 
-            $activationCode->update([
-                'is_revoked' => true,
-                'revoked_at' => now(),
-            ]);
+            $activationCode->update(['is_revoked' => true, 'revoked_at' => now()]);
+
+            $this->auditService->record(
+                action: AdminAuditAction::LICENSE_REVOKED,
+                summary: "إلغاء وحرق كود التفعيل ({$activationCode->code})",
+                metadata: ['license_id' => $activationCode->id, 'code' => $activationCode->code],
+                targetType: ActivationCode::class,
+                targetId: $activationCode->id,
+            );
 
             return $activationCode;
         });
+    }
+
+    private function performRedeem(User $user, string $normalizedCode): array
+    {
+        if (!$user->isOwner()) {
+            throw ValidationException::withMessages([
+                'code' => ['عذراً، تفعيل رخص الاشتراك متاح فقط لمالك المنشأة (Owner). يرجى مراجعة إدارة المتجر.'],
+            ]);
+        }
+
+        $activationCode = $this->findRedeemableCode($normalizedCode);
+        $activationCode->update(['is_used' => true, 'used_by_user_id' => $user->id, 'used_at' => now()]);
+
+        [$subscription, $newEndDate] = $this->applyCodeSubscription($user, $activationCode);
+        $daysRemaining = max(0, (int) ceil(now()->diffInDays($newEndDate, false)));
+
+        return [
+            'success' => true,
+            'message' => "تم تفعيل اشتراكك بنجاح لمدة {$activationCode->duration_days} يوم! 🎉",
+            'code' => $activationCode->code,
+            'duration_days' => $activationCode->duration_days,
+            'end_date' => $newEndDate->toDateString(),
+            'days_remaining' => $daysRemaining,
+            'subscription' => [
+                'id' => $subscription->id,
+                'status' => $subscription->status instanceof SubscriptionStatus ? $subscription->status->value : $subscription->status,
+                'plan' => $subscription->plan,
+                'end_date' => Carbon::parse($subscription->end_date)->format('Y-m-d'),
+                'days_remaining' => $daysRemaining,
+            ],
+        ];
+    }
+
+    private function findRedeemableCode(string $normalizedCode): ActivationCode
+    {
+        $activationCode = ActivationCode::where('code', $normalizedCode)->lockForUpdate()->first();
+
+        if (!$activationCode) {
+            throw ValidationException::withMessages(['code' => ['كود التفعيل المدخل غير صحيح. يُرجى التأكد من كتابة الكود بشكل دقيق.']]);
+        }
+        if ($activationCode->is_revoked) {
+            throw ValidationException::withMessages(['code' => ['كود التفعيل هذا تم إلغاؤه وإبطاله من قبل إدارة المنصة وغير صالح للاستخدام.']]);
+        }
+        if ($activationCode->is_used) {
+            throw ValidationException::withMessages(['code' => ['عذراً، كود التفعيل هذا تم استخدامه مسبقاً وغير صالح للاستخدام مجدداً.']]);
+        }
+
+        return $activationCode;
+    }
+
+    /**
+     * @return array{0: Subscription, 1: Carbon}
+     */
+    private function applyCodeSubscription(User $user, ActivationCode $activationCode): array
+    {
+        $subscription = Subscription::firstOrNew(['user_id' => $user->getAccountId()]);
+        $currentEnd = ($subscription->exists && $subscription->end_date) ? Carbon::parse($subscription->end_date) : now();
+        $baseDate = $currentEnd->isFuture() ? $currentEnd : now();
+        $newEndDate = $baseDate->copy()->addDays($activationCode->duration_days);
+        $priceMoney = Money::of($activationCode->price ?? config('pos.annual_subscription_price'));
+
+        $subscription->fill([
+            'status' => SubscriptionStatus::ACTIVE,
+            'plan' => $activationCode->plan ?? 'BASIC',
+            'start_date' => $subscription->start_date ?? now()->toDateString(),
+            'end_date' => $newEndDate->toDateString(),
+            'price' => $priceMoney->getAmount(),
+            'notes' => 'تفعيل عبر كود: ' . $activationCode->code,
+        ]);
+        $subscription->save();
+
+        return [$subscription, $newEndDate];
     }
 }

@@ -20,6 +20,8 @@ return [
         'api_per_minute' => (int) env('POS_API_PER_MINUTE', 300),
         'login_per_minute' => (int) env('POS_LOGIN_PER_MINUTE', 5),
         'webhook_per_minute' => (int) env('POS_WEBHOOK_PER_MINUTE', 600),
+        'activation_per_minute' => (int) env('POS_ACTIVATION_PER_MINUTE', 6),
+        'admin_per_minute' => (int) env('POS_ADMIN_PER_MINUTE', 60),
     ],
 
     'queues' => [
@@ -33,6 +35,7 @@ return [
         'email' => env('ADMIN_EMAIL'),
         'phone' => env('ADMIN_PHONE'),
         'password' => env('ADMIN_PASSWORD'),
+        'allowed_ips' => array_values(array_filter(array_map('trim', explode(',', (string) env('ADMIN_ALLOWED_IPS', ''))))),
     ],
 
     // فارغ افتراضياً. مسار الصيانة يرفض أي طلب ما لم يُضبط هذا السر في البيئة.

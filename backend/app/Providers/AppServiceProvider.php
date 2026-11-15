@@ -138,5 +138,20 @@ class AppServiceProvider extends ServiceProvider
             $key = !empty($kid) ? 'anoofy_kid_' . $kid : $request->ip();
             return Limit::perMinute((int) config('pos.anoofy.rate_limit_per_minute', 120))->by($key);
         });
+
+        $this->registerAdminAndActivationRateLimiters();
+    }
+
+    private function registerAdminAndActivationRateLimiters(): void
+    {
+        RateLimiter::for('activation', function (Request $request) {
+            $key = ($request->user()?->id ?? 'guest') . '|' . $request->ip();
+            return Limit::perMinute((int) config('pos.security.activation_per_minute', 6))->by($key);
+        });
+
+        RateLimiter::for('admin', function (Request $request) {
+            $key = ($request->user()?->id ?? 'guest') . '|' . $request->ip();
+            return Limit::perMinute((int) config('pos.security.admin_per_minute', 60))->by($key);
+        });
     }
 }

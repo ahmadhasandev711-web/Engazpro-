@@ -1,36 +1,4 @@
 {
-  "src/presentation/components/admin/AdminKPICards.tsx": {
-    "raw": 41,
-    "hex": 0
-  },
-  "src/presentation/components/admin/ExtendSubscriptionModal.tsx": {
-    "raw": 27,
-    "hex": 0
-  },
-  "src/presentation/components/admin/LicenseGeneratorTab.tsx": {
-    "raw": 95,
-    "hex": 0
-  },
-  "src/presentation/components/admin/ResetPasswordModal.tsx": {
-    "raw": 33,
-    "hex": 0
-  },
-  "src/presentation/components/admin/StoreInquiriesTab.tsx": {
-    "raw": 101,
-    "hex": 0
-  },
-  "src/presentation/components/admin/StoreStaffModal.tsx": {
-    "raw": 56,
-    "hex": 0
-  },
-  "src/presentation/components/admin/SystemHealthTab.tsx": {
-    "raw": 23,
-    "hex": 0
-  },
-  "src/presentation/components/admin/UsersManagementTab.tsx": {
-    "raw": 59,
-    "hex": 0
-  },
   "src/presentation/components/landing/StoreDesignSection.tsx": {
     "raw": 133,
     "hex": 29
@@ -54,10 +22,6 @@
   "src/presentation/components/shifts/ShiftZReportModal.tsx": {
     "raw": 54,
     "hex": 1
-  },
-  "src/presentation/pages/AdminDashboardPage.tsx": {
-    "raw": 40,
-    "hex": 0
   },
   "src/presentation/pages/CouriersPage.tsx": {
     "raw": 57,

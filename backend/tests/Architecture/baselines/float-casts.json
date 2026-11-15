@@ -16,8 +16,6 @@
     "Http/Resources/TreasuryTransactionResource.php": 3,
     "Models/ProductBatch.php": 4,
     "Models/ProductVariant.php": 3,
-    "Services/ActivationCodeService.php": 1,
-    "Services/AdminStatsService.php": 1,
     "Services/ImportService.php": 21,
     "Services/InvoiceService.php": 6,
     "Services/PartyService.php": 2,

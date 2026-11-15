@@ -2,9 +2,15 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\UserStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\ExtendSubscriptionRequest;
+use App\Http\Requests\Admin\GenerateLicensesRequest;
+use App\Http\Requests\Admin\ResetMerchantPasswordRequest;
+use App\Http\Requests\Admin\RevokeSubscriptionRequest;
 use App\Models\User;
 use App\Services\ActivationCodeService;
+use App\Services\AdminAuditService;
 use App\Services\AdminStatsService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -14,12 +20,10 @@ class AdminController extends Controller
 {
     public function __construct(
         protected ActivationCodeService $codeService,
-        protected AdminStatsService $statsService
+        protected AdminStatsService $statsService,
+        protected AdminAuditService $auditService,
     ) {}
 
-    /**
-     * إحصائيات عامة للمنصة (KPIs)
-     */
     public function stats(): JsonResponse
     {
         return response()->json([
@@ -28,40 +32,27 @@ class AdminController extends Controller
         ]);
     }
 
-    /**
-     * استعراض كافة أكواد التفعيل
-     */
     public function licenses(Request $request): JsonResponse
     {
-        $status = $request->query('status'); // 'all', 'unused', 'used'
-        $search = $request->query('search');
+        $licenses = $this->statsService->getLicensesPaginated(
+            $request->query('status'),
+            $request->query('search'),
+            (int) $request->query('per_page', 50),
+        );
 
-        $licenses = $this->statsService->getLicensesPaginated($status, $search, 50);
-
-        return response()->json([
-            'success' => true,
-            'data' => $licenses,
-        ]);
+        return response()->json(['success' => true, 'data' => $licenses]);
     }
 
-    /**
-     * توليد دفعة أكواد تفعيل جديدة
-     */
-    public function generateLicenses(Request $request): JsonResponse
+    public function generateLicenses(GenerateLicensesRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'count' => ['required', 'integer', 'min:1', 'max:100'],
-            'duration_days' => ['required', 'integer', 'min:1', 'max:3650'],
-            'plan' => ['nullable', 'string'],
-            'notes' => ['nullable', 'string', 'max:255'],
-        ]);
-
+        $validated = $request->validated();
         $count = (int) $validated['count'];
         $days = (int) $validated['duration_days'];
         $plan = $validated['plan'] ?? 'BASIC';
+        $price = isset($validated['price']) ? (string) $validated['price'] : null;
         $notes = $validated['notes'] ?? ('دفعة مولدة من لوحة الأدمن - ' . Carbon::now()->toDateTimeString());
 
-        $codes = $this->codeService->generateCodes($count, $days, $plan, $notes);
+        $codes = $this->codeService->generateCodes($count, $days, $plan, $notes, $price !== null ? $price + 0 : null);
 
         return response()->json([
             'success' => true,
@@ -70,36 +61,25 @@ class AdminController extends Controller
         ], 201);
     }
 
-    /**
-     * استعراض قائمة المشتركين والتجار
-     */
     public function users(Request $request): JsonResponse
     {
-        $search = $request->query('search');
-        $status = $request->query('status'); // 'all', 'active', 'expired', 'trial'
+        $users = $this->statsService->getUsersPaginated(
+            $request->query('status'),
+            $request->query('search'),
+            (int) $request->query('per_page', 30),
+        );
 
-        $users = $this->statsService->getUsersPaginated($status, $search, 30);
-
-        return response()->json([
-            'success' => true,
-            'data' => $users,
-        ]);
+        return response()->json(['success' => true, 'data' => $users]);
     }
 
-    /**
-     * تمديد اشتراك مستخدم يدوياً
-     */
-    public function extendUser(Request $request, User $user): JsonResponse
+    public function extendUser(ExtendSubscriptionRequest $request, User $user): JsonResponse
     {
-        $validated = $request->validate([
-            'days' => ['required', 'integer', 'min:1', 'max:3650'],
-            'notes' => ['nullable', 'string', 'max:255'],
-        ]);
-
+        $validated = $request->validated();
         $days = (int) $validated['days'];
         $notes = $validated['notes'] ?? 'تمديد يدوي من لوحة تحكم المدير العام';
+        $price = isset($validated['price']) ? $validated['price'] + 0 : null;
 
-        $subscription = $this->statsService->extendUserSubscription($user, $days, $notes);
+        $subscription = $this->statsService->extendUserSubscription($user, $days, $notes, $price);
 
         return response()->json([
             'success' => true,
@@ -108,44 +88,48 @@ class AdminController extends Controller
         ]);
     }
 
-    /**
-     * تجميد / تنشيط حساب تاجر (Kill-Switch)
-     */
-    public function toggleStatus(User $user): JsonResponse
+    public function revokeSubscription(RevokeSubscriptionRequest $request, User $user): JsonResponse
     {
-        try {
-            $updatedUser = $this->statsService->toggleUserStatus($user);
-            $actionWord = $updatedUser->status?->value === 'ACTIVE' ? 'تنشيط' : 'تجميد';
-
-            return response()->json([
-                'success' => true,
-                'message' => "تم {$actionWord} حساب المتجر ({$user->name}) بنجاح.",
-                'data' => $updatedUser,
-            ]);
-        } catch (\DomainException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 422);
-        }
-    }
-
-    /**
-     * فحص فريق العمل وفروع التاجر
-     */
-    public function storeStaff(User $user): JsonResponse
-    {
-        $data = $this->statsService->getStoreStaff($user);
+        $subscription = $this->statsService->revokeUserSubscription($user, $request->validated('notes'));
 
         return response()->json([
             'success' => true,
-            'data' => $data,
+            'message' => "تم إنهاء وإلغاء اشتراك المتجر ({$user->name}) بنجاح.",
+            'data' => $subscription,
         ]);
     }
 
-    /**
-     * إلغاء وحرق كود تفعيل غير مستخدم
-     */
+    public function forceLogout(User $user): JsonResponse
+    {
+        $revokedCount = $this->statsService->forceLogoutStore($user);
+
+        return response()->json([
+            'success' => true,
+            'message' => "تم طرد جميع جلسات المتجر ({$user->name}) وموظفيه ({$revokedCount} جلسة).",
+            'data' => ['revoked_tokens_count' => $revokedCount],
+        ]);
+    }
+
+    public function toggleStatus(User $user): JsonResponse
+    {
+        $updatedUser = $this->statsService->toggleUserStatus($user);
+        $actionWord = $updatedUser->status === UserStatus::ACTIVE ? 'تنشيط' : 'تجميد';
+
+        return response()->json([
+            'success' => true,
+            'message' => "تم {$actionWord} حساب المتجر ({$user->name}) بنجاح.",
+            'data' => $updatedUser,
+        ]);
+    }
+
+    public function storeStaff(User $user): JsonResponse
+    {
+        return response()->json([
+            'success' => true,
+            'data' => $this->statsService->getStoreStaff($user),
+        ]);
+    }
+
     public function revokeLicense(int $id): JsonResponse
     {
         $code = $this->codeService->revokeCode($id);
@@ -157,23 +141,24 @@ class AdminController extends Controller
         ]);
     }
 
-    /**
-     * إعادة تعيين كلمة مرور تاجر/مستخدم من لوحة تحكم الأدمن
-     */
-    public function resetPassword(Request $request, User $user): JsonResponse
+    public function resetPassword(ResetMerchantPasswordRequest $request, User $user): JsonResponse
     {
-        $validated = $request->validate([
-            'password' => ['required', 'string', 'min:6'],
-        ], [
-            'password.required' => 'كلمة المرور الجديدة مطلوبة',
-            'password.min' => 'كلمة المرور يجب ألا تقل عن 6 أحرف أو أرقام',
-        ]);
-
-        $this->statsService->resetUserPassword($user, $validated['password']);
+        $this->statsService->resetUserPassword($user, $request->validated('password'));
 
         return response()->json([
             'success' => true,
             'message' => "تم تغيير كلمة المرور للمستخدم ({$user->name}) بنجاح.",
         ]);
+    }
+
+    public function auditLogs(Request $request): JsonResponse
+    {
+        $logs = $this->auditService->getLogsPaginated(
+            $request->query('action'),
+            $request->query('search'),
+            (int) $request->query('per_page', 30),
+        );
+
+        return response()->json(['success' => true, 'data' => $logs]);
     }
 }

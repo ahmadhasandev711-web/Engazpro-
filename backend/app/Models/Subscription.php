@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\SubscriptionStatus;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -24,6 +25,7 @@ class Subscription extends Model
     protected $casts = [
         'start_date' => 'date',
         'end_date' => 'date',
+        'status' => SubscriptionStatus::class,
         'price' => 'decimal:2',
     ];
 
@@ -39,7 +41,7 @@ class Subscription extends Model
 
     public function isActive(): bool
     {
-        if ($this->status !== 'ACTIVE') {
+        if ($this->status !== SubscriptionStatus::ACTIVE) {
             return false;
         }
 

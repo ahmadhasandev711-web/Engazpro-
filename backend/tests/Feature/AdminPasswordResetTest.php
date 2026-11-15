@@ -42,9 +42,9 @@ class AdminPasswordResetTest extends TestCase
         ]);
         $resForbidden->assertForbidden();
 
-        // 2. Short password fails
+        // 2. Short password (< 8 chars) fails
         $resShort = $this->actingAs($admin)->postJson("/api/admin/users/{$merchant->id}/reset-password", [
-            'password' => '123',
+            'password' => '1234567',
         ]);
         $resShort->assertUnprocessable();
 

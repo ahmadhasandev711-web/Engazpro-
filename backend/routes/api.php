@@ -59,7 +59,8 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     // Subscription Management
     Route::prefix('subscription')->group(function () {
         Route::get('/status', [SubscriptionController::class, 'status']);
-        Route::post('/activate-code', [SubscriptionController::class, 'activateCode']);
+        Route::post('/activate-code', [SubscriptionController::class, 'activateCode'])
+            ->middleware('throttle:activation');
     });
 
     // Operational Routes (Must have Active Subscription)
@@ -200,12 +201,15 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     });
 
     // Super Admin Routes (حماية مشددة للمدير العام فقط)
-    Route::prefix('admin')->middleware('admin')->group(function () {
+    Route::prefix('admin')->middleware(['admin', 'throttle:admin'])->group(function () {
         Route::get('/stats', [\App\Http\Controllers\Api\AdminController::class, 'stats']);
+        Route::get('/audit-logs', [\App\Http\Controllers\Api\AdminController::class, 'auditLogs']);
         Route::get('/licenses', [\App\Http\Controllers\Api\AdminController::class, 'licenses']);
         Route::post('/licenses/generate', [\App\Http\Controllers\Api\AdminController::class, 'generateLicenses']);
         Route::get('/users', [\App\Http\Controllers\Api\AdminController::class, 'users']);
         Route::post('/users/{user}/extend', [\App\Http\Controllers\Api\AdminController::class, 'extendUser']);
+        Route::post('/users/{user}/revoke-subscription', [\App\Http\Controllers\Api\AdminController::class, 'revokeSubscription']);
+        Route::post('/users/{user}/force-logout', [\App\Http\Controllers\Api\AdminController::class, 'forceLogout']);
         Route::post('/users/{user}/toggle-status', [\App\Http\Controllers\Api\AdminController::class, 'toggleStatus']);
         Route::post('/users/{user}/reset-password', [\App\Http\Controllers\Api\AdminController::class, 'resetPassword']);
         Route::get('/users/{user}/staff', [\App\Http\Controllers\Api\AdminController::class, 'storeStaff']);
