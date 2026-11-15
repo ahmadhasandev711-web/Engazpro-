@@ -316,32 +316,32 @@ export const ReportsPage: React.FC = () => {
       {/* ========================================================================= */}
       {/* Dedicated Official Corporate Printable Report (Rendered only during print) */}
       {/* ========================================================================= */}
-      <div className="print-only printable-area font-sans text-slate-900 leading-relaxed text-xs" dir="rtl">
+      <div className="print-only printable-area font-sans bg-paper text-paper-ink leading-relaxed text-xs" dir="rtl">
         {/* Official Store Letterhead */}
-        <div className="border-b-2 border-slate-900 pb-4 mb-5 flex items-start justify-between">
+        <div className="border-b-2 border-paper-ink pb-4 mb-5 flex items-start justify-between">
           <div className="space-y-1">
-            <h1 className="text-xl font-black text-slate-900">{storeName}</h1>
-            <p className="text-xs font-bold text-slate-600">نظام إنجاز برو لإدارة نقاط البيع والمخازن</p>
-            {storePhone && <p className="text-[11px] text-slate-500 font-mono">الهاتف: {storePhone}</p>}
-            {storeAddress && <p className="text-[11px] text-slate-500">{storeAddress}</p>}
+            <h1 className="text-xl font-black text-paper-ink">{storeName}</h1>
+            <p className="text-xs font-bold text-paper-muted">نظام إنجاز برو لإدارة نقاط البيع والمخازن</p>
+            {storePhone && <p className="text-[11px] text-paper-muted font-mono">الهاتف: {storePhone}</p>}
+            {storeAddress && <p className="text-[11px] text-paper-muted">{storeAddress}</p>}
           </div>
 
           <div className="text-left space-y-1">
-            <div className="inline-block bg-slate-900 text-white font-black px-3 py-1 rounded text-sm">
+            <div className="inline-block bg-paper-ink text-paper font-black px-3 py-1 rounded text-sm">
               {activeTab === 'profit' && 'تقرير الأرباح والخسائر الشامل'}
               {activeTab === 'sales' && 'كشف حركة المبيعات والمتحصلات'}
               {activeTab === 'cash-flow' && `كشف حركة ${cashFlowPrintData?.treasuryName || getTreasuryLabel(selectedTreasury)}`}
               {activeTab === 'stock' && 'تقرير جرد وتقييم المخزون'}
             </div>
             {activeTab !== 'stock' && (
-              <p className="text-[11px] text-slate-600 font-mono">
+              <p className="text-[11px] text-paper-muted font-mono">
                 الفترة: {getPresetLabel(preset)} ({fromDate || 'البداية'} إلى {toDate || 'اليوم'})
               </p>
             )}
-            <p className="text-2xs text-slate-400 font-mono">
+            <p className="text-2xs text-paper-muted font-mono">
               تاريخ الطباعة: {new Date().toLocaleDateString('ar-EG')} - {new Date().toLocaleTimeString('ar-EG')}
             </p>
-            <p className="text-2xs text-slate-400">
+            <p className="text-2xs text-paper-muted">
               المستخدم: {user?.name}
             </p>
           </div>
@@ -350,56 +350,56 @@ export const ReportsPage: React.FC = () => {
         {/* Tab 1: Profit Report Table */}
         {activeTab === 'profit' && profitData && (
           <div className="space-y-4">
-            <h2 className="text-sm font-black text-slate-900 border-b border-slate-300 pb-1">
+            <h2 className="text-sm font-black text-paper-ink border-b border-paper-line pb-1">
               قائمة الدخل والأرباح التشغيلية
             </h2>
-            <table className="w-full text-right border-collapse border border-slate-300 text-xs">
+            <table className="w-full text-right border-collapse border border-paper-line text-xs">
               <tbody>
-                <tr className="border-b border-slate-200 bg-slate-50 font-bold">
-                  <td className="p-2 border border-slate-300">إجمالي المبيعات (Gross Sales)</td>
-                  <td className="p-2 border border-slate-300 font-mono text-left font-black">{formatCurrency(profitData.sales?.gross_sales || 0)}</td>
+                <tr className="border-b border-paper-line bg-paper-soft font-bold">
+                  <td className="p-2 border border-paper-line">إجمالي المبيعات (Gross Sales)</td>
+                  <td className="p-2 border border-paper-line font-mono text-left font-black">{formatCurrency(profitData.sales?.gross_sales || 0)}</td>
                 </tr>
-                <tr className="border-b border-slate-200">
-                  <td className="p-2 border border-slate-300 pr-6">├─ مبيعات أصناف المنتجات</td>
-                  <td className="p-2 border border-slate-300 font-mono text-left">{formatCurrency((profitData.sales as any)?.product_sales ?? profitData.sales?.gross_sales ?? 0)}</td>
+                <tr className="border-b border-paper-line">
+                  <td className="p-2 border border-paper-line pr-6">├─ مبيعات أصناف المنتجات</td>
+                  <td className="p-2 border border-paper-line font-mono text-left">{formatCurrency((profitData.sales as any)?.product_sales ?? profitData.sales?.gross_sales ?? 0)}</td>
                 </tr>
-                <tr className="border-b border-slate-200">
-                  <td className="p-2 border border-slate-300 pr-6">├─ إيرادات خدمات الشحن والتوصيل المحصلة</td>
-                  <td className="p-2 border border-slate-300 font-mono text-left font-bold text-indigo-700">{formatCurrency((profitData.sales as any)?.shipping_revenue ?? 0)}</td>
+                <tr className="border-b border-paper-line">
+                  <td className="p-2 border border-paper-line pr-6">├─ إيرادات خدمات الشحن والتوصيل المحصلة</td>
+                  <td className="p-2 border border-paper-line font-mono text-left font-bold text-brand">{formatCurrency((profitData.sales as any)?.shipping_revenue ?? 0)}</td>
                 </tr>
                 {Number((profitData.sales as any)?.discounts || 0) > 0 && (
-                  <tr className="border-b border-slate-200 text-rose-700">
-                    <td className="p-2 border border-slate-300 pr-6">├─ الخصومات الممنوحة على الفواتير (-)</td>
-                    <td className="p-2 border border-slate-300 font-mono text-left">-{formatCurrency((profitData.sales as any)?.discounts || 0)}</td>
+                  <tr className="border-b border-paper-line text-bad">
+                    <td className="p-2 border border-paper-line pr-6">├─ الخصومات الممنوحة على الفواتير (-)</td>
+                    <td className="p-2 border border-paper-line font-mono text-left">-{formatCurrency((profitData.sales as any)?.discounts || 0)}</td>
                   </tr>
                 )}
-                <tr className="border-b border-slate-200 text-rose-700">
-                  <td className="p-2 border border-slate-300 pr-6">└─ مرتجعات المبيعات (-)</td>
-                  <td className="p-2 border border-slate-300 font-mono text-left">-{formatCurrency(profitData.sales?.sale_returns || 0)}</td>
+                <tr className="border-b border-paper-line text-bad">
+                  <td className="p-2 border border-paper-line pr-6">└─ مرتجعات المبيعات (-)</td>
+                  <td className="p-2 border border-paper-line font-mono text-left">-{formatCurrency(profitData.sales?.sale_returns || 0)}</td>
                 </tr>
-                <tr className="border-b border-slate-300 bg-slate-100 font-black">
-                  <td className="p-2 border border-slate-300">= صافي المبيعات (Net Sales)</td>
-                  <td className="p-2 border border-slate-300 font-mono text-left text-sm">{formatCurrency(profitData.sales?.net_sales || 0)}</td>
+                <tr className="border-b border-paper-line bg-paper-soft font-black">
+                  <td className="p-2 border border-paper-line">= صافي المبيعات (Net Sales)</td>
+                  <td className="p-2 border border-paper-line font-mono text-left text-sm">{formatCurrency(profitData.sales?.net_sales || 0)}</td>
                 </tr>
-                <tr className="border-b border-slate-200 text-rose-800">
-                  <td className="p-2 border border-slate-300">تكلفة البضاعة المباعة (COGS) (-)</td>
-                  <td className="p-2 border border-slate-300 font-mono text-left font-bold">-{formatCurrency(profitData.cogs?.net_cogs || 0)}</td>
+                <tr className="border-b border-paper-line text-bad">
+                  <td className="p-2 border border-paper-line">تكلفة البضاعة المباعة (COGS) (-)</td>
+                  <td className="p-2 border border-paper-line font-mono text-left font-bold">-{formatCurrency(profitData.cogs?.net_cogs || 0)}</td>
                 </tr>
-                <tr className="border-b border-slate-300 bg-slate-100 font-black">
-                  <td className="p-2 border border-slate-300">= إجمالي الربح التجاري (Gross Profit)</td>
-                  <td className="p-2 border border-slate-300 font-mono text-left text-sm text-emerald-800">{formatCurrency(profitData.profit?.gross_profit || 0)}</td>
+                <tr className="border-b border-paper-line bg-paper-soft font-black">
+                  <td className="p-2 border border-paper-line">= إجمالي الربح التجاري (Gross Profit)</td>
+                  <td className="p-2 border border-paper-line font-mono text-left text-sm text-ok">{formatCurrency(profitData.profit?.gross_profit || 0)}</td>
                 </tr>
-                <tr className="border-b border-slate-200 text-rose-800">
-                  <td className="p-2 border border-slate-300">إجمالي المصروفات التشغيلية واليومية (-)</td>
-                  <td className="p-2 border border-slate-300 font-mono text-left font-bold">-{formatCurrency(profitData.profit?.total_expenses || 0)}</td>
+                <tr className="border-b border-paper-line text-bad">
+                  <td className="p-2 border border-paper-line">إجمالي المصروفات التشغيلية واليومية (-)</td>
+                  <td className="p-2 border border-paper-line font-mono text-left font-bold">-{formatCurrency(profitData.profit?.total_expenses || 0)}</td>
                 </tr>
-                <tr className="border-2 border-slate-900 bg-slate-100 font-black text-sm">
-                  <td className="p-2.5 border border-slate-900">= صافي الربح الفعلي النهائي (Net Profit)</td>
-                  <td className="p-2.5 border border-slate-900 font-mono text-left text-base text-emerald-800">{formatCurrency(profitData.profit?.net_profit || 0)}</td>
+                <tr className="border-2 border-paper-ink bg-paper-soft font-black text-sm">
+                  <td className="p-2.5 border border-paper-ink">= صافي الربح الفعلي النهائي (Net Profit)</td>
+                  <td className="p-2.5 border border-paper-ink font-mono text-left text-base text-ok">{formatCurrency(profitData.profit?.net_profit || 0)}</td>
                 </tr>
-                <tr className="border-b border-slate-300 font-bold bg-slate-50">
-                  <td className="p-2 border border-slate-300">نسبة هامش صافي الربح (%)</td>
-                  <td className="p-2 border border-slate-300 font-mono text-left font-bold">{profitData.profit?.profit_margin || 0}%</td>
+                <tr className="border-b border-paper-line font-bold bg-paper-soft">
+                  <td className="p-2 border border-paper-line">نسبة هامش صافي الربح (%)</td>
+                  <td className="p-2 border border-paper-line font-mono text-left font-bold">{profitData.profit?.profit_margin || 0}%</td>
                 </tr>
               </tbody>
             </table>
@@ -409,40 +409,40 @@ export const ReportsPage: React.FC = () => {
         {/* Tab 2: Sales Report Table */}
         {activeTab === 'sales' && salesData && (
           <div className="space-y-4">
-            <h2 className="text-sm font-black text-slate-900 border-b border-slate-300 pb-1">
+            <h2 className="text-sm font-black text-paper-ink border-b border-paper-line pb-1">
               ملخص إحصائيات المبيعات والمتحصلات
             </h2>
             <div className="grid grid-cols-3 gap-2 text-center mb-3">
-              <div className="border border-slate-300 p-2 bg-slate-50">
-                <span className="text-2xs text-slate-500 block">إجمالي المبيعات:</span>
+              <div className="border border-paper-line p-2 bg-paper-soft">
+                <span className="text-2xs text-paper-muted block">إجمالي المبيعات:</span>
                 <span className="font-mono font-black text-xs">{formatCurrency(salesData.total_sales || 0)}</span>
               </div>
-              <div className="border border-slate-300 p-2 bg-slate-50">
-                <span className="text-2xs text-slate-500 block">المبالغ المحصلة (مدفوعة):</span>
-                <span className="font-mono font-black text-xs text-emerald-700">{formatCurrency(salesData.sales_paid || 0)}</span>
+              <div className="border border-paper-line p-2 bg-paper-soft">
+                <span className="text-2xs text-paper-muted block">المبالغ المحصلة (مدفوعة):</span>
+                <span className="font-mono font-black text-xs text-ok">{formatCurrency(salesData.sales_paid || 0)}</span>
               </div>
-              <div className="border border-slate-300 p-2 bg-slate-50">
-                <span className="text-2xs text-slate-500 block">المتبقي (آجل):</span>
-                <span className="font-mono font-black text-xs text-rose-700">{formatCurrency(salesData.sales_remaining || 0)}</span>
+              <div className="border border-paper-line p-2 bg-paper-soft">
+                <span className="text-2xs text-paper-muted block">المتبقي (آجل):</span>
+                <span className="font-mono font-black text-xs text-bad">{formatCurrency(salesData.sales_remaining || 0)}</span>
               </div>
             </div>
 
             {/* Payment breakdown */}
             {salesData.payment_methods && salesData.payment_methods.length > 0 && (
               <div>
-                <h3 className="text-xs font-black text-slate-700 mb-1">تفصيل طرق الدفع:</h3>
-                <table className="w-full text-right border border-slate-300 text-xs">
-                  <thead className="bg-slate-100 font-bold">
+                <h3 className="text-xs font-black text-paper-ink mb-1">تفصيل طرق الدفع:</h3>
+                <table className="w-full text-right border border-paper-line text-xs">
+                  <thead className="bg-paper-soft font-bold">
                     <tr>
-                      <th className="p-2 border border-slate-300">طريقة الدفع</th>
-                      <th className="p-2 border border-slate-300 text-center">عدد الفواتير</th>
-                      <th className="p-2 border border-slate-300 text-left">إجمالي المبلغ</th>
+                      <th className="p-2 border border-paper-line">طريقة الدفع</th>
+                      <th className="p-2 border border-paper-line text-center">عدد الفواتير</th>
+                      <th className="p-2 border border-paper-line text-left">إجمالي المبلغ</th>
                     </tr>
                   </thead>
                   <tbody>
                     {salesData.payment_methods.map((pm: any, idx: number) => (
-                      <tr key={idx} className="border-b border-slate-200">
-                        <td className="p-2 border border-slate-300 font-bold">
+                      <tr key={idx} className="border-b border-paper-line">
+                        <td className="p-2 border border-paper-line font-bold">
                           {pm.payment_method === 'CASH' ? 'نقدي (كاش)' :
                            pm.payment_method === 'CARD' ? 'بطاقة / فيزا' :
                            pm.payment_method === 'INSTAPAY' ? 'إنستاباي (InstaPay)' :
@@ -450,8 +450,8 @@ export const ReportsPage: React.FC = () => {
                            pm.payment_method === 'SPLIT' ? 'دفع مجزأ' :
                            pm.payment_method === 'TRANSFER' ? 'تحويل بنكي' : 'آجل على الحساب'}
                         </td>
-                        <td className="p-2 border border-slate-300 text-center font-mono">{pm.count}</td>
-                        <td className="p-2 border border-slate-300 text-left font-mono font-bold">{formatCurrency(pm.total_amount)}</td>
+                        <td className="p-2 border border-paper-line text-center font-mono">{pm.count}</td>
+                        <td className="p-2 border border-paper-line text-left font-mono font-bold">{formatCurrency(pm.total_amount)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -464,32 +464,32 @@ export const ReportsPage: React.FC = () => {
         {/* Tab 3: Cash Flow Report Table */}
         {activeTab === 'cash-flow' && cashFlowData && (
           <div className="space-y-4">
-            <div className="border-b border-slate-300 pb-1.5 flex items-center justify-between">
+            <div className="border-b border-paper-line pb-1.5 flex items-center justify-between">
               <div>
-                <h2 className="text-sm font-black text-slate-900">
+                <h2 className="text-sm font-black text-paper-ink">
                   كشف حركة الحصيلة والخزينة — {cashFlowPrintData?.treasuryName || getTreasuryLabel(selectedTreasury)}
                 </h2>
-                <div className="flex items-center gap-2 text-2xs text-slate-600 font-medium mt-0.5">
+                <div className="flex items-center gap-2 text-2xs text-paper-muted font-medium mt-0.5">
                   <span>الفترة: {getPresetLabel(preset)} ({fromDate || 'البداية'} إلى {toDate || 'اليوم'})</span>
                   {cashFlowPrintData?.flowFilter && cashFlowPrintData.flowFilter !== 'ALL' && (
-                    <span className="font-bold text-slate-800">
+                    <span className="font-bold text-paper-ink">
                       • التصفية: {cashFlowPrintData.flowFilter === 'INFLOW' ? 'الوارد فقط (+)' : 'الصادر فقط (-)'}
                     </span>
                   )}
                   {cashFlowPrintData?.movementCategory && (
-                    <span className="font-bold text-slate-800">
+                    <span className="font-bold text-paper-ink">
                       • تصنيف الحركة: {cashFlowPrintData.movementCategory}
                     </span>
                   )}
                   {cashFlowPrintData?.search && (
-                    <span className="font-bold text-slate-800">
+                    <span className="font-bold text-paper-ink">
                       • نتيجة البحث عن: "{cashFlowPrintData.search}"
                     </span>
                   )}
                 </div>
               </div>
               {cashFlowPrintData?.transactions && (
-                <span className="text-[11px] font-bold font-mono bg-slate-100 border border-slate-300 px-2 py-0.5 rounded">
+                <span className="text-[11px] font-bold font-mono bg-paper-soft border border-paper-line px-2 py-0.5 rounded">
                   {cashFlowPrintData.transactions.length} حركة مسجلة
                 </span>
               )}
@@ -497,9 +497,9 @@ export const ReportsPage: React.FC = () => {
 
             {/* Summary statistics boxes */}
             <div className="grid grid-cols-3 gap-2 text-center mb-3">
-              <div className="border border-slate-300 p-2 bg-slate-50">
-                <span className="text-2xs text-slate-600 font-bold block">إجمالي المقبوضات (الوارد +):</span>
-                <span className="font-mono font-black text-xs text-emerald-800">
+              <div className="border border-paper-line p-2 bg-paper-soft">
+                <span className="text-2xs text-paper-muted font-bold block">إجمالي المقبوضات (الوارد +):</span>
+                <span className="font-mono font-black text-xs text-ok">
                   {formatCurrency(
                     cashFlowPrintData?.transactions && cashFlowPrintData.transactions.length > 0
                       ? cashFlowPrintData.transactions
@@ -509,9 +509,9 @@ export const ReportsPage: React.FC = () => {
                   )}
                 </span>
               </div>
-              <div className="border border-slate-300 p-2 bg-slate-50">
-                <span className="text-2xs text-slate-600 font-bold block">إجمالي المدفوعات (الصادر -):</span>
-                <span className="font-mono font-black text-xs text-rose-800">
+              <div className="border border-paper-line p-2 bg-paper-soft">
+                <span className="text-2xs text-paper-muted font-bold block">إجمالي المدفوعات (الصادر -):</span>
+                <span className="font-mono font-black text-xs text-bad">
                   {formatCurrency(
                     cashFlowPrintData?.transactions && cashFlowPrintData.transactions.length > 0
                       ? cashFlowPrintData.transactions
@@ -521,9 +521,9 @@ export const ReportsPage: React.FC = () => {
                   )}
                 </span>
               </div>
-              <div className="border border-slate-300 p-2 bg-slate-100">
-                <span className="text-2xs text-slate-700 font-bold block">صافي رصيد الحركة:</span>
-                <span className="font-mono font-black text-xs text-slate-900">
+              <div className="border border-paper-line p-2 bg-paper-soft">
+                <span className="text-2xs text-paper-ink font-bold block">صافي رصيد الحركة:</span>
+                <span className="font-mono font-black text-xs text-paper-ink">
                   {formatCurrency(
                     cashFlowPrintData?.transactions && cashFlowPrintData.transactions.length > 0
                       ? cashFlowPrintData.transactions.reduce(
@@ -538,37 +538,37 @@ export const ReportsPage: React.FC = () => {
 
             {/* Detailed Transactions Log Table */}
             {cashFlowPrintData?.transactions && cashFlowPrintData.transactions.length > 0 ? (
-              <table className="w-full text-right border-collapse border border-slate-300 text-2xs">
+              <table className="w-full text-right border-collapse border border-paper-line text-2xs">
                 <thead>
-                  <tr className="bg-slate-100 font-bold border-b border-slate-300 text-slate-800">
-                    <th className="p-1.5 border border-slate-300 text-center w-7">م</th>
-                    <th className="p-1.5 border border-slate-300 whitespace-nowrap">التاريخ والوقت</th>
-                    <th className="p-1.5 border border-slate-300 whitespace-nowrap">المرجع / الرقم</th>
-                    <th className="p-1.5 border border-slate-300 whitespace-nowrap">نوع الحركة</th>
-                    <th className="p-1.5 border border-slate-300">الطرف / العميل / المورد</th>
-                    <th className="p-1.5 border border-slate-300 whitespace-nowrap">المسؤول</th>
-                    <th className="p-1.5 border border-slate-300">البيان / ملاحظات</th>
-                    <th className="p-1.5 border border-slate-300 text-left whitespace-nowrap">المبلغ</th>
+                  <tr className="bg-paper-soft font-bold border-b border-paper-line text-paper-ink">
+                    <th className="p-1.5 border border-paper-line text-center w-7">م</th>
+                    <th className="p-1.5 border border-paper-line whitespace-nowrap">التاريخ والوقت</th>
+                    <th className="p-1.5 border border-paper-line whitespace-nowrap">المرجع / الرقم</th>
+                    <th className="p-1.5 border border-paper-line whitespace-nowrap">نوع الحركة</th>
+                    <th className="p-1.5 border border-paper-line">الطرف / العميل / المورد</th>
+                    <th className="p-1.5 border border-paper-line whitespace-nowrap">المسؤول</th>
+                    <th className="p-1.5 border border-paper-line">البيان / ملاحظات</th>
+                    <th className="p-1.5 border border-paper-line text-left whitespace-nowrap">المبلغ</th>
                   </tr>
                 </thead>
                 <tbody>
                   {cashFlowPrintData.transactions.map((tx, idx) => {
                     const isInflow = tx.flow_direction === 'IN';
                     return (
-                      <tr key={idx} className="border-b border-slate-200 break-inside-avoid">
-                        <td className="p-1.5 border border-slate-300 text-center font-mono">{idx + 1}</td>
-                        <td className="p-1.5 border border-slate-300 whitespace-nowrap font-mono">{tx.date}</td>
-                        <td className="p-1.5 border border-slate-300 whitespace-nowrap font-mono font-bold">
+                      <tr key={idx} className="border-b border-paper-line break-inside-avoid">
+                        <td className="p-1.5 border border-paper-line text-center font-mono">{idx + 1}</td>
+                        <td className="p-1.5 border border-paper-line whitespace-nowrap font-mono">{tx.date}</td>
+                        <td className="p-1.5 border border-paper-line whitespace-nowrap font-mono font-bold">
                           {tx.reference_number || `#${tx.id}`}
                         </td>
-                        <td className="p-1.5 border border-slate-300 whitespace-nowrap font-bold">
+                        <td className="p-1.5 border border-paper-line whitespace-nowrap font-bold">
                           {tx.category_label}
                         </td>
-                        <td className="p-1.5 border border-slate-300">{tx.party_name || '—'}</td>
-                        <td className="p-1.5 border border-slate-300 whitespace-nowrap">{tx.creator_name || '—'}</td>
-                        <td className="p-1.5 border border-slate-300 text-slate-600">{tx.notes || '—'}</td>
-                        <td className="p-1.5 border border-slate-300 text-left font-mono font-bold whitespace-nowrap">
-                          <span className={isInflow ? 'text-emerald-800' : 'text-rose-800'}>
+                        <td className="p-1.5 border border-paper-line">{tx.party_name || '—'}</td>
+                        <td className="p-1.5 border border-paper-line whitespace-nowrap">{tx.creator_name || '—'}</td>
+                        <td className="p-1.5 border border-paper-line text-paper-muted">{tx.notes || '—'}</td>
+                        <td className="p-1.5 border border-paper-line text-left font-mono font-bold whitespace-nowrap">
+                          <span className={isInflow ? 'text-ok' : 'text-bad'}>
                             {isInflow ? '+' : '-'} {formatCurrency(tx.amount)}
                           </span>
                         </td>
@@ -577,11 +577,11 @@ export const ReportsPage: React.FC = () => {
                   })}
                 </tbody>
                 <tfoot>
-                  <tr className="bg-slate-100 font-bold border-t-2 border-slate-400">
-                    <td colSpan={7} className="p-2 border border-slate-300 text-right font-black">
+                  <tr className="bg-paper-soft font-bold border-t-2 border-paper-ink">
+                    <td colSpan={7} className="p-2 border border-paper-line text-right font-black">
                       إجمالي صافي حركة العمليات أعلاه:
                     </td>
-                    <td className="p-2 border border-slate-300 text-left font-mono font-black text-xs whitespace-nowrap">
+                    <td className="p-2 border border-paper-line text-left font-mono font-black text-xs whitespace-nowrap">
                       {formatCurrency(
                         cashFlowPrintData.transactions.reduce(
                           (sum, t) => sum + (t.flow_direction === 'IN' ? Number(t.amount || 0) : -Number(t.amount || 0)),
@@ -593,7 +593,7 @@ export const ReportsPage: React.FC = () => {
                 </tfoot>
               </table>
             ) : (
-              <p className="text-center py-4 text-slate-500 font-medium border border-dashed border-slate-300 rounded">
+              <p className="text-center py-4 text-paper-muted font-medium border border-dashed border-paper-line rounded">
                 لا توجد حركات مسجلة تطابق هذه الخزينة والفترة المحددة.
               </p>
             )}
@@ -603,44 +603,44 @@ export const ReportsPage: React.FC = () => {
         {/* Tab 4: Stock Report Table */}
         {activeTab === 'stock' && stockData && (
           <div className="space-y-4">
-            <h2 className="text-sm font-black text-slate-900 border-b border-slate-300 pb-1">
+            <h2 className="text-sm font-black text-paper-ink border-b border-paper-line pb-1">
               تقرير تقييم وجرد المخزون
             </h2>
             <div className="grid grid-cols-3 gap-2 text-center mb-3">
-              <div className="border border-slate-300 p-2 bg-slate-50">
-                <span className="text-2xs text-slate-500 block">إجمالي عدد القطع:</span>
+              <div className="border border-paper-line p-2 bg-paper-soft">
+                <span className="text-2xs text-paper-muted block">إجمالي عدد القطع:</span>
                 <span className="font-mono font-black text-xs">{stockData.summary?.total_quantity || 0}</span>
               </div>
-              <div className="border border-slate-300 p-2 bg-slate-50">
-                <span className="text-2xs text-slate-500 block">تقييم المخزون بسعر الشراء (التكلفة):</span>
-                <span className="font-mono font-black text-xs text-slate-800">{formatCurrency(stockData.summary?.total_cost_value || 0)}</span>
+              <div className="border border-paper-line p-2 bg-paper-soft">
+                <span className="text-2xs text-paper-muted block">تقييم المخزون بسعر الشراء (التكلفة):</span>
+                <span className="font-mono font-black text-xs text-paper-ink">{formatCurrency(stockData.summary?.total_cost_value || 0)}</span>
               </div>
-              <div className="border border-slate-300 p-2 bg-slate-50">
-                <span className="text-2xs text-slate-500 block">تقييم المخزون بسعر البيع (القطاعي):</span>
-                <span className="font-mono font-black text-xs text-emerald-800">{formatCurrency(stockData.summary?.total_retail_value || 0)}</span>
+              <div className="border border-paper-line p-2 bg-paper-soft">
+                <span className="text-2xs text-paper-muted block">تقييم المخزون بسعر البيع (القطاعي):</span>
+                <span className="font-mono font-black text-xs text-ok">{formatCurrency(stockData.summary?.total_retail_value || 0)}</span>
               </div>
             </div>
 
             {/* Products Table */}
             {stockData.products && stockData.products.length > 0 && (
-              <table className="w-full text-right border border-slate-300 text-[11px]">
-                <thead className="bg-slate-100 font-bold">
+              <table className="w-full text-right border border-paper-line text-[11px]">
+                <thead className="bg-paper-soft font-bold">
                   <tr>
-                    <th className="p-1.5 border border-slate-300">م</th>
-                    <th className="p-1.5 border border-slate-300">الصنف</th>
-                    <th className="p-1.5 border border-slate-300 text-center">الرصيد</th>
-                    <th className="p-1.5 border border-slate-300 text-left">سعر البيع</th>
-                    <th className="p-1.5 border border-slate-300 text-left">قيمة البيع</th>
+                    <th className="p-1.5 border border-paper-line">م</th>
+                    <th className="p-1.5 border border-paper-line">الصنف</th>
+                    <th className="p-1.5 border border-paper-line text-center">الرصيد</th>
+                    <th className="p-1.5 border border-paper-line text-left">سعر البيع</th>
+                    <th className="p-1.5 border border-paper-line text-left">قيمة البيع</th>
                   </tr>
                 </thead>
                 <tbody>
                   {stockData.products.map((p: any, idx: number) => (
-                    <tr key={idx} className="border-b border-slate-200">
-                      <td className="p-1.5 border border-slate-300 font-mono">{idx + 1}</td>
-                      <td className="p-1.5 border border-slate-300 font-bold">{p.name} ({p.code || p.barcode || '-'})</td>
-                      <td className="p-1.5 border border-slate-300 text-center font-mono font-bold">{p.quantity}</td>
-                      <td className="p-1.5 border border-slate-300 text-left font-mono">{formatCurrency(p.sale_price)}</td>
-                      <td className="p-1.5 border border-slate-300 text-left font-mono font-bold">{formatCurrency(p.retail_value ?? (p.sale_price * p.quantity))}</td>
+                    <tr key={idx} className="border-b border-paper-line">
+                      <td className="p-1.5 border border-paper-line font-mono">{idx + 1}</td>
+                      <td className="p-1.5 border border-paper-line font-bold">{p.name} ({p.code || p.barcode || '-'})</td>
+                      <td className="p-1.5 border border-paper-line text-center font-mono font-bold">{p.quantity}</td>
+                      <td className="p-1.5 border border-paper-line text-left font-mono">{formatCurrency(p.sale_price)}</td>
+                      <td className="p-1.5 border border-paper-line text-left font-mono font-bold">{formatCurrency(p.retail_value ?? (p.sale_price * p.quantity))}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -650,18 +650,18 @@ export const ReportsPage: React.FC = () => {
         )}
 
         {/* Formal Approval Signatures & Stamp */}
-        <div className="pt-10 mt-8 border-t-2 border-slate-300 grid grid-cols-3 text-center text-xs">
+        <div className="pt-10 mt-8 border-t-2 border-paper-line grid grid-cols-3 text-center text-xs">
           <div className="space-y-8">
-            <p className="font-bold text-slate-700">توقيع المحاسب المالي</p>
-            <p className="text-slate-400 font-mono">...................................</p>
+            <p className="font-bold text-paper-ink">توقيع المحاسب المالي</p>
+            <p className="text-paper-muted font-mono">...................................</p>
           </div>
           <div className="space-y-8">
-            <p className="font-bold text-slate-700">اعتماد الإدارة العامة</p>
-            <p className="text-slate-400 font-mono">...................................</p>
+            <p className="font-bold text-paper-ink">اعتماد الإدارة العامة</p>
+            <p className="text-paper-muted font-mono">...................................</p>
           </div>
           <div className="space-y-8">
-            <p className="font-bold text-slate-700">خاتم المنشأة</p>
-            <div className="w-20 h-20 border border-dashed border-slate-300 rounded-full mx-auto" />
+            <p className="font-bold text-paper-ink">خاتم المنشأة</p>
+            <div className="w-20 h-20 border border-dashed border-paper-line rounded-full mx-auto" />
           </div>
         </div>
       </div>

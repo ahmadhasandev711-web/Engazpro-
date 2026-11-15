@@ -620,105 +620,105 @@ export const CouriersPage: React.FC = () => {
           {/* ========================================================================= */}
           {/* Dedicated Corporate Printable Manifest Sheet (A4 Print-Only)              */}
           {/* ========================================================================= */}
-          <div className="print-only printable-area font-sans text-slate-900 leading-relaxed text-xs" dir="rtl">
+          <div className="print-only printable-area font-sans bg-paper text-paper-ink leading-relaxed text-xs" dir="rtl">
             {/* Store Letterhead */}
-            <div className="border-b-2 border-slate-900 pb-3 mb-4 flex items-start justify-between">
+            <div className="border-b-2 border-paper-ink pb-3 mb-4 flex items-start justify-between">
               <div className="space-y-1">
-                <h1 className="text-xl font-black text-slate-900">{storeName}</h1>
-                <p className="text-xs font-bold text-slate-600">نظام إدارة نقاط البيع والمخازن والشحنات</p>
-                {storePhone && <p className="text-[11px] text-slate-500 font-mono">الهاتف: {storePhone}</p>}
-                {storeAddress && <p className="text-[11px] text-slate-500">{storeAddress}</p>}
+                <h1 className="text-xl font-black text-paper-ink">{storeName}</h1>
+                <p className="text-xs font-bold text-paper-muted">نظام إدارة نقاط البيع والمخازن والشحنات</p>
+                {storePhone && <p className="text-[11px] text-paper-muted font-mono">الهاتف: {storePhone}</p>}
+                {storeAddress && <p className="text-[11px] text-paper-muted">{storeAddress}</p>}
               </div>
 
               <div className="text-left space-y-1">
-                <div className="inline-block bg-slate-900 text-white font-black px-3 py-1 rounded text-sm">
+                <div className="inline-block bg-paper-ink text-paper font-black px-3 py-1 rounded text-sm">
                   مانيفست تسليم بوالص وشحنات
                 </div>
-                <p className="text-xs font-black text-slate-900">
+                <p className="text-xs font-black text-paper-ink">
                   شركة الشحن: {manifestCourier.name}
                 </p>
                 {manifestCourier.phone && (
-                  <p className="text-[11px] text-slate-600 font-mono" dir="ltr">
+                  <p className="text-[11px] text-paper-muted font-mono" dir="ltr">
                     هاتف المندوب/الشركة: {manifestCourier.phone}
                   </p>
                 )}
-                <p className="text-2xs text-slate-500 font-mono">
+                <p className="text-2xs text-paper-muted font-mono">
                   تاريخ الطباعة: {new Date().toLocaleDateString('ar-EG')} - {new Date().toLocaleTimeString('ar-EG')}
                 </p>
               </div>
             </div>
 
             {/* Manifest Summary Bar in Print */}
-            <div className="grid grid-cols-5 gap-2 p-2.5 bg-slate-50 border border-slate-300 rounded mb-4 text-center">
+            <div className="grid grid-cols-5 gap-2 p-2.5 bg-paper-soft border border-paper-line rounded mb-4 text-center">
               <div>
-                <span className="text-2xs text-slate-500 block font-bold">إجمالي الطرود</span>
-                <span className="text-sm font-black text-slate-900">{manifestMetrics.total_shipments}</span>
+                <span className="text-2xs text-paper-muted block font-bold">إجمالي الطرود</span>
+                <span className="text-sm font-black text-paper-ink">{manifestMetrics.total_shipments}</span>
               </div>
               <div>
-                <span className="text-2xs text-slate-500 block font-bold">قيد التوصيل بالعهدة</span>
-                <span className="text-sm font-black text-amber-700">{manifestMetrics.in_transit_count}</span>
+                <span className="text-2xs text-paper-muted block font-bold">قيد التوصيل بالعهدة</span>
+                <span className="text-sm font-black text-warn">{manifestMetrics.in_transit_count}</span>
               </div>
               <div>
-                <span className="text-2xs text-slate-500 block font-bold">تم التسليم</span>
-                <span className="text-sm font-black text-emerald-700">{manifestMetrics.delivered_count}</span>
+                <span className="text-2xs text-paper-muted block font-bold">تم التسليم</span>
+                <span className="text-sm font-black text-ok">{manifestMetrics.delivered_count}</span>
               </div>
               <div>
-                <span className="text-2xs text-slate-500 block font-bold">مطلوب تحصيله (COD)</span>
-                <span className="text-sm font-black text-purple-800 font-mono">{formatCurrency(manifestMetrics.total_cod_amount)}</span>
+                <span className="text-2xs text-paper-muted block font-bold">مطلوب تحصيله (COD)</span>
+                <span className="text-sm font-black text-brand font-mono">{formatCurrency(manifestMetrics.total_cod_amount)}</span>
               </div>
               <div>
-                <span className="text-2xs text-slate-500 block font-bold">إجمالي أتعاب الشحن</span>
-                <span className="text-sm font-black text-slate-800 font-mono">{formatCurrency(manifestMetrics.total_shipping_fees)}</span>
+                <span className="text-2xs text-paper-muted block font-bold">إجمالي أتعاب الشحن</span>
+                <span className="text-sm font-black text-paper-ink font-mono">{formatCurrency(manifestMetrics.total_shipping_fees)}</span>
               </div>
             </div>
 
             {/* A4 Manifest Print Table */}
-            <table className="w-full text-right border-collapse border border-slate-300 text-2xs">
+            <table className="w-full text-right border-collapse border border-paper-line text-2xs">
               <thead>
-                <tr className="bg-slate-100 text-slate-800 font-black border-b border-slate-300">
-                  <th className="p-1.5 border border-slate-300 text-center w-8">م</th>
-                  <th className="p-1.5 border border-slate-300">رقم الطلب / المصدر</th>
-                  <th className="p-1.5 border border-slate-300">اسم العميل ورقم الهاتف</th>
-                  <th className="p-1.5 border border-slate-300">المدينة والعنوان</th>
-                  <th className="p-1.5 border border-slate-300 text-center">رقم البوليصة</th>
-                  <th className="p-1.5 border border-slate-300 text-center">نوع التحصيل</th>
-                  <th className="p-1.5 border border-slate-300 text-center">مطلوب COD</th>
-                  <th className="p-1.5 border border-slate-300 text-center">أجرة الشحن</th>
-                  <th className="p-1.5 border border-slate-300 text-center">حالة التوصيل</th>
-                  <th className="p-1.5 border border-slate-300 text-center w-28">توقيع المستلم وملاحظات</th>
+                <tr className="bg-paper-soft text-paper-ink font-black border-b border-paper-line">
+                  <th className="p-1.5 border border-paper-line text-center w-8">م</th>
+                  <th className="p-1.5 border border-paper-line">رقم الطلب / المصدر</th>
+                  <th className="p-1.5 border border-paper-line">اسم العميل ورقم الهاتف</th>
+                  <th className="p-1.5 border border-paper-line">المدينة والعنوان</th>
+                  <th className="p-1.5 border border-paper-line text-center">رقم البوليصة</th>
+                  <th className="p-1.5 border border-paper-line text-center">نوع التحصيل</th>
+                  <th className="p-1.5 border border-paper-line text-center">مطلوب COD</th>
+                  <th className="p-1.5 border border-paper-line text-center">أجرة الشحن</th>
+                  <th className="p-1.5 border border-paper-line text-center">حالة التوصيل</th>
+                  <th className="p-1.5 border border-paper-line text-center w-28">توقيع المستلم وملاحظات</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200">
+              <tbody className="divide-y divide-paper-line">
                 {filteredShipments.map((s: any, idx: number) => (
-                  <tr key={s.id + s.source} className="border-b border-slate-200">
-                    <td className="p-1.5 border border-slate-300 text-center font-bold font-mono">{idx + 1}</td>
-                    <td className="p-1.5 border border-slate-300">
+                  <tr key={s.id + s.source} className="border-b border-paper-line">
+                    <td className="p-1.5 border border-paper-line text-center font-bold font-mono">{idx + 1}</td>
+                    <td className="p-1.5 border border-paper-line">
                       <span className="font-bold font-mono block">{s.reference}</span>
-                      <span className="text-2xs text-slate-500">{s.source === 'WOOCOMMERCE' ? 'ووكومرس' : 'مباشر'}</span>
+                      <span className="text-2xs text-paper-muted">{s.source === 'WOOCOMMERCE' ? 'ووكومرس' : 'مباشر'}</span>
                     </td>
-                    <td className="p-1.5 border border-slate-300">
+                    <td className="p-1.5 border border-paper-line">
                       <span className="font-bold block">{s.customer_name}</span>
-                      <span className="font-mono text-2xs text-slate-600" dir="ltr">{s.customer_phone || '—'}</span>
+                      <span className="font-mono text-2xs text-paper-muted" dir="ltr">{s.customer_phone || '—'}</span>
                     </td>
-                    <td className="p-1.5 border border-slate-300">
+                    <td className="p-1.5 border border-paper-line">
                       {[s.city, s.customer_address].filter(Boolean).join(' - ') || '—'}
                     </td>
-                    <td className="p-1.5 border border-slate-300 text-center font-mono font-bold">
+                    <td className="p-1.5 border border-paper-line text-center font-mono font-bold">
                       {s.tracking_number || '—'}
                     </td>
-                    <td className="p-1.5 border border-slate-300 text-center font-bold">
+                    <td className="p-1.5 border border-paper-line text-center font-bold">
                       {s.is_paid_online ? 'أونلاين (مدفوع)' : 'عند الاستلام (COD)'}
                     </td>
-                    <td className="p-1.5 border border-slate-300 text-center font-mono font-black text-slate-900">
+                    <td className="p-1.5 border border-paper-line text-center font-mono font-black text-paper-ink">
                       {s.is_paid_online ? '0.00 ج.م' : formatCurrency(s.cod_amount ?? s.total)}
                     </td>
-                    <td className="p-1.5 border border-slate-300 text-center font-mono">
+                    <td className="p-1.5 border border-paper-line text-center font-mono">
                       {formatCurrency(s.shipping_cost || 0)}
                     </td>
-                    <td className="p-1.5 border border-slate-300 text-center font-bold">
+                    <td className="p-1.5 border border-paper-line text-center font-bold">
                       {s.status_label || s.status}
                     </td>
-                    <td className="p-1.5 border border-slate-300 text-center text-2xs text-slate-400">
+                    <td className="p-1.5 border border-paper-line text-center text-2xs text-paper-muted">
                       {/* توقيع أو ملاحظة استلام */}
                     </td>
                   </tr>
@@ -727,18 +727,18 @@ export const CouriersPage: React.FC = () => {
             </table>
 
             {/* Signatures Footer */}
-            <div className="mt-8 pt-4 border-t-2 border-slate-400 grid grid-cols-3 gap-4 text-center">
+            <div className="mt-8 pt-4 border-t-2 border-paper-line grid grid-cols-3 gap-4 text-center">
               <div className="space-y-6">
                 <p className="font-bold text-xs">مسؤول تسليم الشحنات (المحل)</p>
-                <div className="border-b border-dotted border-slate-400 w-36 mx-auto"></div>
+                <div className="border-b border-dotted border-paper-line w-36 mx-auto"></div>
               </div>
               <div className="space-y-6">
                 <p className="font-bold text-xs">مندوب شركة الشحن (المستلم)</p>
-                <div className="border-b border-dotted border-slate-400 w-36 mx-auto"></div>
+                <div className="border-b border-dotted border-paper-line w-36 mx-auto"></div>
               </div>
               <div className="space-y-6">
                 <p className="font-bold text-xs">الختم الرسمي للمتجر</p>
-                <div className="border border-dashed border-slate-300 w-24 h-12 mx-auto rounded"></div>
+                <div className="border border-dashed border-paper-line w-24 h-12 mx-auto rounded"></div>
               </div>
             </div>
           </div>

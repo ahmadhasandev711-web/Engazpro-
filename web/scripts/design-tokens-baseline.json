@@ -7,40 +7,8 @@
     "raw": 53,
     "hex": 22
   },
-  "src/presentation/components/payments/PaymentReceiptModal.tsx": {
-    "raw": 41,
-    "hex": 1
-  },
-  "src/presentation/components/pos/PosReceiptModal.tsx": {
-    "raw": 36,
-    "hex": 1
-  },
-  "src/presentation/components/products/BarcodePrintModal.tsx": {
-    "raw": 0,
-    "hex": 6
-  },
-  "src/presentation/components/shifts/ShiftZReportModal.tsx": {
-    "raw": 54,
-    "hex": 1
-  },
-  "src/presentation/pages/CouriersPage.tsx": {
-    "raw": 57,
-    "hex": 0
-  },
-  "src/presentation/pages/InvoicesPage.tsx": {
-    "raw": 4,
-    "hex": 0
-  },
   "src/presentation/pages/LandingPage.tsx": {
     "raw": 259,
     "hex": 143
-  },
-  "src/presentation/pages/ReportsPage.tsx": {
-    "raw": 165,
-    "hex": 0
-  },
-  "src/presentation/utils/barcodeSvgRenderer.ts": {
-    "raw": 0,
-    "hex": 3
   }
 }

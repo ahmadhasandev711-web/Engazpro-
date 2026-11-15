@@ -73,4 +73,47 @@
     margin: 5mm;
     size: auto;
   }
+
+  .receipt-print-sheet,
+  .receipt-print-sheet * {
+    color: rgb(var(--c-paper-ink)) !important;
+  }
+
+  .receipt-print-sheet {
+    position: fixed !important;
+    inset: 0 !important;
+    margin: 0 !important;
+    padding: 4mm !important;
+    width: 100% !important;
+    max-width: 80mm !important;
+    background: rgb(var(--c-paper)) !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  .barcode-sheet-area,
+  .barcode-sheet-area * {
+    visibility: visible !important;
+  }
+
+  .barcode-sheet-area {
+    position: fixed !important;
+    inset: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    background: rgb(var(--c-paper)) !important;
+    color: rgb(var(--c-paper-ink)) !important;
+  }
+
+  .barcode-label-box {
+    border: none !important;
+    box-shadow: none !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+}
+
+.barcode-label-hairline {
+  border-color: rgb(var(--c-paper-ink));
 }

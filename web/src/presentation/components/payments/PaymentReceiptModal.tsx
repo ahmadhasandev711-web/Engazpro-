@@ -149,67 +149,67 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
           <div
             ref={printRef}
             id="payment-thermal-receipt"
-            className="w-full bg-white p-4 rounded-2xl border border-slate-200 shadow-xs text-slate-900 font-sans text-xs leading-relaxed"
+            className="w-full bg-paper p-4 rounded-2xl border border-paper-line shadow-xs text-paper-ink font-sans text-xs leading-relaxed"
             dir="rtl"
           >
             {/* Store Branding Header */}
-            <div className="text-center pb-2.5 border-b border-dashed border-slate-300 space-y-0.5">
-              <h2 className="text-sm font-black tracking-tight text-slate-900">{storeName}</h2>
+            <div className="text-center pb-2.5 border-b border-dashed border-paper-line space-y-0.5">
+              <h2 className="text-sm font-black tracking-tight text-paper-ink">{storeName}</h2>
               <div
-                className={`inline-block px-2.5 py-0.5 rounded-full text-2xs font-bold ${
-                  isReceipt ? 'bg-emerald-100 text-emerald-900' : 'bg-rose-100 text-rose-900'
+                className={`inline-block px-2.5 py-0.5 rounded-full text-2xs font-bold border ${
+                  isReceipt ? 'bg-ok-soft text-ok border-ok/30' : 'bg-bad-soft text-bad border-bad/30'
                 }`}
               >
                 {isReceipt ? 'إيصال استلام نقدية (سند قبض)' : 'إيصال صرف نقدية (سند صرف)'}
               </div>
               {storePhone && (
-                <p className="text-2xs text-slate-500 font-mono">هاتف: {storePhone}</p>
+                <p className="text-2xs text-paper-muted font-mono">هاتف: {storePhone}</p>
               )}
               {storeAddress && (
-                <p className="text-2xs text-slate-400 font-sans">{storeAddress}</p>
+                <p className="text-2xs text-paper-muted font-sans">{storeAddress}</p>
               )}
             </div>
 
             {/* Voucher Details */}
-            <div className="py-2.5 border-b border-dashed border-slate-300 space-y-1.5 text-[11px]">
+            <div className="py-2.5 border-b border-dashed border-paper-line space-y-1.5 text-[11px]">
               <div className="flex justify-between items-center">
-                <span className="text-slate-500 font-sans">رقم السند:</span>
+                <span className="text-paper-muted font-sans">رقم السند:</span>
                 <span className="font-bold font-mono">#{payment.id}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-slate-500 font-sans">التاريخ والوقت:</span>
+                <span className="text-paper-muted font-sans">التاريخ والوقت:</span>
                 <span className="font-mono">
                   {dateStr} {timeStr}
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-slate-500 font-sans">
+                <span className="text-paper-muted font-sans">
                   {isReceipt ? 'المستلم منه (العميل):' : 'المصروف له (المورد):'}
                 </span>
-                <span className="font-bold text-slate-900 font-sans">
+                <span className="font-bold text-paper-ink font-sans">
                   {payment.party_name || 'بدون طرف محدد'}
                 </span>
               </div>
               {payment.party_phone && (
                 <div className="flex justify-between items-center">
-                  <span className="text-slate-500 font-sans">هاتف الطرف:</span>
+                  <span className="text-paper-muted font-sans">هاتف الطرف:</span>
                   <span className="font-mono">{payment.party_phone}</span>
                 </div>
               )}
               {payment.invoice_number && (
                 <div className="flex justify-between items-center">
-                  <span className="text-slate-500 font-sans">سداد عن فاتورة:</span>
-                  <span className="font-mono font-bold text-indigo-700">{payment.invoice_number}</span>
+                  <span className="text-paper-muted font-sans">سداد عن فاتورة:</span>
+                  <span className="font-mono font-bold text-brand">{payment.invoice_number}</span>
                 </div>
               )}
               <div className="flex justify-between items-center">
-                <span className="text-slate-500 font-sans">طريقة السداد:</span>
-                <span className="font-bold text-slate-800 font-sans">{methodLabel}</span>
+                <span className="text-paper-muted font-sans">طريقة السداد:</span>
+                <span className="font-bold text-paper-ink font-sans">{methodLabel}</span>
               </div>
               {payment.created_by_name && (
                 <div className="flex justify-between items-center">
-                  <span className="text-slate-500 font-sans">المسؤول / المحصّل:</span>
-                  <span className="font-bold text-slate-800 font-sans">
+                  <span className="text-paper-muted font-sans">المسؤول / المحصّل:</span>
+                  <span className="font-bold text-paper-ink font-sans">
                     {payment.created_by_name} ({roleLabel})
                   </span>
                 </div>
@@ -217,13 +217,13 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
             </div>
 
             {/* Amount Banner */}
-            <div className="my-3 p-3 bg-slate-50 rounded-xl border border-slate-200/80 text-center">
-              <span className="text-2xs text-slate-500 font-sans block mb-0.5">
+            <div className="my-3 p-3 bg-paper-soft rounded-xl border border-paper-line text-center">
+              <span className="text-2xs text-paper-muted font-sans block mb-0.5">
                 {isReceipt ? 'المبلغ المستلم نقداً / إلكترونياً' : 'المبلغ المصروف نقداً / إلكترونياً'}
               </span>
               <div
                 className={`text-lg font-black font-mono tracking-tight ${
-                  isReceipt ? 'text-emerald-700' : 'text-rose-700'
+                  isReceipt ? 'text-ok' : 'text-bad'
                 }`}
               >
                 {formatCurrency(payment.amount)}
@@ -232,9 +232,9 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
 
             {/* Notes / Statement */}
             {payment.notes && (
-              <div className="py-2 border-b border-dashed border-slate-300 text-[11px]">
-                <span className="text-slate-500 font-sans block mb-0.5">البيان / ملاحظات:</span>
-                <p className="font-sans text-slate-800 bg-slate-50 p-2 rounded-lg leading-relaxed text-2xs">
+              <div className="py-2 border-b border-dashed border-paper-line text-[11px]">
+                <span className="text-paper-muted font-sans block mb-0.5">البيان / ملاحظات:</span>
+                <p className="font-sans text-paper-ink bg-paper-soft p-2 rounded-lg leading-relaxed text-2xs">
                   {payment.notes}
                 </p>
               </div>
@@ -242,30 +242,30 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
 
             {/* Party Balance if present */}
             {payment.party_balance != null && Number(payment.party_balance) !== 0 && (
-              <div className="py-2 border-b border-dashed border-slate-300 flex justify-between items-center text-[11px]">
-                <span className="text-slate-500 font-sans">رصيد الحساب الحالي:</span>
-                <span className="font-mono font-bold text-slate-900">
+              <div className="py-2 border-b border-dashed border-paper-line flex justify-between items-center text-[11px]">
+                <span className="text-paper-muted font-sans">رصيد الحساب الحالي:</span>
+                <span className="font-mono font-bold text-paper-ink">
                   {formatCurrency(payment.party_balance)}
                 </span>
               </div>
             )}
 
             {/* Signatures */}
-            <div className="pt-4 pb-2 grid grid-cols-2 gap-3 text-center text-2xs text-slate-600 font-sans">
-              <div className="border-t border-dashed border-slate-300 pt-2">
+            <div className="pt-4 pb-2 grid grid-cols-2 gap-3 text-center text-2xs text-paper-muted font-sans">
+              <div className="border-t border-dashed border-paper-line pt-2">
                 <span>توقيع المسلّم</span>
                 <div className="h-6" />
               </div>
-              <div className="border-t border-dashed border-slate-300 pt-2">
+              <div className="border-t border-dashed border-paper-line pt-2">
                 <span>توقيع المستلم</span>
                 <div className="h-6" />
               </div>
             </div>
 
             {/* Footer */}
-            <div className="text-center pt-2 border-t border-dashed border-slate-300 space-y-1">
-              <p className="text-2xs font-sans text-slate-600 font-bold">شكراً لتعاملكم معنا!</p>
-              <p className="text-[8px] text-slate-400 font-sans">
+            <div className="text-center pt-2 border-t border-dashed border-paper-line space-y-1">
+              <p className="text-2xs font-sans text-paper-ink font-bold">شكراً لتعاملكم معنا!</p>
+              <p className="text-[8px] text-paper-muted font-sans">
                 يعتبر هذا الإيصال إثبات سداد رسمي من نظام {storeName}
               </p>
             </div>
@@ -364,7 +364,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
             font-family: 'IBM Plex Sans Arabic', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif !important;
             font-size: 11px !important;
             line-height: 1.35 !important;
-            color: #000 !important;
+            color: black !important;
             page-break-after: avoid !important;
             break-after: avoid !important;
             page-break-inside: avoid !important;

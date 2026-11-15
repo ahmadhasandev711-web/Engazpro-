@@ -37,6 +37,13 @@ export default {
           DEFAULT: 'rgb(var(--c-info) / <alpha-value>)',
           soft: 'rgb(var(--c-info-soft) / <alpha-value>)',
         },
+        paper: {
+          DEFAULT: 'rgb(var(--c-paper) / <alpha-value>)',
+          soft: 'rgb(var(--c-paper-soft) / <alpha-value>)',
+          ink: 'rgb(var(--c-paper-ink) / <alpha-value>)',
+          muted: 'rgb(var(--c-paper-muted) / <alpha-value>)',
+          line: 'rgb(var(--c-paper-line) / <alpha-value>)',
+        },
         primary: {
           50: 'rgb(var(--c-primary-50) / <alpha-value>)',
           100: 'rgb(var(--c-primary-100) / <alpha-value>)',

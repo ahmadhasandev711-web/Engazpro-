@@ -123,13 +123,13 @@ export function renderBarcodeSvg(text: string, options: BarcodeRenderOptions = {
   }
 
   const textElement = includeText
-    ? `<text x="${totalWidth / 2}" y="${barHeight + fontSize + 2}" text-anchor="middle" font-family="monospace, Courier, sans-serif" font-size="${fontSize}px" font-weight="bold" fill="#000000" letter-spacing="1px">${escapeXml(cleanText)}</text>`
+    ? `<text x="${totalWidth / 2}" y="${barHeight + fontSize + 2}" text-anchor="middle" font-family="monospace, Courier, sans-serif" font-size="${fontSize}px" font-weight="bold" fill="black" letter-spacing="1px">${escapeXml(cleanText)}</text>`
     : '';
 
   return `
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalWidth} ${totalHeight}" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" shape-rendering="crispEdges">
-      <rect width="${totalWidth}" height="${totalHeight}" fill="#ffffff"/>
-      <path d="${pathData}" fill="#000000"/>
+      <rect width="${totalWidth}" height="${totalHeight}" fill="white"/>
+      <path d="${pathData}" fill="black"/>
       ${textElement}
     </svg>
   `.trim();
