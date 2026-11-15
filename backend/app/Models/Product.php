@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ProductType;
 use App\Models\Concerns\BelongsToStore;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -87,12 +88,12 @@ class Product extends Model
 
     public function isVariable(): bool
     {
-        return $this->type === 'VARIABLE' || $this->has_variants;
+        return $this->type === ProductType::VARIABLE->value || $this->has_variants;
     }
 
     public function hasExpiry(): bool
     {
-        return $this->type === 'EXPIRY' || $this->has_expiry;
+        return $this->type === ProductType::EXPIRY->value || $this->has_expiry;
     }
 
     public function isLowStock(): bool

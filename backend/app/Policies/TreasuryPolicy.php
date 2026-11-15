@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\TreasuryType;
 use App\Models\Treasury;
 use App\Models\User;
 use Illuminate\Auth\Access\Response;
@@ -27,7 +28,11 @@ class TreasuryPolicy
         // مدير الفرع والمشرف: يريان خزن فرعهما فقط، ومحجوب عنهما البنوك والمسحوبات والخزائن العامة
         if ($user->isManager() || $user->isSupervisor()) {
             $typeVal = $treasury->type instanceof \BackedEnum ? $treasury->type->value : (string) $treasury->type;
-            if (in_array($typeVal, ['BANK', 'WALLET', 'OWNER_DRAWINGS'])) {
+            if (in_array($typeVal, [
+                TreasuryType::BANK->value,
+                TreasuryType::WALLET->value,
+                TreasuryType::OWNER_DRAWINGS->value,
+            ])) {
                 return Response::deny('غير مصرح لك بالاطلاع على الحسابات البنكية أو المسحوبات الشخصية');
             }
             if ($treasury->branch_id && $treasury->branch_id !== $user->branch_id) {

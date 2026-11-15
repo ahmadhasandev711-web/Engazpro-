@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\PartyType;
 use App\Models\Concerns\BelongsToStore;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -63,16 +64,16 @@ class Party extends Model
 
     public function scopeCustomers(Builder $query): Builder
     {
-        return $query->where('type', 'CUSTOMER');
+        return $query->where('type', PartyType::CUSTOMER->value);
     }
 
     public function scopeSuppliers(Builder $query): Builder
     {
-        return $query->where('type', 'SUPPLIER');
+        return $query->where('type', PartyType::SUPPLIER->value);
     }
 
     public function scopeCouriers(Builder $query): Builder
     {
-        return $query->where('type', 'COURIER');
+        return $query->where('type', PartyType::COURIER->value);
     }
 }

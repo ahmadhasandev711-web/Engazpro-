@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\PaymentMethod;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -24,7 +25,7 @@ class InvoiceRequest extends FormRequest
             'tax' => (float) ($this->tax ?? 0),
             'shipping_amount' => (float) ($this->shipping_amount ?? 0),
             'paid_amount' => (float) ($this->paid_amount ?? 0),
-            'payment_method' => $this->payment_method ?: 'CASH',
+            'payment_method' => $this->payment_method ?: PaymentMethod::CASH->value,
         ]);
     }
 

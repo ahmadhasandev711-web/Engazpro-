@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\PartyType;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -102,7 +103,7 @@ class User extends Authenticatable
 
     public function isOwner(): bool
     {
-        return $this->owner_id === null && ($this->role === UserRole::OWNER || $this->role?->value === 'OWNER' || $this->role === null);
+        return $this->owner_id === null && ($this->role === UserRole::OWNER || $this->role?->value === UserRole::OWNER->value || $this->role === null);
     }
 
     public function isPartnerOrAdmin(): bool
@@ -117,27 +118,27 @@ class User extends Authenticatable
 
     public function isManager(): bool
     {
-        return $this->role === UserRole::MANAGER || $this->role?->value === 'MANAGER';
+        return $this->role === UserRole::MANAGER || $this->role?->value === UserRole::MANAGER->value;
     }
 
     public function isSupervisor(): bool
     {
-        return $this->role === UserRole::SUPERVISOR || $this->role?->value === 'SUPERVISOR';
+        return $this->role === UserRole::SUPERVISOR || $this->role?->value === UserRole::SUPERVISOR->value;
     }
 
     public function isMandob(): bool
     {
-        return $this->role === UserRole::MANDOB || $this->role?->value === 'MANDOB';
+        return $this->role === UserRole::MANDOB || $this->role?->value === UserRole::MANDOB->value;
     }
 
     public function isCashier(): bool
     {
-        return $this->role === UserRole::CASHIER || $this->role?->value === 'CASHIER';
+        return $this->role === UserRole::CASHIER || $this->role?->value === UserRole::CASHIER->value;
     }
 
     public function isSales(): bool
     {
-        return $this->role === UserRole::SALES || $this->role?->value === 'SALES';
+        return $this->role === UserRole::SALES || $this->role?->value === UserRole::SALES->value;
     }
 
     public function isEligibleForPayroll(): bool
@@ -197,7 +198,7 @@ class User extends Authenticatable
 
     public function isActive(): bool
     {
-        return $this->status === UserStatus::ACTIVE || $this->status?->value === 'ACTIVE';
+        return $this->status === UserStatus::ACTIVE || $this->status?->value === UserStatus::ACTIVE->value;
     }
 
     public function subscription(): HasOne
@@ -227,12 +228,12 @@ class User extends Authenticatable
 
     public function customers(): HasMany
     {
-        return $this->hasMany(Party::class)->where('type', 'CUSTOMER');
+        return $this->hasMany(Party::class)->where('type', PartyType::CUSTOMER->value);
     }
 
     public function suppliers(): HasMany
     {
-        return $this->hasMany(Party::class)->where('type', 'SUPPLIER');
+        return $this->hasMany(Party::class)->where('type', PartyType::SUPPLIER->value);
     }
 
     public function invoices(): HasMany

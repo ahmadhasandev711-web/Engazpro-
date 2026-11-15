@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\PaymentMethod;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ExpenseRequest extends FormRequest
@@ -14,7 +15,7 @@ class ExpenseRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->merge([
-            'payment_method' => $this->payment_method ?: 'CASH',
+            'payment_method' => $this->payment_method ?: PaymentMethod::CASH->value,
             'amount' => (float) ($this->amount ?? 0),
         ]);
     }
@@ -39,7 +40,11 @@ class ExpenseRequest extends FormRequest
             $method = $this->input('payment_method');
 
             if ($user && ($user->isCashier() || $user->isMandob())) {
-                $allowed = ['CASH', 'VODAFONE_CASH', 'INSTAPAY'];
+                $allowed = [
+                    PaymentMethod::CASH->value,
+                    PaymentMethod::VODAFONE_CASH->value,
+                    PaymentMethod::INSTAPAY->value,
+                ];
                 if ($method && !in_array($method, $allowed, true)) {
                     $validator->errors()->add(
                         'payment_method',

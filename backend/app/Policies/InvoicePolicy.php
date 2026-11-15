@@ -38,7 +38,7 @@ class InvoicePolicy
         }
 
         // Cashier, Sales, and Mandob cannot create purchase invoices
-        if ($invoiceType && in_array($invoiceType, ['PURCHASE', 'PURCHASE_RETURN'], true)) {
+        if ($invoiceType && in_array($invoiceType, [InvoiceType::PURCHASE->value, InvoiceType::PURCHASE_RETURN->value], true)) {
             return Response::deny('عذراً، صلاحية إنشاء أو تعديل فواتير المشتريات مقتصرة على المالك والإدارة ومديري الفروع فقط.');
         }
 
@@ -56,8 +56,8 @@ class InvoicePolicy
     {
         $isSale = $invoice->type === InvoiceType::SALE
             || $invoice->type === InvoiceType::SALE_RETURN
-            || $invoice->type === 'SALE'
-            || $invoice->type === 'SALE_RETURN';
+            || $invoice->type === InvoiceType::SALE->value
+            || $invoice->type === InvoiceType::SALE_RETURN->value;
 
         if (!$isSale) {
             return Response::deny('عذراً، لا يمكن تعيين أو تعديل مسؤول المبيعات إلا لفواتير المبيعات فقط.');

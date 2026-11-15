@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\SubscriptionStatus;
 use App\Enums\UserStatus;
 use App\Services\SubscriptionGate;
 use Closure;
@@ -46,7 +47,7 @@ class CheckSubscription
                 return response()->json([
                     'success' => false,
                     'message' => 'عذراً، اشتراك المنشأة السنوي غير نشط أو منتهي الصلاحية. يرجى تجديد الاشتراك للمتابعة.',
-                    'subscription_status' => $gate['subscription_status'] ?? 'NONE',
+                    'subscription_status' => $gate['subscription_status'] ?? SubscriptionStatus::NONE->value,
                 ], 403);
             }
         }
