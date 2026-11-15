@@ -61,11 +61,7 @@ class PartyController extends Controller
      */
     public function show(Request $request, int $id): JsonResponse
     {
-        $party = Party::with(['ledgerEntries' => function ($q) {
-            $q->latest()->limit(50);
-        }])
-        ->withExists(['invoices', 'payments'])
-        ->findOrFail($id);
+        $party = $this->partyService->findForShowOrFail($id);
 
         Gate::authorize('view', $party);
 
@@ -81,7 +77,7 @@ class PartyController extends Controller
      */
     public function update(PartyRequest $request, int $id): JsonResponse
     {
-        $party = Party::findOrFail($id);
+        $party = $this->partyService->findOrFail($id);
 
         Gate::authorize('update', $party);
 
@@ -101,7 +97,7 @@ class PartyController extends Controller
      */
     public function destroy(Request $request, int $id): JsonResponse
     {
-        $party = Party::findOrFail($id);
+        $party = $this->partyService->findOrFail($id);
 
         Gate::authorize('delete', $party);
 

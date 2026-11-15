@@ -316,4 +316,13 @@ class PayrollService
             throw new PayrollDomainException('مالك المنشأة ومدير النظام مستثنون من مسير رواتب الموظفين.', 'OWNER_EXCLUDED_FROM_PAYROLL', 422);
         }
     }
+
+    public function findEmployeeForAccount(User $actor, int $employeeId): User
+    {
+        $accountId = $actor->getAccountId();
+
+        return User::where(function ($q) use ($accountId) {
+            $q->where('owner_id', $accountId)->orWhere('id', $accountId);
+        })->findOrFail($employeeId);
+    }
 }

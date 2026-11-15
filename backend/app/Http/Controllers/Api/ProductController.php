@@ -91,14 +91,7 @@ class ProductController extends Controller
         Gate::authorize('create', Product::class);
 
         $product = $this->productService->createProduct($request->user(), $request->validated());
-
-        $product->load('category');
-        $product->loadExists([
-            'invoiceItems',
-            'stockMovements as non_initial_stock_movements_exists' => function ($q) {
-                $q->where('source_type', '!=', 'INITIAL');
-            },
-        ]);
+        $this->productService->loadProductDetails($product);
 
         return response()->json([
             'success' => true,
@@ -112,16 +105,7 @@ class ProductController extends Controller
      */
     public function show(Request $request, int $id): JsonResponse
     {
-        $product = Product::with(['category', 'stockMovements' => function ($q) {
-            $q->latest()->limit(20);
-        }])
-        ->withExists([
-            'invoiceItems',
-            'stockMovements as non_initial_stock_movements_exists' => function ($q) {
-                $q->where('source_type', '!=', 'INITIAL');
-            },
-        ])
-        ->findOrFail($id);
+        $product = $this->productService->findForShowOrFail($id);
 
         Gate::authorize('view', $product);
 
@@ -136,7 +120,7 @@ class ProductController extends Controller
      */
     public function update(ProductRequest $request, int $id): JsonResponse
     {
-        $product = Product::findOrFail($id);
+        $product = $this->productService->findOrFail($id);
         Gate::authorize('update', $product);
 
         $product = $this->productService->updateProduct($product, $request->validated());
@@ -153,7 +137,7 @@ class ProductController extends Controller
      */
     public function destroy(Request $request, int $id): JsonResponse
     {
-        $product = Product::findOrFail($id);
+        $product = $this->productService->findOrFail($id);
         Gate::authorize('delete', $product);
 
         $this->productService->deleteProduct($product);
@@ -169,7 +153,7 @@ class ProductController extends Controller
      */
     public function addBatch(Request $request, int $id): JsonResponse
     {
-        $product = Product::findOrFail($id);
+        $product = $this->productService->findOrFail($id);
         Gate::authorize('update', $product);
 
         $validated = $request->validate([

@@ -266,4 +266,14 @@ class PaymentService
             'total_payments' => $paymentsMoney->getAmount(),
         ];
     }
+
+    public function findForShowOrFail(int $id): Payment
+    {
+        return Payment::with(['party', 'invoice', 'creator'])->findOrFail($id);
+    }
+
+    public function findOrFail(int $id): Payment
+    {
+        return Payment::findOrFail($id);
+    }
 }

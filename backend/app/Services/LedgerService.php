@@ -218,4 +218,14 @@ class LedgerService
             ],
         ];
     }
+
+    /**
+     * استرجاع كشف حساب الطرف التابع لحساب المنشأة
+     */
+    public function getStatementForPartyId(User $user, int $partyId, array $filters = []): array
+    {
+        $party = Party::where('user_id', $user->getAccountId())->findOrFail($partyId);
+
+        return $this->getStatement($user, $party, $filters);
+    }
 }

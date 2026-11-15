@@ -118,4 +118,9 @@ class ExpenseService
     {
         return (bool) $expense->delete();
     }
+
+    public function findOrFail(int $id): Expense
+    {
+        return Expense::findOrFail($id);
+    }
 }

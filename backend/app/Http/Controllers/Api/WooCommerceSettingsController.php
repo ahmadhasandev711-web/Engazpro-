@@ -3,32 +3,19 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\WooCommerceIntegration;
-use App\Services\WooCommerce\WooCommerceApiClient;
-use App\Services\WooCommerce\WooCommerceCustomerSyncService;
-use App\Services\WooCommerce\WooCommerceBulkStockPushService;
-use App\Services\WooCommerce\WooCommerceProductImportService;
-use App\Services\WooCommerce\WooStockPushService;
-use App\Jobs\ImportWooCommerceProductsJob;
-use App\Jobs\PushAllWooCommerceStocksJob;
+use App\Http\Requests\SaveWooCommerceSettingsRequest;
 use App\Models\Product;
-use App\Models\Branch;
-use App\Rules\PublicHttpsUrl;
+use App\Models\WooCommerceIntegration;
+use App\Services\WooCommerce\WooCommerceSettingsService;
+use App\Services\WooCommerce\WooStockPushService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 
 class WooCommerceSettingsController extends Controller
 {
     public function __construct(
-        protected WooCommerceApiClient $apiClient,
-        protected WooCommerceCustomerSyncService $customerSyncService
+        protected WooCommerceSettingsService $settingsService
     ) {}
-
-    protected function resolveImportService(): WooCommerceProductImportService
-    {
-        return app(WooCommerceProductImportService::class);
-    }
 
     protected function checkOwnerOrAdmin(Request $request): ?JsonResponse
     {
@@ -38,6 +25,7 @@ class WooCommerceSettingsController extends Controller
                 'message' => 'عذراً، إعدادات وربط متجر ووكومرس مخصصة لمالك المنشأة ومدير النظام فقط.',
             ], 403);
         }
+
         return null;
     }
 
@@ -46,7 +34,9 @@ class WooCommerceSettingsController extends Controller
         return [
             'id' => $integration->id,
             'store_url' => $integration->store_url,
-            'consumer_key_preview' => $integration->consumer_key ? (substr($integration->consumer_key, 0, 7) . '...' . substr($integration->consumer_key, -4)) : '',
+            'consumer_key_preview' => $integration->consumer_key
+                ? (substr($integration->consumer_key, 0, 7) . '...' . substr($integration->consumer_key, -4))
+                : '',
             'online_branch_id' => $integration->online_branch_id,
             'online_branch_name' => $integration->onlineBranch?->name,
             'auto_sync_stock' => $integration->auto_sync_stock,
@@ -60,82 +50,26 @@ class WooCommerceSettingsController extends Controller
         ];
     }
 
-    /**
-     * Get WooCommerce integration settings for the authenticated store
-     */
     public function getSettings(Request $request): JsonResponse
     {
         if ($err = $this->checkOwnerOrAdmin($request)) {
             return $err;
         }
 
-        $user = $request->user();
-        $integration = WooCommerceIntegration::where('user_id', $user->getAccountId())
-            ->with('onlineBranch')
-            ->first();
-
-        if (!$integration) {
-            return response()->json([
-                'success' => true,
-                'data' => null,
-            ]);
-        }
+        $integration = $this->settingsService->findForAccount($request->user()->getAccountId(), true);
 
         return response()->json([
             'success' => true,
-            'data' => $this->presentSettings($integration),
+            'data' => $integration ? $this->presentSettings($integration) : null,
         ]);
     }
 
-    /**
-     * Save or update integration settings
-     */
-    public function saveSettings(Request $request): JsonResponse
+    public function saveSettings(SaveWooCommerceSettingsRequest $request): JsonResponse
     {
-        if ($err = $this->checkOwnerOrAdmin($request)) {
-            return $err;
-        }
-
-        $user = $request->user();
-        $validated = $request->validate([
-            'store_url' => ['required', 'url', new PublicHttpsUrl()],
-            'consumer_key' => ['nullable', 'string'],
-            'consumer_secret' => ['nullable', 'string'],
-            'online_branch_id' => ['nullable', 'exists:branches,id'],
-            'auto_sync_stock' => ['boolean'],
-            'is_active' => ['boolean'],
-        ]);
-
-        $integration = WooCommerceIntegration::firstOrNew(['user_id' => $user->getAccountId()]);
-        $integration->store_url = rtrim($validated['store_url'], '/');
-        
-        if (!empty($validated['consumer_key'])) {
-            $integration->consumer_key = trim($validated['consumer_key']);
-        }
-        if (!empty($validated['consumer_secret'])) {
-            $integration->consumer_secret = trim($validated['consumer_secret']);
-        }
-        if (empty($integration->webhook_secret)) {
-            $integration->webhook_secret = Str::random(32);
-        }
-
-        $integration->online_branch_id = $validated['online_branch_id'] ?? $integration->online_branch_id;
-        $integration->auto_sync_stock = $validated['auto_sync_stock'] ?? $integration->auto_sync_stock ?? true;
-        $integration->is_active = $validated['is_active'] ?? true;
-        $integration->save();
-
-        // Automatically register order webhooks on WooCommerce
-        if ($integration->is_active && $integration->consumer_key && $integration->consumer_secret) {
-            try {
-                $this->apiClient->registerWebhooks($integration);
-            } catch (\Throwable $e) {
-                // Non-blocking
-            }
-        }
-
-        \App\Services\WooCommerce\WooStockSyncGate::forget($user->getAccountId());
-
-        $integration->load('onlineBranch');
+        $integration = $this->settingsService->saveSettings(
+            $request->user()->getAccountId(),
+            $request->validated()
+        );
 
         return response()->json([
             'success' => true,
@@ -144,18 +78,13 @@ class WooCommerceSettingsController extends Controller
         ]);
     }
 
-    /**
-     * Test connection to WooCommerce store
-     */
     public function testConnection(Request $request): JsonResponse
     {
         if ($err = $this->checkOwnerOrAdmin($request)) {
             return $err;
         }
 
-        $user = $request->user();
-        $integration = WooCommerceIntegration::where('user_id', $user->getAccountId())->first();
-
+        $integration = $this->settingsService->findForAccount($request->user()->getAccountId());
         if (!$integration || !$integration->consumer_key || !$integration->consumer_secret) {
             return response()->json([
                 'success' => false,
@@ -163,33 +92,23 @@ class WooCommerceSettingsController extends Controller
             ], 422);
         }
 
-        $connected = $this->apiClient->testConnection($integration);
-        if ($connected && $integration->is_active) {
-            try {
-                $this->apiClient->registerWebhooks($integration);
-            } catch (\Throwable $e) {
-                // Non-blocking
-            }
-        }
+        $connected = $this->settingsService->testConnection($integration);
 
         return response()->json([
             'success' => $connected,
-            'message' => $connected ? 'تم الاتصال بالمتجر وتفعيل خطافات الويب بنجاح 🟢' : 'فشل الاتصال بالمتجر، يرجى التحقق من الرابط والمفاتيح 🔴',
+            'message' => $connected
+                ? 'تم الاتصال بالمتجر وتفعيل خطافات الويب بنجاح 🟢'
+                : 'فشل الاتصال بالمتجر، يرجى التحقق من الرابط والمفاتيح 🔴',
         ]);
     }
 
-    /**
-     * Explicitly trigger automatic webhook registration on WooCommerce
-     */
     public function autoRegisterWebhooks(Request $request): JsonResponse
     {
         if ($err = $this->checkOwnerOrAdmin($request)) {
             return $err;
         }
 
-        $user = $request->user();
-        $integration = WooCommerceIntegration::where('user_id', $user->getAccountId())->first();
-
+        $integration = $this->settingsService->findForAccount($request->user()->getAccountId());
         if (!$integration || !$integration->consumer_key || !$integration->consumer_secret) {
             return response()->json([
                 'success' => false,
@@ -197,7 +116,7 @@ class WooCommerceSettingsController extends Controller
             ], 422);
         }
 
-        $success = $this->apiClient->registerWebhooks($integration);
+        $success = $this->settingsService->registerWebhooks($integration);
 
         return response()->json([
             'success' => $success,
@@ -207,18 +126,13 @@ class WooCommerceSettingsController extends Controller
         ]);
     }
 
-    /**
-     * Import products from WooCommerce (One-way: Woo -> Kashat)
-     */
     public function importProducts(Request $request): JsonResponse
     {
         if ($err = $this->checkOwnerOrAdmin($request)) {
             return $err;
         }
 
-        $user = $request->user();
-        $integration = WooCommerceIntegration::where('user_id', $user->getAccountId())->first();
-
+        $integration = $this->settingsService->findForAccount($request->user()->getAccountId());
         if (!$integration || !$integration->is_active) {
             return response()->json([
                 'success' => false,
@@ -226,40 +140,22 @@ class WooCommerceSettingsController extends Controller
             ], 422);
         }
 
-        $importStock = $request->boolean('import_stock', false);
-        $accountId = $user->getAccountId();
+        $outcome = $this->settingsService->importProducts(
+            $request->user(),
+            $integration,
+            $request->boolean('import_stock', false)
+        );
 
-        if (config('queue.default') === 'sync') {
-            $result = $this->resolveImportService()->importProducts($user, $integration, $importStock);
-
-            return response()->json([
-                'success' => true,
-                'message' => "اكتمل استيراد الأصناف: تم إنشاء {$result['imported']} صنف جديد، وتحديث {$result['updated']} صنف.",
-                'data' => $result,
-            ]);
-        }
-
-        \App\Jobs\ImportWooCommerceProductsPageJob::dispatch($accountId, $user->id, 1, $importStock);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'بدأ استيراد الأصناف من ووكومرس في الخلفية. راجع آخر مزامنة في الإعدادات بعد اكتمال العملية.',
-            'data' => ['status' => 'queued'],
-        ], 202);
+        return $this->importProductsResponse($outcome);
     }
 
-    /**
-     * Bulk sync customers between Kashat and WooCommerce
-     */
     public function syncCustomers(Request $request): JsonResponse
     {
         if ($err = $this->checkOwnerOrAdmin($request)) {
             return $err;
         }
 
-        $user = $request->user();
-        $integration = WooCommerceIntegration::where('user_id', $user->getAccountId())->first();
-
+        $integration = $this->settingsService->findForAccount($request->user()->getAccountId());
         if (!$integration || !$integration->is_active) {
             return response()->json([
                 'success' => false,
@@ -267,23 +163,14 @@ class WooCommerceSettingsController extends Controller
             ], 422);
         }
 
-        // 1. Pull recent customers from WooCommerce
-        $wcCustomers = $this->apiClient->getCustomers($integration, 1, 50);
-        $syncedFromWoo = 0;
-        foreach ($wcCustomers as $wcCust) {
-            $this->customerSyncService->syncCustomerFromWooCommerce($user, $wcCust);
-            $syncedFromWoo++;
-        }
+        $synced = $this->settingsService->syncCustomers($request->user(), $integration);
 
         return response()->json([
             'success' => true,
-            'message' => "تم استيراد ومزامنة {$syncedFromWoo} عميل من متجر ووكومرس بنجاح.",
+            'message' => "تم استيراد ومزامنة {$synced} عميل من متجر ووكومرس بنجاح.",
         ]);
     }
 
-    /**
-     * Push current stock quantity for a single product directly to WooCommerce (Synchronous / Direct Sync)
-     */
     public function pushProductStock(
         Request $request,
         Product $product,
@@ -293,10 +180,7 @@ class WooCommerceSettingsController extends Controller
             return $err;
         }
 
-        $result = $stockPushService->pushProductForAccount(
-            $request->user()->getAccountId(),
-            $product
-        );
+        $result = $stockPushService->pushProductForAccount($request->user()->getAccountId(), $product);
 
         return response()->json([
             'success' => true,
@@ -309,19 +193,14 @@ class WooCommerceSettingsController extends Controller
         ]);
     }
 
-    /**
-     * Push all linked products stock quantities directly to WooCommerce (Bulk Direct Sync)
-     */
     public function pushAllStocks(Request $request): JsonResponse
     {
         if ($err = $this->checkOwnerOrAdmin($request)) {
             return $err;
         }
 
-        $user = $request->user();
-        $accountId = $user->getAccountId();
-
-        $integration = WooCommerceIntegration::where('user_id', $accountId)->first();
+        $accountId = $request->user()->getAccountId();
+        $integration = $this->settingsService->findForAccount($accountId);
         if (!$integration || !$integration->is_active || !$integration->consumer_key || !$integration->consumer_secret) {
             return response()->json([
                 'success' => false,
@@ -329,10 +208,7 @@ class WooCommerceSettingsController extends Controller
             ], 422);
         }
 
-        $linkedCount = Product::where('user_id', $accountId)
-            ->whereNotNull('wc_product_id')
-            ->count();
-
+        $linkedCount = $this->settingsService->countLinkedProducts($accountId);
         if ($linkedCount === 0) {
             return response()->json([
                 'success' => false,
@@ -340,26 +216,46 @@ class WooCommerceSettingsController extends Controller
             ], 422);
         }
 
-        $job = new PushAllWooCommerceStocksJob($accountId, $user->id);
+        return $this->pushAllStocksResponse($this->settingsService->pushAllStocks($request->user(), $linkedCount));
+    }
 
-        if (config('queue.default') === 'sync') {
-            $result = $job->handle(app(WooCommerceBulkStockPushService::class));
+    private function importProductsResponse(array $outcome): JsonResponse
+    {
+        if (!$outcome['queued']) {
+            $res = $outcome['result'];
 
             return response()->json([
                 'success' => true,
-                'message' => "تمت مزامنة وتحديث أرصدة {$result['synced_count']} صنف مع متجر ووكومرس بنجاح 🟢",
-                'data' => $result,
+                'message' => "اكتمل استيراد الأصناف: تم إنشاء {$res['imported']} صنف جديد، وتحديث {$res['updated']} صنف.",
+                'data' => $res,
             ]);
         }
 
-        PushAllWooCommerceStocksJob::dispatch($accountId, $user->id);
+        return response()->json([
+            'success' => true,
+            'message' => 'بدأ استيراد الأصناف من ووكومرس في الخلفية. راجع آخر مزامنة في الإعدادات بعد اكتمال العملية.',
+            'data' => ['status' => 'queued'],
+        ], 202);
+    }
+
+    private function pushAllStocksResponse(array $outcome): JsonResponse
+    {
+        if (!$outcome['queued']) {
+            $res = $outcome['result'];
+
+            return response()->json([
+                'success' => true,
+                'message' => "تمت مزامنة وتحديث أرصدة {$res['synced_count']} صنف مع متجر ووكومرس بنجاح 🟢",
+                'data' => $res,
+            ]);
+        }
 
         return response()->json([
             'success' => true,
             'message' => 'بدأت مزامنة الأرصدة مع ووكومرس في الخلفية. قد تستغرق العملية عدة دقائق حسب حجم الكتالوج.',
             'data' => [
                 'status' => 'queued',
-                'total_linked_products' => $linkedCount,
+                'total_linked_products' => $outcome['total_linked_products'],
             ],
         ], 202);
     }

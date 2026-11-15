@@ -48,14 +48,7 @@ class WooCommerceAuthController extends Controller
         $accountId = $request->query('account_id') ? (int) $request->query('account_id') : null;
         $signature = $request->query('signature') ?? $request->input('signature');
 
-        try {
-            $integration = $this->authService->handleCallback($request->validated(), $accountId, $signature);
-        } catch (\App\Exceptions\WooCommerceConnectionException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], $e->getCode() >= 400 ? $e->getCode() : 403);
-        }
+        $integration = $this->authService->handleCallback($request->validated(), $accountId, $signature);
 
         return response()->json([
             'success' => true,

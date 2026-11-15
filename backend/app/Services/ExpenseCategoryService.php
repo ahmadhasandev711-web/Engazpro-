@@ -137,4 +137,9 @@ class ExpenseCategoryService
 
         $category->delete();
     }
+
+    public function findForUserOrFail(User $user, int $id): ExpenseCategory
+    {
+        return ExpenseCategory::where('user_id', $user->getAccountId())->findOrFail($id);
+    }
 }

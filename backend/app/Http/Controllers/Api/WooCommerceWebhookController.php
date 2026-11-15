@@ -3,84 +3,25 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Jobs\ProcessWooCommerceWebhookJob;
-use App\Models\User;
-use App\Models\WooCommerceIntegration;
-use App\Services\WooCommerce\WooCommerceOrderSyncService;
-use Exception;
+use App\Services\WooCommerce\WooCommerceWebhookService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 
 class WooCommerceWebhookController extends Controller
 {
     public function __construct(
-        protected WooCommerceOrderSyncService $orderSyncService
+        protected WooCommerceWebhookService $webhookService
     ) {}
 
-    /**
-     * Handle incoming webhook from WooCommerce
-     */
     public function handle(Request $request, int $userId): JsonResponse
     {
-        $integration = WooCommerceIntegration::withoutGlobalScopes()
-            ->where('user_id', $userId)
-            ->where('is_active', true)
-            ->first();
+        $result = $this->webhookService->handleIncomingWebhook(
+            $userId,
+            $request->getContent(),
+            $request->header('X-WC-Webhook-Signature'),
+            $request->header('X-WC-Webhook-Topic')
+        );
 
-        if (!$integration) {
-            return response()->json(['message' => 'Integration inactive or not found'], 404);
-        }
-
-        $user = User::withoutGlobalScopes()->find($userId);
-        if (!$user) {
-            return response()->json(['message' => 'Store owner not found'], 404);
-        }
-
-        $rawPayload = $request->getContent();
-        $signature = $request->header('X-WC-Webhook-Signature');
-
-        // Verify HMAC-SHA256 signature strictly
-        if (empty($integration->webhook_secret)) {
-            Log::error("WooCommerce webhook rejected: webhook_secret not configured for user #{$userId}");
-            return response()->json(['message' => 'Webhook secret not configured'], 403);
-        }
-
-        if (empty($signature)) {
-            Log::warning("Missing WooCommerce webhook signature header for user #{$userId}");
-            return response()->json(['message' => 'Unauthorized webhook signature'], 401);
-        }
-
-        $expectedSignature = base64_encode(hash_hmac('sha256', $rawPayload, $integration->webhook_secret, true));
-        if (!hash_equals($expectedSignature, $signature)) {
-            Log::warning("Invalid WooCommerce webhook signature for user #{$userId}");
-            return response()->json(['message' => 'Unauthorized webhook signature'], 401);
-        }
-
-        // Establish tenant authentication context for the webhook request
-        \Illuminate\Support\Facades\Auth::setUser($user);
-
-        $topic = $request->header('X-WC-Webhook-Topic');
-        if ($topic && !str_starts_with($topic, 'order.') && !str_contains($topic, 'ping')) {
-            return response()->json(['message' => "Webhook topic '{$topic}' ignored"], 200);
-        }
-
-        $payload = json_decode($rawPayload, true);
-        if (!$payload) {
-            return response()->json(['message' => 'Invalid JSON payload'], 400);
-        }
-
-        // Handle webhook verification ping from WooCommerce
-        if (isset($payload['webhook_id'])) {
-            return response()->json(['message' => 'Webhook ping received successfully'], 200);
-        }
-
-        // Queue order webhook for background processing on woo-realtime
-        ProcessWooCommerceWebhookJob::dispatch($userId, $topic, $payload);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Webhook queued for processing',
-        ], 202);
+        return response()->json($result['body'], $result['status']);
     }
 }

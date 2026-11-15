@@ -2,16 +2,18 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Enums\AdminAuditAction;
 use App\Http\Controllers\Controller;
-use App\Models\StoreInquiry;
-use App\Services\AdminAuditService;
+use App\Http\Requests\UpdateStoreInquiryRequest;
+use App\Services\StoreInquiryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class StoreInquiryController extends Controller
 {
-    public function __construct(protected AdminAuditService $auditService) {}
+    public function __construct(
+        protected StoreInquiryService $inquiryService
+    ) {}
+
     /**
      * Submit a store creation inquiry from the public landing page.
      */
@@ -25,14 +27,7 @@ class StoreInquiryController extends Controller
             'notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $inquiry = StoreInquiry::create([
-            'name' => $validated['name'],
-            'phone' => $validated['phone'],
-            'business_type' => $validated['business_type'] ?? null,
-            'city' => $validated['city'] ?? null,
-            'notes' => $validated['notes'] ?? null,
-            'status' => 'NEW',
-        ]);
+        $inquiry = $this->inquiryService->submitPublicInquiry($validated);
 
         return response()->json([
             'success' => true,
@@ -46,35 +41,16 @@ class StoreInquiryController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $status = $request->input('status');
-        $search = $request->input('search');
-
-        $query = StoreInquiry::query();
-
-        if ($status && in_array($status, ['NEW', 'CONTACTED', 'CONTRACTED', 'CLOSED'])) {
-            $query->where('status', $status);
-        }
-
-        if ($search) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('phone', 'like', "%{$search}%")
-                  ->orWhere('business_type', 'like', "%{$search}%");
-            });
-        }
-
-        $stats = [
-            'total' => StoreInquiry::count(),
-            'new' => StoreInquiry::where('status', 'NEW')->count(),
-            'contacted' => StoreInquiry::where('status', 'CONTACTED')->count(),
-            'contracted' => StoreInquiry::where('status', 'CONTRACTED')->count(),
-        ];
-
-        $inquiries = $query->latest()->paginate(min((int) $request->input('per_page', 25), 100));
+        $result = $this->inquiryService->listWithStats(
+            $request->input('status'),
+            $request->input('search'),
+            (int) $request->input('per_page', 25)
+        );
+        $inquiries = $result['inquiries'];
 
         return response()->json([
             'success' => true,
-            'stats' => $stats,
+            'stats' => $result['stats'],
             'data' => $inquiries->items(),
             'meta' => [
                 'current_page' => $inquiries->currentPage(),
@@ -88,24 +64,9 @@ class StoreInquiryController extends Controller
     /**
      * Update inquiry status or admin notes.
      */
-    public function update(Request $request, int $id): JsonResponse
+    public function update(UpdateStoreInquiryRequest $request, int $id): JsonResponse
     {
-        $inquiry = StoreInquiry::findOrFail($id);
-
-        $validated = $request->validate([
-            'status' => ['nullable', 'string', 'in:NEW,CONTACTED,CONTRACTED,CLOSED'],
-            'admin_notes' => ['nullable', 'string', 'max:1000'],
-        ]);
-
-        $inquiry->update($validated);
-
-        $this->auditService->record(
-            action: AdminAuditAction::INQUIRY_UPDATED,
-            summary: "تحديث طلب متجر ({$inquiry->name}) إلى {$inquiry->status}",
-            metadata: ['inquiry_id' => $inquiry->id, 'status' => $inquiry->status],
-            targetType: StoreInquiry::class,
-            targetId: $inquiry->id,
-        );
+        $inquiry = $this->inquiryService->updateInquiry($id, $request->validated());
 
         return response()->json([
             'success' => true,
@@ -119,16 +80,7 @@ class StoreInquiryController extends Controller
      */
     public function destroy(int $id): JsonResponse
     {
-        $inquiry = StoreInquiry::findOrFail($id);
-        $inquiry->delete();
-
-        $this->auditService->record(
-            action: AdminAuditAction::INQUIRY_DELETED,
-            summary: "حذف طلب متجر ({$inquiry->name})",
-            metadata: ['inquiry_id' => $id, 'phone' => $inquiry->phone],
-            targetType: StoreInquiry::class,
-            targetId: $id,
-        );
+        $this->inquiryService->deleteInquiry($id);
 
         return response()->json([
             'success' => true,

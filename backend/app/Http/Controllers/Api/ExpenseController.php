@@ -61,7 +61,7 @@ class ExpenseController extends Controller
      */
     public function show(Request $request, int $id): JsonResponse
     {
-        $expense = Expense::findOrFail($id);
+        $expense = $this->expenseService->findOrFail($id);
 
         Gate::authorize('view', $expense);
 
@@ -76,7 +76,7 @@ class ExpenseController extends Controller
      */
     public function update(ExpenseRequest $request, int $id): JsonResponse
     {
-        $expense = Expense::findOrFail($id);
+        $expense = $this->expenseService->findOrFail($id);
 
         Gate::authorize('update', $expense);
 
@@ -94,7 +94,7 @@ class ExpenseController extends Controller
      */
     public function destroy(Request $request, int $id): JsonResponse
     {
-        $expense = Expense::findOrFail($id);
+        $expense = $this->expenseService->findOrFail($id);
 
         Gate::authorize('delete', $expense);
 

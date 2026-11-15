@@ -776,4 +776,29 @@ class InvoiceService
             'total_amount' => Money::of($query->sum('total') ?? 0)->getAmount(),
         ];
     }
+
+    public function findOrFail(int $id): Invoice
+    {
+        return Invoice::findOrFail($id);
+    }
+
+    public function findForShowOrFail(int $id): Invoice
+    {
+        return Invoice::with(['party', 'items', 'creator', 'salesperson'])->findOrFail($id);
+    }
+
+    public function findByNumberForUser(User $user, string $invoiceNumber): ?Invoice
+    {
+        return Invoice::where('user_id', $user->getAccountId())
+            ->where('invoice_number', $invoiceNumber)
+            ->with(['party', 'items', 'creator', 'salesperson'])
+            ->first();
+    }
+
+    public function updateSalesperson(Invoice $invoice, ?int $salespersonId): Invoice
+    {
+        $invoice->update(['salesperson_id' => $salespersonId]);
+
+        return $invoice->fresh(['party', 'items', 'creator', 'salesperson']);
+    }
 }

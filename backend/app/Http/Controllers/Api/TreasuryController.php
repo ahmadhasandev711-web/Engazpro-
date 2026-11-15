@@ -3,14 +3,16 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreTreasuryRequest;
+use App\Http\Requests\TransferTreasuryRequest;
+use App\Http\Requests\UpdateTreasuryRequest;
 use App\Http\Resources\TreasuryResource;
 use App\Http\Resources\TreasuryTransactionResource;
-use App\Models\Treasury;
-use App\Models\TreasuryTransaction;
 use App\Services\TreasuryService;
 use App\Support\Money;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class TreasuryController extends Controller
 {
@@ -36,36 +38,9 @@ class TreasuryController extends Controller
     /**
      * إنشاء خزينة جديدة أو حساب بنكي (صاحب العمل / المدير العام)
      */
-    public function store(Request $request): JsonResponse
+    public function store(StoreTreasuryRequest $request): JsonResponse
     {
-        \Illuminate\Support\Facades\Gate::authorize('create', Treasury::class);
-
-        $accountId = $request->user()->getAccountId();
-
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:100'],
-            'type' => ['required', 'string', 'in:MAIN,BRANCH_SAFE,CASHIER_DRAWER,MANDOB_CUSTODY,BANK,WALLET,OWNER_DRAWINGS'],
-            'branch_id' => [
-                'nullable',
-                'integer',
-                \Illuminate\Validation\Rule::exists('branches', 'id')->where('user_id', $accountId),
-            ],
-            'opening_balance' => ['nullable', 'numeric', 'min:0'],
-            'assigned_user_id' => [
-                'nullable',
-                'integer',
-                \Illuminate\Validation\Rule::exists('users', 'id')->where(function ($q) use ($accountId) {
-                    $q->where('id', $accountId)->orWhere('owner_id', $accountId);
-                }),
-            ],
-            'notes' => ['nullable', 'string', 'max:500'],
-        ], [
-            'name.required' => 'يجب إدخال اسم الخزينة أو الحساب',
-            'type.required' => 'يجب تحديد نوع الخزينة',
-            'type.in' => 'نوع الخزينة المحدد غير صالح',
-        ]);
-
-        $treasury = $this->treasuryService->createTreasury($validated, $request->user());
+        $treasury = $this->treasuryService->createTreasury($request->validated(), $request->user());
 
         return response()->json([
             'success' => true,
@@ -77,25 +52,12 @@ class TreasuryController extends Controller
     /**
      * تعديل بيانات الخزينة
      */
-    public function update(Request $request, int $id): JsonResponse
+    public function update(UpdateTreasuryRequest $request, int $id): JsonResponse
     {
-        $treasury = Treasury::findOrFail($id);
-        \Illuminate\Support\Facades\Gate::authorize('update', $treasury);
+        $treasury = $this->treasuryService->findOrFail($id);
+        Gate::authorize('update', $treasury);
 
-        $accountId = $request->user()->getAccountId();
-
-        $validated = $request->validate([
-            'name' => ['nullable', 'string', 'max:100'],
-            'branch_id' => [
-                'nullable',
-                'integer',
-                \Illuminate\Validation\Rule::exists('branches', 'id')->where('user_id', $accountId),
-            ],
-            'is_active' => ['nullable', 'boolean'],
-            'notes' => ['nullable', 'string', 'max:500'],
-        ]);
-
-        $updated = $this->treasuryService->updateTreasury($treasury, $validated);
+        $updated = $this->treasuryService->updateTreasury($treasury, $request->validated());
 
         return response()->json([
             'success' => true,
@@ -109,8 +71,8 @@ class TreasuryController extends Controller
      */
     public function show(Request $request, int $id): JsonResponse
     {
-        $treasury = Treasury::with(['assignedUser', 'branch'])->findOrFail($id);
-        \Illuminate\Support\Facades\Gate::authorize('view', $treasury);
+        $treasury = $this->treasuryService->findForShowOrFail($id);
+        Gate::authorize('view', $treasury);
 
         return response()->json([
             'success' => true,
@@ -123,8 +85,8 @@ class TreasuryController extends Controller
      */
     public function transactions(Request $request, int $id): JsonResponse
     {
-        $treasury = Treasury::findOrFail($id);
-        \Illuminate\Support\Facades\Gate::authorize('viewTransactions', $treasury);
+        $treasury = $this->treasuryService->findOrFail($id);
+        Gate::authorize('viewTransactions', $treasury);
 
         $transactions = $this->treasuryService->getTransactionsPaginated($treasury, $request->all());
 
@@ -143,51 +105,16 @@ class TreasuryController extends Controller
     /**
      * تحويل نقدية يدوي بين خزنتين (صاحب العمل أو المدير)
      */
-    public function transfer(Request $request): JsonResponse
+    public function transfer(TransferTreasuryRequest $request): JsonResponse
     {
-        \Illuminate\Support\Facades\Gate::authorize('transfer', Treasury::class);
+        $validated = $request->validated();
 
-        $validated = $request->validate([
-            'from_treasury_id' => ['required', 'integer', 'different:to_treasury_id'],
-            'to_treasury_id' => ['required', 'integer'],
-            'amount' => ['required', 'numeric', 'min:0.01'],
-            'notes' => ['nullable', 'string', 'max:500'],
-        ], [
-            'from_treasury_id.required' => 'يجب تحديد خزينة المصدر',
-            'to_treasury_id.required' => 'يجب تحديد خزينة الوجهة',
-            'from_treasury_id.different' => 'لا يمكن التحويل لنفس الخزينة',
-            'amount.min' => 'المبلغ يجب أن يكون أكبر من صفر',
-        ]);
-
-        $from = Treasury::findOrFail($validated['from_treasury_id']);
-        $to = Treasury::findOrFail($validated['to_treasury_id']);
-        $user = $request->user();
-
-        if ($user->isManager()) {
-            if ($from->branch_id !== $user->branch_id) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'عذراً، يمكنك التحويل فقط من خزن فرعك التابع له.',
-                ], 403);
-            }
-            $toType = $to->type instanceof \BackedEnum ? $to->type->value : (string) $to->type;
-            $isAllowedDest = ($to->branch_id === $user->branch_id) || in_array($toType, ['BANK', 'MAIN']);
-            if (!$isAllowedDest) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'عذراً، يمكنك التوريد فقط إلى خزن فرعك، أو الحساب البنكي، أو الخزنة المركزية.',
-                ], 403);
-            }
-        }
-
-        $amountMoney = Money::of($validated['amount']);
-
-        $transaction = $this->treasuryService->recordTransfer(
-            fromTreasury: $from,
-            toTreasury: $to,
-            amount: $amountMoney,
-            actor: $user,
-            notes: $validated['notes'] ?? 'تحويل إداري بين الخزن'
+        $transaction = $this->treasuryService->transferBetweenTreasuries(
+            actor: $request->user(),
+            fromTreasuryId: (int) $validated['from_treasury_id'],
+            toTreasuryId: (int) $validated['to_treasury_id'],
+            amount: Money::of($validated['amount']),
+            notes: $validated['notes'] ?? null
         );
 
         return response()->json([

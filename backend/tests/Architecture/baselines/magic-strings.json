@@ -1,11 +1,5 @@
 {
     "Console/Commands/MakeAdminCommand.php": 1,
-    "Http/Controllers/Api/AuthController.php": 1,
-    "Http/Controllers/Api/EmployeeController.php": 7,
-    "Http/Controllers/Api/ProductController.php": 2,
-    "Http/Controllers/Api/StoreInquiryController.php": 1,
-    "Http/Controllers/Api/TreasuryController.php": 2,
-    "Http/Controllers/Api/WcOrderController.php": 1,
     "Http/Middleware/CheckSubscription.php": 1,
     "Http/Requests/ExpenseRequest.php": 4,
     "Http/Requests/InvoiceRequest.php": 1,
