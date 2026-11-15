@@ -3,6 +3,8 @@
 namespace App\Services\Payments;
 
 use App\Contracts\PaymentHandlerInterface;
+use App\Enums\LedgerSource;
+use App\Enums\PaymentMethod;
 use App\Models\Party;
 use App\Models\Payment;
 use App\Models\Shift;
@@ -19,7 +21,7 @@ class CashPaymentHandler implements PaymentHandlerInterface
 
     public function supports(string $method): bool
     {
-        return strtoupper($method) === 'CASH';
+        return strtoupper($method) === PaymentMethod::CASH->value;
     }
 
     public function handle(
@@ -40,7 +42,7 @@ class CashPaymentHandler implements PaymentHandlerInterface
             $this->treasuryService->recordDeposit(
                 treasury: $treasury,
                 amount: $money,
-                sourceType: 'PAYMENT',
+                sourceType: LedgerSource::PAYMENT->value,
                 sourceId: $payment->id,
                 actor: $user,
                 notes: "سند تحصيل نقدي #{$payment->id} من ({$party->name})",
@@ -50,7 +52,7 @@ class CashPaymentHandler implements PaymentHandlerInterface
             $this->treasuryService->recordWithdrawal(
                 treasury: $treasury,
                 amount: $money,
-                sourceType: 'PAYMENT',
+                sourceType: LedgerSource::PAYMENT->value,
                 sourceId: $payment->id,
                 actor: $user,
                 notes: "سند صرف نقدي #{$payment->id} إلى ({$party->name})",

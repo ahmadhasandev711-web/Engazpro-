@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\LedgerSource;
 use App\Enums\PartyType;
 use App\Exceptions\PosDomainException;
 use App\Models\Party;
@@ -37,7 +38,7 @@ class PartyService
                 $debit = 0.0;
                 $credit = 0.0;
 
-                if ($party->type === 'CUSTOMER') {
+                if ($party->type === PartyType::CUSTOMER->value) {
                     if ($initialBalance > 0) {
                         $debit = $initialBalance;
                     } else {
@@ -54,7 +55,7 @@ class PartyService
                 $this->ledgerService->recordEntry(
                     $user,
                     $party,
-                    'INITIAL',
+                    LedgerSource::INITIAL->value,
                     $party->id,
                     now()->toDateString(),
                     'رصيد افتتاحي عند إنشاء الحساب',
@@ -111,7 +112,7 @@ class PartyService
         $query = Party::withCount('invoices')
             ->withExists(['invoices', 'payments']);
 
-        if ($type && in_array($type, ['CUSTOMER', 'SUPPLIER', 'COURIER'])) {
+        if ($type && in_array($type, array_column(PartyType::cases(), 'value'))) {
             $query->where('type', $type);
         }
 
