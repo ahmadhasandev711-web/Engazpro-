@@ -7,16 +7,22 @@ import {
   ArrowRight,
   Database,
   Globe,
+  FileText,
+  Sun,
+  Moon,
 } from 'lucide-react';
-import clsx from 'clsx';
 import { Link } from 'react-router-dom';
 import { User } from '@pos-mandob/shared';
 import {
+  AdminUserStatusFilter,
   useAdminStats,
   useAdminLicenses,
   useAdminUsers,
+  useAdminAuditLogs,
   useGenerateLicenses,
   useExtendUserSubscription,
+  useRevokeSubscription,
+  useForceLogoutStore,
   useRevokeLicense,
   useToggleUserStatus,
   useResetUserPassword,
@@ -24,203 +30,246 @@ import {
 import { AdminKPICards } from '../components/admin/AdminKPICards';
 import { LicenseGeneratorTab } from '../components/admin/LicenseGeneratorTab';
 import { UsersManagementTab } from '../components/admin/UsersManagementTab';
+import { AdminAuditLogTab } from '../components/admin/AdminAuditLogTab';
 import { SystemHealthTab } from '../components/admin/SystemHealthTab';
 import { StoreInquiriesTab } from '../components/admin/StoreInquiriesTab';
 import { ExtendSubscriptionModal } from '../components/admin/ExtendSubscriptionModal';
 import { StoreStaffModal } from '../components/admin/StoreStaffModal';
 import { ResetPasswordModal } from '../components/admin/ResetPasswordModal';
+import { Badge, Button, PageHeader, Tabs } from '../components/ui';
 import { useToast } from '../context/ToastContext';
+import { useTheme } from '../context/ThemeContext';
+
+type AdminTab = 'licenses' | 'users' | 'audit' | 'system' | 'inquiries';
 
 export const AdminDashboardPage: React.FC = () => {
   const toast = useToast();
-  const [activeTab, setActiveTab] = useState<'licenses' | 'users' | 'system' | 'inquiries'>('licenses');
+  const { resolvedTheme, toggleTheme } = useTheme();
+
+  const [activeTab, setActiveTab] = useState<AdminTab>('licenses');
   const [licenseSearch, setLicenseSearch] = useState<string>('');
   const [licenseStatusFilter, setLicenseStatusFilter] = useState<'all' | 'unused' | 'used' | 'revoked'>('all');
+  const [licensePage, setLicensePage] = useState<number>(1);
+
   const [userSearch, setUserSearch] = useState<string>('');
+  const [userStatusFilter, setUserStatusFilter] = useState<AdminUserStatusFilter>('all');
+  const [userPage, setUserPage] = useState<number>(1);
+
+  const [auditSearch, setAuditSearch] = useState<string>('');
+  const [auditActionFilter, setAuditActionFilter] = useState<string>('all');
+  const [auditPage, setAuditPage] = useState<number>(1);
+
   const [selectedUserForExtend, setSelectedUserForExtend] = useState<User | null>(null);
   const [selectedUserForResetPassword, setSelectedUserForResetPassword] = useState<User | null>(null);
   const [inspectedStoreId, setInspectedStoreId] = useState<number | null>(null);
 
-  // Queries & Mutations via Custom Hooks
   const { data: statsData, isLoading: isLoadingStats, refetch: refetchStats } = useAdminStats();
-  const {
-    data: licenses = [],
-    isLoading: isLoadingLicenses,
-    refetch: refetchLicenses,
-  } = useAdminLicenses(licenseStatusFilter, licenseSearch);
-  const {
-    data: users = [],
-    isLoading: isLoadingUsers,
-    refetch: refetchUsers,
-  } = useAdminUsers(userSearch);
+  const { data: licensesPageData, isLoading: isLoadingLicenses, refetch: refetchLicenses } = useAdminLicenses(
+    licenseStatusFilter,
+    licenseSearch,
+    licensePage
+  );
+  const { data: usersPageData, isLoading: isLoadingUsers, refetch: refetchUsers } = useAdminUsers(
+    userStatusFilter,
+    userSearch,
+    userPage
+  );
+  const { data: auditPageData, isLoading: isLoadingAudit, refetch: refetchAudit } = useAdminAuditLogs(
+    auditActionFilter,
+    auditSearch,
+    auditPage
+  );
 
   const generateMutation = useGenerateLicenses();
   const extendUserMutation = useExtendUserSubscription();
+  const revokeSubscriptionMutation = useRevokeSubscription();
+  const forceLogoutMutation = useForceLogoutStore();
   const revokeLicenseMutation = useRevokeLicense();
   const toggleStatusMutation = useToggleUserStatus();
   const resetPasswordMutation = useResetUserPassword();
 
-  const handleGenerate = (payload: { count: number; duration_days: number; notes: string }) => {
+  const handleGenerate = (payload: { count: number; duration_days: number; notes: string; price?: number | null }) => {
     generateMutation.mutate(payload, {
-      onSuccess: () => toast.success('تم توليد أكواد التفعيل بنجاح! 🔑'),
+      onSuccess: () => toast.success('تم توليد أكواد التفعيل بنجاح!'),
       onError: (err: any) => toast.error(err.response?.data?.message || 'حدث خطأ أثناء توليد الأكواد'),
     });
   };
 
-  const handleExtend = (payload: { userId: number; days: number; notes: string }) => {
+  const handleExtend = (payload: { userId: number; days: number; notes: string; price?: number | null }) => {
     extendUserMutation.mutate(payload, {
       onSuccess: (data: any) => {
         setSelectedUserForExtend(null);
-        toast.success(data.message || 'تم تمديد اشتراك المستخدم بنجاح! 🎉');
+        toast.success(data.message || 'تم تمديد اشتراك المستخدم بنجاح!');
       },
       onError: (err: any) => toast.error(err.response?.data?.message || 'تعذر تمديد الاشتراك'),
     });
   };
 
-  const handleResetPassword = (payload: { userId: number; password: string }) => {
-    resetPasswordMutation.mutate(payload, {
-      onSuccess: (data: any) => {
-        setSelectedUserForResetPassword(null);
-        toast.success(data.message || 'تم تغيير كلمة المرور بنجاح! 🔑');
-      },
-      onError: (err: any) => toast.error(err.response?.data?.message || 'تعذر تغيير كلمة المرور'),
-    });
+  const handleResetPassword = async (payload: { userId: number; password: string }): Promise<void> => {
+    try {
+      const data: any = await resetPasswordMutation.mutateAsync(payload);
+      toast.success(data.message || 'تم تغيير كلمة المرور بنجاح!');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'تعذر تغيير كلمة المرور');
+      throw err;
+    }
   };
 
   const handleRevokeLicense = (licenseId: number) => {
     revokeLicenseMutation.mutate(licenseId, {
-      onSuccess: (data: any) => {
-        toast.success(data.message || 'تم حرق وإلغاء كود التفعيل بنجاح ومنع استخدامه نهائياً! 🚫');
-      },
+      onSuccess: (data: any) => toast.success(data.message || 'تم إلغاء كود التفعيل بنجاح!'),
       onError: (err: any) => toast.error(err.response?.data?.message || 'تعذر إلغاء الكود'),
     });
   };
 
   const handleToggleStatus = (user: User) => {
     toggleStatusMutation.mutate(user.id, {
-      onSuccess: (data: any) => {
-        toast.success(data.message || 'تم تعديل حالة حساب المتجر بنجاح.');
-      },
+      onSuccess: (data: any) => toast.success(data.message || 'تم تعديل حالة حساب المتجر بنجاح.'),
       onError: (err: any) => toast.error(err.response?.data?.message || 'تعذر تعديل حالة الحساب'),
     });
   };
 
+  const handleRevokeSubscription = (user: User) => {
+    revokeSubscriptionMutation.mutate(
+      { userId: user.id },
+      {
+        onSuccess: (data: any) => toast.success(data.message || 'تم إنهاء الاشتراك بنجاح.'),
+        onError: (err: any) => toast.error(err.response?.data?.message || 'تعذر إنهاء الاشتراك'),
+      }
+    );
+  };
+
+  const handleForceLogout = (user: User) => {
+    forceLogoutMutation.mutate(user.id, {
+      onSuccess: (data: any) => toast.success(data.message || 'تم طرد جميع الجلسات بنجاح.'),
+      onError: (err: any) => toast.error(err.response?.data?.message || 'تعذر طرد الجلسات'),
+    });
+  };
+
+  const isAnyUserMutationPending =
+    toggleStatusMutation.isPending || revokeSubscriptionMutation.isPending || forceLogoutMutation.isPending;
+
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 pb-16" dir="rtl">
-      {/* Top Super Admin Navbar */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link to="/dashboard" className="p-2 text-slate-500 hover:text-slate-900 rounded-lg hover:bg-slate-100 transition-colors">
+    <div className="min-h-screen bg-canvas text-ink pb-16 transition-colors" dir="rtl">
+      <header className="bg-panel border-b border-line sticky top-0 z-30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <Link
+              to="/dashboard"
+              className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-muted hover:text-ink rounded-xl hover:bg-surface-2 border border-line transition-colors"
+              aria-label="العودة للوحة التحكم"
+            >
               <ArrowRight className="w-5 h-5" />
             </Link>
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white font-black shadow-md shadow-emerald-500/20">
-              <ShieldCheck className="w-6 h-6" />
+            <div className="w-10 h-10 rounded-xl bg-brand text-on-brand flex items-center justify-center shrink-0">
+              <ShieldCheck className="w-5 h-5" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-lg font-black text-slate-900 leading-tight">لوحة تحكم الإدارة العامة</h1>
-                <span className="px-2 py-0.5 text-[11px] font-bold bg-amber-100 text-amber-800 rounded-full border border-amber-200">
-                  👑 Super Admin
-                </span>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-black text-base sm:text-lg text-ink truncate">الإدارة العامة</span>
+                <Badge tone="warn">Super Admin</Badge>
               </div>
-              <p className="text-xs text-slate-500 font-medium">إدارة منصة إنجاز برو، الاشتراكات، وبنك الأكواد الآمنة ومكافحة الاحتيال</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <button
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={toggleTheme}
+              aria-label="تبديل المظهر"
+              className="min-h-[44px]"
+              leftIcon={resolvedTheme === 'dark' ? <Sun className="w-4 h-4 text-warn" /> : <Moon className="w-4 h-4" />}
+            >
+              <span className="hidden sm:inline">{resolvedTheme === 'dark' ? 'نهاري' : 'ليلي'}</span>
+            </Button>
+
+            <Button
+              size="sm"
+              variant="secondary"
+              className="min-h-[44px]"
               onClick={() => {
                 refetchStats();
                 refetchLicenses();
                 refetchUsers();
+                refetchAudit();
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+              leftIcon={<RefreshCw className={isLoadingStats ? 'w-4 h-4 animate-spin' : 'w-4 h-4'} />}
             >
-              <RefreshCw className={clsx('w-3.5 h-3.5', isLoadingStats && 'animate-spin')} />
-              <span>تحديث البيانات</span>
-            </button>
-
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-xs font-bold">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              السيرفر متصل وقاعدة البيانات مؤمنة
-            </div>
+              <span className="hidden sm:inline">تحديث</span>
+            </Button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 space-y-8">
-        {/* KPI Cards */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 sm:mt-8 space-y-6">
+        <PageHeader
+          title="لوحة قيادة منصة إنجاز برو"
+          description="إدارة الاشتراكات، بنك الأكواد، حماية الجلسات، وسجل التدقيق السيادي."
+          badge={
+            <Badge tone="ok" dot>
+              السيرفر مؤمن
+            </Badge>
+          }
+        />
+
         <AdminKPICards stats={statsData} />
 
-        {/* Tab Navigation Controls */}
-        <div className="flex border-b border-slate-200 space-x-reverse space-x-8">
-          <button
-            onClick={() => setActiveTab('licenses')}
-            className={clsx(
-              'pb-4 font-bold text-sm flex items-center gap-2 border-b-2 transition-colors',
-              activeTab === 'licenses'
-                ? 'border-emerald-600 text-emerald-700'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            )}
-          >
-            <Key className="w-4 h-4" />
-            <span>بنك ومولد أكواد التفعيل ({statsData?.licenses.unused ?? 0} متاح)</span>
-          </button>
+        <Tabs
+          activeTab={activeTab}
+          onChange={(id) => setActiveTab(id as AdminTab)}
+          tabs={[
+            {
+              id: 'licenses',
+              label: 'أكواد التفعيل',
+              count: statsData?.licenses.unused ?? 0,
+              icon: <Key className="w-4 h-4" />,
+            },
+            {
+              id: 'users',
+              label: 'المتاجر المشتركة',
+              count: statsData?.users.merchants ?? statsData?.users.total ?? 0,
+              icon: <Users className="w-4 h-4" />,
+            },
+            {
+              id: 'audit',
+              label: 'سجل التدقيق',
+              icon: <FileText className="w-4 h-4" />,
+            },
+            {
+              id: 'system',
+              label: 'حالة النظام',
+              icon: <Database className="w-4 h-4" />,
+            },
+            {
+              id: 'inquiries',
+              label: 'طلبات المتاجر',
+              icon: <Globe className="w-4 h-4" />,
+            },
+          ]}
+        />
 
-          <button
-            onClick={() => setActiveTab('users')}
-            className={clsx(
-              'pb-4 font-bold text-sm flex items-center gap-2 border-b-2 transition-colors',
-              activeTab === 'users'
-                ? 'border-emerald-600 text-emerald-700'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            )}
-          >
-            <Users className="w-4 h-4" />
-            <span>إدارة المتاجر المشتركة ({statsData?.users.merchants ?? statsData?.users.total ?? 0})</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('system')}
-            className={clsx(
-              'pb-4 font-bold text-sm flex items-center gap-2 border-b-2 transition-colors',
-              activeTab === 'system'
-                ? 'border-emerald-600 text-emerald-700'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            )}
-          >
-            <Database className="w-4 h-4" />
-            <span>حالة النظام والبيانات</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('inquiries')}
-            className={clsx(
-              'pb-4 font-bold text-sm flex items-center gap-2 border-b-2 transition-colors',
-              activeTab === 'inquiries'
-                ? 'border-emerald-600 text-emerald-700'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            )}
-          >
-            <Globe className="w-4 h-4" />
-            <span>طلبات المتاجر وإدارة الموقع</span>
-          </button>
-        </div>
-
-        {/* TAB Content */}
         {activeTab === 'licenses' && (
           <LicenseGeneratorTab
-            licenses={licenses}
+            licenses={licensesPageData?.items ?? []}
             isLoading={isLoadingLicenses}
             totalLicenses={statsData?.licenses.total ?? 0}
             unusedCount={statsData?.licenses.unused ?? 0}
             usedCount={statsData?.licenses.used ?? 0}
             revokedCount={statsData?.licenses.revoked ?? 0}
             statusFilter={licenseStatusFilter}
-            onStatusFilterChange={setLicenseStatusFilter}
+            onStatusFilterChange={(status) => {
+              setLicenseStatusFilter(status);
+              setLicensePage(1);
+            }}
             search={licenseSearch}
-            onSearchChange={setLicenseSearch}
+            onSearchChange={(val) => {
+              setLicenseSearch(val);
+              setLicensePage(1);
+            }}
+            page={licensesPageData?.current_page ?? 1}
+            lastPage={licensesPageData?.last_page ?? 1}
+            onPageChange={setLicensePage}
             onGenerate={handleGenerate}
             onRevokeLicense={handleRevokeLicense}
             isGenerating={generateMutation.isPending}
@@ -229,15 +278,50 @@ export const AdminDashboardPage: React.FC = () => {
 
         {activeTab === 'users' && (
           <UsersManagementTab
-            users={users}
+            users={usersPageData?.items ?? []}
+            totalUsers={usersPageData?.total ?? 0}
             isLoading={isLoadingUsers}
+            statusFilter={userStatusFilter}
+            onStatusFilterChange={(st) => {
+              setUserStatusFilter(st);
+              setUserPage(1);
+            }}
             search={userSearch}
-            onSearchChange={setUserSearch}
+            onSearchChange={(val) => {
+              setUserSearch(val);
+              setUserPage(1);
+            }}
+            page={usersPageData?.current_page ?? 1}
+            lastPage={usersPageData?.last_page ?? 1}
+            onPageChange={setUserPage}
             onSelectUserForExtend={setSelectedUserForExtend}
             onSelectUserForResetPassword={setSelectedUserForResetPassword}
             onInspectStore={(uid) => setInspectedStoreId(uid)}
             onToggleStatus={handleToggleStatus}
-            isTogglingStatus={toggleStatusMutation.isPending}
+            onRevokeSubscription={handleRevokeSubscription}
+            onForceLogout={handleForceLogout}
+            isMutating={isAnyUserMutationPending}
+          />
+        )}
+
+        {activeTab === 'audit' && (
+          <AdminAuditLogTab
+            logs={auditPageData?.items ?? []}
+            totalLogs={auditPageData?.total ?? 0}
+            isLoading={isLoadingAudit}
+            actionFilter={auditActionFilter}
+            onActionFilterChange={(act) => {
+              setAuditActionFilter(act);
+              setAuditPage(1);
+            }}
+            search={auditSearch}
+            onSearchChange={(val) => {
+              setAuditSearch(val);
+              setAuditPage(1);
+            }}
+            page={auditPageData?.current_page ?? 1}
+            lastPage={auditPageData?.last_page ?? 1}
+            onPageChange={setAuditPage}
           />
         )}
 
@@ -246,7 +330,6 @@ export const AdminDashboardPage: React.FC = () => {
         {activeTab === 'inquiries' && <StoreInquiriesTab />}
       </main>
 
-      {/* Direct Extend Subscription Modal */}
       {selectedUserForExtend && (
         <ExtendSubscriptionModal
           user={selectedUserForExtend}
@@ -256,7 +339,6 @@ export const AdminDashboardPage: React.FC = () => {
         />
       )}
 
-      {/* Direct Reset Password Modal */}
       {selectedUserForResetPassword && (
         <ResetPasswordModal
           user={selectedUserForResetPassword}
@@ -266,13 +348,7 @@ export const AdminDashboardPage: React.FC = () => {
         />
       )}
 
-      {/* Store Staff & Branches Inspection Modal */}
-      {inspectedStoreId && (
-        <StoreStaffModal
-          userId={inspectedStoreId}
-          onClose={() => setInspectedStoreId(null)}
-        />
-      )}
+      {inspectedStoreId && <StoreStaffModal userId={inspectedStoreId} onClose={() => setInspectedStoreId(null)} />}
     </div>
   );
 };

@@ -482,10 +482,10 @@ export interface AdminStatsData {
   };
   financials: {
     estimated_revenue_egp: number;
+    recorded_revenue_egp?: number;
   };
   system?: {
     database_driver: string;
-    database_name: string;
     database_label: string;
   };
 }
@@ -493,6 +493,8 @@ export interface AdminStatsData {
 export interface LicenseKey extends BaseEntity {
   code: string;
   duration_days: number;
+  plan?: string;
+  price?: number | null;
   is_used: boolean;
   is_revoked?: boolean;
   revoked_at?: string | null;
@@ -505,6 +507,30 @@ export interface LicenseKey extends BaseEntity {
     phone: string;
   } | null;
   used_by?: {
+    id: number;
+    name: string;
+    phone: string;
+  } | null;
+}
+
+export interface AdminAuditLogItem {
+  id: number;
+  actor_user_id: number | null;
+  target_user_id: number | null;
+  action: string;
+  target_type: string | null;
+  target_id: number | null;
+  summary: string;
+  metadata?: Record<string, any> | null;
+  ip_address: string | null;
+  user_agent: string | null;
+  created_at: string;
+  actor?: {
+    id: number;
+    name: string;
+    phone: string;
+  } | null;
+  target_user?: {
     id: number;
     name: string;
     phone: string;
