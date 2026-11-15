@@ -44,7 +44,6 @@ const HEX_REGEX = /#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})\b/g;
 
 const EXCLUDED_FILES = new Set([
   path.normalize('src/styles/tokens.css'),
-  path.normalize('src/styles/landing.css'),
 ]);
 
 function getAllFiles(dir, fileList = []) {

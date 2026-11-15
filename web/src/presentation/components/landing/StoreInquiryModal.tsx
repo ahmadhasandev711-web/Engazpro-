@@ -1,30 +1,42 @@
 import React, { useState } from 'react';
-import '../../../styles/landing.css';
 import {
-  X,
-  Sparkles,
-  ShoppingBag,
-  MessageCircle,
   CheckCircle2,
-  Phone,
-  User,
-  Building2,
-  MapPin,
-  FileText,
+  MessageCircle,
+  ShoppingBag,
+  Sparkles,
+  X,
 } from 'lucide-react';
 import { apiClient } from '../../../data/api/client';
+import { Badge, Button, Input, Select, Textarea } from '../ui';
 
 interface StoreInquiryModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+const BUSINESS_TYPES = [
+  { value: 'أزياء وملابس', label: 'أزياء وملابس' },
+  { value: 'أحذية وشنط', label: 'أحذية وشنط' },
+  { value: 'إلكترونيات وموبايلات', label: 'إلكترونيات وموبايلات' },
+  { value: 'عطور ومستحضرات تجميل', label: 'عطور ومستحضرات تجميل' },
+  { value: 'أدوات منزلية وديكور', label: 'أدوات منزلية وديكور' },
+  { value: 'سوبرماركت وأغذية', label: 'سوبرماركت وأغذية' },
+  { value: 'مطاعم وكافيهات', label: 'مطاعم وكافيهات' },
+  { value: 'تجارة جملة وتوزيع', label: 'تجارة جملة وتوزيع' },
+  { value: 'نشاط تجاري آخر', label: 'نشاط تجاري آخر' },
+];
+
+const SALES_WHATSAPP = import.meta.env.VITE_SALES_WHATSAPP || '201125030642';
+
+/**
+ * Modal form allowing visitors to request a custom e-commerce storefront integrated with EngazPRO.
+ */
 export const StoreInquiryModal: React.FC<StoreInquiryModalProps> = ({ isOpen, onClose }) => {
   const [form, setForm] = useState({
     name: '',
     phone: '',
     business_type: 'أزياء وملابس',
-    city: 'القاهرة',
+    city: '',
     notes: '',
   });
   const [loading, setLoading] = useState(false);
@@ -36,7 +48,7 @@ export const StoreInquiryModal: React.FC<StoreInquiryModalProps> = ({ isOpen, on
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim() || !form.phone.trim()) {
-      setError('يرجى كتابة الاسم ورقم الهاتف للتواصل.');
+      setError('يرجى كتابة الاسم ورقم الهاتف لنتواصل معك.');
       return;
     }
 
@@ -46,22 +58,12 @@ export const StoreInquiryModal: React.FC<StoreInquiryModalProps> = ({ isOpen, on
     try {
       await apiClient.post('/landing/inquiries', form);
       setSuccess(true);
-    } catch (err: any) {
-      setError(
-        err.response?.data?.message ||
-          'تعذر إرسال الطلب في الوقت الحالي. يمكنك التواصل معنا مباشرة عبر واتساب.'
-      );
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { data?: { message?: string } } };
+      setError(apiErr?.response?.data?.message || 'حدث خطأ أثناء إرسال الطلب، يرجى المحاولة مرة أخرى.');
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleWhatsAppRedirect = () => {
-    const text = encodeURIComponent(
-      `مرحباً، أنا ${form.name}. قمت بتقديم طلب لتصميم وتطوير متجر إلكتروني لنشاط (${form.business_type}) في (${form.city}). أود متابعة التفاصيل والعرض المتاح.`
-    );
-    window.open(`https://wa.me/201125030642?text=${text}`, '_blank');
-    onClose();
   };
 
   const resetAndClose = () => {
@@ -71,223 +73,141 @@ export const StoreInquiryModal: React.FC<StoreInquiryModalProps> = ({ isOpen, on
       name: '',
       phone: '',
       business_type: 'أزياء وملابس',
-      city: 'القاهرة',
+      city: '',
       notes: '',
     });
     onClose();
   };
 
+  const handleWhatsAppRedirect = () => {
+    const text = `مرحباً فريق إنجاز برو، قدمت طلباً لتصميم متجر إلكتروني مربوط بالكاشير:\nالاسم: ${form.name}\nرقم الهاتف: ${form.phone}\nالنشاط: ${form.business_type}\nالمدينة: ${form.city || 'غير محددة'}\n${form.notes ? `ملاحظات: ${form.notes}` : ''}`;
+    window.open(`https://wa.me/${SALES_WHATSAPP}?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');
+  };
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md animate-fade-in"
-      dir="rtl"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/50 backdrop-blur-xs"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="store-inquiry-title"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) resetAndClose();
+      }}
     >
-      <div
-        className="w-full max-w-lg rounded-[32px] p-6 sm:p-8 relative border border-white/90 shadow-2xl transition-all"
-        style={{
-          background: 'linear-gradient(160deg, #FFFFFF, #F5F9FF 50%, #EDF4FE)',
-          boxShadow: '0 25px 50px -12px rgba(14, 58, 46, 0.25), 0 0 0 1px rgba(255,255,255,0.8)',
-        }}
-      >
-        {/* Close button */}
+      <div className="relative w-full max-w-lg rounded-3xl bg-panel border border-line p-6 sm:p-8 shadow-2xl text-right max-h-[90vh] overflow-y-auto">
         <button
+          type="button"
           onClick={resetAndClose}
-          className="absolute top-5 left-5 p-2 rounded-full text-slate-400 hover:text-slate-700 bg-white/80 shadow-xs transition-colors"
+          className="absolute top-4 left-4 w-9 h-9 rounded-xl border border-line bg-surface-2 text-muted hover:text-ink flex items-center justify-center transition-colors"
           aria-label="إغلاق"
         >
-          <X className="w-5 h-5" />
+          <X className="w-4 h-4" />
         </button>
 
         {success ? (
-          <div className="text-center py-6 space-y-5 animate-fade-in">
-            <div
-              className="w-20 h-20 rounded-full mx-auto flex items-center justify-center text-[#0E3A2E]"
-              style={{
-                backgroundImage: 'var(--gloss-jade)',
-                boxShadow: 'var(--lift-jade), var(--lip-jade)',
-              }}
-            >
-              <CheckCircle2 className="w-10 h-10" />
+          <div className="text-center py-4 space-y-5">
+            <div className="w-16 h-16 rounded-2xl mx-auto flex items-center justify-center bg-ok-soft border border-ok/25 text-ok">
+              <CheckCircle2 className="w-9 h-9" />
             </div>
 
-            <div>
-              <h3 className="text-2xl font-black text-[#232D3C]">
-                تم استلام طلبك بنجاح! 🎉
+            <div className="space-y-2">
+              <h3 id="store-inquiry-title" className="text-xl sm:text-2xl font-black text-ink">
+                تم استلام طلبك بنجاح
               </h3>
-              <p className="text-xs sm:text-sm text-slate-600 mt-2 leading-relaxed">
-                شكراً لك يا أستاذ <b className="text-[#0E3A2E]">{form.name}</b>.
-                تم توجيه طلبك مباشرة إلى فريق تطوير وتصميم المتاجر. سيتواصل معك أحد مستشارينا خلال دقائق لمناقشة التفاصيل.
+              <p className="text-xs sm:text-sm text-muted leading-relaxed">
+                شكراً لك يا أستاذ <strong className="text-ink">{form.name}</strong>. تم تسجيل طلبك لتصميم المتجر الإلكتروني، وسيتواصل معك فريقنا خلال ساعات العمل لمناقشة التفاصيل وعرض النماذج.
               </p>
             </div>
 
             <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
-              <button
-                type="button"
-                onClick={handleWhatsAppRedirect}
-                className="w-full sm:w-auto px-6 py-3 rounded-full text-xs font-black text-[#0E3A2E] transition-all flex items-center justify-center gap-2 active:scale-95"
-                style={{
-                  backgroundImage: 'var(--gloss-jade)',
-                  boxShadow: 'var(--lift-jade)',
-                }}
-              >
+              <Button type="button" className="w-full sm:w-auto" onClick={handleWhatsAppRedirect}>
                 <MessageCircle className="w-4 h-4" />
                 <span>متابعة فورية عبر واتساب</span>
-              </button>
-              <button
-                type="button"
-                onClick={resetAndClose}
-                className="w-full sm:w-auto px-5 py-3 rounded-full text-xs font-bold text-slate-600 hover:bg-slate-200/60 transition-colors"
-              >
-                تم، إغلاق النافذة
-              </button>
+              </Button>
+              <Button type="button" variant="secondary" className="w-full sm:w-auto" onClick={resetAndClose}>
+                إغلاق النافذة
+              </Button>
             </div>
           </div>
         ) : (
-          <div>
-            {/* Header */}
-            <div className="flex items-center gap-3 mb-5">
-              <div
-                className="w-12 h-12 rounded-2xl flex items-center justify-center text-[#0E3A2E] shrink-0"
-                style={{
-                  backgroundImage: 'var(--gloss-jade)',
-                  boxShadow: 'var(--lip-jade)',
-                }}
-              >
+          <div className="space-y-5">
+            <div className="flex items-center gap-3 pl-8">
+              <div className="w-12 h-12 rounded-2xl bg-brand-soft border border-brand/25 text-brand flex items-center justify-center shrink-0">
                 <ShoppingBag className="w-6 h-6" />
               </div>
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-2xs font-black bg-[#B2E7D2] text-[#0E3A2E] px-2 py-0.5 rounded-full">
-                    استشارة مجانية
-                  </span>
-                  <span className="text-2xs font-bold text-slate-400">| تصميم وتطوير</span>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Badge tone="brand">استشارة مجانية</Badge>
+                  <span className="text-xs text-muted">خدمة تصميم وتطوير</span>
                 </div>
-                <h3 className="text-lg sm:text-xl font-black text-[#232D3C] mt-0.5">
-                  طلب تصميم وبرمجة متجر إلكتروني
+                <h3 id="store-inquiry-title" className="text-lg sm:text-xl font-black text-ink">
+                  طلب تصميم متجر إلكتروني مربوط بالكاشير
                 </h3>
               </div>
             </div>
 
-            <p className="text-xs text-slate-600 mb-5 leading-relaxed font-medium">
-              أدخل بياناتك وسنتواصل معك لعرض نماذج المتاجر الحية ومناقشة تفاصيل الربط مع كاشير ومخازن إنجاز برو:
+            <p className="text-xs sm:text-sm text-muted leading-relaxed">
+              أدخل بياناتك وسيتواصل معك فريق التطوير لعرض نماذج المتاجر الحية ومناقشة تفاصيل الربط مع مخازن وكاشير إنجاز برو:
             </p>
 
             {error && (
-              <div className="p-3 mb-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold">
+              <div className="p-3 rounded-xl bg-bad-soft border border-bad/25 text-bad-ink text-xs font-bold">
                 {error}
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-3.5">
-              {/* Name */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1">
-                  <User className="w-3.5 h-3.5 text-[#2A7A62]" />
-                  <span>الاسم بالكامل / اسم المسؤول *</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder="مثال: أحمد عبد الله"
-                  className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white/80 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#7CCFB0] transition-all"
-                />
-              </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <Input
+                label="الاسم بالكامل / اسم المسؤول *"
+                required
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                placeholder="مثال: أحمد عبد الله"
+              />
 
-              {/* Phone */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1">
-                  <Phone className="w-3.5 h-3.5 text-[#2A7A62]" />
-                  <span>رقم الموبايل أو الواتساب *</span>
-                </label>
-                <input
-                  type="tel"
-                  required
-                  value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                  placeholder="01012345678"
-                  className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white/80 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#7CCFB0] transition-all dir-ltr text-right"
-                />
-              </div>
+              <Input
+                label="رقم الموبايل أو الواتساب *"
+                type="tel"
+                dir="ltr"
+                required
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                placeholder="01012345678"
+              />
 
-              {/* Row: Business Type & City */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1">
-                    <Building2 className="w-3.5 h-3.5 text-[#2A7A62]" />
-                    <span>نوع النشاط التجاري</span>
-                  </label>
-                  <select
-                    value={form.business_type}
-                    onChange={(e) => setForm({ ...form, business_type: e.target.value })}
-                    className="w-full text-xs px-3 py-2.5 rounded-xl border border-slate-200 bg-white/80 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#7CCFB0] transition-all"
-                  >
-                    <option value="أزياء وملابس">أزياء وملابس</option>
-                    <option value="أحذية وشنط">أحذية وشنط</option>
-                    <option value="إلكترونيات وموبايلات">إلكترونيات وموبايلات</option>
-                    <option value="عطور ومستحضرات تجميل">عطور ومستحضرات تجميل</option>
-                    <option value="أدوات منزلية وديكور">أدوات منزلية وديكور</option>
-                    <option value="سوبرماركت وأغذية">سوبرماركت وأغذية</option>
-                    <option value="مطاعم وكافيهات">مطاعم وكافيهات</option>
-                    <option value="تجارة جملة وتوزيع">تجارة جملة وتوزيع</option>
-                    <option value="نشاط تجاري آخر">نشاط تجاري آخر</option>
-                  </select>
-                </div>
+                <Select
+                  label="نوع النشاط التجاري"
+                  value={form.business_type}
+                  onChange={(e) => setForm({ ...form, business_type: e.target.value })}
+                  options={BUSINESS_TYPES}
+                />
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1">
-                    <MapPin className="w-3.5 h-3.5 text-[#2A7A62]" />
-                    <span>المدينة / المحافظة</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={form.city}
-                    onChange={(e) => setForm({ ...form, city: e.target.value })}
-                    placeholder="مثال: القاهرة، الإسكندرية..."
-                    className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white/80 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#7CCFB0] transition-all"
-                  />
-                </div>
-              </div>
-
-              {/* Notes */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1">
-                  <FileText className="w-3.5 h-3.5 text-[#2A7A62]" />
-                  <span>ملاحظات أو رابط صفحة فيسبوك/إنستغرام الحالية (اختياري)</span>
-                </label>
-                <textarea
-                  rows={2}
-                  value={form.notes}
-                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                  placeholder="هل لديك صفحة تبيع عليها حالياً؟ كم صنف تقريباً تود عرضه؟"
-                  className="w-full text-xs px-3.5 py-2 rounded-xl border border-slate-200 bg-white/80 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#7CCFB0] resize-none transition-all"
+                <Input
+                  label="المدينة / المحافظة"
+                  value={form.city}
+                  onChange={(e) => setForm({ ...form, city: e.target.value })}
+                  placeholder="مثال: القاهرة، الإسكندرية..."
                 />
               </div>
 
-              {/* Submit */}
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-3 rounded-full text-xs sm:text-sm font-black text-[#0E3A2E] transition-all flex items-center justify-center gap-2 active:scale-98 shadow-md"
-                  style={{
-                    backgroundImage: 'var(--gloss-jade)',
-                    boxShadow: 'var(--lift-jade)',
-                  }}
-                >
-                  {loading ? (
-                    <span>جاري الإرسال...</span>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4" />
-                      <span>إرسال طلب الاستشارة وتصميم المتجر</span>
-                    </>
-                  )}
-                </button>
-                <div className="flex items-center justify-center gap-4 text-2xs text-slate-500 font-medium mt-2">
-                  <span>🔒 بياناتك محمية تماماً</span>
-                  <span>⚡ تواصل فوري خلال ساعات العمل</span>
+              <Textarea
+                label="ملاحظات أو رابط صفحة السوشيال (اختياري)"
+                rows={2}
+                value={form.notes}
+                onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                placeholder="كم صنف تقريباً تود عرضه؟ وهل لديك صفحة أو متجر حالي؟"
+              />
+
+              <div className="space-y-2.5 pt-1">
+                <Button type="submit" size="lg" className="w-full" isLoading={loading}>
+                  <Sparkles className="w-4 h-4" />
+                  <span>إرسال طلب الاستشارة وتصميم المتجر</span>
+                </Button>
+                <div className="flex items-center justify-center gap-4 text-xs text-muted">
+                  <span>بياناتك محمية تماماً</span>
+                  <span>•</span>
+                  <span>رد سريع خلال ساعات العمل</span>
                 </div>
               </div>
             </form>

@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Allow: /login
+Allow: /register
+Disallow: /admin-dashboard
+Disallow: /admin-dashbord
+Disallow: /dashboard
+Disallow: /pos
+Disallow: /settings
+Disallow: /api/
+
+Sitemap: /sitemap.xml

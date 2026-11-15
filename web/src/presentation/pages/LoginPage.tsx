@@ -5,6 +5,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { LoginSchema, LoginInput } from '@pos-mandob/shared';
 import { ArrowLeft, Phone, Zap } from 'lucide-react';
 import { useAuthStore } from '../../data/store/useAuthStore';
+import { usePageMeta } from '../../hooks/usePageMeta';
 import { AuthShell } from '../components/auth/AuthShell';
 import { PasswordField } from '../components/auth/PasswordField';
 import { Button, Input } from '../components/ui';
@@ -18,6 +19,10 @@ const LOGIN_FEATURES = [
 
 /** Store owner / staff login screen built on EngazPRO AuthShell. */
 export const LoginPage: React.FC = () => {
+  usePageMeta({
+    title: 'تسجيل الدخول — إنجاز برو | Engaz PRO',
+    description: 'سجّل الدخول إلى منظومة إنجاز برو لإدارة نقاط البيع POS والمخازن والخزائن وعهد المناديب.',
+  });
   const navigate = useNavigate();
   const { login, isLoading, error } = useAuthStore();
 
