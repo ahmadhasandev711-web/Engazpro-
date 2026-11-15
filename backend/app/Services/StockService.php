@@ -2,14 +2,16 @@
 
 namespace App\Services;
 
+use App\Enums\StockMovementSource;
+use App\Enums\StockMovementType;
+use App\Exceptions\InsufficientStockException;
+use App\Exceptions\PosDomainException;
 use App\Models\Branch;
 use App\Models\BranchStock;
 use App\Models\Product;
 use App\Models\ProductBatch;
 use App\Models\ProductVariant;
 use App\Models\StockMovement;
-use App\Exceptions\PosDomainException;
-use App\Exceptions\InsufficientStockException;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
@@ -47,12 +49,12 @@ class StockService
         $lockedProduct = Product::where('id', $product->id)->lockForUpdate()->first() ?? $product;
         $currentQty = (float) $lockedProduct->quantity;
 
-        if ($type === 'OUT' && $currentQty < $quantity) {
+        if ($type === StockMovementType::OUT->value && $currentQty < $quantity) {
             throw new PosDomainException("الرصيد المتاح من الصنف '{$lockedProduct->name}' غير كافٍ لإتمام العملية (الرصيد الحالي: {$currentQty}).", 'INSUFFICIENT_STOCK');
         }
 
         // تحديث إجمالي كمية الصنف التراكمي
-        $balanceAfter = ($type === 'IN') ? $currentQty + $quantity : $currentQty - $quantity;
+        $balanceAfter = ($type === StockMovementType::IN->value) ? $currentQty + $quantity : $currentQty - $quantity;
         $lockedProduct->quantity = $balanceAfter;
         $lockedProduct->save();
 
@@ -60,10 +62,10 @@ class StockService
         if ($variant) {
             $lockedVariant = ProductVariant::where('id', $variant->id)->lockForUpdate()->first() ?? $variant;
             $varQty = (float) $lockedVariant->quantity;
-            if ($type === 'OUT' && $varQty < $quantity) {
+            if ($type === StockMovementType::OUT->value && $varQty < $quantity) {
                 throw new PosDomainException("الرصيد المتاح من المتغير غير كافٍ (الرصيد الحالي: {$varQty}).", 'INSUFFICIENT_STOCK');
             }
-            $lockedVariant->quantity = ($type === 'IN') ? $varQty + $quantity : $varQty - $quantity;
+            $lockedVariant->quantity = ($type === StockMovementType::IN->value) ? $varQty + $quantity : $varQty - $quantity;
             $lockedVariant->save();
         }
 
@@ -71,10 +73,10 @@ class StockService
         if ($batch) {
             $lockedBatch = ProductBatch::where('id', $batch->id)->lockForUpdate()->first() ?? $batch;
             $batchQty = (float) $lockedBatch->quantity;
-            if ($type === 'OUT' && $batchQty < $quantity) {
+            if ($type === StockMovementType::OUT->value && $batchQty < $quantity) {
                 throw new PosDomainException("الرصيد المتاح من التشغيلة '{$lockedBatch->batch_number}' غير كافٍ (الرصيد الحالي: {$batchQty}).", 'INSUFFICIENT_STOCK');
             }
-            $lockedBatch->quantity = ($type === 'IN') ? $batchQty + $quantity : $batchQty - $quantity;
+            $lockedBatch->quantity = ($type === StockMovementType::IN->value) ? $batchQty + $quantity : $batchQty - $quantity;
             $lockedBatch->save();
         }
 
@@ -105,7 +107,7 @@ class StockService
             }
 
             $currentBranchQty = (float) $branchStock->quantity;
-            if ($type === 'OUT' && $currentBranchQty < $quantity) {
+            if ($type === StockMovementType::OUT->value && $currentBranchQty < $quantity) {
                 $allowNegative = $this->settingService->allowsNegativeBranchStock($user);
                 if (!$allowNegative) {
                     $branch = Branch::find($branchId);
@@ -121,7 +123,7 @@ class StockService
                 $isShortSelling = true;
             }
 
-            $branchStock->quantity = ($type === 'IN')
+            $branchStock->quantity = ($type === StockMovementType::IN->value)
                 ? $currentBranchQty + $quantity
                 : $currentBranchQty - $quantity;
             $branchStock->save();
@@ -204,8 +206,8 @@ class StockService
                 $this->recordMovement(
                     user: $user,
                     product: $product,
-                    type: 'IN',
-                    sourceType: 'INITIAL',
+                    type: StockMovementType::IN->value,
+                    sourceType: StockMovementSource::INITIAL->value,
                     sourceId: null,
                     quantity: $quantity,
                     unitPrice: $unitPrice,

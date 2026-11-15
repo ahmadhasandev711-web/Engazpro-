@@ -1,10 +1,5 @@
 {
-    "Services/CourierService.php": 12,
     "Services/DashboardService.php": 56,
     "Services/InvoiceService.php": 91,
-    "Services/PaymentService.php": 11,
-    "Services/ProductService.php": 15,
-    "Services/ReportService.php": 53,
-    "Services/ShiftService.php": 16,
-    "Services/StockService.php": 10
+    "Services/ReportService.php": 53
 }

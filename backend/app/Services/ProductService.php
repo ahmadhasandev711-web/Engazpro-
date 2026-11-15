@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Enums\ProductType;
 use App\Enums\StockMovementSource;
+use App\Enums\StockMovementType;
 use App\Exceptions\PosDomainException;
 use App\Models\Product;
 use App\Models\ProductVariant;
@@ -64,9 +66,9 @@ class ProductService
             $dataToSave['user_id'] = $user->getAccountId();
             
             if (isset($dataToSave['type'])) {
-                if ($dataToSave['type'] === 'VARIABLE') {
+                if ($dataToSave['type'] === ProductType::VARIABLE->value) {
                     $dataToSave['has_variants'] = true;
-                } elseif ($dataToSave['type'] === 'EXPIRY') {
+                } elseif ($dataToSave['type'] === ProductType::EXPIRY->value) {
                     $dataToSave['has_expiry'] = true;
                 }
             }
@@ -88,8 +90,8 @@ class ProductService
                         $this->stockService->recordMovement(
                             $user,
                             $product,
-                            'IN',
-                            'INITIAL',
+                            StockMovementType::IN->value,
+                            StockMovementSource::INITIAL->value,
                             $product->id,
                             $varQty,
                             $variant->purchase_price ?? $product->purchase_price,
@@ -116,8 +118,8 @@ class ProductService
                         $this->stockService->recordMovement(
                             $user,
                             $product,
-                            'IN',
-                            'INITIAL',
+                            StockMovementType::IN->value,
+                            StockMovementSource::INITIAL->value,
                             $product->id,
                             $batchQty,
                             $batch->purchase_price ?? $product->purchase_price,
@@ -134,8 +136,8 @@ class ProductService
                 $this->stockService->recordMovement(
                     $user,
                     $product,
-                    'IN',
-                    'INITIAL',
+                    StockMovementType::IN->value,
+                    StockMovementSource::INITIAL->value,
                     $product->id,
                     $initialQty,
                     $product->purchase_price,
@@ -202,7 +204,7 @@ class ProductService
                 $deletedVariants = $product->variants()->whereNotIn('id', $sentVariantIds)->get();
 
                 foreach ($deletedVariants as $oldVar) {
-                    $hasSales = $oldVar->invoiceItems()->exists() || $oldVar->stockMovements()->where('source_type', '!=', 'INITIAL')->exists();
+                    $hasSales = $oldVar->invoiceItems()->exists() || $oldVar->stockMovements()->where('source_type', '!=', StockMovementSource::INITIAL->value)->exists();
                     if ($hasSales) {
                         throw new PosDomainException(
                             message: "لا يمكن حذف المتغير ({$oldVar->name}) لوجود فواتير أو حركات مخزون سابقة مرتبطة به.",
@@ -232,8 +234,8 @@ class ProductService
                             $this->stockService->recordMovement(
                                 $user,
                                 $product,
-                                'IN',
-                                'INITIAL',
+                                StockMovementType::IN->value,
+                                StockMovementSource::INITIAL->value,
                                 $product->id,
                                 $varQty,
                                 $variant->purchase_price ?? $product->purchase_price,
@@ -267,8 +269,8 @@ class ProductService
                 $this->stockService->recordMovement(
                     $user,
                     $product,
-                    'IN',
-                    'INITIAL',
+                    StockMovementType::IN->value,
+                    StockMovementSource::INITIAL->value,
                     $product->id,
                     $batchQty,
                     $batch->purchase_price ?? $product->purchase_price,
@@ -288,7 +290,7 @@ class ProductService
     public function deleteProduct(Product $product): bool
     {
         $hasInvoices = $product->invoiceItems()->exists();
-        $hasMovements = $product->stockMovements()->where('source_type', '!=', 'INITIAL')->exists();
+        $hasMovements = $product->stockMovements()->where('source_type', '!=', StockMovementSource::INITIAL->value)->exists();
 
         if ($hasInvoices || $hasMovements) {
             throw new PosDomainException(
@@ -314,7 +316,7 @@ class ProductService
             ->withExists([
                 'invoiceItems',
                 'stockMovements as non_initial_stock_movements_exists' => function ($smq) {
-                    $smq->where('source_type', '!=', 'INITIAL');
+                    $smq->where('source_type', '!=', StockMovementSource::INITIAL->value);
                 },
             ]);
 

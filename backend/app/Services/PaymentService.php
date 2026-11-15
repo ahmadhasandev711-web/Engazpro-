@@ -3,15 +3,18 @@
 namespace App\Services;
 
 use App\Contracts\PaymentHandlerInterface;
+use App\Enums\LedgerSource;
+use App\Enums\PaymentMethod;
+use App\Enums\PaymentType;
+use App\Enums\TreasuryTransactionType;
 use App\Models\Party;
 use App\Models\Payment;
+use App\Models\TreasuryTransaction;
 use App\Models\User;
 use App\Services\Payments\CardPaymentHandler;
 use App\Services\Payments\CashPaymentHandler;
 use App\Services\Payments\CreditPaymentHandler;
 use App\Services\Payments\TransferPaymentHandler;
-use App\Models\TreasuryTransaction;
-use App\Enums\TreasuryTransactionType;
 use App\Support\Money;
 use Illuminate\Support\Facades\DB;
 
@@ -66,7 +69,7 @@ class PaymentService
             $type = $data['type']; // PAYMENT (دفع لمورد) or RECEIPT (قبض من عميل)
             $amountMoney = Money::of($data['amount']);
             $amount = $amountMoney->getAmount();
-            $method = $data['method'] ?? 'CASH';
+            $method = $data['method'] ?? PaymentMethod::CASH->value;
             $date = $data['date'] ?? now()->toDateString();
             $notes = $data['notes'] ?? null;
 
@@ -107,15 +110,15 @@ class PaymentService
             // تسجيل القيد في كشف حساب الطرف (Ledger)
             // RECEIPT من عميل: دائن (Credit) لتخفيض مديونية العميل
             // PAYMENT لمورد: مدين (Debit) لتخفيض مستحقات المورد
-            $debit = ($type === 'PAYMENT') ? $amount : 0;
-            $credit = ($type === 'RECEIPT') ? $amount : 0;
-            $docName = ($type === 'RECEIPT') ? 'سند قبض' : 'سند صرف';
+            $debit = ($type === PaymentType::PAYMENT->value) ? $amount : 0;
+            $credit = ($type === PaymentType::RECEIPT->value) ? $amount : 0;
+            $docName = ($type === PaymentType::RECEIPT->value) ? 'سند قبض' : 'سند صرف';
             $desc = $notes ? "{$docName} - {$notes}" : "{$docName} رقم #{$payment->id}";
 
             $this->ledgerService->recordEntry(
                 $user,
                 $party,
-                'PAYMENT',
+                LedgerSource::PAYMENT->value,
                 $payment->id,
                 $payment->date->format('Y-m-d'),
                 $desc,
@@ -146,7 +149,7 @@ class PaymentService
             $this->ledgerService->recordEntry(
                 $user,
                 $party,
-                'REVERSAL',
+                LedgerSource::REVERSAL->value,
                 $payment->id,
                 now()->toDateString(),
                 "إلغاء {$docName} رقم #{$payment->id}",
@@ -156,7 +159,7 @@ class PaymentService
 
             // عكس حركات الخزينة النقدية المرتبطة بالسند
             $treasuryTxns = TreasuryTransaction::where('user_id', $user->getAccountId())
-                ->where('source_type', 'PAYMENT')
+                ->where('source_type', LedgerSource::PAYMENT->value)
                 ->where('source_id', $payment->id)
                 ->get();
 
@@ -168,7 +171,7 @@ class PaymentService
                         $this->treasuryService->recordWithdrawal(
                             treasury: $treasury,
                             amount: $txnMoney,
-                            sourceType: 'REVERSAL',
+                            sourceType: LedgerSource::REVERSAL->value,
                             sourceId: $payment->id,
                             actor: $user,
                             notes: "إلغاء إيداع نقدي لسند قبض رقم #{$payment->id}",
@@ -178,7 +181,7 @@ class PaymentService
                         $this->treasuryService->recordDeposit(
                             treasury: $treasury,
                             amount: $txnMoney,
-                            sourceType: 'REVERSAL',
+                            sourceType: LedgerSource::REVERSAL->value,
                             sourceId: $payment->id,
                             actor: $user,
                             notes: "إلغاء صرف نقدي لسند صرف رقم #{$payment->id}",
@@ -258,8 +261,8 @@ class PaymentService
     {
         $baseQuery = $this->buildFilteredPaymentsQuery($user, $filters);
 
-        $receiptsMoney = Money::of((clone $baseQuery)->where('type', 'RECEIPT')->sum('amount') ?? 0);
-        $paymentsMoney = Money::of((clone $baseQuery)->where('type', 'PAYMENT')->sum('amount') ?? 0);
+        $receiptsMoney = Money::of((clone $baseQuery)->where('type', PaymentType::RECEIPT->value)->sum('amount') ?? 0);
+        $paymentsMoney = Money::of((clone $baseQuery)->where('type', PaymentType::PAYMENT->value)->sum('amount') ?? 0);
 
         return [
             'total_receipts' => $receiptsMoney->getAmount(),
