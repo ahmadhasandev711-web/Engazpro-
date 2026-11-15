@@ -1,18 +1,6 @@
 {
-    "Api/InvoiceController.php": {
-        "queries": 6,
-        "try": 0
-    },
-    "Api/ProductController.php": {
-        "queries": 5,
-        "try": 0
-    },
     "Api/StoreInquiryController.php": {
         "queries": 10,
-        "try": 0
-    },
-    "Api/TreasuryController.php": {
-        "queries": 8,
         "try": 0
     },
     "Api/WcOrderController.php": {

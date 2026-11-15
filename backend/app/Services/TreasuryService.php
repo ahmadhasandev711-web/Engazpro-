@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\PaymentMethod;
 use App\Enums\TreasuryTransactionType;
 use App\Enums\TreasuryType;
+use App\Exceptions\PosDomainException;
 use App\Models\Treasury;
 use App\Models\TreasuryTransaction;
 use App\Models\User;
@@ -407,4 +408,61 @@ class TreasuryService
         return $query->paginate($perPage);
     }
 
+    public function findOrFail(int $id): Treasury
+    {
+        return Treasury::findOrFail($id);
+    }
+
+    public function findForShowOrFail(int $id): Treasury
+    {
+        return Treasury::with(['assignedUser', 'branch'])->findOrFail($id);
+    }
+
+    public function transferBetweenTreasuries(
+        User $actor,
+        int $fromTreasuryId,
+        int $toTreasuryId,
+        Money $amount,
+        ?string $notes = null
+    ): TreasuryTransaction {
+        $from = $this->findOrFail($fromTreasuryId);
+        $to = $this->findOrFail($toTreasuryId);
+
+        $this->assertManagerCanTransfer($actor, $from, $to);
+
+        return $this->recordTransfer(
+            fromTreasury: $from,
+            toTreasury: $to,
+            amount: $amount,
+            actor: $actor,
+            notes: $notes ?? 'تحويل إداري بين الخزن'
+        );
+    }
+
+    private function assertManagerCanTransfer(User $actor, Treasury $from, Treasury $to): void
+    {
+        if (!$actor->isManager()) {
+            return;
+        }
+
+        if ($from->branch_id !== $actor->branch_id) {
+            throw new PosDomainException(
+                'عذراً، يمكنك التحويل فقط من خزن فرعك التابع له.',
+                'TREASURY_FORBIDDEN',
+                403
+            );
+        }
+
+        $toType = $to->type instanceof \BackedEnum ? $to->type->value : (string) $to->type;
+        $isAllowedDest = ($to->branch_id === $actor->branch_id)
+            || in_array($toType, [TreasuryType::BANK->value, TreasuryType::MAIN->value], true);
+
+        if (!$isAllowedDest) {
+            throw new PosDomainException(
+                'عذراً، يمكنك التوريد فقط إلى خزن فرعك، أو الحساب البنكي، أو الخزنة المركزية.',
+                'TREASURY_FORBIDDEN',
+                403
+            );
+        }
+    }
 }

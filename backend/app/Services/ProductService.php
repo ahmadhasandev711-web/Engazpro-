@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\StockMovementSource;
 use App\Exceptions\PosDomainException;
 use App\Models\Product;
 use App\Models\ProductVariant;
@@ -468,6 +469,38 @@ class ProductService
     {
         return Product::with($with)->where('barcode', $code)->first()
             ?? Product::with($with)->where('code', $code)->first();
+    }
+
+    public function findOrFail(int $id): Product
+    {
+        return Product::findOrFail($id);
+    }
+
+    public function findForShowOrFail(int $id): Product
+    {
+        return Product::with(['category', 'stockMovements' => function ($q) {
+            $q->latest()->limit(20);
+        }])
+            ->withExists([
+                'invoiceItems',
+                'stockMovements as non_initial_stock_movements_exists' => function ($q) {
+                    $q->where('source_type', '!=', StockMovementSource::INITIAL->value);
+                },
+            ])
+            ->findOrFail($id);
+    }
+
+    public function loadProductDetails(Product $product): Product
+    {
+        $product->load('category');
+        $product->loadExists([
+            'invoiceItems',
+            'stockMovements as non_initial_stock_movements_exists' => function ($q) {
+                $q->where('source_type', '!=', StockMovementSource::INITIAL->value);
+            },
+        ]);
+
+        return $product;
     }
 
     private function escapeLike(string $value): string

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\InvoiceRequest;
+use App\Http\Requests\UpdateInvoiceSalespersonRequest;
 use App\Http\Resources\InvoiceResource;
 use App\Models\Invoice;
 use App\Services\InvoiceService;
@@ -60,7 +61,7 @@ class InvoiceController extends Controller
      */
     public function show(Request $request, int $id): JsonResponse
     {
-        $invoice = Invoice::with(['party', 'items', 'creator', 'salesperson'])->findOrFail($id);
+        $invoice = $this->invoiceService->findForShowOrFail($id);
 
         Gate::authorize('view', $invoice);
 
@@ -75,11 +76,7 @@ class InvoiceController extends Controller
      */
     public function findByNumber(Request $request, string $invoiceNumber): JsonResponse
     {
-        $user = $request->user();
-        $invoice = Invoice::where('user_id', $user->getAccountId())
-            ->where('invoice_number', $invoiceNumber)
-            ->with(['party', 'items', 'creator', 'salesperson'])
-            ->first();
+        $invoice = $this->invoiceService->findByNumberForUser($request->user(), $invoiceNumber);
 
         if (!$invoice) {
             return response()->json([
@@ -99,27 +96,19 @@ class InvoiceController extends Controller
     /**
      * تعديل مسؤول المبيعات في الفاتورة (متاح للمالك والإدارة ومدير الفرع)
      */
-    public function updateSalesperson(Request $request, int $id): JsonResponse
+    public function updateSalesperson(UpdateInvoiceSalespersonRequest $request, int $id): JsonResponse
     {
-        $invoice = Invoice::findOrFail($id);
+        $invoice = $this->invoiceService->findOrFail($id);
 
         Gate::authorize('updateSalesperson', $invoice);
 
-        $accountId = $request->user()->getAccountId();
-        $validated = $request->validate([
-            'salesperson_id' => [
-                'nullable',
-                'integer',
-                \Illuminate\Validation\Rule::exists('users', 'id')->where(fn ($q) => $q->where('owner_id', $accountId)->orWhere('id', $accountId)),
-            ],
-        ]);
-
-        $invoice->update(['salesperson_id' => $validated['salesperson_id'] ?? null]);
+        $salespersonId = $request->validated()['salesperson_id'] ?? null;
+        $updated = $this->invoiceService->updateSalesperson($invoice, $salespersonId !== null ? (int) $salespersonId : null);
 
         return response()->json([
             'success' => true,
             'message' => 'تم تعديل مسؤول المبيعات في الفاتورة بنجاح',
-            'data' => new InvoiceResource($invoice->fresh(['party', 'items', 'creator', 'salesperson'])),
+            'data' => new InvoiceResource($updated),
         ]);
     }
 
@@ -128,7 +117,7 @@ class InvoiceController extends Controller
      */
     public function destroy(Request $request, int $id): JsonResponse
     {
-        $invoice = Invoice::findOrFail($id);
+        $invoice = $this->invoiceService->findOrFail($id);
 
         Gate::authorize('delete', $invoice);
 

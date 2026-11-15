@@ -2,8 +2,6 @@
     "Console/Commands/MakeAdminCommand.php::handle": 33,
     "Http/Controllers/Api/ReportController.php::cashFlowTransactions": 32,
     "Http/Controllers/Api/StoreInquiryController.php::index": 40,
-    "Http/Controllers/Api/TreasuryController.php::store": 37,
-    "Http/Controllers/Api/TreasuryController.php::transfer": 53,
     "Http/Controllers/Api/WcOrderController.php::confirm": 41,
     "Http/Controllers/Api/WcOrderController.php::dispatchCourier": 42,
     "Http/Controllers/Api/WcOrderController.php::dispatchToMandob": 34,
