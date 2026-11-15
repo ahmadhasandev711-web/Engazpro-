@@ -6,9 +6,5 @@
     "Api/WcOrderController.php": {
         "queries": 30,
         "try": 0
-    },
-    "Api/WooCommerceSettingsController.php": {
-        "queries": 7,
-        "try": 2
     }
 }
