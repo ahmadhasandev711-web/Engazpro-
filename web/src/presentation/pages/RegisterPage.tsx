@@ -5,6 +5,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { RegisterSchema, RegisterInput } from '@pos-mandob/shared';
 import { ArrowLeft, Mail, Phone, Sparkles, Store, Zap } from 'lucide-react';
 import { useAuthStore } from '../../data/store/useAuthStore';
+import { usePageMeta } from '../../hooks/usePageMeta';
 import { AuthShell } from '../components/auth/AuthShell';
 import { PasswordField } from '../components/auth/PasswordField';
 import { Button, Input } from '../components/ui';
@@ -18,6 +19,10 @@ const REGISTER_FEATURES = [
 
 /** Store trial registration screen built on EngazPRO AuthShell. */
 export const RegisterPage: React.FC = () => {
+  usePageMeta({
+    title: 'ابدأ تجربة مجانية 14 يوم — إنجاز برو | Engaz PRO',
+    description: 'أنشئ حساب متجرك في إنجاز برو خلال 60 ثانية واحصل على تجربة مجانية 14 يوم بكامل الصلاحيات بدون بطاقة بنكية.',
+  });
   const navigate = useNavigate();
   const { register: registerUser, isLoading, error } = useAuthStore();
 

@@ -57,6 +57,13 @@
   --swatch-orange: #ea580c;
   --swatch-cyan: #06b6d4;
   --swatch-purple: #9333ea;
+
+  /* Print Paper Semantic Tokens (Always white paper + dark ink across themes) */
+  --c-paper: 255 255 255;
+  --c-paper-soft: 241 245 249;
+  --c-paper-ink: 15 23 42;
+  --c-paper-muted: 71 85 105;
+  --c-paper-line: 203 213 225;
 }
 
 .dark {

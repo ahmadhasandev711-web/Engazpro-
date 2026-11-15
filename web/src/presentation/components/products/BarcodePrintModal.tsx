@@ -224,7 +224,7 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
             width: 100% !important;
             margin: 0 !important;
             padding: 0 !important;
-            background: #ffffff !important;
+            background: white !important;
           }
 
           /* Thermal Page formatting */
@@ -267,7 +267,7 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
               page-break-inside: avoid !important;
               box-sizing: border-box !important;
               padding: 2mm !important;
-              border: 0.5px dashed #cccccc !important;
+              border: 0.5px dashed rgb(var(--c-paper-line)) !important;
               display: flex !important;
               flex-direction: column !important;
               justify-content: space-between !important;
@@ -659,7 +659,7 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
                       style={{
                         fontSize: '8pt',
                         fontWeight: 'bold',
-                        borderBottom: '0.5px solid #000',
+                        borderBottom: '0.5px solid black',
                         paddingBottom: '1px',
                         marginBottom: '1px',
                         textTransform: 'uppercase',
@@ -707,7 +707,7 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
                       style={{
                         fontSize: '9pt',
                         fontWeight: 'bold',
-                        borderTop: '0.5px solid #000',
+                        borderTop: '0.5px solid black',
                         paddingTop: '1px',
                       }}
                     >
@@ -735,7 +735,7 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
                       style={{
                         fontSize: '8pt',
                         fontWeight: 'bold',
-                        borderBottom: '0.5px solid #000',
+                        borderBottom: '0.5px solid black',
                         paddingBottom: '1px',
                         textTransform: 'uppercase',
                       }}
@@ -782,7 +782,7 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
                       style={{
                         fontSize: '9pt',
                         fontWeight: 'bold',
-                        borderTop: '0.5px solid #000',
+                        borderTop: '0.5px solid black',
                         paddingTop: '1px',
                       }}
                     >

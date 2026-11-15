@@ -659,20 +659,20 @@ export const InvoicesPage: React.FC = () => {
                 isReceiptModalOpen ? 'print:hidden' : 'printable-area'
               }`}
             >
-              {/* Print Header for Physical Printouts (untouched print area) */}
-              <div className="hidden print:block border-b-2 border-slate-900 pb-3 mb-4">
+              {/* Print Header for Physical Printouts (paper tokens) */}
+              <div className="hidden print:block border-b-2 border-paper-ink pb-3 mb-4">
                 <div className="flex justify-between items-center">
                   <div>
-                    <h2 className="text-xl font-black text-slate-900">
+                    <h2 className="text-xl font-black text-paper-ink">
                       {invoiceDetails?.type === 'SALE' ? 'فاتورة ضريبية مبسطة (مبيعات)' :
                        invoiceDetails?.type === 'PURCHASE' ? 'فاتورة مشتريات' :
                        invoiceDetails?.type === 'SALE_RETURN' ? 'إشعار دائن (مرتجع مبيعات)' : 'مرتجع مشتريات'}
                     </h2>
-                    <p className="text-sm font-mono font-bold text-slate-700 mt-0.5">
+                    <p className="text-sm font-mono font-bold text-paper-muted mt-0.5">
                       رقم الفاتورة: {invoiceDetails?.invoice_number}
                     </p>
                   </div>
-                  <div className="text-left font-mono text-xs text-slate-600">
+                  <div className="text-left font-mono text-xs text-paper-muted">
                     <div>التاريخ: {invoiceDetails?.date}</div>
                     {invoiceDetails?.wc_order_id && <div>طلب ووكومرس: #{invoiceDetails.wc_order_id}</div>}
                   </div>

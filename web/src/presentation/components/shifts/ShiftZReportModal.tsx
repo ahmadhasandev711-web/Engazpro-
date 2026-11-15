@@ -158,100 +158,100 @@ export const ShiftZReportModal: React.FC<ShiftZReportModalProps> = ({
           <div
             ref={printRef}
             id="shift-z-report-receipt"
-            className="w-full bg-white p-4 rounded-2xl border border-slate-200 shadow-xs text-slate-900 font-sans text-xs leading-relaxed"
+            className="w-full bg-paper p-4 rounded-2xl border border-paper-line shadow-xs text-paper-ink font-sans text-xs leading-relaxed"
             dir="rtl"
           >
             {/* Store Branding Header */}
-            <div className="text-center pb-2.5 border-b border-dashed border-slate-300 space-y-0.5">
-              <h2 className="text-sm font-black tracking-tight text-slate-900">{storeName}</h2>
-              <div className="inline-block px-2.5 py-0.5 rounded-full text-2xs font-bold bg-slate-900 text-white">
+            <div className="text-center pb-2.5 border-b border-dashed border-paper-line space-y-0.5">
+              <h2 className="text-sm font-black tracking-tight text-paper-ink">{storeName}</h2>
+              <div className="inline-block px-2.5 py-0.5 rounded-full text-2xs font-bold bg-paper-ink text-paper">
                 بون إغلاق وتسليم الوردية (Z-Report)
               </div>
               {storePhone && (
-                <p className="text-2xs text-slate-500 font-mono">هاتف: {storePhone}</p>
+                <p className="text-2xs text-paper-muted font-mono">هاتف: {storePhone}</p>
               )}
               {storeAddress && (
-                <p className="text-2xs text-slate-400 font-sans">{storeAddress}</p>
+                <p className="text-2xs text-paper-muted font-sans">{storeAddress}</p>
               )}
             </div>
 
             {/* Shift Header Meta */}
-            <div className="py-2.5 border-b border-dashed border-slate-300 space-y-1 text-[11px]">
+            <div className="py-2.5 border-b border-dashed border-paper-line space-y-1 text-[11px]">
               <div className="flex justify-between items-center">
-                <span className="text-slate-500 font-sans">رقم الوردية:</span>
+                <span className="text-paper-muted font-sans">رقم الوردية:</span>
                 <span className="font-bold font-mono">{shift.shift_number}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-slate-500 font-sans">الموظف المسؤول:</span>
-                <span className="font-bold font-sans text-slate-800">
+                <span className="text-paper-muted font-sans">الموظف المسؤول:</span>
+                <span className="font-bold font-sans text-paper-ink">
                   {employeeName} ({roleLabel})
                 </span>
               </div>
               {shift.treasury_name && (
                 <div className="flex justify-between items-center">
-                  <span className="text-slate-500 font-sans">الدرج / الخزينة:</span>
-                  <span className="font-bold font-sans text-slate-800">{shift.treasury_name}</span>
+                  <span className="text-paper-muted font-sans">الدرج / الخزينة:</span>
+                  <span className="font-bold font-sans text-paper-ink">{shift.treasury_name}</span>
                 </div>
               )}
               <div className="flex justify-between items-center">
-                <span className="text-slate-500 font-sans">وقت الفتح:</span>
+                <span className="text-paper-muted font-sans">وقت الفتح:</span>
                 <span className="font-mono text-2xs">
                   {openedDateStr} {openedTimeStr}
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-slate-500 font-sans">وقت الإغلاق:</span>
+                <span className="text-paper-muted font-sans">وقت الإغلاق:</span>
                 <span className="font-mono text-2xs">
                   {closedDateStr} {closedTimeStr}
                 </span>
               </div>
               {shift.settled_by_name && (
                 <div className="flex justify-between items-center">
-                  <span className="text-slate-500 font-sans">المعتمد / المستلم:</span>
-                  <span className="font-bold font-sans text-emerald-800">{shift.settled_by_name}</span>
+                  <span className="text-paper-muted font-sans">المعتمد / المستلم:</span>
+                  <span className="font-bold font-sans text-ok">{shift.settled_by_name}</span>
                 </div>
               )}
             </div>
 
             {/* Financial Movements Breakdown */}
-            <div className="py-2 border-b border-dashed border-slate-300 space-y-1.5 text-[11px]">
-              <div className="text-2xs font-bold text-slate-400 font-sans uppercase tracking-wider mb-1">
+            <div className="py-2 border-b border-dashed border-paper-line space-y-1.5 text-[11px]">
+              <div className="text-2xs font-bold text-paper-muted font-sans uppercase tracking-wider mb-1">
                 تفاصيل الحركة المالية
               </div>
 
               <div className="flex justify-between items-center">
-                <span className="text-slate-600 font-sans">رصيد الافتتاح:</span>
-                <span className="font-mono font-bold text-slate-700">{formatCurrency(shift.opening_balance)}</span>
+                <span className="text-paper-muted font-sans">رصيد الافتتاح:</span>
+                <span className="font-mono font-bold text-paper-ink">{formatCurrency(shift.opening_balance)}</span>
               </div>
 
-              <div className="flex justify-between items-center text-emerald-700">
+              <div className="flex justify-between items-center text-ok">
                 <span className="font-sans">مبيعات نقدية (كاش):</span>
                 <span className="font-mono font-bold">+{formatCurrency(shift.cash_sales)}</span>
               </div>
 
               {Number(shift.electronic_sales) > 0 && (
-                <div className="flex justify-between items-center text-indigo-700">
+                <div className="flex justify-between items-center text-brand">
                   <span className="font-sans">مبيعات إلكترونية (شبكة/محافظ):</span>
                   <span className="font-mono font-bold">{formatCurrency(shift.electronic_sales)}</span>
                 </div>
               )}
 
               {Number(shift.cash_receipts) > 0 && (
-                <div className="flex justify-between items-center text-emerald-700">
+                <div className="flex justify-between items-center text-ok">
                   <span className="font-sans">تحصيلات وسندات قبض:</span>
                   <span className="font-mono font-bold">+{formatCurrency(shift.cash_receipts)}</span>
                 </div>
               )}
 
               {Number(shift.expenses) > 0 && (
-                <div className="flex justify-between items-center text-rose-600">
+                <div className="flex justify-between items-center text-bad">
                   <span className="font-sans">مصروفات ونثريات:</span>
                   <span className="font-mono font-bold">-{formatCurrency(shift.expenses)}</span>
                 </div>
               )}
 
               {Number(shift.cash_returns) > 0 && (
-                <div className="flex justify-between items-center text-rose-600">
+                <div className="flex justify-between items-center text-bad">
                   <span className="font-sans">مرتجعات مبيعات كاش:</span>
                   <span className="font-mono font-bold">-{formatCurrency(shift.cash_returns)}</span>
                 </div>
@@ -259,33 +259,33 @@ export const ShiftZReportModal: React.FC<ShiftZReportModalProps> = ({
             </div>
 
             {/* Reconciliation Cash Box */}
-            <div className="my-2.5 p-2.5 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5 text-[11px]">
+            <div className="my-2.5 p-2.5 bg-paper-soft rounded-xl border border-paper-line space-y-1.5 text-[11px]">
               <div className="flex justify-between items-center">
-                <span className="text-slate-600 font-sans">النقدية المتوقعة بالدرج:</span>
-                <span className="font-mono font-bold text-slate-800">{formatCurrency(shift.expected_cash)}</span>
+                <span className="text-paper-muted font-sans">النقدية المتوقعة بالدرج:</span>
+                <span className="font-mono font-bold text-paper-ink">{formatCurrency(shift.expected_cash)}</span>
               </div>
 
-              <div className="flex justify-between items-center border-t border-slate-200/80 pt-1.5">
-                <span className="font-black text-slate-900 font-sans">النقدية الفعلية المجرودة:</span>
-                <span className="font-mono font-black text-slate-950 text-sm">
+              <div className="flex justify-between items-center border-t border-paper-line pt-1.5">
+                <span className="font-black text-paper-ink font-sans">النقدية الفعلية المجرودة:</span>
+                <span className="font-mono font-black text-paper-ink text-sm">
                   {formatCurrency(actualCash)}
                 </span>
               </div>
 
-              <div className="flex justify-between items-center border-t border-slate-200/80 pt-1.5">
-                <span className="font-sans font-bold text-slate-600">نتيجة المطابقة:</span>
+              <div className="flex justify-between items-center border-t border-paper-line pt-1.5">
+                <span className="font-sans font-bold text-paper-muted">نتيجة المطابقة:</span>
                 {isDiffZero ? (
-                  <span className="font-bold text-emerald-700 font-sans flex items-center gap-1">
+                  <span className="font-bold text-ok font-sans flex items-center gap-1">
                     <CheckCircle2 className="w-3.5 h-3.5" />
                     <span>مطابق (0.00)</span>
                   </span>
                 ) : isSurplus ? (
-                  <span className="font-bold text-amber-700 font-mono flex items-center gap-1">
+                  <span className="font-bold text-warn font-mono flex items-center gap-1">
                     <TrendingUp className="w-3.5 h-3.5" />
                     <span>زيادة +{formatCurrency(difference)}</span>
                   </span>
                 ) : (
-                  <span className="font-bold text-rose-700 font-mono flex items-center gap-1">
+                  <span className="font-bold text-bad font-mono flex items-center gap-1">
                     <TrendingDown className="w-3.5 h-3.5" />
                     <span>عجز {formatCurrency(difference)}</span>
                   </span>
@@ -295,9 +295,9 @@ export const ShiftZReportModal: React.FC<ShiftZReportModalProps> = ({
 
             {/* Shift Notes if any */}
             {shift.notes && (
-              <div className="py-2 border-b border-dashed border-slate-300 text-[11px]">
-                <span className="text-slate-500 font-sans block mb-0.5">ملاحظات الكاشير:</span>
-                <p className="font-sans text-slate-800 bg-slate-50 p-2 rounded-lg leading-relaxed text-2xs">
+              <div className="py-2 border-b border-dashed border-paper-line text-[11px]">
+                <span className="text-paper-muted font-sans block mb-0.5">ملاحظات الكاشير:</span>
+                <p className="font-sans text-paper-ink bg-paper-soft p-2 rounded-lg leading-relaxed text-2xs">
                   {shift.notes}
                 </p>
               </div>
@@ -305,32 +305,32 @@ export const ShiftZReportModal: React.FC<ShiftZReportModalProps> = ({
 
             {/* Settlement Notes if any */}
             {shift.settlement_notes && (
-              <div className="py-2 border-b border-dashed border-slate-300 text-[11px]">
-                <span className="text-slate-500 font-sans block mb-0.5">ملاحظات التوريد والاعتماد:</span>
-                <p className="font-sans text-slate-800 bg-slate-50 p-2 rounded-lg leading-relaxed text-2xs">
+              <div className="py-2 border-b border-dashed border-paper-line text-[11px]">
+                <span className="text-paper-muted font-sans block mb-0.5">ملاحظات التوريد والاعتماد:</span>
+                <p className="font-sans text-paper-ink bg-paper-soft p-2 rounded-lg leading-relaxed text-2xs">
                   {shift.settlement_notes}
                 </p>
               </div>
             )}
 
             {/* Dual Signature Lines */}
-            <div className="pt-3 pb-2 grid grid-cols-2 gap-3 text-center text-2xs text-slate-600 font-sans">
-              <div className="border-t border-dashed border-slate-300 pt-2">
+            <div className="pt-3 pb-2 grid grid-cols-2 gap-3 text-center text-2xs text-paper-muted font-sans">
+              <div className="border-t border-dashed border-paper-line pt-2">
                 <span className="font-bold">توقيع الكاشير (المسلّم)</span>
                 <div className="h-6" />
               </div>
-              <div className="border-t border-dashed border-slate-300 pt-2">
+              <div className="border-t border-dashed border-paper-line pt-2">
                 <span className="font-bold">توقيع الخزينة (المستلم)</span>
                 <div className="h-6" />
               </div>
             </div>
 
             {/* Receipt Footer */}
-            <div className="text-center pt-2 border-t border-dashed border-slate-300 space-y-0.5">
-              <p className="text-2xs font-sans text-slate-500">
+            <div className="text-center pt-2 border-t border-dashed border-paper-line space-y-0.5">
+              <p className="text-2xs font-sans text-paper-muted">
                 يتم تدبيس هذا البون الحراري بمظروف النقدية المسلم للخزينة
               </p>
-              <p className="text-[8px] text-slate-400 font-sans">
+              <p className="text-[8px] text-paper-muted font-sans">
                 نظام إدارة نقاط البيع والمناديب الذكي • {storeName}
               </p>
             </div>
@@ -429,7 +429,7 @@ export const ShiftZReportModal: React.FC<ShiftZReportModalProps> = ({
             font-family: 'IBM Plex Sans Arabic', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif !important;
             font-size: 11px !important;
             line-height: 1.35 !important;
-            color: #000 !important;
+            color: black !important;
             page-break-after: avoid !important;
             break-after: avoid !important;
             page-break-inside: avoid !important;

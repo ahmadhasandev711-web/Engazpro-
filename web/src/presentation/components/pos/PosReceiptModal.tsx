@@ -79,83 +79,83 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
           <div
             ref={printRef}
             id="pos-thermal-receipt"
-            className="w-full bg-white p-5 rounded-2xl border border-slate-200 shadow-sm text-slate-900 font-sans text-xs leading-relaxed"
+            className="w-full bg-paper p-5 rounded-2xl border border-paper-line shadow-sm text-paper-ink font-sans text-xs leading-relaxed"
             dir="rtl"
           >
             {/* Header Branding */}
-            <div className="text-center pb-3 border-b border-dashed border-slate-300 space-y-1">
-              <h2 className="text-base font-black tracking-tight text-slate-900">{storeName}</h2>
-              <p className="text-2xs text-slate-500 font-sans">فاتورة مبيعات</p>
+            <div className="text-center pb-3 border-b border-dashed border-paper-line space-y-1">
+              <h2 className="text-base font-black tracking-tight text-paper-ink">{storeName}</h2>
+              <p className="text-2xs text-paper-muted font-sans">فاتورة مبيعات</p>
               {storePhone && (
-                <p className="text-2xs text-slate-500 font-mono">هاتف: {storePhone}</p>
+                <p className="text-2xs text-paper-muted font-mono">هاتف: {storePhone}</p>
               )}
               {storeAddress && (
-                <p className="text-2xs text-slate-400 font-sans">{storeAddress}</p>
+                <p className="text-2xs text-paper-muted font-sans">{storeAddress}</p>
               )}
             </div>
 
             {/* Invoice Info */}
-            <div className="py-2.5 border-b border-dashed border-slate-300 space-y-1 text-[11px]">
+            <div className="py-2.5 border-b border-dashed border-paper-line space-y-1 text-[11px]">
               <div className="flex justify-between items-center">
-                <span className="text-slate-500">رقم الفاتورة:</span>
+                <span className="text-paper-muted">رقم الفاتورة:</span>
                 <span className="font-bold font-mono">{invoice.invoice_number}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-slate-500">التاريخ والوقت:</span>
+                <span className="text-paper-muted">التاريخ والوقت:</span>
                 <span className="font-mono">
                   {dateStr} {timeStr}
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-slate-500">الكاشير:</span>
-                <span className="font-bold text-slate-800">{cashierName}</span>
+                <span className="text-paper-muted">الكاشير:</span>
+                <span className="font-bold text-paper-ink">{cashierName}</span>
               </div>
               {(invoice.salesperson_name || invoice.salesperson?.name) && (invoice.salesperson_name || invoice.salesperson?.name) !== cashierName && (
                 <div className="flex justify-between items-center">
-                  <span className="text-slate-500">مسؤول البيع:</span>
-                  <span className="font-bold text-slate-800">{invoice.salesperson_name || invoice.salesperson?.name}</span>
+                  <span className="text-paper-muted">مسؤول البيع:</span>
+                  <span className="font-bold text-paper-ink">{invoice.salesperson_name || invoice.salesperson?.name}</span>
                 </div>
               )}
               <div className="flex justify-between items-center">
-                <span className="text-slate-500">العميل:</span>
-                <span className="font-medium text-slate-900">{invoice.party?.name || invoice.party_name || 'عميل نقدي'}</span>
+                <span className="text-paper-muted">العميل:</span>
+                <span className="font-medium text-paper-ink">{invoice.party?.name || invoice.party_name || 'عميل نقدي'}</span>
               </div>
               {(invoice.party?.phone || invoice.customer_phone) && (
                 <div className="flex justify-between items-center">
-                  <span className="text-slate-500">هاتف العميل:</span>
+                  <span className="text-paper-muted">هاتف العميل:</span>
                   <span className="font-mono">{invoice.party?.phone || invoice.customer_phone}</span>
                 </div>
               )}
               {(invoice.party?.address || invoice.customer_address) && (
                 <div className="flex justify-between items-center">
-                  <span className="text-slate-500">العنوان:</span>
+                  <span className="text-paper-muted">العنوان:</span>
                   <span className="text-left text-2xs">{invoice.party?.address || invoice.customer_address}</span>
                 </div>
               )}
               {invoice.courier_name && (
                 <div className="flex justify-between items-center">
-                  <span className="text-slate-500">شركة الشحن:</span>
-                  <span className="font-bold text-purple-800">{invoice.courier_name} {invoice.tracking_number ? `(#${invoice.tracking_number})` : ''}</span>
+                  <span className="text-paper-muted">شركة الشحن:</span>
+                  <span className="font-bold text-brand">{invoice.courier_name} {invoice.tracking_number ? `(#${invoice.tracking_number})` : ''}</span>
                 </div>
               )}
             </div>
 
             {/* Items Table */}
-            <div className="py-2.5 border-b border-dashed border-slate-300">
+            <div className="py-2.5 border-b border-dashed border-paper-line">
               <table className="w-full text-right text-[11px] table-fixed">
                 <thead>
-                  <tr className="border-b border-slate-200 text-slate-500 font-bold">
+                  <tr className="border-b border-paper-line text-paper-muted font-bold">
                     <th className="pb-1 w-[50%]">الصنف</th>
                     <th className="pb-1 text-center w-[18%]">الكمية</th>
                     <th className="pb-1 text-left w-[32%]">الإجمالي</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-paper-line">
                   {items.map((item: any, idx: number) => (
                     <tr key={idx} className="py-1">
                       <td className="py-1 font-bold">
                         <div className="line-clamp-1">{item.product_name}</div>
-                        <div className="text-2xs text-slate-400 font-normal">
+                        <div className="text-2xs text-paper-muted font-normal">
                           <span className="font-mono">{formatCurrency(item.unit_price, currencySymbol)}</span> للقطعة
                         </div>
                       </td>
@@ -168,33 +168,33 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
             </div>
 
             {/* Summary */}
-            <div className="py-2.5 border-b border-dashed border-slate-300 space-y-1 text-xs">
-              <div className="flex justify-between text-slate-500">
+            <div className="py-2.5 border-b border-dashed border-paper-line space-y-1 text-xs">
+              <div className="flex justify-between text-paper-muted">
                 <span>المجموع الفرعي:</span>
                 <span>{formatCurrency(invoice.subtotal, currencySymbol)}</span>
               </div>
               {Number(invoice.discount) > 0 && (
-                <div className="flex justify-between text-rose-600">
+                <div className="flex justify-between text-bad">
                   <span>الخصم:</span>
                   <span>-{formatCurrency(invoice.discount, currencySymbol)}</span>
                 </div>
               )}
               {Number(invoice.shipping_amount) > 0 && (
-                <div className="flex justify-between text-slate-700">
+                <div className="flex justify-between text-paper-ink">
                   <span>خدمة التوصيل / الشحن:</span>
                   <span className="font-bold">{formatCurrency(invoice.shipping_amount, currencySymbol)}</span>
                 </div>
               )}
-              <div className="flex justify-between text-sm font-black pt-1 border-t border-slate-200">
+              <div className="flex justify-between text-sm font-black pt-1 border-t border-paper-line">
                 <span>الإجمالي الصافي:</span>
                 <span>{formatCurrency(invoice.total, currencySymbol)}</span>
               </div>
             </div>
 
             {/* Payment info */}
-            <div className="py-2.5 border-b border-dashed border-slate-300 space-y-1 text-[11px]">
+            <div className="py-2.5 border-b border-dashed border-paper-line space-y-1 text-[11px]">
               <div className="flex justify-between">
-                <span className="text-slate-500">طريقة الدفع:</span>
+                <span className="text-paper-muted">طريقة الدفع:</span>
                 <span className="font-bold">
                   {invoice.payment_method === 'CASH'
                     ? 'نقدي (كاش)'
@@ -214,14 +214,14 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">المبلغ المدفوع:</span>
+                <span className="text-paper-muted">المبلغ المدفوع:</span>
                 <span className="font-bold">{formatCurrency(invoice.paid_amount || invoice.total, currencySymbol)}</span>
               </div>
             </div>
 
             {/* Footer QR simulation & Thank you */}
-            <div className="pt-3 text-center space-y-1 text-2xs text-slate-400">
-              <p className="font-sans font-bold text-slate-700">شكراً لزيارتكم ونسعد بخدمتكم دائماً!</p>
+            <div className="pt-3 text-center space-y-1 text-2xs text-paper-muted">
+              <p className="font-sans font-bold text-paper-ink">شكراً لزيارتكم ونسعد بخدمتكم دائماً!</p>
               <p className="font-mono text-2xs">نظام إنجاز برو لإدارة نقاط البيع والمخازن</p>
             </div>
           </div>
@@ -328,7 +328,7 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
             font-family: 'IBM Plex Sans Arabic', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif !important;
             font-size: 11px !important;
             line-height: 1.35 !important;
-            color: #000 !important;
+            color: black !important;
             page-break-after: avoid !important;
             break-after: avoid !important;
             page-break-inside: avoid !important;
