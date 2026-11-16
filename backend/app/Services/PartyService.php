@@ -36,37 +36,30 @@ class PartyService
             ]);
 
             if ($initialBalance != 0.0) {
-                $debit = 0.0;
-                $credit = 0.0;
-
-                if ($party->type === PartyType::CUSTOMER->value) {
-                    if ($initialBalance > 0) {
-                        $debit = $initialBalance;
-                    } else {
-                        $credit = abs($initialBalance);
-                    }
-                } else {
-                    if ($initialBalance > 0) {
-                        $credit = $initialBalance;
-                    } else {
-                        $debit = abs($initialBalance);
-                    }
-                }
-
-                $this->ledgerService->recordEntry(
-                    $user,
-                    $party,
-                    LedgerSource::INITIAL->value,
-                    $party->id,
-                    now()->toDateString(),
-                    'رصيد افتتاحي عند إنشاء الحساب',
-                    $debit,
-                    $credit
-                );
+                $this->recordOpeningLedgerBalance($user, $party, $initialBalance);
             }
 
             return $party;
         });
+    }
+
+    private function recordOpeningLedgerBalance(User $user, Party $party, float $initialBalance): void
+    {
+        $isCustomer = $party->type === PartyType::CUSTOMER->value;
+        $isPositive = $initialBalance > 0;
+        $debit = ($isCustomer === $isPositive) ? abs($initialBalance) : 0.0;
+        $credit = ($isCustomer !== $isPositive) ? abs($initialBalance) : 0.0;
+
+        $this->ledgerService->recordEntry(
+            $user,
+            $party,
+            LedgerSource::INITIAL->value,
+            $party->id,
+            now()->toDateString(),
+            'رصيد افتتاحي عند إنشاء الحساب',
+            $debit,
+            $credit
+        );
     }
 
     /**

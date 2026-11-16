@@ -25,42 +25,43 @@ class LedgerService
         float $debit = 0.0,  // مدين (عليه)
         float $credit = 0.0  // دائن (له)
     ): LedgerEntry {
-        $sourceTypeValue = $sourceType instanceof LedgerSource ? $sourceType->value : $sourceType;
         if ($debit < 0 || $credit < 0) {
             throw new InvalidArgumentException('المبالغ المدينة والدائنة يجب أن تكون أكبر من أو تساوي صفراً.');
         }
 
         $debitMoney = Money::of($debit);
         $creditMoney = Money::of($credit);
-        // قفل تشاؤمي لصف جهة التعامل لمنع تضارب التزامن (Lost Updates)
         $lockedParty = Party::where('id', $party->id)->lockForUpdate()->first() ?? $party;
-        $currentBalanceMoney = Money::of($lockedParty->balance);
-
         $partyType = $lockedParty->type instanceof PartyType ? $lockedParty->type : PartyType::tryFrom((string) $lockedParty->type);
 
-        // للعميل وشركة الشحن: المدين يزيد المديونية (مطلوب تحصيله) والدائن يقلله (سداد / توريد)
-        // للمورد: الدائن يزيد ما له والمدين يقلله
-        if ($partyType === PartyType::CUSTOMER || $partyType === PartyType::COURIER) {
-            $newBalanceMoney = $currentBalanceMoney->add($debitMoney)->subtract($creditMoney);
-        } else {
-            $newBalanceMoney = $currentBalanceMoney->add($creditMoney)->subtract($debitMoney);
-        }
-
-        $newBalance = $newBalanceMoney->getAmount();
-        $lockedParty->balance = $newBalance;
-        $lockedParty->save();
+        $newBalance = $this->applyLedgerDelta($partyType, Money::of($lockedParty->balance), $debitMoney, $creditMoney)->getAmount();
+        $lockedParty->update(['balance' => $newBalance]);
         $party->balance = $newBalance;
 
+        return $this->persistLedgerEntry($user, $party, $sourceType, $sourceId, $date, $description, $debitMoney, $creditMoney, $newBalance);
+    }
+
+    private function persistLedgerEntry(
+        User $user,
+        Party $party,
+        LedgerSource|string $sourceType,
+        ?int $sourceId,
+        string $date,
+        string $description,
+        Money $debitMoney,
+        Money $creditMoney,
+        float $balanceAfter
+    ): LedgerEntry {
         return LedgerEntry::create([
             'user_id' => $user->getAccountId(),
             'party_id' => $party->id,
-            'source_type' => $sourceTypeValue,
+            'source_type' => $sourceType instanceof LedgerSource ? $sourceType->value : $sourceType,
             'source_id' => $sourceId,
             'date' => $date,
             'description' => $description,
             'debit' => $debitMoney->getAmount(),
             'credit' => $creditMoney->getAmount(),
-            'balance_after' => $newBalance,
+            'balance_after' => $balanceAfter,
         ]);
     }
 
@@ -69,38 +70,32 @@ class LedgerService
      */
     public function auditAndRecalculateBalance(Party $party): float
     {
-        $entries = LedgerEntry::where('party_id', $party->id)
-            ->orderBy('date', 'asc')
-            ->orderBy('id', 'asc')
-            ->get();
-
+        $entries = LedgerEntry::where('party_id', $party->id)->orderBy('date', 'asc')->orderBy('id', 'asc')->get();
         $runningBalanceMoney = Money::zero();
-
         $partyType = $party->type instanceof PartyType ? $party->type : PartyType::tryFrom((string) $party->type);
 
         foreach ($entries as $entry) {
-            $debitMoney = Money::of($entry->debit);
-            $creditMoney = Money::of($entry->credit);
-
-            if ($partyType === PartyType::CUSTOMER || $partyType === PartyType::COURIER) {
-                $runningBalanceMoney = $runningBalanceMoney->add($debitMoney)->subtract($creditMoney);
-            } else {
-                $runningBalanceMoney = $runningBalanceMoney->add($creditMoney)->subtract($debitMoney);
-            }
-
+            $runningBalanceMoney = $this->applyLedgerDelta($partyType, $runningBalanceMoney, Money::of($entry->debit), Money::of($entry->credit));
             if ($entry->balance_after != $runningBalanceMoney->getAmount()) {
-                $entry->balance_after = $runningBalanceMoney->getAmount();
-                $entry->save();
+                $entry->update(['balance_after' => $runningBalanceMoney->getAmount()]);
             }
         }
 
         $calculatedBalance = $runningBalanceMoney->getAmount();
         if ($party->balance != $calculatedBalance) {
-            $party->balance = $calculatedBalance;
-            $party->save();
+            $party->update(['balance' => $calculatedBalance]);
         }
 
         return $calculatedBalance;
+    }
+
+    private function applyLedgerDelta(?PartyType $partyType, Money $current, Money $debit, Money $credit): Money
+    {
+        if ($partyType === PartyType::CUSTOMER || $partyType === PartyType::COURIER) {
+            return $current->add($debit)->subtract($credit);
+        }
+
+        return $current->add($credit)->subtract($debit);
     }
 
     /**

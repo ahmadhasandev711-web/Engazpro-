@@ -64,70 +64,60 @@ class PaymentService
             }
         }
 
-        return DB::transaction(function () use ($user, $data, $idempotencyKey) {
-            $party = Party::where('user_id', $user->getAccountId())->findOrFail($data['party_id']);
-            $type = $data['type']; // PAYMENT (دفع لمورد) or RECEIPT (قبض من عميل)
-            $amountMoney = Money::of($data['amount']);
-            $amount = $amountMoney->getAmount();
-            $method = $data['method'] ?? PaymentMethod::CASH->value;
-            $date = $data['date'] ?? now()->toDateString();
-            $notes = $data['notes'] ?? null;
+        return DB::transaction(fn() => $this->persistAndProcessPayment($user, $data, $idempotencyKey));
+    }
 
-            // تحديد الوردية والخزينة
-            $activeShift = $this->shiftService->getActiveShift($user);
-            $treasury = $this->treasuryService->getTreasuryForUser($user);
+    private function persistAndProcessPayment(User $user, array $data, ?string $idempotencyKey): Payment
+    {
+        $party = Party::where('user_id', $user->getAccountId())->findOrFail($data['party_id']);
+        $amount = Money::of($data['amount'])->getAmount();
+        $method = $data['method'] ?? PaymentMethod::CASH->value;
+        $activeShift = $this->shiftService->getActiveShift($user);
+        $treasury = $this->treasuryService->getTreasuryForUser($user);
 
-            $payment = Payment::create([
-                'user_id' => $user->getAccountId(),
-                'created_by' => $user->id,
-                'party_id' => $party->id,
-                'invoice_id' => $data['invoice_id'] ?? null,
-                'treasury_id' => $treasury->id,
-                'shift_id' => $activeShift?->id,
-                'idempotency_key' => $idempotencyKey,
-                'type' => $type,
-                'amount' => $amount,
-                'method' => $method,
-                'date' => $date,
-                'notes' => $notes,
-            ]);
+        $payment = $this->createPaymentRecord($user, $party, $treasury, $activeShift, $data, $idempotencyKey, $amount, $method);
+        $this->executePaymentStrategy($payment, $user, $party, $treasury, $activeShift, $method);
+        $this->recordPaymentLedgerEntry($user, $party, $payment, $data['type'], $amount, $data['notes'] ?? null);
 
-            // تطبيق استراتيجية وسيلة الدفع (Strategy Pattern GR-8.1)
-            $methodStr = $payment->method instanceof \BackedEnum ? $payment->method->value : (string) ($payment->method ?? $method);
-            $this->resolveHandler($methodStr)->handle(
-                $payment,
-                $user,
-                $party,
-                $treasury,
-                $activeShift
-            );
+        return $payment->load('party');
+    }
 
-            // تحديث الحسابات المالية الحية للوردية
-            if ($activeShift) {
-                $this->shiftService->syncShiftFinancials($activeShift);
-            }
+    private function createPaymentRecord(User $user, Party $party, $treasury, $activeShift, array $data, ?string $idempotencyKey, float $amount, string $method): Payment
+    {
+        return Payment::create([
+            'user_id' => $user->getAccountId(),
+            'created_by' => $user->id,
+            'party_id' => $party->id,
+            'invoice_id' => $data['invoice_id'] ?? null,
+            'treasury_id' => $treasury->id,
+            'shift_id' => $activeShift?->id,
+            'idempotency_key' => $idempotencyKey,
+            'type' => $data['type'],
+            'amount' => $amount,
+            'method' => $method,
+            'date' => $data['date'] ?? now()->toDateString(),
+            'notes' => $data['notes'] ?? null,
+        ]);
+    }
 
-            // تسجيل القيد في كشف حساب الطرف (Ledger)
-            // RECEIPT من عميل: دائن (Credit) لتخفيض مديونية العميل
-            // PAYMENT لمورد: مدين (Debit) لتخفيض مستحقات المورد
-            $debit = ($type === PaymentType::PAYMENT->value) ? $amount : 0;
-            $credit = ($type === PaymentType::RECEIPT->value) ? $amount : 0;
-            $docName = ($type === PaymentType::RECEIPT->value) ? 'سند قبض' : 'سند صرف';
-            $desc = $notes ? "{$docName} - {$notes}" : "{$docName} رقم #{$payment->id}";
+    private function executePaymentStrategy(Payment $payment, User $user, Party $party, $treasury, $activeShift, string $method): void
+    {
+        $methodStr = $payment->method instanceof \BackedEnum ? $payment->method->value : (string) ($payment->method ?? $method);
+        $this->resolveHandler($methodStr)->handle($payment, $user, $party, $treasury, $activeShift);
 
-            $this->ledgerService->recordEntry(
-                $user,
-                $party,
-                LedgerSource::PAYMENT->value,
-                $payment->id,
-                $payment->date->format('Y-m-d'),
-                $desc,
-                $debit,
-                $credit
-            );
+        if ($activeShift) {
+            $this->shiftService->syncShiftFinancials($activeShift);
+        }
+    }
 
-            return $payment->load('party');
-        });
+    private function recordPaymentLedgerEntry(User $user, Party $party, Payment $payment, string $type, float $amount, ?string $notes): void
+    {
+        $debit = ($type === PaymentType::PAYMENT->value) ? $amount : 0;
+        $credit = ($type === PaymentType::RECEIPT->value) ? $amount : 0;
+        $docName = ($type === PaymentType::RECEIPT->value) ? 'سند قبض' : 'سند صرف';
+        $desc = $notes ? "{$docName} - {$notes}" : "{$docName} رقم #{$payment->id}";
+
+        $this->ledgerService->recordEntry($user, $party, LedgerSource::PAYMENT->value, $payment->id, $payment->date->format('Y-m-d'), $desc, $debit, $credit);
     }
 
     /**
@@ -139,60 +129,56 @@ class PaymentService
             $payment = Payment::where('user_id', $user->getAccountId())->findOrFail($id);
             $party = Party::where('user_id', $user->getAccountId())->findOrFail($payment->party_id);
 
-            // عكس القيد المحاسبي
-            // إذا كان RECEIPT (كان Credit)، نعكسه بـ Debit
-            $isReceipt = $payment->isReceipt();
-            $debit = $isReceipt ? $payment->amount : 0;
-            $credit = !$isReceipt ? $payment->amount : 0;
-            $docName = $isReceipt ? 'سند قبض' : 'سند صرف';
-
-            $this->ledgerService->recordEntry(
-                $user,
-                $party,
-                LedgerSource::REVERSAL->value,
-                $payment->id,
-                now()->toDateString(),
-                "إلغاء {$docName} رقم #{$payment->id}",
-                $debit,
-                $credit
-            );
-
-            // عكس حركات الخزينة النقدية المرتبطة بالسند
-            $treasuryTxns = TreasuryTransaction::where('user_id', $user->getAccountId())
-                ->where('source_type', LedgerSource::PAYMENT->value)
-                ->where('source_id', $payment->id)
-                ->get();
-
-            foreach ($treasuryTxns as $txn) {
-                $treasury = $txn->treasury;
-                if ($treasury) {
-                    $txnMoney = Money::of($txn->amount);
-                    if ($txn->type === TreasuryTransactionType::DEPOSIT) {
-                        $this->treasuryService->recordWithdrawal(
-                            treasury: $treasury,
-                            amount: $txnMoney,
-                            sourceType: LedgerSource::REVERSAL->value,
-                            sourceId: $payment->id,
-                            actor: $user,
-                            notes: "إلغاء إيداع نقدي لسند قبض رقم #{$payment->id}",
-                            shiftId: $txn->shift_id
-                        );
-                    } elseif ($txn->type === TreasuryTransactionType::WITHDRAWAL) {
-                        $this->treasuryService->recordDeposit(
-                            treasury: $treasury,
-                            amount: $txnMoney,
-                            sourceType: LedgerSource::REVERSAL->value,
-                            sourceId: $payment->id,
-                            actor: $user,
-                            notes: "إلغاء صرف نقدي لسند صرف رقم #{$payment->id}",
-                            shiftId: $txn->shift_id
-                        );
-                    }
-                }
-            }
+            $this->reversePaymentLedgerEntry($user, $party, $payment);
+            $this->reversePaymentTreasuryTransactions($user, $payment);
 
             $payment->delete();
         });
+    }
+
+    private function reversePaymentLedgerEntry(User $user, Party $party, Payment $payment): void
+    {
+        $isReceipt = $payment->isReceipt();
+        $debit = $isReceipt ? $payment->amount : 0;
+        $credit = !$isReceipt ? $payment->amount : 0;
+        $docName = $isReceipt ? 'سند قبض' : 'سند صرف';
+
+        $this->ledgerService->recordEntry(
+            $user,
+            $party,
+            LedgerSource::REVERSAL->value,
+            $payment->id,
+            now()->toDateString(),
+            "إلغاء {$docName} رقم #{$payment->id}",
+            $debit,
+            $credit
+        );
+    }
+
+    private function reversePaymentTreasuryTransactions(User $user, Payment $payment): void
+    {
+        $treasuryTxns = TreasuryTransaction::where('user_id', $user->getAccountId())
+            ->where('source_type', LedgerSource::PAYMENT->value)
+            ->where('source_id', $payment->id)
+            ->get();
+
+        foreach ($treasuryTxns as $txn) {
+            $treasury = $txn->treasury;
+            if (!$treasury) {
+                continue;
+            }
+            $this->reverseSingleTreasuryTransaction($user, $payment, $treasury, $txn);
+        }
+    }
+
+    private function reverseSingleTreasuryTransaction(User $user, Payment $payment, $treasury, TreasuryTransaction $txn): void
+    {
+        $txnMoney = Money::of($txn->amount);
+        if ($txn->type === TreasuryTransactionType::DEPOSIT) {
+            $this->treasuryService->recordWithdrawal($treasury, $txnMoney, LedgerSource::REVERSAL->value, $payment->id, $user, "إلغاء إيداع نقدي لسند قبض رقم #{$payment->id}", $txn->shift_id);
+        } elseif ($txn->type === TreasuryTransactionType::WITHDRAWAL) {
+            $this->treasuryService->recordDeposit($treasury, $txnMoney, LedgerSource::REVERSAL->value, $payment->id, $user, "إلغاء صرف نقدي لسند صرف رقم #{$payment->id}", $txn->shift_id);
+        }
     }
 
     /**
@@ -201,36 +187,20 @@ class PaymentService
     protected function buildFilteredPaymentsQuery(User $user, array $filters = []): \Illuminate\Database\Eloquent\Builder
     {
         $isEmployee = $user->isMandob() || $user->isCashier();
-
-        $query = Payment::query()
-            ->when($isEmployee, fn($q) => $q->where('created_by', $user->id));
+        $query = Payment::query()->when($isEmployee, fn($q) => $q->where('created_by', $user->id));
 
         if (!empty($filters['type'])) {
             $query->where('type', $filters['type']);
         }
-
         if (!empty($filters['created_by']) && !$isEmployee) {
             $query->where('created_by', $filters['created_by']);
         }
-
         if (!empty($filters['party_id'])) {
             $query->where('party_id', $filters['party_id']);
         }
-
         if (!empty($filters['search'])) {
-            $search = trim((string) $filters['search']);
-            $numericSearch = ltrim($search, '#');
-            $query->where(function ($q) use ($search, $numericSearch) {
-                if (is_numeric($numericSearch)) {
-                    $q->where('id', (int) $numericSearch)
-                      ->orWhere('notes', 'like', "%{$search}%");
-                } else {
-                    $q->where('notes', 'like', "%{$search}%");
-                }
-                $q->orWhereHas('party', fn($pq) => $pq->where('name', 'like', "%{$search}%")->orWhere('phone', 'like', "%{$search}%"));
-            });
+            $this->applyPaymentSearchFilter($query, trim((string) $filters['search']));
         }
-
         if (!empty($filters['date_from'])) {
             $query->where('date', '>=', $filters['date_from']);
         }
@@ -239,6 +209,19 @@ class PaymentService
         }
 
         return $query;
+    }
+
+    private function applyPaymentSearchFilter(\Illuminate\Database\Eloquent\Builder $query, string $search): void
+    {
+        $numericSearch = ltrim($search, '#');
+        $query->where(function ($q) use ($search, $numericSearch) {
+            if (is_numeric($numericSearch)) {
+                $q->where('id', (int) $numericSearch)->orWhere('notes', 'like', "%{$search}%");
+            } else {
+                $q->where('notes', 'like', "%{$search}%");
+            }
+            $q->orWhereHas('party', fn($pq) => $pq->where('name', 'like', "%{$search}%")->orWhere('phone', 'like', "%{$search}%"));
+        });
     }
 
     /**

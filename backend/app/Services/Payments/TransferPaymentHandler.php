@@ -43,6 +43,7 @@ class TransferPaymentHandler implements PaymentHandlerInterface
         if (!$money->isPositive()) {
             return;
         }
+
         $methodStr = $payment->method instanceof \BackedEnum ? $payment->method->value : (string) $payment->method;
         $targetTreasury = $this->treasuryService->getTreasuryForPaymentMethod($user, $methodStr);
 
@@ -50,9 +51,14 @@ class TransferPaymentHandler implements PaymentHandlerInterface
             $payment->update(['treasury_id' => $targetTreasury->id]);
         }
 
+        $this->recordTreasuryMovement($targetTreasury, $money, $payment, $party, $user, $activeShift, $methodStr);
+    }
+
+    private function recordTreasuryMovement(Treasury $treasury, Money $money, Payment $payment, Party $party, User $user, ?Shift $activeShift, string $methodStr): void
+    {
         if ($payment->isReceipt()) {
             $this->treasuryService->recordDeposit(
-                treasury: $targetTreasury,
+                treasury: $treasury,
                 amount: $money,
                 sourceType: LedgerSource::PAYMENT->value,
                 sourceId: $payment->id,
@@ -60,16 +66,17 @@ class TransferPaymentHandler implements PaymentHandlerInterface
                 notes: "سداد إلكتروني ({$methodStr}) #{$payment->id} من ({$party->name})",
                 shiftId: $activeShift?->id
             );
-        } else {
-            $this->treasuryService->recordWithdrawal(
-                treasury: $targetTreasury,
-                amount: $money,
-                sourceType: LedgerSource::PAYMENT->value,
-                sourceId: $payment->id,
-                actor: $user,
-                notes: "صرف إلكتروني ({$methodStr}) #{$payment->id} إلى ({$party->name})",
-                shiftId: $activeShift?->id
-            );
+            return;
         }
+
+        $this->treasuryService->recordWithdrawal(
+            treasury: $treasury,
+            amount: $money,
+            sourceType: LedgerSource::PAYMENT->value,
+            sourceId: $payment->id,
+            actor: $user,
+            notes: "صرف إلكتروني ({$methodStr}) #{$payment->id} إلى ({$party->name})",
+            shiftId: $activeShift?->id
+        );
     }
 }
