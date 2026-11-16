@@ -36,6 +36,11 @@ class CashPaymentHandler implements PaymentHandlerInterface
             return;
         }
 
+        $this->recordTreasuryMovement($treasury, $money, $payment, $party, $user, $activeShift);
+    }
+
+    private function recordTreasuryMovement(Treasury $treasury, Money $money, Payment $payment, Party $party, User $user, ?Shift $activeShift): void
+    {
         if ($payment->isReceipt()) {
             $this->treasuryService->recordDeposit(
                 treasury: $treasury,
@@ -46,16 +51,17 @@ class CashPaymentHandler implements PaymentHandlerInterface
                 notes: "سند تحصيل نقدي #{$payment->id} من ({$party->name})",
                 shiftId: $activeShift?->id
             );
-        } else {
-            $this->treasuryService->recordWithdrawal(
-                treasury: $treasury,
-                amount: $money,
-                sourceType: LedgerSource::PAYMENT->value,
-                sourceId: $payment->id,
-                actor: $user,
-                notes: "سند صرف نقدي #{$payment->id} إلى ({$party->name})",
-                shiftId: $activeShift?->id
-            );
+            return;
         }
+
+        $this->treasuryService->recordWithdrawal(
+            treasury: $treasury,
+            amount: $money,
+            sourceType: LedgerSource::PAYMENT->value,
+            sourceId: $payment->id,
+            actor: $user,
+            notes: "سند صرف نقدي #{$payment->id} إلى ({$party->name})",
+            shiftId: $activeShift?->id
+        );
     }
 }

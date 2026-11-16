@@ -43,7 +43,15 @@ class MakeAdminCommand extends Command
         $user->is_admin = true;
         $user->save();
 
-        // Ensure user has active subscription
+        $this->ensureLifetimeSubscription($user);
+
+        $this->info("تمت ترقية المستخدم [{$user->name}] ({$user->email}) إلى مدير عام (Super Admin) بنجاح! 👑");
+
+        return self::SUCCESS;
+    }
+
+    private function ensureLifetimeSubscription(User $user): void
+    {
         Subscription::updateOrCreate(
             ['user_id' => $user->id],
             [
@@ -55,9 +63,5 @@ class MakeAdminCommand extends Command
                 'notes' => 'حساب مدير عام معتمد مدى الحياة',
             ]
         );
-
-        $this->info("تمت ترقية المستخدم [{$user->name}] ({$user->email}) إلى مدير عام (Super Admin) بنجاح! 👑");
-
-        return self::SUCCESS;
     }
 }

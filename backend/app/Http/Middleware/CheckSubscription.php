@@ -17,41 +17,39 @@ class CheckSubscription
     public function handle(Request $request, Closure $next): Response
     {
         $user = $request->user();
+        if (!$user) {
+            return $next($request);
+        }
 
-        if ($user) {
-            // التحقق من حالة المستخدم نفسه
-            if ($user->status === UserStatus::INACTIVE) {
-                $msg = $user->isOwner()
-                    ? 'تم تجميد حساب المنشأة من قبل إدارة المنصة. يرجى التواصل مع الدعم الفني.'
-                    : 'تم إيقاف حسابك من قبل صاحب العمل. يرجى مراجعة إدارة المؤسسة.';
+        if ($user->status === UserStatus::INACTIVE) {
+            $msg = $user->isOwner()
+                ? 'تم تجميد حساب المنشأة من قبل إدارة المنصة. يرجى التواصل مع الدعم الفني.'
+                : 'تم إيقاف حسابك من قبل صاحب العمل. يرجى مراجعة إدارة المؤسسة.';
 
-                return response()->json([
-                    'success' => false,
-                    'message' => $msg,
-                ], 403);
-            }
+            return $this->forbiddenResponse($msg);
+        }
 
-            // التحقق من اشتراك وحالة المنشأة الأم عبر SubscriptionGate المزود بالكاش
-            $gate = SubscriptionGate::statusFor($user);
+        $gate = SubscriptionGate::statusFor($user);
+        if ($gate['frozen']) {
+            return $this->forbiddenResponse('تم تجميد حساب المنشأة بالكامل من قبل إدارة المنصة. يرجى مراجعة إدارة المتجر.');
+        }
 
-            // إذا كان حساب مالك المتجر مجمداً من السوبر أدمن، يُمنع كافة موظفي المتجر فورياً
-            if ($gate['frozen']) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'تم تجميد حساب المنشأة بالكامل من قبل إدارة المنصة. يرجى مراجعة إدارة المتجر.',
-                ], 403);
-            }
-
-            // إذا لم يكن لديه اشتراك أو كان اشتراكه منتهي الصلاحية وفترة السماح
-            if (!$gate['active']) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'عذراً، اشتراك المنشأة السنوي غير نشط أو منتهي الصلاحية. يرجى تجديد الاشتراك للمتابعة.',
-                    'subscription_status' => $gate['subscription_status'] ?? SubscriptionStatus::NONE->value,
-                ], 403);
-            }
+        if (!$gate['active']) {
+            return $this->forbiddenResponse(
+                'عذراً، اشتراك المنشأة السنوي غير نشط أو منتهي الصلاحية. يرجى تجديد الاشتراك للمتابعة.',
+                ['subscription_status' => $gate['subscription_status'] ?? SubscriptionStatus::NONE->value]
+            );
         }
 
         return $next($request);
+    }
+
+    private function forbiddenResponse(string $message, array $extra = []): Response
+    {
+        return response()->json([
+            'success' => false,
+            'message' => $message,
+            ...$extra,
+        ], 403);
     }
 }

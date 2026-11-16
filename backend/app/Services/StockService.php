@@ -46,109 +46,86 @@ class StockService
         }
 
         $branchId ??= $user->branch_id;
-
-        // القفل التشاؤمي للمنتج لمنع تضارب التزامن (Race Conditions)
         $lockedProduct = Product::where('id', $product->id)->lockForUpdate()->first() ?? $product;
-        $currentQty = Quantity::of($lockedProduct->quantity ?? 0)->toFloat();
+        $balanceAfter = $this->adjustLockedEntityStock($lockedProduct, $type, $quantity, fn($cur) => "الرصيد المتاح من الصنف '{$lockedProduct->name}' غير كافٍ لإتمام العملية (الرصيد الحالي: {$cur}).");
+        $notes = $this->applySecondaryStockTargets($user, $product, $variant, $batch, $branchId, $type, $quantity, $notes);
 
-        if ($type === StockMovementType::OUT->value && $currentQty < $quantity) {
-            throw new PosDomainException("الرصيد المتاح من الصنف '{$lockedProduct->name}' غير كافٍ لإتمام العملية (الرصيد الحالي: {$currentQty}).", 'INSUFFICIENT_STOCK');
-        }
+        return $this->createStockMovementRecord($user, $branchId, $product, $variant, $batch, $type, $sourceType, $sourceId, $quantity, $balanceAfter, $unitPrice, $notes);
+    }
 
-        // تحديث إجمالي كمية الصنف التراكمي
-        $balanceAfter = ($type === StockMovementType::IN->value) ? $currentQty + $quantity : $currentQty - $quantity;
-        $lockedProduct->quantity = $balanceAfter;
-        $lockedProduct->save();
-
-        // تحديث كمية المتغير إن وجد مع القفل التشاؤمي
+    private function applySecondaryStockTargets(User $user, Product $product, ?ProductVariant $variant, ?ProductBatch $batch, ?int $branchId, string $type, float $quantity, ?string $notes): ?string
+    {
         if ($variant) {
-            $lockedVariant = ProductVariant::where('id', $variant->id)->lockForUpdate()->first() ?? $variant;
-            $varQty = Quantity::of($lockedVariant->quantity ?? 0)->toFloat();
-            if ($type === StockMovementType::OUT->value && $varQty < $quantity) {
-                throw new PosDomainException("الرصيد المتاح من المتغير غير كافٍ (الرصيد الحالي: {$varQty}).", 'INSUFFICIENT_STOCK');
-            }
-            $lockedVariant->quantity = ($type === StockMovementType::IN->value) ? $varQty + $quantity : $varQty - $quantity;
-            $lockedVariant->save();
+            $lockedVar = ProductVariant::where('id', $variant->id)->lockForUpdate()->first() ?? $variant;
+            $this->adjustLockedEntityStock($lockedVar, $type, $quantity, fn($cur) => "الرصيد المتاح من المتغير غير كافٍ (الرصيد الحالي: {$cur}).");
         }
-
-        // تحديث كمية التشغيلة / تاريخ الصلاحية إن وجدت مع القفل التشاؤمي
         if ($batch) {
             $lockedBatch = ProductBatch::where('id', $batch->id)->lockForUpdate()->first() ?? $batch;
-            $batchQty = Quantity::of($lockedBatch->quantity ?? 0)->toFloat();
-            if ($type === StockMovementType::OUT->value && $batchQty < $quantity) {
-                throw new PosDomainException("الرصيد المتاح من التشغيلة '{$lockedBatch->batch_number}' غير كافٍ (الرصيد الحالي: {$batchQty}).", 'INSUFFICIENT_STOCK');
-            }
-            $lockedBatch->quantity = ($type === StockMovementType::IN->value) ? $batchQty + $quantity : $batchQty - $quantity;
-            $lockedBatch->save();
+            $this->adjustLockedEntityStock($lockedBatch, $type, $quantity, fn($cur) => "الرصيد المتاح من التشغيلة '{$lockedBatch->batch_number}' غير كافٍ (الرصيد الحالي: {$cur}).");
         }
 
+        $isShortSelling = $branchId ? $this->adjustBranchStock($user, $product, $variant, $branchId, $type, $quantity) : false;
+
+        return $isShortSelling ? trim(($notes ? $notes . ' ' : '') . '[بيع على المكشوف]') : $notes;
+    }
+
+    private function adjustLockedEntityStock($entity, string $type, float $quantity, callable $errorBuilder): float
+    {
+        $currentQty = Quantity::of($entity->quantity ?? 0)->toFloat();
+        if ($type === StockMovementType::OUT->value && $currentQty < $quantity) {
+            throw new PosDomainException($errorBuilder($currentQty), 'INSUFFICIENT_STOCK');
+        }
+
+        $newQty = ($type === StockMovementType::IN->value) ? $currentQty + $quantity : $currentQty - $quantity;
+        $entity->quantity = $newQty;
+        $entity->save();
+
+        return $newQty;
+    }
+
+    private function adjustBranchStock(User $user, Product $product, ?ProductVariant $variant, int $branchId, string $type, float $quantity): bool
+    {
+        $branchStock = $this->lockOrCreateBranchStock($branchId, $product, $variant);
+        $currentBranchQty = Quantity::of($branchStock->quantity ?? 0)->toFloat();
         $isShortSelling = false;
-        // تحديث رصيد الفرع (BranchStock) إن وجد فرع محدد مع القفل التشاؤمي
-        if ($branchId) {
-            $branchStock = BranchStock::where('branch_id', $branchId)
-                ->where('product_id', $product->id)
-                ->where('product_variant_id', $variant?->id)
-                ->lockForUpdate()
-                ->first();
 
-            if (!$branchStock) {
-                $branchStock = BranchStock::firstOrCreate([
-                    'branch_id' => $branchId,
-                    'product_id' => $product->id,
-                    'product_variant_id' => $variant?->id,
-                ], [
-                    'quantity' => 0,
-                    'min_quantity' => $variant?->min_quantity ?? $product->min_quantity,
-                ]);
-
-                $branchStock = BranchStock::where('branch_id', $branchId)
-                    ->where('product_id', $product->id)
-                    ->where('product_variant_id', $variant?->id)
-                    ->lockForUpdate()
-                    ->firstOrFail();
+        if ($type === StockMovementType::OUT->value && $currentBranchQty < $quantity) {
+            if (!$this->settingService->allowsNegativeBranchStock($user)) {
+                $branchName = Branch::find($branchId)?->name ?: "الفرع #{$branchId}";
+                throw new InsufficientStockException($product->name, $currentBranchQty, $quantity, 'INSUFFICIENT_BRANCH_STOCK', "الرصيد المتاح في فرع '{$branchName}' للصنف '{$product->name}' غير كافٍ لإتمام العملية (الرصيد الحالي: {$currentBranchQty}، المطلوب: {$quantity}).");
             }
-
-            $currentBranchQty = Quantity::of($branchStock->quantity ?? 0)->toFloat();
-            if ($type === StockMovementType::OUT->value && $currentBranchQty < $quantity) {
-                $allowNegative = $this->settingService->allowsNegativeBranchStock($user);
-                if (!$allowNegative) {
-                    $branch = Branch::find($branchId);
-                    $branchName = $branch?->name ?: "الفرع #{$branchId}";
-                    throw new InsufficientStockException(
-                        productName: $product->name,
-                        available: $currentBranchQty,
-                        requested: $quantity,
-                        errorCode: 'INSUFFICIENT_BRANCH_STOCK',
-                        customMessage: "الرصيد المتاح في فرع '{$branchName}' للصنف '{$product->name}' غير كافٍ لإتمام العملية (الرصيد الحالي: {$currentBranchQty}، المطلوب: {$quantity})."
-                    );
-                }
-                $isShortSelling = true;
-            }
-
-            $branchStock->quantity = ($type === StockMovementType::IN->value)
-                ? $currentBranchQty + $quantity
-                : $currentBranchQty - $quantity;
-            $branchStock->save();
+            $isShortSelling = true;
         }
 
-        if ($isShortSelling) {
-            $notes = trim(($notes ? $notes . ' ' : '') . '[بيع على المكشوف]');
+        $branchStock->quantity = ($type === StockMovementType::IN->value) ? $currentBranchQty + $quantity : $currentBranchQty - $quantity;
+        $branchStock->save();
+
+        return $isShortSelling;
+    }
+
+    private function lockOrCreateBranchStock(int $branchId, Product $product, ?ProductVariant $variant): BranchStock
+    {
+        $query = BranchStock::where('branch_id', $branchId)->where('product_id', $product->id)->where('product_variant_id', $variant?->id);
+        $branchStock = (clone $query)->lockForUpdate()->first();
+        if ($branchStock) {
+            return $branchStock;
         }
 
-        // إنشاء قيد حركة المخزون
+        BranchStock::firstOrCreate(
+            ['branch_id' => $branchId, 'product_id' => $product->id, 'product_variant_id' => $variant?->id],
+            ['quantity' => 0, 'min_quantity' => $variant?->min_quantity ?? $product->min_quantity]
+        );
+
+        return $query->lockForUpdate()->firstOrFail();
+    }
+
+    private function createStockMovementRecord(User $user, ?int $branchId, Product $product, ?ProductVariant $variant, ?ProductBatch $batch, string $type, string $sourceType, ?int $sourceId, float $quantity, float $balanceAfter, ?float $unitPrice, ?string $notes): StockMovement
+    {
         return StockMovement::create([
-            'user_id' => $user->getAccountId(),
-            'branch_id' => $branchId,
-            'product_id' => $product->id,
-            'product_variant_id' => $variant?->id,
-            'product_batch_id' => $batch?->id,
-            'type' => $type,
-            'source_type' => $sourceType,
-            'source_id' => $sourceId,
-            'quantity' => $quantity,
-            'balance_after' => $balanceAfter,
-            'unit_price' => $unitPrice,
-            'notes' => $notes,
+            'user_id' => $user->getAccountId(), 'branch_id' => $branchId, 'product_id' => $product->id,
+            'product_variant_id' => $variant?->id, 'product_batch_id' => $batch?->id,
+            'type' => $type, 'source_type' => $sourceType, 'source_id' => $sourceId,
+            'quantity' => $quantity, 'balance_after' => $balanceAfter, 'unit_price' => $unitPrice, 'notes' => $notes,
         ]);
     }
 
@@ -160,65 +137,13 @@ class StockService
         $accountId = $user->getAccountId();
 
         return DB::transaction(function () use ($user, $accountId, $branchId, $items) {
-            $branch = Branch::where('id', $branchId)
-                ->where('user_id', $accountId)
-                ->firstOrFail();
-
+            $branch = Branch::where('id', $branchId)->where('user_id', $accountId)->firstOrFail();
             $processedCount = 0;
 
             foreach ($items as $item) {
-                $productId = $item['product_id'];
-                $variantId = $item['product_variant_id'] ?? null;
-                $quantity = Quantity::of($item['quantity'] ?? 0)->toFloat();
-                $costPrice = isset($item['cost_price']) && is_numeric($item['cost_price']) ? Money::of($item['cost_price'])->getAmount() : null;
-
-                if ($quantity <= 0) {
-                    continue;
+                if ($this->processOpeningBalanceItem($user, $accountId, $branch, $item)) {
+                    $processedCount++;
                 }
-
-                $product = Product::where('id', $productId)
-                    ->where('user_id', $accountId)
-                    ->lockForUpdate()
-                    ->firstOrFail();
-
-                $variant = null;
-                if ($variantId) {
-                    $variant = ProductVariant::where('id', $variantId)
-                        ->where('product_id', $product->id)
-                        ->where('user_id', $accountId)
-                        ->lockForUpdate()
-                        ->firstOrFail();
-
-                    if ($costPrice !== null && $costPrice > 0) {
-                        $variant->purchase_price = $costPrice;
-                        $variant->save();
-                    }
-                } elseif ($costPrice !== null && $costPrice > 0) {
-                    $product->purchase_price = $costPrice;
-                    $product->save();
-                }
-
-                $unitPrice = $costPrice ?? ($variant?->purchase_price ?? $product->purchase_price);
-
-                $notes = 'رصيد أول المدة - فرع: ' . $branch->name;
-                if ($variant) {
-                    $notes .= ' (' . $variant->name . ')';
-                }
-
-                $this->recordMovement(
-                    user: $user,
-                    product: $product,
-                    type: StockMovementType::IN->value,
-                    sourceType: StockMovementSource::INITIAL->value,
-                    sourceId: null,
-                    quantity: $quantity,
-                    unitPrice: $unitPrice,
-                    notes: $notes,
-                    variant: $variant,
-                    branchId: $branchId
-                );
-
-                $processedCount++;
             }
 
             return [
@@ -227,5 +152,41 @@ class StockService
                 'branch_name' => $branch->name,
             ];
         });
+    }
+
+    private function processOpeningBalanceItem(User $user, int $accountId, Branch $branch, array $item): bool
+    {
+        $quantity = Quantity::of($item['quantity'] ?? 0)->toFloat();
+        if ($quantity <= 0) {
+            return false;
+        }
+
+        $product = Product::where('id', $item['product_id'])->where('user_id', $accountId)->lockForUpdate()->firstOrFail();
+        $costPrice = isset($item['cost_price']) && is_numeric($item['cost_price']) ? Money::of($item['cost_price'])->getAmount() : null;
+        $variant = $this->resolveOpeningVariant($product, $accountId, $item['product_variant_id'] ?? null, $costPrice);
+
+        if (!$variant && $costPrice !== null && $costPrice > 0) {
+            $product->update(['purchase_price' => $costPrice]);
+        }
+
+        $unitPrice = $costPrice ?? ($variant?->purchase_price ?? $product->purchase_price);
+        $notes = 'رصيد أول المدة - فرع: ' . $branch->name . ($variant ? ' (' . $variant->name . ')' : '');
+        $this->recordMovement($user, $product, StockMovementType::IN->value, StockMovementSource::INITIAL->value, null, $quantity, $unitPrice, $notes, $variant, null, $branch->id);
+
+        return true;
+    }
+
+    private function resolveOpeningVariant(Product $product, int $accountId, ?int $variantId, ?float $costPrice): ?ProductVariant
+    {
+        if (!$variantId) {
+            return null;
+        }
+
+        $variant = ProductVariant::where('id', $variantId)->where('product_id', $product->id)->where('user_id', $accountId)->lockForUpdate()->firstOrFail();
+        if ($costPrice !== null && $costPrice > 0) {
+            $variant->update(['purchase_price' => $costPrice]);
+        }
+
+        return $variant;
     }
 }

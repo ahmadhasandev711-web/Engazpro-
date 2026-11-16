@@ -68,46 +68,21 @@ class TreasuryService
         $accountId = $user->getAccountId();
 
         if ($user->isMandob()) {
-            return Treasury::withoutGlobalScopes()
-                ->firstOrCreate(
-                    [
-                        'user_id' => $accountId,
-                        'assigned_user_id' => $user->id,
-                        'type' => TreasuryType::MANDOB_CUSTODY,
-                    ],
-                    [
-                        'branch_id' => $user->branch_id,
-                        'name' => "عهدة المندوب ({$user->name})",
-                        'balance' => 0.00,
-                        'is_active' => true,
-                        'notes' => 'محفظة النقدية الميدانية للتحصيلات والمصاريف',
-                    ]
-                );
+            return $this->firstOrCreateUserSafe($user, $accountId, TreasuryType::MANDOB_CUSTODY, "عهدة المندوب ({$user->name})", 'محفظة النقدية الميدانية للتحصيلات والمصاريف');
         }
-
         if ($user->isCashier()) {
-            return Treasury::withoutGlobalScopes()
-                ->firstOrCreate(
-                    [
-                        'user_id' => $accountId,
-                        'assigned_user_id' => $user->id,
-                        'type' => TreasuryType::CASHIER_DRAWER,
-                    ],
-                    [
-                        'branch_id' => $user->branch_id,
-                        'name' => "درج الكاشير ({$user->name})",
-                        'balance' => 0.00,
-                        'is_active' => true,
-                        'notes' => 'درج نقدية نقطة البيع (POS)',
-                    ]
-                );
+            return $this->firstOrCreateUserSafe($user, $accountId, TreasuryType::CASHIER_DRAWER, "درج الكاشير ({$user->name})", 'درج نقدية نقطة البيع (POS)');
         }
 
-        if ($user->branch_id) {
-            return $this->getBranchTreasury($user->branch_id, $accountId);
-        }
+        return $user->branch_id ? $this->getBranchTreasury($user->branch_id, $accountId) : $this->getMainTreasury($accountId);
+    }
 
-        return $this->getMainTreasury($accountId);
+    private function firstOrCreateUserSafe(User $user, int $accountId, TreasuryType $type, string $name, string $notes): Treasury
+    {
+        return Treasury::withoutGlobalScopes()->firstOrCreate(
+            ['user_id' => $accountId, 'assigned_user_id' => $user->id, 'type' => $type],
+            ['branch_id' => $user->branch_id, 'name' => $name, 'balance' => 0.00, 'is_active' => true, 'notes' => $notes]
+        );
     }
 
     /**
@@ -118,50 +93,24 @@ class TreasuryService
         $accountId = $user->getAccountId();
         $methodEnum = $method instanceof PaymentMethod ? $method : PaymentMethod::from($method);
 
-        // إذا تم تحديد معرف خزينة صريح وكان المستخدم مصرحاً له
-        if ($explicitTreasuryId) {
-            $explicit = Treasury::withoutGlobalScopes()
-                ->where('user_id', $accountId)
-                ->find($explicitTreasuryId);
-            if ($explicit) {
-                return $explicit;
-            }
+        if ($explicitTreasuryId && ($explicit = Treasury::withoutGlobalScopes()->where('user_id', $accountId)->find($explicitTreasuryId))) {
+            return $explicit;
         }
 
         return match ($methodEnum) {
-            PaymentMethod::CASH => $this->getTreasuryForUser($user),
-            PaymentMethod::VODAFONE_CASH => Treasury::withoutGlobalScopes()
-                ->firstOrCreate(
-                    [
-                        'user_id' => $accountId,
-                        'type' => TreasuryType::WALLET,
-                        'name' => 'محفظة فودافون كاش',
-                    ],
-                    [
-                        'balance' => 0.00,
-                        'is_active' => true,
-                        'notes' => 'محفظة فودافون كاش والمحافظ الإلكترونية للمتجر',
-                    ]
-                ),
-            PaymentMethod::INSTAPAY => Treasury::withoutGlobalScopes()
-                ->firstOrCreate(
-                    [
-                        'user_id' => $accountId,
-                        'type' => TreasuryType::WALLET,
-                        'name' => 'حساب إنستاباي (InstaPay)',
-                    ],
-                    [
-                        'balance' => 0.00,
-                        'is_active' => true,
-                        'notes' => 'حساب إنستاباي للمتجر للتحويلات اللحظية',
-                    ]
-                ),
-            PaymentMethod::TRANSFER, PaymentMethod::CARD => Treasury::withoutGlobalScopes()
-                ->where('user_id', $accountId)
-                ->where('type', TreasuryType::BANK)
-                ->first() ?? $this->getMainTreasury($accountId),
+            PaymentMethod::VODAFONE_CASH => $this->firstOrCreateWallet($accountId, 'محفظة فودافون كاش', 'محفظة فودافون كاش والمحافظ الإلكترونية للمتجر'),
+            PaymentMethod::INSTAPAY => $this->firstOrCreateWallet($accountId, 'حساب إنستاباي (InstaPay)', 'حساب إنستاباي للمتجر للتحويلات اللحظية'),
+            PaymentMethod::TRANSFER, PaymentMethod::CARD => Treasury::withoutGlobalScopes()->where('user_id', $accountId)->where('type', TreasuryType::BANK)->first() ?? $this->getMainTreasury($accountId),
             default => $this->getTreasuryForUser($user),
         };
+    }
+
+    private function firstOrCreateWallet(int $accountId, string $name, string $notes): Treasury
+    {
+        return Treasury::withoutGlobalScopes()->firstOrCreate(
+            ['user_id' => $accountId, 'type' => TreasuryType::WALLET, 'name' => $name],
+            ['balance' => 0.00, 'is_active' => true, 'notes' => $notes]
+        );
     }
 
     /**
@@ -176,32 +125,7 @@ class TreasuryService
         ?string $notes = null,
         ?int $shiftId = null
     ): TreasuryTransaction {
-        return DB::transaction(function () use ($treasury, $amount, $sourceType, $sourceId, $actor, $notes, $shiftId) {
-            /** @var Treasury $locked */
-            $locked = Treasury::withoutGlobalScopes()->lockForUpdate()->findOrFail($treasury->id);
-
-            $currentBalance = Money::of($locked->balance);
-            $newBalance = $currentBalance->add($amount);
-
-            $locked->update([
-                'balance' => $newBalance->getAmount(),
-            ]);
-
-            return TreasuryTransaction::create([
-                'user_id' => $locked->user_id,
-                'created_by' => $actor->id,
-                'treasury_id' => $locked->id,
-                'shift_id' => $shiftId,
-                'type' => TreasuryTransactionType::DEPOSIT,
-                'amount' => $amount->getAmount(),
-                'balance_before' => $currentBalance->getAmount(),
-                'balance_after' => $newBalance->getAmount(),
-                'source_type' => $sourceType,
-                'source_id' => $sourceId,
-                'date' => Carbon::today()->toDateString(),
-                'notes' => $notes,
-            ]);
-        });
+        return $this->recordAdjustment($treasury, $amount, TreasuryTransactionType::DEPOSIT, $sourceType, $sourceId, $actor, $notes, $shiftId);
     }
 
     /**
@@ -216,30 +140,31 @@ class TreasuryService
         ?string $notes = null,
         ?int $shiftId = null
     ): TreasuryTransaction {
-        return DB::transaction(function () use ($treasury, $amount, $sourceType, $sourceId, $actor, $notes, $shiftId) {
+        return $this->recordAdjustment($treasury, $amount, TreasuryTransactionType::WITHDRAWAL, $sourceType, $sourceId, $actor, $notes, $shiftId);
+    }
+
+    private function recordAdjustment(
+        Treasury $treasury,
+        Money $amount,
+        TreasuryTransactionType $type,
+        string $sourceType,
+        ?int $sourceId,
+        User $actor,
+        ?string $notes,
+        ?int $shiftId
+    ): TreasuryTransaction {
+        return DB::transaction(function () use ($treasury, $amount, $type, $sourceType, $sourceId, $actor, $notes, $shiftId) {
             /** @var Treasury $locked */
             $locked = Treasury::withoutGlobalScopes()->lockForUpdate()->findOrFail($treasury->id);
-
             $currentBalance = Money::of($locked->balance);
-            $newBalance = $currentBalance->subtract($amount);
-
-            $locked->update([
-                'balance' => $newBalance->getAmount(),
-            ]);
+            $newBalance = $type === TreasuryTransactionType::DEPOSIT ? $currentBalance->add($amount) : $currentBalance->subtract($amount);
+            $locked->update(['balance' => $newBalance->getAmount()]);
 
             return TreasuryTransaction::create([
-                'user_id' => $locked->user_id,
-                'created_by' => $actor->id,
-                'treasury_id' => $locked->id,
-                'shift_id' => $shiftId,
-                'type' => TreasuryTransactionType::WITHDRAWAL,
-                'amount' => $amount->getAmount(),
-                'balance_before' => $currentBalance->getAmount(),
-                'balance_after' => $newBalance->getAmount(),
-                'source_type' => $sourceType,
-                'source_id' => $sourceId,
-                'date' => Carbon::today()->toDateString(),
-                'notes' => $notes,
+                'user_id' => $locked->user_id, 'created_by' => $actor->id, 'treasury_id' => $locked->id, 'shift_id' => $shiftId,
+                'type' => $type, 'amount' => $amount->getAmount(), 'balance_before' => $currentBalance->getAmount(),
+                'balance_after' => $newBalance->getAmount(), 'source_type' => $sourceType, 'source_id' => $sourceId,
+                'date' => Carbon::today()->toDateString(), 'notes' => $notes,
             ]);
         });
     }
@@ -257,41 +182,43 @@ class TreasuryService
         TreasuryTransactionType $type = TreasuryTransactionType::TRANSFER
     ): TreasuryTransaction {
         return DB::transaction(function () use ($fromTreasury, $toTreasury, $amount, $actor, $notes, $shiftId, $type) {
-            // القفل بترتيب المعرفات لمنع Deadlocks
-            $firstId = min($fromTreasury->id, $toTreasury->id);
-            $secondId = max($fromTreasury->id, $toTreasury->id);
+            [$lockedFrom, $lockedTo] = $this->lockTwoTreasuries($fromTreasury->id, $toTreasury->id);
+            $fromBefore = Money::of($lockedFrom->balance);
+            $fromAfter = $fromBefore->subtract($amount);
+            $toAfter = Money::of($lockedTo->balance)->add($amount);
 
-            $first = Treasury::withoutGlobalScopes()->lockForUpdate()->findOrFail($firstId);
-            $second = Treasury::withoutGlobalScopes()->lockForUpdate()->findOrFail($secondId);
+            $lockedFrom->update(['balance' => $fromAfter->getAmount()]);
+            $lockedTo->update(['balance' => $toAfter->getAmount()]);
 
-            $lockedFrom = $first->id === $fromTreasury->id ? $first : $second;
-            $lockedTo = $first->id === $toTreasury->id ? $first : $second;
-
-            $fromBalanceBefore = Money::of($lockedFrom->balance);
-            $fromBalanceAfter = $fromBalanceBefore->subtract($amount);
-
-            $toBalanceBefore = Money::of($lockedTo->balance);
-            $toBalanceAfter = $toBalanceBefore->add($amount);
-
-            $lockedFrom->update(['balance' => $fromBalanceAfter->getAmount()]);
-            $lockedTo->update(['balance' => $toBalanceAfter->getAmount()]);
-
-            return TreasuryTransaction::create([
-                'user_id' => $lockedFrom->user_id,
-                'created_by' => $actor->id,
-                'treasury_id' => $lockedFrom->id,
-                'target_treasury_id' => $lockedTo->id,
-                'shift_id' => $shiftId,
-                'type' => $type,
-                'amount' => $amount->getAmount(),
-                'balance_before' => $fromBalanceBefore->getAmount(),
-                'balance_after' => $fromBalanceAfter->getAmount(),
-                'source_type' => 'SHIFT_HANDOVER',
-                'source_id' => $shiftId,
-                'date' => Carbon::today()->toDateString(),
-                'notes' => $notes,
-            ]);
+            return $this->createTransferTransaction($lockedFrom, $lockedTo, $amount, $fromBefore, $fromAfter, $actor, $notes, $shiftId, $type);
         });
+    }
+
+    private function lockTwoTreasuries(int $fromId, int $toId): array
+    {
+        $first = Treasury::withoutGlobalScopes()->lockForUpdate()->findOrFail(min($fromId, $toId));
+        $second = Treasury::withoutGlobalScopes()->lockForUpdate()->findOrFail(max($fromId, $toId));
+
+        return $first->id === $fromId ? [$first, $second] : [$second, $first];
+    }
+
+    private function createTransferTransaction(
+        Treasury $from,
+        Treasury $to,
+        Money $amount,
+        Money $balanceBefore,
+        Money $balanceAfter,
+        User $actor,
+        ?string $notes,
+        ?int $shiftId,
+        TreasuryTransactionType $type
+    ): TreasuryTransaction {
+        return TreasuryTransaction::create([
+            'user_id' => $from->user_id, 'created_by' => $actor->id, 'treasury_id' => $from->id, 'target_treasury_id' => $to->id,
+            'shift_id' => $shiftId, 'type' => $type, 'amount' => $amount->getAmount(),
+            'balance_before' => $balanceBefore->getAmount(), 'balance_after' => $balanceAfter->getAmount(),
+            'source_type' => 'SHIFT_HANDOVER', 'source_id' => $shiftId, 'date' => Carbon::today()->toDateString(), 'notes' => $notes,
+        ]);
     }
 
     /**
@@ -337,52 +264,38 @@ class TreasuryService
      */
     public function getTreasuries(User $user, ?int $branchId = null, bool $forTransfer = false): Collection
     {
-        $accountId = $user->getAccountId();
-
-        // إذا كان للمستخدم فرع، نتأكد من وجود خزينة لفرعه
         if ($user->branch_id) {
-            $this->getBranchTreasury($user->branch_id, $accountId);
+            $this->getBranchTreasury($user->branch_id, $user->getAccountId());
         }
 
         $query = Treasury::with(['assignedUser', 'branch']);
 
-        // 1. الكاشير والمندوب: لا يريان إلا الخزينة المعينة لهما فقط
         if ($user->isMandob() || $user->isCashier()) {
             return $query->where('assigned_user_id', $user->id)->orderBy('type')->get();
         }
-
-        // 2. مدير الفرع والمشرف:
         if ($user->isManager() || $user->isSupervisor()) {
-            if ($forTransfer && $user->isManager()) {
-                // عند التحويل/التوريد، يحق لمدير الفرع اختيار خزن فرعه أو الخزنة العامة أو البنك كوجهة
-                return $query->where(function ($q) use ($user) {
-                    $q->where('branch_id', $user->branch_id)
-                      ->orWhereIn('type', [TreasuryType::MAIN, TreasuryType::BANK]);
-                })
-                ->where('type', '!=', TreasuryType::OWNER_DRAWINGS)
-                ->orderBy('type')
-                ->get();
-            }
-
-            return $query->where('branch_id', $user->branch_id)
-                ->whereNotIn('type', [
-                    TreasuryType::BANK,
-                    TreasuryType::WALLET,
-                    TreasuryType::OWNER_DRAWINGS,
-                ])
-                ->orderBy('type')
-                ->get();
+            return $this->getManagerScopedTreasuries($query, $user, $forTransfer);
         }
-
-        // 3. صاحب العمل والمدير العام: يريان الكل مع إمكانية الفلترة بفرع محدد
         if ($branchId) {
-            $query->where(function ($q) use ($branchId) {
-                $q->where('branch_id', $branchId)
-                  ->orWhereNull('branch_id'); // يظهر الحسابات البنكية المركزية مع الفرع
-            });
+            $query->where(fn($q) => $q->where('branch_id', $branchId)->orWhereNull('branch_id'));
         }
 
         return $query->orderBy('type')->get();
+    }
+
+    private function getManagerScopedTreasuries($query, User $user, bool $forTransfer): Collection
+    {
+        if ($forTransfer && $user->isManager()) {
+            return $query->where(fn($q) => $q->where('branch_id', $user->branch_id)->orWhereIn('type', [TreasuryType::MAIN, TreasuryType::BANK]))
+                ->where('type', '!=', TreasuryType::OWNER_DRAWINGS)
+                ->orderBy('type')
+                ->get();
+        }
+
+        return $query->where('branch_id', $user->branch_id)
+            ->whereNotIn('type', [TreasuryType::BANK, TreasuryType::WALLET, TreasuryType::OWNER_DRAWINGS])
+            ->orderBy('type')
+            ->get();
     }
 
     /**

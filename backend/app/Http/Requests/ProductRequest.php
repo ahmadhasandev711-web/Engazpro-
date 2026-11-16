@@ -25,9 +25,6 @@ class ProductRequest extends FormRequest
 
     public function rules(): array
     {
-        $user = $this->user();
-        $productId = $this->route('product') ? (is_object($this->route('product')) ? $this->route('product')->id : $this->route('product')) : null;
-
         return [
             'name' => ['required', 'string', 'max:255'],
             'type' => ['nullable', 'string', 'in:STANDARD,VARIABLE,EXPIRY'],
@@ -47,6 +44,14 @@ class ProductRequest extends FormRequest
             'quantity' => ['nullable', 'numeric', 'min:0'],
             'min_quantity' => ['nullable', 'numeric', 'min:0'],
             'notes' => ['nullable', 'string'],
+            ...$this->variantRules(),
+            ...$this->batchRules(),
+        ];
+    }
+
+    private function variantRules(): array
+    {
+        return [
             'variants' => ['nullable', 'array'],
             'variants.*.id' => ['nullable', 'integer'],
             'variants.*.name' => ['required_with:variants', 'string', 'max:255'],
@@ -59,6 +64,12 @@ class ProductRequest extends FormRequest
             'variants.*.sale_price' => ['nullable', 'numeric', 'min:0'],
             'variants.*.quantity' => ['nullable', 'numeric', 'min:0'],
             'variants.*.min_quantity' => ['nullable', 'numeric', 'min:0'],
+        ];
+    }
+
+    private function batchRules(): array
+    {
+        return [
             'batches' => ['nullable', 'array'],
             'batches.*.id' => ['nullable', 'integer'],
             'batches.*.batch_number' => ['required_with:batches', 'string', 'max:100'],

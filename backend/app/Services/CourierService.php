@@ -34,32 +34,30 @@ class CourierService
     public function getCouriersWithMetrics(User $user, ?string $search = null): array
     {
         $accountId = $user->getAccountId();
-
-        $query = Party::where('user_id', $accountId)
+        $couriers = Party::where('user_id', $accountId)
             ->where('type', PartyType::COURIER->value)
-            ->withExists(['invoices', 'payments']);
+            ->withExists(['invoices', 'payments'])
+            ->when(!empty($search), fn($q) => $q->where(fn($sq) => $sq->where('name', 'like', "%{$search}%")->orWhere('phone', 'like', "%{$search}%")->orWhere('notes', 'like', "%{$search}%")))
+            ->orderBy('name')
+            ->get();
 
-        if (!empty($search)) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('phone', 'like', "%{$search}%")
-                  ->orWhere('notes', 'like', "%{$search}%");
-            });
-        }
-
-        $couriers = $query->orderBy('name')->get();
         $courierIds = $couriers->pluck('id')->all();
+        $wcStats = $this->fetchCourierWcStats($accountId, $courierIds);
+        $invoiceStats = $this->fetchCourierDirectInvoiceStats($accountId, $courierIds);
 
-        // 1. استعلام تجميعي واحد لطلبات ووكومرس
-        $wcStats = WcOrder::where('user_id', $accountId)
+        $couriersWithStats = $couriers->map(fn(Party $courier) => $this->buildCourierMetricRow($courier, $wcStats->get($courier->id), $invoiceStats->get($courier->id)));
+
+        return [
+            'couriers' => $couriersWithStats,
+            'summary' => $this->buildCourierSummary($couriers->count(), $couriersWithStats),
+        ];
+    }
+
+    private function fetchCourierWcStats(int $accountId, array $courierIds)
+    {
+        return WcOrder::where('user_id', $accountId)
             ->whereIn('courier_party_id', $courierIds)
-            ->selectRaw('
-                courier_party_id,
-                COUNT(*) as total_orders_count,
-                COALESCE(SUM(CASE WHEN status = ? THEN 1 ELSE 0 END), 0) as active_orders_count,
-                COALESCE(SUM(CASE WHEN status = ? THEN 1 ELSE 0 END), 0) as delivered_orders_count,
-                COALESCE(SUM(CASE WHEN status = ? AND payment_status != ? THEN total ELSE 0 END), 0) as pending_cod_amount
-            ', [
+            ->selectRaw('courier_party_id, COUNT(*) as total_orders_count, COALESCE(SUM(CASE WHEN status = ? THEN 1 ELSE 0 END), 0) as active_orders_count, COALESCE(SUM(CASE WHEN status = ? THEN 1 ELSE 0 END), 0) as delivered_orders_count, COALESCE(SUM(CASE WHEN status = ? AND payment_status != ? THEN total ELSE 0 END), 0) as pending_cod_amount', [
                 WcOrderStatus::SHIPPED_VIA_COURIER->value,
                 WcOrderStatus::DELIVERED->value,
                 WcOrderStatus::SHIPPED_VIA_COURIER->value,
@@ -68,59 +66,40 @@ class CourierService
             ->groupBy('courier_party_id')
             ->get()
             ->keyBy('courier_party_id');
+    }
 
-        // 2. استعلام تجميعي واحد للفواتير المباشرة
-        $invoiceStats = Invoice::where('user_id', $accountId)
+    private function fetchCourierDirectInvoiceStats(int $accountId, array $courierIds)
+    {
+        return Invoice::where('user_id', $accountId)
             ->whereIn('courier_party_id', $courierIds)
             ->whereNull('wc_order_id')
-            ->selectRaw('
-                courier_party_id,
-                COUNT(*) as total_invoices_count,
-                COALESCE(SUM(CASE WHEN remaining_amount > 0 THEN 1 ELSE 0 END), 0) as active_invoices_count,
-                COALESCE(SUM(remaining_amount), 0) as pending_direct_amount
-            ')
+            ->selectRaw('courier_party_id, COUNT(*) as total_invoices_count, COALESCE(SUM(CASE WHEN remaining_amount > 0 THEN 1 ELSE 0 END), 0) as active_invoices_count, COALESCE(SUM(remaining_amount), 0) as pending_direct_amount')
             ->groupBy('courier_party_id')
             ->get()
             ->keyBy('courier_party_id');
+    }
 
-        $couriersWithStats = $couriers->map(function (Party $courier) use ($wcStats, $invoiceStats) {
-            $wc = $wcStats->get($courier->id);
-            $inv = $invoiceStats->get($courier->id);
+    private function buildCourierMetricRow(Party $courier, ?object $wc, ?object $inv): array
+    {
+        $data = (new PartyResource($courier))->resolve();
+        $data['active_shipments_count'] = (int) ($wc?->active_orders_count ?? 0) + (int) ($inv?->active_invoices_count ?? 0);
+        $data['delivered_shipments_count'] = (int) ($wc?->delivered_orders_count ?? 0);
+        $data['total_shipments_count'] = (int) ($wc?->total_orders_count ?? 0) + (int) ($inv?->total_invoices_count ?? 0);
+        $data['pending_cod_amount'] = Money::of($wc?->pending_cod_amount ?? 0)->add(Money::of($inv?->pending_direct_amount ?? 0))->getAmount();
 
-            $activeCount = (int) ($wc?->active_orders_count ?? 0) + (int) ($inv?->active_invoices_count ?? 0);
-            $deliveredCount = (int) ($wc?->delivered_orders_count ?? 0);
-            $totalCount = (int) ($wc?->total_orders_count ?? 0) + (int) ($inv?->total_invoices_count ?? 0);
-            $pendingCod = Money::of($wc?->pending_cod_amount ?? 0)
-                ->add(Money::of($inv?->pending_direct_amount ?? 0))
-                ->getAmount();
+        return $data;
+    }
 
-            $data = (new PartyResource($courier))->resolve();
-            $data['active_shipments_count'] = $activeCount;
-            $data['delivered_shipments_count'] = $deliveredCount;
-            $data['total_shipments_count'] = $totalCount;
-            $data['pending_cod_amount'] = $pendingCod;
-
-            return $data;
-        });
-
-        $globalActiveShipments = (int) $couriersWithStats->sum('active_shipments_count');
-        $globalPendingCod = $couriersWithStats->reduce(
-            fn (Money $carry, $c) => $carry->add(Money::of($c['pending_cod_amount'] ?? 0)),
-            Money::zero()
-        )->getAmount();
-        $globalNetBalance = $couriersWithStats->reduce(
-            fn (Money $carry, $c) => $carry->add(Money::of($c['balance'] ?? 0)),
-            Money::zero()
-        )->getAmount();
+    private function buildCourierSummary(int $totalCouriers, $couriersWithStats): array
+    {
+        $globalPendingCod = $couriersWithStats->reduce(fn(Money $c, $row) => $c->add(Money::of($row['pending_cod_amount'] ?? 0)), Money::zero())->getAmount();
+        $globalNetBalance = $couriersWithStats->reduce(fn(Money $c, $row) => $c->add(Money::of($row['balance'] ?? 0)), Money::zero())->getAmount();
 
         return [
-            'couriers' => $couriersWithStats,
-            'summary' => [
-                'total_couriers' => $couriers->count(),
-                'global_active_shipments' => $globalActiveShipments,
-                'global_pending_cod' => $globalPendingCod,
-                'global_net_balance' => $globalNetBalance,
-            ],
+            'total_couriers' => $totalCouriers,
+            'global_active_shipments' => (int) $couriersWithStats->sum('active_shipments_count'),
+            'global_pending_cod' => $globalPendingCod,
+            'global_net_balance' => $globalNetBalance,
         ];
     }
 
@@ -130,240 +109,173 @@ class CourierService
     public function getCourierManifest(User $user, int $courierPartyId, ?int $branchId = null, array $filters = []): array
     {
         $accountId = $user->getAccountId();
+        $courier = Party::where('user_id', $accountId)->where('type', PartyType::COURIER->value)->findOrFail($courierPartyId);
+        $effectiveBranchId = $this->resolveManifestBranchId($user, $branchId);
+        [$wcBase, $invBase] = $this->buildManifestBaseQueries($accountId, $courier->id, $effectiveBranchId);
+        $metrics = $this->computeManifestMetrics(clone $wcBase, clone $invBase);
 
-        $courier = Party::where('user_id', $accountId)
-            ->where('type', PartyType::COURIER->value)
-            ->findOrFail($courierPartyId);
-
-        $effectiveBranchId = null;
-        if ($user->isManager() && $user->branch_id) {
-            $effectiveBranchId = (int) $user->branch_id;
-        } elseif ($branchId && $user->isOwnerOrAdmin()) {
-            $effectiveBranchId = (int) $branchId;
-        }
-
-        // Base queries
-        $wcBaseQuery = WcOrder::where('user_id', $accountId)
-            ->where('courier_party_id', $courier->id)
-            ->when($effectiveBranchId, fn ($q) => $q->where('branch_id', $effectiveBranchId));
-
-        $invBaseQuery = Invoice::where('user_id', $accountId)
-            ->where('courier_party_id', $courier->id)
-            ->whereNull('wc_order_id')
-            ->when($effectiveBranchId, fn ($q) => $q->where('branch_id', $effectiveBranchId));
-
-        // الإجماليات الشاملة بـ SQL
-        $wcMetrics = (clone $wcBaseQuery)->selectRaw('
-            COUNT(*) as total_count,
-            COALESCE(SUM(CASE WHEN status = ? THEN 1 ELSE 0 END), 0) as in_transit_count,
-            COALESCE(SUM(CASE WHEN status = ? THEN 1 ELSE 0 END), 0) as delivered_count,
-            COALESCE(SUM(CASE WHEN status = ? THEN 1 ELSE 0 END), 0) as returned_count,
-            COALESCE(SUM(total), 0) as total_amount,
-            COALESCE(SUM(shipping_cost), 0) as total_shipping,
-            COALESCE(SUM(CASE WHEN payment_status = ? THEN total ELSE 0 END), 0) as collected_amount,
-            COALESCE(SUM(CASE WHEN status = ? AND payment_status != ? THEN total ELSE 0 END), 0) as pending_amount
-        ', [
-            WcOrderStatus::SHIPPED_VIA_COURIER->value,
-            WcOrderStatus::DELIVERED->value,
-            WcOrderStatus::RETURNED->value,
-            WcPaymentStatus::COLLECTED->value,
-            WcOrderStatus::SHIPPED_VIA_COURIER->value,
-            WcPaymentStatus::PAID_ONLINE->value,
-        ])->first();
-
-        $invMetrics = (clone $invBaseQuery)->selectRaw('
-            COUNT(*) as total_count,
-            COALESCE(SUM(CASE WHEN remaining_amount > 0 THEN 1 ELSE 0 END), 0) as in_transit_count,
-            COALESCE(SUM(CASE WHEN remaining_amount <= 0 THEN 1 ELSE 0 END), 0) as delivered_count,
-            COALESCE(SUM(total), 0) as total_amount,
-            COALESCE(SUM(shipping_amount), 0) as total_shipping,
-            COALESCE(SUM(CASE WHEN remaining_amount <= 0 THEN total ELSE 0 END), 0) as collected_amount,
-            COALESCE(SUM(CASE WHEN remaining_amount > 0 THEN total ELSE 0 END), 0) as pending_amount
-        ')->first();
-
-        $metrics = [
-            'total_shipments' => (int) ($wcMetrics->total_count ?? 0) + (int) ($invMetrics->total_count ?? 0),
-            'in_transit_count' => (int) ($wcMetrics->in_transit_count ?? 0) + (int) ($invMetrics->in_transit_count ?? 0),
-            'delivered_count' => (int) ($wcMetrics->delivered_count ?? 0) + (int) ($invMetrics->delivered_count ?? 0),
-            'returned_count' => (int) ($wcMetrics->returned_count ?? 0),
-            'total_cod_amount' => Money::of($wcMetrics->total_amount ?? 0)->add(Money::of($invMetrics->total_amount ?? 0))->getAmount(),
-            'total_shipping_fees' => Money::of($wcMetrics->total_shipping ?? 0)->add(Money::of($invMetrics->total_shipping ?? 0))->getAmount(),
-            'collected_cod_amount' => Money::of($wcMetrics->collected_amount ?? 0)->add(Money::of($invMetrics->collected_amount ?? 0))->getAmount(),
-            'pending_cod_amount' => Money::of($wcMetrics->pending_amount ?? 0)->add(Money::of($invMetrics->pending_amount ?? 0))->getAmount(),
-        ];
-
-        // تطبيق الفلاتر في قاعدة البيانات
-        $statusFilter = $filters['status'] ?? 'ALL';
-        $paymentFilter = $filters['payment_status'] ?? 'ALL';
-        $sourceFilter = $filters['source'] ?? 'ALL';
-        $search = trim((string) ($filters['search'] ?? ''));
-
-        $wcFiltered = clone $wcBaseQuery;
-        if ($statusFilter === StockTransferStatus::IN_TRANSIT->value) {
-            $wcFiltered->where('status', WcOrderStatus::SHIPPED_VIA_COURIER->value);
-        } elseif ($statusFilter === WcOrderStatus::DELIVERED->value) {
-            $wcFiltered->where('status', WcOrderStatus::DELIVERED->value);
-        } elseif ($statusFilter === WcOrderStatus::RETURNED->value) {
-            $wcFiltered->where('status', WcOrderStatus::RETURNED->value);
-        }
-
-        if ($paymentFilter === 'COD') {
-            $wcFiltered->where('payment_status', '!=', WcPaymentStatus::PAID_ONLINE->value);
-        } elseif ($paymentFilter === 'PREPAID') {
-            $wcFiltered->where('payment_status', WcPaymentStatus::PAID_ONLINE->value);
-        }
-
-        if ($search !== '') {
-            $wcFiltered->where(function ($q) use ($search) {
-                $q->where('wc_order_id', 'like', "%{$search}%")
-                    ->orWhere('customer_name', 'like', "%{$search}%")
-                    ->orWhere('customer_phone', 'like', "%{$search}%")
-                    ->orWhere('tracking_number', 'like', "%{$search}%");
-            });
-        }
-
-        $invFiltered = clone $invBaseQuery;
-        if ($statusFilter === StockTransferStatus::IN_TRANSIT->value) {
-            $invFiltered->where('remaining_amount', '>', 0);
-        } elseif ($statusFilter === WcOrderStatus::DELIVERED->value) {
-            $invFiltered->where('remaining_amount', '<=', 0);
-        } elseif ($statusFilter === WcOrderStatus::RETURNED->value) {
-            $invFiltered->whereRaw('0 = 1');
-        }
-
-        if ($paymentFilter === 'COD') {
-            $invFiltered->where(function ($q) {
-                $q->where('payment_method', \App\Enums\PaymentMethod::COURIER_COD->value)
-                    ->orWhere('remaining_amount', '>', 0);
-            });
-        } elseif ($paymentFilter === 'PREPAID') {
-            $invFiltered->where('remaining_amount', '<=', 0)
-                ->where('payment_method', '!=', \App\Enums\PaymentMethod::COURIER_COD->value);
-        }
-
-        if ($search !== '') {
-            $invFiltered->where(function ($q) use ($search) {
-                $q->where('invoice_number', 'like', "%{$search}%")
-                    ->orWhereHas('party', function ($pq) use ($search) {
-                        $pq->where('name', 'like', "%{$search}%")
-                            ->orWhere('phone', 'like', "%{$search}%");
-                    });
-            });
-        }
-
-        $includeWc = ($sourceFilter === 'ALL' || $sourceFilter === 'WOOCOMMERCE');
-        $includeInv = ($sourceFilter === 'ALL' || $sourceFilter === 'DIRECT_SALE');
-
-        $wcCount = $includeWc ? $wcFiltered->count() : 0;
-        $invCount = $includeInv ? $invFiltered->count() : 0;
-        $totalFiltered = $wcCount + $invCount;
-
-        $perPage = 50;
-        $page = max(1, (int) ($filters['page'] ?? request()->input('page', 1)));
-        $offset = ($page - 1) * $perPage;
-
-        $shipments = collect();
-
-        if ($includeWc && $offset < $wcCount) {
-            $wcTake = min($perPage, $wcCount - $offset);
-            $wcOrders = $wcFiltered->with(['branch'])
-                ->orderBy('id', 'desc')
-                ->skip($offset)
-                ->take($wcTake)
-                ->get();
-
-            foreach ($wcOrders as $order) {
-                $isPaidOnline = $order->payment_status === WcPaymentStatus::PAID_ONLINE;
-                $statusStr = $order->status instanceof \BackedEnum ? $order->status->value : (string) $order->status;
-                $payStatusStr = $order->payment_status instanceof \BackedEnum ? $order->payment_status->value : (string) $order->payment_status;
-
-                $shipments->push([
-                    'id' => $order->id,
-                    'source' => 'WOOCOMMERCE',
-                    'reference' => '#' . $order->wc_order_id,
-                    'wc_order_id' => $order->wc_order_id,
-                    'invoice_id' => $order->invoice_id,
-                    'customer_name' => $order->customer_name ?: 'عميل ووكومرس',
-                    'customer_phone' => $order->customer_phone,
-                    'customer_address' => $order->customer_address,
-                    'city' => $order->city,
-                    'tracking_number' => $order->tracking_number,
-                    'branch_name' => $order->branch?->name,
-                    'total' => Money::of($order->total)->getAmount(),
-                    'shipping_cost' => Money::of($order->shipping_cost)->getAmount(),
-                    'cod_amount' => $isPaidOnline ? 0.0 : Money::of($order->total)->getAmount(),
-                    'status' => $statusStr,
-                    'status_label' => $order->status->label(),
-                    'payment_status' => $payStatusStr,
-                    'payment_status_label' => $order->payment_status->label(),
-                    'is_paid_online' => $isPaidOnline,
-                    'shipped_at' => $order->shipped_at?->format('Y-m-d H:i'),
-                    'created_at' => $order->created_at?->format('Y-m-d'),
-                ]);
-            }
-        }
-
-        $remainingSlots = $perPage - $shipments->count();
-        if ($includeInv && $remainingSlots > 0) {
-            $invOffset = max(0, $offset - $wcCount);
-            if ($invOffset < $invCount) {
-                $invTake = min($remainingSlots, $invCount - $invOffset);
-                $directInvoices = $invFiltered->with(['party', 'branch'])
-                    ->orderBy('id', 'desc')
-                    ->skip($invOffset)
-                    ->take($invTake)
-                    ->get();
-
-                foreach ($directInvoices as $inv) {
-                    $isFullyPaid = Money::of($inv->remaining_amount)->isZeroOrNegative();
-                    $isCourierCod = $inv->payment_method === \App\Enums\PaymentMethod::COURIER_COD;
-                    $isPrepaid = $isFullyPaid && !$isCourierCod;
-
-                    $shipments->push([
-                        'id' => $inv->id,
-                        'source' => 'DIRECT_SALE',
-                        'reference' => $inv->invoice_number,
-                        'wc_order_id' => null,
-                        'invoice_id' => $inv->id,
-                        'customer_name' => $inv->party?->name ?: 'عميل مباشر (POS)',
-                        'customer_phone' => $inv->party?->phone,
-                        'customer_address' => $inv->party?->address,
-                        'city' => null,
-                        'tracking_number' => null,
-                        'branch_name' => $inv->branch?->name,
-                        'total' => Money::of($inv->total)->getAmount(),
-                        'shipping_cost' => Money::of($inv->shipping_amount)->getAmount(),
-                        'cod_amount' => $isPrepaid ? 0.0 : Money::of($inv->total)->getAmount(),
-                        'status' => $isFullyPaid ? WcOrderStatus::DELIVERED->value : StockTransferStatus::IN_TRANSIT->value,
-                        'status_label' => $isFullyPaid ? 'تم التحصيل والتسليم' : 'قيد التوصيل والتحصيل',
-                        'payment_status' => $isFullyPaid ? ($isCourierCod ? 'COLLECTED_COD' : 'PAID') : WcPaymentStatus::PENDING_COD->value,
-                        'payment_status_label' => $isFullyPaid ? ($isCourierCod ? 'تحصيل عبر شركة شحن' : 'مدفوعة مقدماً') : 'متبقي تحصيل',
-                        'is_paid_online' => $isPrepaid,
-                        'shipped_at' => null,
-                        'created_at' => $inv->date->format('Y-m-d'),
-                    ]);
-                }
-            }
-        }
-
-        $lastPage = max(1, (int) ceil($totalFiltered / $perPage));
+        [$wcFiltered, $invFiltered] = $this->applyManifestFilters(clone $wcBase, clone $invBase, $filters);
+        [$shipments, $totalFiltered, $page, $perPage] = $this->paginateManifestShipments($wcFiltered, $invFiltered, $filters);
+        $pagination = ['current_page' => $page, 'last_page' => max(1, (int) ceil($totalFiltered / $perPage)), 'per_page' => $perPage, 'total' => $totalFiltered];
 
         return [
             'courier' => new PartyResource($courier),
             'shipments' => $shipments,
             'metrics' => $metrics,
-            'pagination' => [
-                'current_page' => $page,
-                'last_page' => $lastPage,
-                'per_page' => $perPage,
-                'total' => $totalFiltered,
-            ],
-            'meta' => [
-                'current_page' => $page,
-                'last_page' => $lastPage,
-                'per_page' => $perPage,
-                'total' => $totalFiltered,
-            ],
+            'pagination' => $pagination,
+            'meta' => $pagination,
+        ];
+    }
+
+    private function resolveManifestBranchId(User $user, ?int $branchId): ?int
+    {
+        if ($user->isManager() && $user->branch_id) {
+            return (int) $user->branch_id;
+        }
+
+        return ($branchId && $user->isOwnerOrAdmin()) ? (int) $branchId : null;
+    }
+
+    private function buildManifestBaseQueries(int $accountId, int $courierId, ?int $branchId): array
+    {
+        $wc = WcOrder::where('user_id', $accountId)->where('courier_party_id', $courierId)->when($branchId, fn ($q) => $q->where('branch_id', $branchId));
+        $inv = Invoice::where('user_id', $accountId)->where('courier_party_id', $courierId)->whereNull('wc_order_id')->when($branchId, fn ($q) => $q->where('branch_id', $branchId));
+
+        return [$wc, $inv];
+    }
+
+    private function computeManifestMetrics($wcBaseQuery, $invBaseQuery): array
+    {
+        $wc = $wcBaseQuery->selectRaw(
+            'COUNT(*) as total_count, COALESCE(SUM(CASE WHEN status = ? THEN 1 ELSE 0 END), 0) as in_transit_count, COALESCE(SUM(CASE WHEN status = ? THEN 1 ELSE 0 END), 0) as delivered_count, COALESCE(SUM(CASE WHEN status = ? THEN 1 ELSE 0 END), 0) as returned_count, COALESCE(SUM(total), 0) as total_amount, COALESCE(SUM(shipping_cost), 0) as total_shipping, COALESCE(SUM(CASE WHEN payment_status = ? THEN total ELSE 0 END), 0) as collected_amount, COALESCE(SUM(CASE WHEN status = ? AND payment_status != ? THEN total ELSE 0 END), 0) as pending_amount',
+            [WcOrderStatus::SHIPPED_VIA_COURIER->value, WcOrderStatus::DELIVERED->value, WcOrderStatus::RETURNED->value, WcPaymentStatus::COLLECTED->value, WcOrderStatus::SHIPPED_VIA_COURIER->value, WcPaymentStatus::PAID_ONLINE->value]
+        )->first();
+        $inv = $invBaseQuery->selectRaw('COUNT(*) as total_count, COALESCE(SUM(CASE WHEN remaining_amount > 0 THEN 1 ELSE 0 END), 0) as in_transit_count, COALESCE(SUM(CASE WHEN remaining_amount <= 0 THEN 1 ELSE 0 END), 0) as delivered_count, COALESCE(SUM(total), 0) as total_amount, COALESCE(SUM(shipping_amount), 0) as total_shipping, COALESCE(SUM(CASE WHEN remaining_amount <= 0 THEN total ELSE 0 END), 0) as collected_amount, COALESCE(SUM(CASE WHEN remaining_amount > 0 THEN total ELSE 0 END), 0) as pending_amount')->first();
+
+        return [
+            'total_shipments' => (int) ($wc->total_count ?? 0) + (int) ($inv->total_count ?? 0),
+            'in_transit_count' => (int) ($wc->in_transit_count ?? 0) + (int) ($inv->in_transit_count ?? 0),
+            'delivered_count' => (int) ($wc->delivered_count ?? 0) + (int) ($inv->delivered_count ?? 0),
+            'returned_count' => (int) ($wc->returned_count ?? 0),
+            'total_cod_amount' => Money::of($wc->total_amount ?? 0)->add(Money::of($inv->total_amount ?? 0))->getAmount(),
+            'total_shipping_fees' => Money::of($wc->total_shipping ?? 0)->add(Money::of($inv->total_shipping ?? 0))->getAmount(),
+            'collected_cod_amount' => Money::of($wc->collected_amount ?? 0)->add(Money::of($inv->collected_amount ?? 0))->getAmount(),
+            'pending_cod_amount' => Money::of($wc->pending_amount ?? 0)->add(Money::of($inv->pending_amount ?? 0))->getAmount(),
+        ];
+    }
+
+    private function applyManifestFilters($wcFiltered, $invFiltered, array $filters): array
+    {
+        $statusFilter = $filters['status'] ?? 'ALL';
+        $paymentFilter = $filters['payment_status'] ?? 'ALL';
+        $search = trim((string) ($filters['search'] ?? ''));
+
+        $this->applyManifestWcFilters($wcFiltered, $statusFilter, $paymentFilter, $search);
+        $this->applyManifestInvFilters($invFiltered, $statusFilter, $paymentFilter, $search);
+
+        return [$wcFiltered, $invFiltered];
+    }
+
+    private function applyManifestWcFilters($query, string $statusFilter, string $paymentFilter, string $search): void
+    {
+        match ($statusFilter) {
+            StockTransferStatus::IN_TRANSIT->value => $query->where('status', WcOrderStatus::SHIPPED_VIA_COURIER->value),
+            WcOrderStatus::DELIVERED->value => $query->where('status', WcOrderStatus::DELIVERED->value),
+            WcOrderStatus::RETURNED->value => $query->where('status', WcOrderStatus::RETURNED->value),
+            default => null,
+        };
+        if ($paymentFilter === 'COD') {
+            $query->where('payment_status', '!=', WcPaymentStatus::PAID_ONLINE->value);
+        } elseif ($paymentFilter === 'PREPAID') {
+            $query->where('payment_status', WcPaymentStatus::PAID_ONLINE->value);
+        }
+        if ($search !== '') {
+            $query->where(fn ($q) => $q->where('wc_order_id', 'like', "%{$search}%")->orWhere('customer_name', 'like', "%{$search}%")->orWhere('customer_phone', 'like', "%{$search}%")->orWhere('tracking_number', 'like', "%{$search}%"));
+        }
+    }
+
+    private function applyManifestInvFilters($query, string $statusFilter, string $paymentFilter, string $search): void
+    {
+        match ($statusFilter) {
+            StockTransferStatus::IN_TRANSIT->value => $query->where('remaining_amount', '>', 0),
+            WcOrderStatus::DELIVERED->value => $query->where('remaining_amount', '<=', 0),
+            WcOrderStatus::RETURNED->value => $query->whereRaw('0 = 1'),
+            default => null,
+        };
+        if ($paymentFilter === 'COD') {
+            $query->where(fn ($q) => $q->where('payment_method', \App\Enums\PaymentMethod::COURIER_COD->value)->orWhere('remaining_amount', '>', 0));
+        } elseif ($paymentFilter === 'PREPAID') {
+            $query->where('remaining_amount', '<=', 0)->where('payment_method', '!=', \App\Enums\PaymentMethod::COURIER_COD->value);
+        }
+        if ($search !== '') {
+            $query->where(fn ($q) => $q->where('invoice_number', 'like', "%{$search}%")->orWhereHas('party', fn ($pq) => $pq->where('name', 'like', "%{$search}%")->orWhere('phone', 'like', "%{$search}%")));
+        }
+    }
+
+    private function paginateManifestShipments($wcFiltered, $invFiltered, array $filters): array
+    {
+        $source = $filters['source'] ?? 'ALL';
+        $wcCount = ($source === 'ALL' || $source === 'WOOCOMMERCE') ? $wcFiltered->count() : 0;
+        $invCount = ($source === 'ALL' || $source === 'DIRECT_SALE') ? $invFiltered->count() : 0;
+        $perPage = 50;
+        $page = max(1, (int) ($filters['page'] ?? request()->input('page', 1)));
+        $offset = ($page - 1) * $perPage;
+        $shipments = collect();
+
+        if ($wcCount > 0 && $offset < $wcCount) {
+            foreach ($wcFiltered->with(['branch'])->orderBy('id', 'desc')->skip($offset)->take(min($perPage, $wcCount - $offset))->get() as $order) {
+                $shipments->push($this->formatWcManifestShipment($order));
+            }
+        }
+        $remaining = $perPage - $shipments->count();
+        $invOffset = max(0, $offset - $wcCount);
+        if ($invCount > 0 && $remaining > 0 && $invOffset < $invCount) {
+            foreach ($invFiltered->with(['party', 'branch'])->orderBy('id', 'desc')->skip($invOffset)->take(min($remaining, $invCount - $invOffset))->get() as $inv) {
+                $shipments->push($this->formatDirectManifestShipment($inv));
+            }
+        }
+
+        return [$shipments, $wcCount + $invCount, $page, $perPage];
+    }
+
+    private function formatWcManifestShipment(WcOrder $order): array
+    {
+        $isPaidOnline = $order->payment_status === WcPaymentStatus::PAID_ONLINE;
+
+        return [
+            'id' => $order->id, 'source' => 'WOOCOMMERCE', 'reference' => '#' . $order->wc_order_id,
+            'wc_order_id' => $order->wc_order_id, 'invoice_id' => $order->invoice_id,
+            'customer_name' => $order->customer_name ?: 'عميل ووكومرس', 'customer_phone' => $order->customer_phone,
+            'customer_address' => $order->customer_address, 'city' => $order->city, 'tracking_number' => $order->tracking_number,
+            'branch_name' => $order->branch?->name, 'total' => Money::of($order->total)->getAmount(),
+            'shipping_cost' => Money::of($order->shipping_cost)->getAmount(),
+            'cod_amount' => $isPaidOnline ? 0.0 : Money::of($order->total)->getAmount(),
+            'status' => $order->status instanceof \BackedEnum ? $order->status->value : (string) $order->status,
+            'status_label' => $order->status->label(),
+            'payment_status' => $order->payment_status instanceof \BackedEnum ? $order->payment_status->value : (string) $order->payment_status,
+            'payment_status_label' => $order->payment_status->label(), 'is_paid_online' => $isPaidOnline,
+            'shipped_at' => $order->shipped_at?->format('Y-m-d H:i'), 'created_at' => $order->created_at?->format('Y-m-d'),
+        ];
+    }
+
+    private function formatDirectManifestShipment(Invoice $inv): array
+    {
+        $isFullyPaid = Money::of($inv->remaining_amount)->isZeroOrNegative();
+        $isCourierCod = $inv->payment_method === \App\Enums\PaymentMethod::COURIER_COD;
+        $isPrepaid = $isFullyPaid && !$isCourierCod;
+
+        return [
+            'id' => $inv->id, 'source' => 'DIRECT_SALE', 'reference' => $inv->invoice_number, 'wc_order_id' => null,
+            'invoice_id' => $inv->id, 'customer_name' => $inv->party?->name ?: 'عميل مباشر (POS)',
+            'customer_phone' => $inv->party?->phone, 'customer_address' => $inv->party?->address, 'city' => null, 'tracking_number' => null,
+            'branch_name' => $inv->branch?->name, 'total' => Money::of($inv->total)->getAmount(),
+            'shipping_cost' => Money::of($inv->shipping_amount)->getAmount(),
+            'cod_amount' => $isPrepaid ? 0.0 : Money::of($inv->total)->getAmount(),
+            'status' => $isFullyPaid ? WcOrderStatus::DELIVERED->value : StockTransferStatus::IN_TRANSIT->value,
+            'status_label' => $isFullyPaid ? 'تم التحصيل والتسليم' : 'قيد التوصيل والتحصيل',
+            'payment_status' => $isFullyPaid ? ($isCourierCod ? 'COLLECTED_COD' : 'PAID') : WcPaymentStatus::PENDING_COD->value,
+            'payment_status_label' => $isFullyPaid ? ($isCourierCod ? 'تحصيل عبر شركة شحن' : 'مدفوعة مقدماً') : 'متبقي تحصيل',
+            'is_paid_online' => $isPrepaid, 'shipped_at' => null, 'created_at' => $inv->date->format('Y-m-d'),
         ];
     }
 
@@ -372,44 +284,36 @@ class CourierService
      */
     public function recordDeliveryCollection(User $user, Invoice $invoice, WcOrder $order, float $collectedAmount): void
     {
-        if (!$order->courier_party_id) {
+        if (!$order->courier_party_id || $collectedAmount <= 0) {
             return;
         }
 
-        DB::transaction(function () use ($user, $invoice, $order, $collectedAmount) {
-            $courier = Party::where('user_id', $user->getAccountId())
-                ->where('type', PartyType::COURIER->value)
-                ->lockForUpdate()
-                ->find($order->courier_party_id);
+        DB::transaction(fn() => $this->persistDeliveryCollection($user, $invoice, $order, $collectedAmount));
+    }
 
-            if (!$courier || $collectedAmount <= 0) {
-                return;
-            }
+    private function persistDeliveryCollection(User $user, Invoice $invoice, WcOrder $order, float $collectedAmount): void
+    {
+        $courier = Party::where('user_id', $user->getAccountId())
+            ->where('type', PartyType::COURIER->value)
+            ->lockForUpdate()
+            ->find($order->courier_party_id);
 
-            // منع تكرار قيد التحصيل لنفس الفاتورة
-            $alreadyRecorded = LedgerEntry::where('party_id', $courier->id)
-                ->where('source_type', LedgerSource::INVOICE->value)
-                ->where('source_id', $invoice->id)
-                ->where('debit', '>', 0)
-                ->exists();
+        if (!$courier) {
+            return;
+        }
 
-            if ($alreadyRecorded) {
-                return;
-            }
+        $alreadyRecorded = LedgerEntry::where('party_id', $courier->id)
+            ->where('source_type', LedgerSource::INVOICE->value)
+            ->where('source_id', $invoice->id)
+            ->where('debit', '>', 0)
+            ->exists();
 
-            $desc = "تحصيل شحنة أوردر #{$order->wc_order_id} - العميل: " . ($order->customer_name ?: 'عميل ووكومرس');
+        if ($alreadyRecorded) {
+            return;
+        }
 
-            $this->ledgerService->recordEntry(
-                user: $user,
-                party: $courier,
-                sourceType: LedgerSource::INVOICE->value,
-                sourceId: $invoice->id,
-                date: $invoice->date->format('Y-m-d'),
-                description: $desc,
-                debit: $collectedAmount,
-                credit: 0.0
-            );
-        });
+        $desc = "تحصيل شحنة أوردر #{$order->wc_order_id} - العميل: " . ($order->customer_name ?: 'عميل ووكومرس');
+        $this->ledgerService->recordEntry($user, $courier, LedgerSource::INVOICE->value, $invoice->id, $invoice->date->format('Y-m-d'), $desc, $collectedAmount, 0.0);
     }
 
     /**
@@ -417,57 +321,16 @@ class CourierService
      */
     public function settleCourierNet(User $user, int $courierPartyId, array $data): array
     {
-        $accountId = $user->getAccountId();
-        $courier = Party::where('user_id', $accountId)
-            ->where('type', PartyType::COURIER->value)
-            ->findOrFail($courierPartyId);
+        $courier = Party::where('user_id', $user->getAccountId())->where('type', PartyType::COURIER->value)->findOrFail($courierPartyId);
+        $balanceMoney = Money::of($courier->balance);
+        $amountMoney = $this->validateSettlementAmount($balanceMoney, $data['amount'] ?? null);
+        $type = $this->resolveSettlementType($balanceMoney, $data['type'] ?? null);
 
-        $courierBalanceMoney = Money::of($courier->balance);
-        $maxAllowed = Money::of(abs($courierBalanceMoney->getAmount()));
-
-        if ($maxAllowed->isZero()) {
-            throw new PosDomainException("رصيد شركة الشحن مسوى بالكامل بالفعل.", "SETTLEMENT_EXCEEDS_BALANCE", 422);
-        }
-
-        $amountMoney = !empty($data['amount']) ? Money::of($data['amount']) : $maxAllowed;
-
-        if ($amountMoney->isZero() || $amountMoney->isNegative()) {
-            throw new PosDomainException("المبلغ المطلوب تصفيته يجب أن يكون أكبر من الصفر.", "INVALID_SETTLEMENT_AMOUNT", 422);
-        }
-
-        if ($amountMoney->greaterThan($maxAllowed)) {
-            throw new PosDomainException("المبلغ المطلوب تصفيته يتجاوز الرصيد المستحق لشركة الشحن.", "SETTLEMENT_EXCEEDS_BALANCE", 422);
-        }
-
-        // تحديد نوع السند بناءً على الرصيد أو التحقق من النوع المرسل
-        // إذا كان رصيد شركة الشحن مديناً (موجب) أي أنها حصلت كاش لصالح المتجر -> نوع السند قبض RECEIPT
-        // إذا كان الرصيد دائناً (سالب) أي أن المتجر مدين لها بمصاريف شحن -> نوع السند صرف PAYMENT
-        if (!empty($data['type'])) {
-            $requestedType = $data['type'] instanceof PaymentType ? $data['type'] : PaymentType::from($data['type']);
-            if ($courierBalanceMoney->greaterThan(Money::zero()) && $requestedType !== PaymentType::RECEIPT) {
-                throw new PosDomainException("نوع السند غير متوافق مع اتجاه رصيد شركة الشحن.", "SETTLEMENT_DIRECTION_MISMATCH", 422);
-            }
-            if ($courierBalanceMoney->lessThan(Money::zero()) && $requestedType !== PaymentType::PAYMENT) {
-                throw new PosDomainException("نوع السند غير متوافق مع اتجاه رصيد شركة الشحن.", "SETTLEMENT_DIRECTION_MISMATCH", 422);
-            }
-            $type = $requestedType;
-        } else {
-            $type = $courierBalanceMoney->greaterThan(Money::zero()) ? PaymentType::RECEIPT : PaymentType::PAYMENT;
-        }
-
-        $method = $data['method'] ?? PaymentMethod::CASH->value;
-        $notes = $data['notes'] ?? ($type === PaymentType::RECEIPT
-            ? "تصفية مستحقات شحن COD - شركة {$courier->name}"
-            : "سداد أتعاب ومصاريف شحن - شركة {$courier->name}");
-
+        $defaultNote = $type === PaymentType::RECEIPT ? "تصفية مستحقات شحن COD - شركة {$courier->name}" : "سداد أتعاب ومصاريف شحن - شركة {$courier->name}";
         $payment = $this->paymentService->createPayment($user, [
-            'party_id' => $courier->id,
-            'type' => $type->value,
-            'amount' => $amountMoney->getAmount(),
-            'method' => $method,
-            'date' => $data['date'] ?? now()->toDateString(),
-            'notes' => $notes,
-            'idempotency_key' => $data['idempotency_key'] ?? null,
+            'party_id' => $courier->id, 'type' => $type->value, 'amount' => $amountMoney->getAmount(),
+            'method' => $data['method'] ?? PaymentMethod::CASH->value, 'date' => $data['date'] ?? now()->toDateString(),
+            'notes' => $data['notes'] ?? $defaultNote, 'idempotency_key' => $data['idempotency_key'] ?? null,
         ]);
 
         $courier->refresh();
@@ -478,5 +341,38 @@ class CourierService
             'settled_amount' => $amountMoney->getAmount(),
             'remaining_balance' => Money::of($courier->balance)->getAmount(),
         ];
+    }
+
+    private function validateSettlementAmount(Money $balanceMoney, mixed $rawAmount): Money
+    {
+        $maxAllowed = Money::of(abs($balanceMoney->getAmount()));
+        if ($maxAllowed->isZero()) {
+            throw new PosDomainException("رصيد شركة الشحن مسوى بالكامل بالفعل.", "SETTLEMENT_EXCEEDS_BALANCE", 422);
+        }
+
+        $amountMoney = !empty($rawAmount) ? Money::of($rawAmount) : $maxAllowed;
+        if ($amountMoney->isZero() || $amountMoney->isNegative()) {
+            throw new PosDomainException("المبلغ المطلوب تصفيته يجب أن يكون أكبر من الصفر.", "INVALID_SETTLEMENT_AMOUNT", 422);
+        }
+        if ($amountMoney->greaterThan($maxAllowed)) {
+            throw new PosDomainException("المبلغ المطلوب تصفيته يتجاوز الرصيد المستحق لشركة الشحن.", "SETTLEMENT_EXCEEDS_BALANCE", 422);
+        }
+
+        return $amountMoney;
+    }
+
+    private function resolveSettlementType(Money $balanceMoney, mixed $requested): PaymentType
+    {
+        if (empty($requested)) {
+            return $balanceMoney->greaterThan(Money::zero()) ? PaymentType::RECEIPT : PaymentType::PAYMENT;
+        }
+
+        $type = $requested instanceof PaymentType ? $requested : PaymentType::from($requested);
+        if (($balanceMoney->greaterThan(Money::zero()) && $type !== PaymentType::RECEIPT)
+            || ($balanceMoney->lessThan(Money::zero()) && $type !== PaymentType::PAYMENT)) {
+            throw new PosDomainException("نوع السند غير متوافق مع اتجاه رصيد شركة الشحن.", "SETTLEMENT_DIRECTION_MISMATCH", 422);
+        }
+
+        return $type;
     }
 }

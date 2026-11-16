@@ -48,53 +48,39 @@ class ShiftService
      */
     public function openShift(User $user, float $openingBalance = 0.00, ?string $notes = null): Shift
     {
-        $active = $this->getActiveShift($user);
-        if ($active) {
+        if ($active = $this->getActiveShift($user)) {
             throw new ShiftDomainException('لديك وردية مفتوحة بالفعل برقم ' . $active->shift_number . '، يجب تقفيلها أولاً قبل بدء وردية جديدة.', 'SHIFT_ALREADY_OPEN');
         }
 
+        return DB::transaction(fn() => $this->persistOpenedShift($user, $openingBalance, $notes));
+    }
+
+    private function persistOpenedShift(User $user, float $openingBalance, ?string $notes): Shift
+    {
         $accountId = $user->getAccountId();
         $treasury = $this->treasuryService->getTreasuryForUser($user);
+        $shiftNumber = 'SH-' . str_pad((string) $this->sequenceService->next($accountId, DocumentType::SHIFT), 5, '0', STR_PAD_LEFT);
+        $openingMoney = Money::of($openingBalance);
 
-        return DB::transaction(function () use ($user, $accountId, $treasury, $openingBalance, $notes) {
-            $seq = $this->sequenceService->next($accountId, DocumentType::SHIFT);
-            $shiftNumber = 'SH-' . str_pad((string) $seq, 5, '0', STR_PAD_LEFT);
+        $shift = Shift::create([
+            'user_id' => $accountId,
+            'created_by' => $user->id,
+            'treasury_id' => $treasury->id,
+            'shift_number' => $shiftNumber,
+            'status' => ShiftStatus::OPEN,
+            'opened_at' => Carbon::now(),
+            'opening_balance' => $openingMoney->getAmount(),
+            'cash_sales' => 0.00, 'electronic_sales' => 0.00, 'credit_sales' => 0.00,
+            'cash_receipts' => 0.00, 'cash_returns' => 0.00, 'expenses' => 0.00,
+            'expected_cash' => $openingMoney->getAmount(),
+            'notes' => $notes,
+        ]);
 
-            $openingMoney = Money::of($openingBalance);
+        if ($openingMoney->isPositive()) {
+            $this->treasuryService->recordDeposit($treasury, $openingMoney, 'SHIFT_OPENING', $shift->id, $user, "رصيد افتتاحي للوردية {$shiftNumber}", $shift->id);
+        }
 
-            $shift = Shift::create([
-                'user_id' => $accountId,
-                'created_by' => $user->id,
-                'treasury_id' => $treasury->id,
-                'shift_number' => $shiftNumber,
-                'status' => ShiftStatus::OPEN,
-                'opened_at' => Carbon::now(),
-                'opening_balance' => $openingMoney->getAmount(),
-                'cash_sales' => 0.00,
-                'electronic_sales' => 0.00,
-                'credit_sales' => 0.00,
-                'cash_receipts' => 0.00,
-                'cash_returns' => 0.00,
-                'expenses' => 0.00,
-                'expected_cash' => $openingMoney->getAmount(),
-                'notes' => $notes,
-            ]);
-
-            // إذا كان هناك رصيد افتتاحي (فكة الدرج أو سلفة المندوب) نسجله إيداع في درج/عهدة الموظف
-            if ($openingMoney->isPositive()) {
-                $this->treasuryService->recordDeposit(
-                    treasury: $treasury,
-                    amount: $openingMoney,
-                    sourceType: 'SHIFT_OPENING',
-                    sourceId: $shift->id,
-                    actor: $user,
-                    notes: "رصيد افتتاحي للوردية {$shiftNumber}",
-                    shiftId: $shift->id
-                );
-            }
-
-            return $shift;
-        });
+        return $shift;
     }
 
     /**
@@ -103,82 +89,29 @@ class ShiftService
     public function syncShiftFinancials(Shift $shift): void
     {
         $shiftId = $shift->id;
-
-        // مبيعات الكاش المباشرة + الأجزاء النقدية من الفواتير المجزأة
-        $cashSalesDirect = Invoice::withoutGlobalScopes()
-            ->where('shift_id', $shiftId)
-            ->where('type', InvoiceType::SALE)
-            ->where('payment_method', PaymentMethod::CASH->value)
-            ->sum('paid_amount');
-
-        $cashSalesSplit = Payment::withoutGlobalScopes()
-            ->where('shift_id', $shiftId)
-            ->where('type', PaymentType::RECEIPT->value)
-            ->where('method', PaymentMethod::CASH->value)
-            ->whereHas('invoice', fn($q) => $q->where('payment_method', PaymentMethod::SPLIT->value))
-            ->sum('amount');
-
-        $cashSales = Money::of($cashSalesDirect)->add(Money::of($cashSalesSplit));
-
-        // مبيعات البطاقة والتحويل وإنستاباي وفودافون كاش (المباشرة والمجزأة)
-        $electronicDirect = Invoice::withoutGlobalScopes()
-            ->where('shift_id', $shiftId)
-            ->where('type', InvoiceType::SALE)
-            ->whereIn('payment_method', [PaymentMethod::CARD->value, PaymentMethod::TRANSFER->value, PaymentMethod::INSTAPAY->value, PaymentMethod::VODAFONE_CASH->value])
-            ->sum('paid_amount');
-
-        $electronicSplit = Payment::withoutGlobalScopes()
-            ->where('shift_id', $shiftId)
-            ->where('type', PaymentType::RECEIPT->value)
-            ->whereIn('method', [PaymentMethod::CARD->value, PaymentMethod::TRANSFER->value, PaymentMethod::INSTAPAY->value, PaymentMethod::VODAFONE_CASH->value])
-            ->whereHas('invoice', fn($q) => $q->where('payment_method', PaymentMethod::SPLIT->value))
-            ->sum('amount');
-
-        $electronicSales = Money::of($electronicDirect)->add(Money::of($electronicSplit));
-
-        // مبيعات الآجل
-        $creditSales = Money::of(Invoice::withoutGlobalScopes()
-            ->where('shift_id', $shiftId)
-            ->where('type', InvoiceType::SALE)
-            ->sum('remaining_amount'));
-
-        // سندات القبض النقدية الحرة غير المرتبطة بفاتورة مبيعات مباشرة
-        $cashReceipts = Money::of(Payment::withoutGlobalScopes()
-            ->where('shift_id', $shiftId)
-            ->where('type', PaymentType::RECEIPT->value)
-            ->where('method', PaymentMethod::CASH->value)
-            ->whereNull('invoice_id')
-            ->sum('amount'));
-
-        // مرتجعات البيع المستردة نقداً
-        $cashReturns = Money::of(Invoice::withoutGlobalScopes()
-            ->where('shift_id', $shiftId)
-            ->where('type', InvoiceType::SALE_RETURN)
-            ->sum('paid_amount'));
-
-        // مصروفات الوردية
-        $expenses = Money::of(Expense::withoutGlobalScopes()
-            ->where('shift_id', $shiftId)
-            ->sum('amount'));
-
-        $opening = Money::of($shift->opening_balance);
-
-        // المعادلة المحاسبية الصافية للنقدية المتوقعة في الدرج/العهدة
-        $expectedCash = $opening
-            ->add($cashSales)
-            ->add($cashReceipts)
-            ->subtract($cashReturns)
-            ->subtract($expenses);
+        $cashSales = $this->sumShiftSalesByMethods($shiftId, [PaymentMethod::CASH->value]);
+        $electronicSales = $this->sumShiftSalesByMethods($shiftId, [PaymentMethod::CARD->value, PaymentMethod::TRANSFER->value, PaymentMethod::INSTAPAY->value, PaymentMethod::VODAFONE_CASH->value]);
+        $creditSales = Money::of(Invoice::withoutGlobalScopes()->where('shift_id', $shiftId)->where('type', InvoiceType::SALE)->sum('remaining_amount'));
+        $cashReceipts = Money::of(Payment::withoutGlobalScopes()->where('shift_id', $shiftId)->where('type', PaymentType::RECEIPT->value)->where('method', PaymentMethod::CASH->value)->whereNull('invoice_id')->sum('amount'));
+        $cashReturns = Money::of(Invoice::withoutGlobalScopes()->where('shift_id', $shiftId)->where('type', InvoiceType::SALE_RETURN)->sum('paid_amount'));
+        $expenses = Money::of(Expense::withoutGlobalScopes()->where('shift_id', $shiftId)->sum('amount'));
+        $expectedCash = Money::of($shift->opening_balance)->add($cashSales)->add($cashReceipts)->subtract($cashReturns)->subtract($expenses);
 
         $shift->update([
-            'cash_sales' => $cashSales->getAmount(),
-            'electronic_sales' => $electronicSales->getAmount(),
-            'credit_sales' => $creditSales->getAmount(),
-            'cash_receipts' => $cashReceipts->getAmount(),
-            'cash_returns' => $cashReturns->getAmount(),
-            'expenses' => $expenses->getAmount(),
+            'cash_sales' => $cashSales->getAmount(), 'electronic_sales' => $electronicSales->getAmount(),
+            'credit_sales' => $creditSales->getAmount(), 'cash_receipts' => $cashReceipts->getAmount(),
+            'cash_returns' => $cashReturns->getAmount(), 'expenses' => $expenses->getAmount(),
             'expected_cash' => $expectedCash->getAmount(),
         ]);
+    }
+
+    private function sumShiftSalesByMethods(int $shiftId, array $methods): Money
+    {
+        $direct = Invoice::withoutGlobalScopes()->where('shift_id', $shiftId)->where('type', InvoiceType::SALE)->whereIn('payment_method', $methods)->sum('paid_amount');
+        $split = Payment::withoutGlobalScopes()->where('shift_id', $shiftId)->where('type', PaymentType::RECEIPT->value)->whereIn('method', $methods)
+            ->whereHas('invoice', fn($q) => $q->where('payment_method', PaymentMethod::SPLIT->value))->sum('amount');
+
+        return Money::of($direct)->add(Money::of($split));
     }
 
     /**
@@ -222,44 +155,28 @@ class ShiftService
         if (!$settledBy->canSettleShifts()) {
             throw new ShiftDomainException('غير مصرح لك باعتماد واستلام توريدات الخزينة.', 'UNAUTHORIZED_SETTLEMENT', 403);
         }
-
         if ($shift->status !== ShiftStatus::CLOSED) {
             throw new ShiftDomainException('يجب أن تكون الوردية مقفلة من قِبل الموظف قبل اعتماد استلامها.', 'SHIFT_NOT_CLOSED');
         }
 
-        return DB::transaction(function () use ($shift, $settledBy, $targetTreasuryId, $settlementNotes) {
-            $sourceTreasury = $shift->treasury;
+        return DB::transaction(fn() => $this->executeShiftHandover($shift, $settledBy, $targetTreasuryId, $settlementNotes));
+    }
 
-            $targetTreasury = $targetTreasuryId
-                ? Treasury::withoutGlobalScopes()->findOrFail($targetTreasuryId)
-                : ($shift->creator?->branch_id
-                    ? $this->treasuryService->getBranchTreasury($shift->creator->branch_id, $shift->user_id)
-                    : $this->treasuryService->getMainTreasury($shift->user_id));
+    private function executeShiftHandover(Shift $shift, User $settledBy, ?int $targetTreasuryId, ?string $settlementNotes): TreasuryTransaction
+    {
+        $targetTreasury = $targetTreasuryId
+            ? Treasury::withoutGlobalScopes()->findOrFail($targetTreasuryId)
+            : ($shift->creator?->branch_id
+                ? $this->treasuryService->getBranchTreasury($shift->creator->branch_id, $shift->user_id)
+                : $this->treasuryService->getMainTreasury($shift->user_id));
 
-            // المبلغ الفعلي المسلم باليد
-            $handoverAmount = Money::of($shift->actual_cash ?? $shift->expected_cash);
+        $handoverAmount = Money::of($shift->actual_cash ?? $shift->expected_cash);
+        $notes = "توريد عهدة رسمية للوردية {$shift->shift_number} من ({$shift->creator?->name}) إلى ({$targetTreasury->name}). " . ($settlementNotes ?? '');
+        $transaction = $this->treasuryService->recordTransfer($shift->treasury, $targetTreasury, $handoverAmount, $settledBy, $notes, $shift->id, TreasuryTransactionType::HANDOVER);
 
-            // تحويل النقدية من عهدة/درج الموظف إلى الخزينة الرئيسية بسند توريد رسمي
-            $transaction = $this->treasuryService->recordTransfer(
-                fromTreasury: $sourceTreasury,
-                toTreasury: $targetTreasury,
-                amount: $handoverAmount,
-                actor: $settledBy,
-                notes: "توريد عهدة رسمية للوردية {$shift->shift_number} من ({$shift->creator?->name}) إلى ({$targetTreasury->name}). " . ($settlementNotes ?? ''),
-                shiftId: $shift->id,
-                type: TreasuryTransactionType::HANDOVER
-            );
+        $shift->update(['status' => ShiftStatus::SETTLED, 'settled_at' => Carbon::now(), 'settled_by' => $settledBy->id, 'settlement_notes' => $settlementNotes]);
 
-            // تحديث حالة الوردية إلى موردة ومستلمة رسمياً
-            $shift->update([
-                'status' => ShiftStatus::SETTLED,
-                'settled_at' => Carbon::now(),
-                'settled_by' => $settledBy->id,
-                'settlement_notes' => $settlementNotes,
-            ]);
-
-            return $transaction;
-        });
+        return $transaction;
     }
 
     /**
