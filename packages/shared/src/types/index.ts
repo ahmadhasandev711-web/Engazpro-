@@ -646,3 +646,107 @@ export interface WcOrder extends BaseEntity {
   items_snapshot?: any[];
   items?: WcOrderItem[];
 }
+
+export type StockAdjustmentMode = 'INCREASE' | 'DECREASE' | 'SET_ACTUAL';
+
+export interface StockAlertsSummary {
+  out_of_stock_count: number;
+  low_stock_count: number;
+  expiring_batches_count: number;
+  total_alerts: number;
+}
+
+export interface LowStockAlertItem {
+  branch_stock_id: number;
+  branch_id: number;
+  branch_name: string | null;
+  product_id: number;
+  product_name: string | null;
+  unit: string;
+  product_variant_id: number | null;
+  variant_name: string | null;
+  quantity: number;
+  min_quantity: number;
+  is_out_of_stock: boolean;
+  suggested_reorder_qty: number;
+  last_purchase_price: number;
+  last_supplier_id: number | null;
+  last_supplier_name: string | null;
+}
+
+export interface ExpiringBatchAlertItem {
+  batch_id: number;
+  product_id: number;
+  product_name: string | null;
+  variant_name: string | null;
+  batch_number: string;
+  expiry_date: string | null;
+  days_remaining: number;
+  is_expired: boolean;
+  quantity: number;
+}
+
+export interface StockAlertsResponse {
+  summary: StockAlertsSummary;
+  low_stock_items: LowStockAlertItem[];
+  expiring_batches: ExpiringBatchAlertItem[];
+}
+
+export interface StockMovementRecord {
+  id: number;
+  branch_id: number | null;
+  branch_name: string | null;
+  product_id: number;
+  product_name: string | null;
+  product_code: string | null;
+  unit: string | null;
+  product_variant_id: number | null;
+  variant_name: string | null;
+  product_batch_id: number | null;
+  batch_number: string | null;
+  type: 'IN' | 'OUT';
+  source_type: string;
+  source_id: number | null;
+  quantity: number;
+  balance_after: number;
+  unit_price: number | null;
+  notes: string | null;
+  created_at: string | null;
+}
+
+export interface PurchaseReportData {
+  period: {
+    from_date?: string | null;
+    to_date?: string | null;
+    branch_id?: number | null;
+  };
+  summary: {
+    total_purchases: number;
+    total_purchase_returns: number;
+    net_purchases: number;
+    cash_purchases: number;
+    credit_purchases: number;
+    total_paid: number;
+    total_remaining: number;
+    invoices_count: number;
+    returns_count: number;
+  };
+  top_suppliers: Array<{
+    party_id: number;
+    supplier_name: string;
+    supplier_phone: string | null;
+    invoices_count: number;
+    total_amount: number;
+    paid_amount: number;
+    remaining_amount: number;
+    current_balance: number;
+  }>;
+  top_products: Array<{
+    product_id: number;
+    product_name: string;
+    invoices_count: number;
+    total_quantity: number;
+    total_cost: number;
+    avg_unit_cost: number;
+  }>;
+}

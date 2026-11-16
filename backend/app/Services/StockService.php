@@ -121,6 +121,8 @@ class StockService
 
     private function createStockMovementRecord(User $user, ?int $branchId, Product $product, ?ProductVariant $variant, ?ProductBatch $batch, string $type, string $sourceType, ?int $sourceId, float $quantity, float $balanceAfter, ?float $unitPrice, ?string $notes): StockMovement
     {
+        StockAlertsService::forgetForAccount($user->getAccountId());
+
         return StockMovement::create([
             'user_id' => $user->getAccountId(), 'branch_id' => $branchId, 'product_id' => $product->id,
             'product_variant_id' => $variant?->id, 'product_batch_id' => $batch?->id,

@@ -24,9 +24,11 @@ import {
   Globe,
   Sun,
   Moon,
+  AlertTriangle,
 } from 'lucide-react';
 import { useAuthStore } from '../../data/store/useAuthStore';
 import { usePermissions } from '../../hooks/usePermissions';
+import { useStockAlertsSummary } from '../../hooks/useStockOperations';
 import { useTheme } from '../context/ThemeContext';
 import { cn } from '../utils/cn';
 import { ActiveShiftBanner } from './shifts/ActiveShiftBanner';
@@ -39,6 +41,7 @@ interface NavItemDef {
   to: string;
   label: string;
   icon: React.ElementType;
+  badgeCount?: number;
 }
 
 export interface SidebarNavGroup {
@@ -85,7 +88,12 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ groups, onNavigate }) =>
                     }
                   >
                     <Icon className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
-                    <span className="truncate">{item.label}</span>
+                    <span className="truncate flex-1">{item.label}</span>
+                    {(item.badgeCount ?? 0) > 0 && (
+                      <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-bad-soft text-bad tabular-nums">
+                        {item.badgeCount! > 99 ? '99+' : item.badgeCount}
+                      </span>
+                    )}
                   </NavLink>
                 );
               })}
@@ -121,7 +129,10 @@ export const Layout: React.FC = () => {
     canManageEmployees,
     canManageSettings,
     canViewProfitReport,
+    canManageStockOperations,
   } = usePermissions();
+
+  const { data: alertsSummary } = useStockAlertsSummary(canManageStockOperations);
 
   // Group 1: البيع (الرئيسية، نقطة البيع، طلبات المتجر، المناديب والشحن)
   const salesGroup: NavItemDef[] = [
@@ -140,9 +151,19 @@ export const Layout: React.FC = () => {
     { to: '/couriers', label: 'شركات الشحن', icon: Truck },
   ];
 
-  // Group 2: المخزون (الأصناف، التحويلات، الفروع)
+  // Group 2: المخزون (الأصناف، العمليات والنواقص، التحويلات، الفروع)
   const inventoryGroup: NavItemDef[] = [
     { to: '/products', label: isMandob ? 'الأصناف والأسعار' : 'الأصناف والمخزون', icon: Package },
+    ...(canManageStockOperations
+      ? [
+          {
+            to: '/stock-operations',
+            label: 'العمليات والنواقص',
+            icon: AlertTriangle,
+            badgeCount: alertsSummary?.total_alerts,
+          },
+        ]
+      : []),
     ...(isOwner || isManager
       ? [{ to: '/transfers', label: 'تحويلات المخزون', icon: ArrowLeftRight }]
       : []),

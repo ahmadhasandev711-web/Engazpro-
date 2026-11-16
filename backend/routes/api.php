@@ -146,6 +146,14 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
         Route::post('stock-transfers/{stockTransfer}/cancel', [StockTransferController::class, 'cancel']);
         Route::apiResource('stock-transfers', StockTransferController::class)->except(['update', 'destroy']);
 
+        // Stock Operations, Alerts & Movements Ledger (إشعارات النواقص، تسوية الجرد، ودفتر الحركات)
+        Route::prefix('stock')->group(function () {
+            Route::get('alerts/summary', [\App\Http\Controllers\Api\StockOperationsController::class, 'alertsSummary']);
+            Route::get('alerts', [\App\Http\Controllers\Api\StockOperationsController::class, 'alerts']);
+            Route::post('adjust', [\App\Http\Controllers\Api\StockOperationsController::class, 'adjust']);
+            Route::get('movements', [\App\Http\Controllers\Api\StockOperationsController::class, 'movements']);
+        });
+
         // Dashboard (لوحة القيادة والدفتر الذكي)
         Route::get('dashboard', [DashboardController::class, 'index']);
 
@@ -157,6 +165,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
             Route::get('profit', [ReportController::class, 'profit']);
             Route::get('sales', [ReportController::class, 'sales']);
             Route::get('stock', [ReportController::class, 'stock']);
+            Route::get('purchases', [ReportController::class, 'purchases']);
             Route::get('cash-flow', [ReportController::class, 'cashFlow']);
             Route::get('cash-flow/transactions', [ReportController::class, 'cashFlowTransactions']);
         });

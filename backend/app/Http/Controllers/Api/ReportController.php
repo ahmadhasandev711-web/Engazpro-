@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CashFlowTransactionsRequest;
 use App\Http\Resources\CashFlowTransactionResource;
+use App\Services\PurchaseReportService;
 use App\Services\ReportService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -58,6 +59,23 @@ class ReportController extends Controller
             user: $request->user(),
             search: $request->input('search'),
             perPage: (int) $request->input('per_page', 50)
+        );
+
+        return response()->json(['data' => $data]);
+    }
+
+    /**
+     * تقرير المشتريات والموردين والأصناف الأكثر شراءً
+     */
+    public function purchases(Request $request, PurchaseReportService $purchaseReportService): JsonResponse
+    {
+        Gate::authorize('view-purchases');
+
+        $data = $purchaseReportService->getPurchaseReport(
+            user: $request->user(),
+            fromDate: $request->input('from_date'),
+            toDate: $request->input('to_date'),
+            branchId: $request->filled('branch_id') ? (int) $request->input('branch_id') : null
         );
 
         return response()->json(['data' => $data]);

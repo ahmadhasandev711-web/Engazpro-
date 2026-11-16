@@ -51,7 +51,9 @@ export const usePermissions = () => {
     canPaySuppliers: isOwnerOrAdmin || isManager,
     // Reports & Settings Permissions (STRICT: Profit only for Owner and Admin!)
     canViewProfitReport: isOwnerOrAdmin,
+    canViewPurchaseReport: isOwnerOrAdmin || isManager,
     canViewCashFlowReport: isOwnerOrAdmin || isManager,
+    canManageStockOperations: isOwnerOrAdmin || isManager,
     canManageEmployees: isOwnerOrAdmin || isManager,
     canManageBranches: isOwnerOrAdmin,
     canManageWooCommerce: isOwnerOrAdmin,
