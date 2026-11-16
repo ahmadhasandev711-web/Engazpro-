@@ -13,6 +13,7 @@ use App\Models\WooCommerceIntegration;
 use App\Services\ProductService;
 use App\Services\StockService;
 use App\Support\Money;
+use App\Support\Quantity;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -112,7 +113,7 @@ class WooCommerceProductImportService
             return 'skipped';
         }
 
-        $regularPrice = isset($wcProduct['regular_price']) && is_numeric($wcProduct['regular_price']) ? (float) $wcProduct['regular_price'] : null;
+        $regularPrice = isset($wcProduct['regular_price']) && is_numeric($wcProduct['regular_price']) ? Money::of($wcProduct['regular_price'])->getAmount() : null;
         $salePrice = $this->resolveSellingPrice($wcProduct, 0);
         $isVariable = ($wcProduct['type'] ?? '') === 'variable';
         $imageUrl = !empty($wcProduct['images'][0]['src']) ? (string) $wcProduct['images'][0]['src'] : null;
@@ -165,14 +166,14 @@ class WooCommerceProductImportService
 
             $product->update($updateData);
 
-            if ($importStock && !$isVariable && (float)$product->quantity == 0 && !empty($wcProduct['manage_stock']) && isset($wcProduct['stock_quantity']) && (float)$wcProduct['stock_quantity'] > 0) {
+            if ($importStock && !$isVariable && Quantity::of($product->quantity ?? 0)->isZero() && !empty($wcProduct['manage_stock']) && isset($wcProduct['stock_quantity']) && Quantity::of($wcProduct['stock_quantity'])->isPositive()) {
                 $this->stockService->recordMovement(
                     $user,
                     $product,
                     StockMovementType::IN->value,
                     StockMovementSource::INITIAL->value,
                     $product->id,
-                    (float)$wcProduct['stock_quantity'],
+                    Quantity::of($wcProduct['stock_quantity'])->toFloat(),
                     $product->purchase_price,
                     'رصيد أول المدة مستورد من ووكومرس',
                     branchId: $integration->online_branch_id
@@ -188,8 +189,8 @@ class WooCommerceProductImportService
 
         // 2. Create new product
         $initialQty = 0;
-        if ($importStock && !$isVariable && !empty($wcProduct['manage_stock']) && isset($wcProduct['stock_quantity']) && (float)$wcProduct['stock_quantity'] > 0) {
-            $initialQty = (float)$wcProduct['stock_quantity'];
+        if ($importStock && !$isVariable && !empty($wcProduct['manage_stock']) && isset($wcProduct['stock_quantity']) && Quantity::of($wcProduct['stock_quantity'])->isPositive()) {
+            $initialQty = Quantity::of($wcProduct['stock_quantity'])->toFloat();
         }
 
         $productData = [
@@ -214,14 +215,14 @@ class WooCommerceProductImportService
 
             foreach ($variations as $var) {
                 $attributes = $this->extractAttributes($var['attributes'] ?? []);
-                $varRegularPrice = isset($var['regular_price']) && is_numeric($var['regular_price']) ? (float) $var['regular_price'] : null;
+                $varRegularPrice = isset($var['regular_price']) && is_numeric($var['regular_price']) ? Money::of($var['regular_price'])->getAmount() : null;
                 $varPrice = $this->resolveSellingPrice($var, $salePrice);
                 $varSku = !empty($var['sku']) ? trim($var['sku']) : null;
                 $varImageUrl = !empty($var['image']['src']) ? (string) $var['image']['src'] : $imageUrl;
 
                 $varQty = 0;
-                if ($importStock && !empty($var['manage_stock']) && isset($var['stock_quantity']) && (float)$var['stock_quantity'] > 0) {
-                    $varQty = (float)$var['stock_quantity'];
+                if ($importStock && !empty($var['manage_stock']) && isset($var['stock_quantity']) && Quantity::of($var['stock_quantity'])->isPositive()) {
+                    $varQty = Quantity::of($var['stock_quantity'])->toFloat();
                 }
 
                 $variantsPayload[] = [
@@ -289,14 +290,14 @@ class WooCommerceProductImportService
                 }
                 $variant->update($variantUpdate);
 
-                if ($importStock && (float)$variant->quantity == 0 && !empty($var['manage_stock']) && isset($var['stock_quantity']) && (float)$var['stock_quantity'] > 0) {
+                if ($importStock && Quantity::of($variant->quantity ?? 0)->isZero() && !empty($var['manage_stock']) && isset($var['stock_quantity']) && Quantity::of($var['stock_quantity'])->isPositive()) {
                     $this->stockService->recordMovement(
                         $user,
                         $product,
                         StockMovementType::IN->value,
                         StockMovementSource::INITIAL->value,
                         $product->id,
-                        (float)$var['stock_quantity'],
+                        Quantity::of($var['stock_quantity'])->toFloat(),
                         $variant->purchase_price,
                         'رصيد أول المدة للمتغير مستورد من ووكومرس',
                         variant: $variant,
@@ -305,8 +306,8 @@ class WooCommerceProductImportService
                 }
             } else {
                 $varQty = 0;
-                if ($importStock && !empty($var['manage_stock']) && isset($var['stock_quantity']) && (float)$var['stock_quantity'] > 0) {
-                    $varQty = (float)$var['stock_quantity'];
+                if ($importStock && !empty($var['manage_stock']) && isset($var['stock_quantity']) && Quantity::of($var['stock_quantity'])->isPositive()) {
+                    $varQty = Quantity::of($var['stock_quantity'])->toFloat();
                 }
 
                 $newVar = $product->variants()->create([
