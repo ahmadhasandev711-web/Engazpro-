@@ -67,7 +67,7 @@ export const WcOrdersToolbar: React.FC<{ vm: WcOrdersViewModel }> = ({ vm }) => 
             <ShoppingBag className="w-7 h-7 text-brand" />
           </div>
           <div>
-            <h1 className="text-xl font-black text-ink">طلبيات ووكومرس والتوصيل الميداني</h1>
+            <h1 className="text-xl font-black text-ink">{vm.channelTitle}</h1>
             <p className="text-xs text-muted mt-1 leading-relaxed">{storeSubtitle}</p>
           </div>
         </div>

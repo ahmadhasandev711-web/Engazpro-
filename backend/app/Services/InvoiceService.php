@@ -215,14 +215,15 @@ class InvoiceService
     private function enforceDiscountLimits(User $user, array $data, Money $subtotalMoney, Money $discountMoney): Money
     {
         if ($discountMoney->isGreaterThan($subtotalMoney)) {
-            if (empty($data['wc_order_id'])) {
+            if (empty($data['wc_order_id']) && empty($data['shopify_order_id'])) {
                 throw new PosDomainException('قيمة الخصم لا يمكن أن تتجاوز إجمالي الأصناف (قيمة السلة).', 'DISCOUNT_EXCEEDS_SUBTOTAL', 422);
             }
             $discountMoney = $subtotalMoney;
         }
 
         $maxPercent = $this->settingService->getMaxDiscountPercent($user);
-        if (!$user->isOwnerOrAdmin() && !$user->isManager() && $maxPercent < 100.0 && $discountMoney->isGreaterThan($subtotalMoney->multiply($maxPercent / 100.0))) {
+        $isExternalStoreOrder = !empty($data['wc_order_id']) || !empty($data['shopify_order_id']);
+        if (!$isExternalStoreOrder && !$user->isOwnerOrAdmin() && !$user->isManager() && $maxPercent < 100.0 && $discountMoney->isGreaterThan($subtotalMoney->multiply($maxPercent / 100.0))) {
             $maxAmount = number_format($subtotalMoney->multiply($maxPercent / 100.0)->getAmount(), 2);
             throw new PosDomainException(sprintf('أقصى نسبة خصم مسموحة لك هي %.2f%% (بحد أقصى %s).', $maxPercent, $maxAmount), 'DISCOUNT_EXCEEDS_LIMIT', 422);
         }
@@ -293,7 +294,7 @@ class InvoiceService
             'user_id' => $user->getAccountId(), 'branch_id' => $context['branch_id'], 'created_by' => $context['created_by'],
             'salesperson_id' => $isSaleType ? (!empty($data['salesperson_id']) ? (int) $data['salesperson_id'] : $context['created_by']) : null,
             'treasury_id' => $context['treasury']->id, 'shift_id' => $context['active_shift']?->id,
-            'invoice_number' => $invoiceNumber, 'idempotency_key' => $idempotencyKey, 'wc_order_id' => $data['wc_order_id'] ?? null,
+            'invoice_number' => $invoiceNumber, 'idempotency_key' => $idempotencyKey, 'wc_order_id' => $data['wc_order_id'] ?? null, 'shopify_order_id' => $data['shopify_order_id'] ?? null,
             'type' => $type, 'party_id' => $data['party_id'] ?? null,
             'courier_party_id' => !empty($data['courier_party_id']) ? (int) $data['courier_party_id'] : null,
             'parent_invoice_id' => $data['parent_invoice_id'] ?? null, 'date' => $data['date'] ?? now()->toDateString(),

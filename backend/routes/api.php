@@ -34,8 +34,12 @@ Route::prefix('auth')->group(function () {
 
 // WooCommerce Incoming Webhooks (Public endpoint with HMAC signature verification)
 Route::post('webhooks/woocommerce/{userId}', [\App\Http\Controllers\Api\WooCommerceWebhookController::class, 'handle'])->middleware('throttle:webhook');
+// Shopify Incoming Webhooks (Public endpoint with X-Shopify-Hmac-Sha256 verification)
+Route::post('webhooks/shopify/{userId}', [\App\Http\Controllers\Api\ShopifyWebhookController::class, 'handle'])->middleware('throttle:webhook');
 // WooCommerce 1-Click OAuth Callback (Public endpoint called by WordPress)
 Route::post('woocommerce/auth-callback', [\App\Http\Controllers\Api\WooCommerceAuthController::class, 'authCallback'])->middleware('throttle:webhook');
+// Shopify OAuth Callback (Public endpoint redirected from Shopify)
+Route::get('shopify/auth-callback', [\App\Http\Controllers\Api\ShopifyAuthController::class, 'callback'])->middleware('throttle:webhook');
 // Anoofy Inbound Events (Public endpoint with HMAC-SHA256 signature verification)
 Route::post('webhooks/anoofy/events', \App\Http\Controllers\Api\AnoofyInboundController::class)
     ->middleware('throttle:anoofy_inbound')
@@ -191,6 +195,32 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
             Route::post('/{id}/dispatch-courier', [\App\Http\Controllers\Api\WcOrderController::class, 'dispatchCourier']);
             Route::post('/{id}/deliver', [\App\Http\Controllers\Api\WcOrderController::class, 'deliver']);
             Route::post('/{id}/return', [\App\Http\Controllers\Api\WcOrderController::class, 'returnOrder']);
+        });
+
+        // Shopify Integration (ربط ومزامنة متجر شوبيفاي)
+        Route::prefix('shopify')->group(function () {
+            Route::get('authorize-url', [\App\Http\Controllers\Api\ShopifyAuthController::class, 'authorizeUrl']);
+            Route::get('settings', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'getSettings']);
+            Route::post('settings', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'saveSettings']);
+            Route::post('test-connection', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'testConnection']);
+            Route::post('sync-locations', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'syncLocations']);
+            Route::post('location-mappings', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'saveLocationMappings']);
+            Route::post('register-webhooks', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'registerWebhooks']);
+            Route::post('import-products', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'importProducts']);
+            Route::post('products/{product}/push-stock', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'pushProductStock']);
+            Route::post('push-all-stocks', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'pushAllStocks']);
+        });
+
+        // Shopify Orders & Dispatch (طلبات شوبيفاي والشحن والتسليم الميداني)
+        Route::prefix('shopify-orders')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Api\ShopifyOrderController::class, 'index']);
+            Route::post('pull', [\App\Http\Controllers\Api\ShopifyOrderController::class, 'pull']);
+            Route::get('/{id}', [\App\Http\Controllers\Api\ShopifyOrderController::class, 'show']);
+            Route::post('/{id}/confirm', [\App\Http\Controllers\Api\ShopifyOrderController::class, 'confirm']);
+            Route::post('/{id}/dispatch', [\App\Http\Controllers\Api\ShopifyOrderController::class, 'dispatchToMandob']);
+            Route::post('/{id}/dispatch-courier', [\App\Http\Controllers\Api\ShopifyOrderController::class, 'dispatchCourier']);
+            Route::post('/{id}/deliver', [\App\Http\Controllers\Api\ShopifyOrderController::class, 'deliver']);
+            Route::post('/{id}/return', [\App\Http\Controllers\Api\ShopifyOrderController::class, 'returnOrder']);
         });
 
         // Store Settings & Identity (هوية المنشأة والعملة)

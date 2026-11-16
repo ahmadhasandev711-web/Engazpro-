@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Contracts\AnoofySignatureVerifierInterface;
 use App\Contracts\HostResolver;
+use App\Contracts\ShopifyGraphqlClientInterface;
 use App\Contracts\WooCommerceApiClientInterface;
 use App\Models\Branch;
 use App\Models\BranchStock;
@@ -14,12 +15,15 @@ use App\Models\Party;
 use App\Models\Payment;
 use App\Models\PayrollPayout;
 use App\Models\Product;
+use App\Models\ShopifyOrder;
 use App\Models\StockTransfer;
 use App\Models\Treasury;
 use App\Models\User;
 use App\Models\WcOrder;
+use App\Observers\BranchStockShopifyObserver;
 use App\Observers\BranchStockWooCommerceObserver;
 use App\Observers\PartyWooCommerceObserver;
+use App\Observers\ShopifyOrderStockSyncObserver;
 use App\Observers\WcOrderAnoofyStageObserver;
 use App\Observers\WcOrderStockSyncObserver;
 use App\Policies\BranchPolicy;
@@ -54,6 +58,10 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(
             WooCommerceApiClientInterface::class,
             WooCommerceApiClient::class
+        );
+        $this->app->bind(
+            ShopifyGraphqlClientInterface::class,
+            \App\Services\Shopify\ShopifyGraphqlClient::class
         );
         $this->app->bind(
             HostResolver::class,
@@ -109,9 +117,11 @@ class AppServiceProvider extends ServiceProvider
     private function registerObservers(): void
     {
         BranchStock::observe(BranchStockWooCommerceObserver::class);
+        BranchStock::observe(BranchStockShopifyObserver::class);
         Party::observe(PartyWooCommerceObserver::class);
         WcOrder::observe(WcOrderStockSyncObserver::class);
         WcOrder::observe(WcOrderAnoofyStageObserver::class);
+        ShopifyOrder::observe(ShopifyOrderStockSyncObserver::class);
     }
 
     private function registerRateLimiters(): void

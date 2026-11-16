@@ -38,12 +38,14 @@ class Invoice extends Model
         'payment_method',
         'notes',
         'wc_order_id',
+        'shopify_order_id',
         'shipping_amount',
     ];
 
     protected $casts = [
         'courier_party_id' => 'integer',
         'wc_order_id' => 'integer',
+        'shopify_order_id' => 'integer',
         'shipping_amount' => 'decimal:2',
         'type' => InvoiceType::class,
         'payment_method' => PaymentMethod::class,

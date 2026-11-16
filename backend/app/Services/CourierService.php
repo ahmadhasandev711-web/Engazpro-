@@ -13,6 +13,7 @@ use App\Http\Resources\PartyResource;
 use App\Models\Invoice;
 use App\Models\LedgerEntry;
 use App\Models\Party;
+use App\Models\ShopifyOrder;
 use App\Models\User;
 use App\Models\WcOrder;
 use App\Exceptions\PosDomainException;
@@ -282,7 +283,7 @@ class CourierService
     /**
      * تسجيل قيد استحقاق تحصيل الشحنة في دفتر شركة الشحن عند التسليم
      */
-    public function recordDeliveryCollection(User $user, Invoice $invoice, WcOrder $order, float $collectedAmount): void
+    public function recordDeliveryCollection(User $user, Invoice $invoice, WcOrder|ShopifyOrder $order, float $collectedAmount): void
     {
         if (!$order->courier_party_id || $collectedAmount <= 0) {
             return;
@@ -291,7 +292,7 @@ class CourierService
         DB::transaction(fn() => $this->persistDeliveryCollection($user, $invoice, $order, $collectedAmount));
     }
 
-    private function persistDeliveryCollection(User $user, Invoice $invoice, WcOrder $order, float $collectedAmount): void
+    private function persistDeliveryCollection(User $user, Invoice $invoice, WcOrder|ShopifyOrder $order, float $collectedAmount): void
     {
         $courier = Party::where('user_id', $user->getAccountId())
             ->where('type', PartyType::COURIER->value)
@@ -312,7 +313,9 @@ class CourierService
             return;
         }
 
-        $desc = "تحصيل شحنة أوردر #{$order->wc_order_id} - العميل: " . ($order->customer_name ?: 'عميل ووكومرس');
+        $ref = $order instanceof ShopifyOrder ? ($order->shopify_order_number ?: "#{$order->shopify_order_id}") : "#{$order->wc_order_id}";
+        $fallbackCustomer = $order instanceof ShopifyOrder ? 'عميل شوبيفاي' : 'عميل ووكومرس';
+        $desc = "تحصيل شحنة أوردر {$ref} - العميل: " . ($order->customer_name ?: $fallbackCustomer);
         $this->ledgerService->recordEntry($user, $courier, LedgerSource::INVOICE->value, $invoice->id, $invoice->date->format('Y-m-d'), $desc, $collectedAmount, 0.0);
     }
 

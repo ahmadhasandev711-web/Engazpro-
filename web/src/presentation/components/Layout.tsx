@@ -132,6 +132,11 @@ export const Layout: React.FC = () => {
       label: isMandob ? 'طلبات التوصيل والشحن' : 'طلبات المتجر (الشحن)',
       icon: ShoppingBag,
     },
+    {
+      to: '/shopify-orders',
+      label: isMandob ? 'توصيل Shopify' : 'طلبات Shopify',
+      icon: ShoppingBag,
+    },
     { to: '/couriers', label: 'شركات الشحن', icon: Truck },
   ];
 
@@ -169,6 +174,7 @@ export const Layout: React.FC = () => {
   const bottomGroup: NavItemDef[] = [
     ...(canManageSettings ? [{ to: '/settings', label: 'الإعدادات والاشتراك', icon: Settings }] : []),
     ...(isOwnerOrAdmin ? [{ to: '/woocommerce', label: 'ربط WooCommerce', icon: Globe }] : []),
+    ...(isOwnerOrAdmin ? [{ to: '/shopify', label: 'ربط Shopify', icon: ShoppingBag }] : []),
     ...(isOwner || isManager ? [{ to: '/excel', label: 'استيراد وتصدير Excel', icon: FileSpreadsheet }] : []),
     ...(user?.is_admin
       ? [{ to: '/admin-dashboard', label: '👑 لوحة تحكم الإدارة', icon: ShieldCheck }]
