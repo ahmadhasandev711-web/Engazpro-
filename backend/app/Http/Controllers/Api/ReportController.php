@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\CashFlowTransactionsRequest;
 use App\Http\Resources\CashFlowTransactionResource;
 use App\Services\ReportService;
 use Illuminate\Http\JsonResponse;
@@ -80,22 +81,11 @@ class ReportController extends Controller
     /**
      * سجل الحركات التفصيلي لخزينة / قناة دفع محددة
      */
-    public function cashFlowTransactions(Request $request): JsonResponse
+    public function cashFlowTransactions(CashFlowTransactionsRequest $request): JsonResponse
     {
         Gate::authorize('view-cash-flow');
 
-        $validated = $request->validate([
-            'channel' => ['required', 'string'],
-            'from_date' => ['nullable', 'date'],
-            'to_date' => ['nullable', 'date'],
-            'flow_type' => ['nullable', 'string', 'in:ALL,INFLOW,OUTFLOW,all,inflow,outflow'],
-            'movement_category' => ['nullable', 'string'],
-            'search' => ['nullable', 'string', 'max:100'],
-            'cashier_id' => ['nullable', 'integer'],
-            'per_page' => ['nullable', 'integer', 'min:1', 'max:200'],
-            'page' => ['nullable', 'integer', 'min:1'],
-        ]);
-
+        $validated = $request->validated();
         $paginator = $this->reportService->getCashFlowTransactions(
             channel: strtoupper($validated['channel']),
             filters: $validated

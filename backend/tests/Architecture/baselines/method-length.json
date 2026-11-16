@@ -1,12 +1,4 @@
 {
-    "Console/Commands/MakeAdminCommand.php::handle": 33,
-    "Http/Controllers/Api/ReportController.php::cashFlowTransactions": 32,
-    "Http/Middleware/CheckSubscription.php::handle": 40,
-    "Http/Requests/InvoiceRequest.php::rules": 53,
-    "Http/Requests/ProductRequest.php::rules": 46,
-    "Http/Resources/InvoiceResource.php::toArray": 31,
-    "Http/Resources/ProductResource.php::toArray": 102,
-    "Http/Resources/ShiftResource.php::toArray": 41,
     "Services/BarcodeService.php::validateUniqueBarcode": 43,
     "Services/BranchService.php::createBranch": 69,
     "Services/CourierService.php::getCourierManifest": 239,

@@ -37,23 +37,11 @@ class InvoiceRequest extends FormRequest
         return [
             'type' => ['required', 'in:SALE,PURCHASE,SALE_RETURN,PURCHASE_RETURN'],
             'idempotency_key' => ['nullable', 'string', 'max:100'],
-            'branch_id' => [
-                'nullable',
-                $accountId ? Rule::exists('branches', 'id')->where('user_id', $accountId) : 'exists:branches,id',
-            ],
+            'branch_id' => ['nullable', $this->scopedExists($accountId, 'branches')],
             'salesperson_id' => ['nullable', 'exists:users,id'],
-            'party_id' => [
-                'nullable',
-                $accountId ? Rule::exists('parties', 'id')->where('user_id', $accountId) : 'exists:parties,id',
-            ],
-            'courier_party_id' => [
-                'nullable',
-                $accountId ? Rule::exists('parties', 'id')->where('user_id', $accountId) : 'exists:parties,id',
-            ],
-            'parent_invoice_id' => [
-                'nullable',
-                $accountId ? Rule::exists('invoices', 'id')->where('user_id', $accountId) : 'exists:invoices,id',
-            ],
+            'party_id' => ['nullable', $this->scopedExists($accountId, 'parties')],
+            'courier_party_id' => ['nullable', $this->scopedExists($accountId, 'parties')],
+            'parent_invoice_id' => ['nullable', $this->scopedExists($accountId, 'invoices')],
             'date' => ['required', 'date'],
             'discount' => ['nullable', 'numeric', 'min:0'],
             'tax' => ['nullable', 'numeric', 'min:0'],
@@ -65,12 +53,15 @@ class InvoiceRequest extends FormRequest
             'split_payments.*.amount' => ['required_with:split_payments', 'numeric', 'min:0.01'],
             'split_payments.*.notes' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string'],
+            ...$this->itemRules($accountId),
+        ];
+    }
 
+    private function itemRules(?int $accountId): array
+    {
+        return [
             'items' => ['required', 'array', 'min:1'],
-            'items.*.product_id' => [
-                'required',
-                $accountId ? Rule::exists('products', 'id')->where('user_id', $accountId) : 'exists:products,id',
-            ],
+            'items.*.product_id' => ['required', $this->scopedExists($accountId, 'products')],
             'items.*.product_variant_id' => ['nullable', 'exists:product_variants,id'],
             'items.*.product_batch_id' => ['nullable', 'exists:product_batches,id'],
             'items.*.variant_name' => ['nullable', 'string', 'max:255'],
@@ -82,6 +73,11 @@ class InvoiceRequest extends FormRequest
             'items.*.unit_price' => ['required', 'numeric', 'min:0'],
             'items.*.notes' => ['nullable', 'string'],
         ];
+    }
+
+    private function scopedExists(?int $accountId, string $table): mixed
+    {
+        return $accountId ? Rule::exists($table, 'id')->where('user_id', $accountId) : "exists:{$table},id";
     }
 
     public function messages(): array
