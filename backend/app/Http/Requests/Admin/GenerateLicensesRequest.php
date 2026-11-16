@@ -18,6 +18,7 @@ class GenerateLicensesRequest extends FormRequest
             'duration_days' => ['required', 'integer', 'min:1', 'max:3650'],
             'plan' => ['nullable', 'string', 'max:50'],
             'price' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
+            'ecommerce_enabled' => ['nullable', 'boolean'],
             'notes' => ['nullable', 'string', 'max:255'],
         ];
     }

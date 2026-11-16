@@ -3,6 +3,7 @@
 namespace App\Services\Shopify;
 
 use App\Models\ShopifyIntegration;
+use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 
 class ShopifyStockSyncGate
@@ -17,6 +18,10 @@ class ShopifyStockSyncGate
         }
 
         return Cache::remember("shopify_stock_sync_active_{$userId}", 60, function () use ($userId) {
+            if (!User::withoutGlobalScopes()->whereKey($userId)->where('ecommerce_enabled', true)->exists()) {
+                return false;
+            }
+
             return ShopifyIntegration::withoutGlobalScopes()
                 ->where('user_id', $userId)
                 ->where('is_active', true)

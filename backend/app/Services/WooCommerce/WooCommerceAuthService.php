@@ -3,9 +3,11 @@
 namespace App\Services\WooCommerce;
 
 use App\Contracts\WooCommerceApiClientInterface;
+use App\Enums\EcommercePlatform;
 use App\Exceptions\WooCommerceConnectionException;
 use App\Models\User;
 use App\Models\WooCommerceIntegration;
+use App\Services\EcommerceAccessService;
 use App\Services\SettingService;
 use Illuminate\Support\Str;
 
@@ -13,7 +15,8 @@ class WooCommerceAuthService
 {
     public function __construct(
         protected WooCommerceApiClientInterface $apiClient,
-        protected SettingService $settingService
+        protected SettingService $settingService,
+        protected EcommerceAccessService $ecommerceAccess
     ) {}
 
     /**
@@ -42,6 +45,7 @@ class WooCommerceAuthService
     public function buildAuthorizeUrl(User $user, string $storeUrl, ?string $returnUrl = null): string
     {
         $accountId = $user->getAccountId();
+        $this->ecommerceAccess->assertPlatformAllowed($accountId, EcommercePlatform::WOOCOMMERCE);
         $normalizedUrl = rtrim(trim($storeUrl), '/');
         $this->ensureDraftIntegration($accountId, $normalizedUrl);
 
@@ -83,6 +87,8 @@ class WooCommerceAuthService
         if (!$user) {
             throw new WooCommerceConnectionException('حساب المستخدم المطلوب غير موجود في النظام.', 404);
         }
+
+        $this->ecommerceAccess->assertPlatformAllowed($targetAccountId, EcommercePlatform::WOOCOMMERCE);
 
         \Illuminate\Support\Facades\Auth::setUser($user);
         $integration = $this->upsertActiveIntegration($targetAccountId, $payload);

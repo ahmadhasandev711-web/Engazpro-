@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Layout } from './presentation/components/Layout';
 import { ProtectedRoute } from './presentation/components/ProtectedRoute';
@@ -83,6 +83,14 @@ const RootRouteHandler: React.FC = () => {
   return <LandingPage />;
 };
 
+const EcommerceRoute: React.FC = () => {
+  const user = useAuthStore((s) => s.user);
+  if (!user?.ecommerce_enabled) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return <Outlet />;
+};
+
 export const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
@@ -118,9 +126,11 @@ export const App: React.FC = () => {
                   <Route path="/expenses" element={<ExpensesPage />} />
                   <Route path="/ledger/:partyId" element={<LedgerPage />} />
                   
-                  {/* WooCommerce & Shopify Orders (Accessible to Cashier, Supervisor, Mandob, Manager, Owner) */}
-                  <Route path="/wc-orders" element={<WcOrdersPage />} />
-                  <Route path="/shopify-orders" element={<ShopifyOrdersPage />} />
+                  {/* WooCommerce & Shopify Orders (Only when e-commerce addon is enabled) */}
+                  <Route element={<EcommerceRoute />}>
+                    <Route path="/wc-orders" element={<WcOrdersPage />} />
+                    <Route path="/shopify-orders" element={<ShopifyOrdersPage />} />
+                  </Route>
 
                   {/* Treasuries & Shifts Management (Owner, Admin, Manager, Supervisor) */}
                   <Route element={<RoleRoute allowedRoles={[UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPERVISOR]} />}>
@@ -141,11 +151,13 @@ export const App: React.FC = () => {
                     <Route path="/employees" element={<EmployeesPage />} />
                   </Route>
 
-                  {/* Sovereign Owner & Admin Only Routes (Settings, Branches & WooCommerce) */}
+                  {/* Sovereign Owner & Admin Only Routes (Settings, Branches & E-Commerce) */}
                   <Route element={<RoleRoute allowedRoles={[UserRole.OWNER, UserRole.ADMIN]} />}>
                     <Route path="/branches" element={<BranchesPage />} />
-                    <Route path="/woocommerce" element={<WooCommerceSettingsPage />} />
-                    <Route path="/shopify" element={<ShopifySettingsPage />} />
+                    <Route element={<EcommerceRoute />}>
+                      <Route path="/woocommerce" element={<WooCommerceSettingsPage />} />
+                      <Route path="/shopify" element={<ShopifySettingsPage />} />
+                    </Route>
                     <Route path="/settings" element={<SettingsPage />} />
                   </Route>
                 </Route>

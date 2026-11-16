@@ -7,6 +7,7 @@ import {
   LedgerSource,
   SubscriptionStatus,
   SubscriptionPlan,
+  EcommercePlatform,
   UserRole,
   UserStatus,
   ProductType,
@@ -40,6 +41,8 @@ export interface User extends BaseEntity {
   branch?: Branch | null;
   role?: UserRole;
   status?: UserStatus;
+  ecommerce_enabled?: boolean;
+  active_ecommerce_platform?: EcommercePlatform | null;
   permissions?: string[];
   subscription?: Subscription | null;
   store_identity?: StoreIdentity | null;
@@ -495,6 +498,7 @@ export interface LicenseKey extends BaseEntity {
   duration_days: number;
   plan?: string;
   price?: number | null;
+  ecommerce_enabled?: boolean;
   is_used: boolean;
   is_revoked?: boolean;
   revoked_at?: string | null;

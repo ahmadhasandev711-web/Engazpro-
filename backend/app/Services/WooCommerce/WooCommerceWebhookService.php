@@ -49,8 +49,8 @@ class WooCommerceWebhookService
         }
 
         $user = User::withoutGlobalScopes()->find($userId);
-        if (!$user) {
-            throw new WooCommerceConnectionException('Store owner not found', 404);
+        if (!$user || !$user->ecommerce_enabled) {
+            throw new WooCommerceConnectionException('Store owner not found or e-commerce addon disabled', 403);
         }
 
         return [$integration, $user];

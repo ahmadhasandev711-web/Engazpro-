@@ -72,6 +72,11 @@ var SubscriptionPlan = /* @__PURE__ */ ((SubscriptionPlan2) => {
   SubscriptionPlan2["BASIC"] = "BASIC";
   return SubscriptionPlan2;
 })(SubscriptionPlan || {});
+var EcommercePlatform = /* @__PURE__ */ ((EcommercePlatform2) => {
+  EcommercePlatform2["WOOCOMMERCE"] = "woocommerce";
+  EcommercePlatform2["SHOPIFY"] = "shopify";
+  return EcommercePlatform2;
+})(EcommercePlatform || {});
 var UserRole = /* @__PURE__ */ ((UserRole2) => {
   UserRole2["OWNER"] = "OWNER";
   UserRole2["ADMIN"] = "ADMIN";
@@ -559,6 +564,7 @@ export {
   BranchType,
   CategorySchema,
   CommissionType,
+  EcommercePlatform,
   EmployeeAdjustmentType,
   EmployeeSchema,
   ExpenseSchema,

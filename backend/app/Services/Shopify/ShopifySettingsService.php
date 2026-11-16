@@ -3,6 +3,7 @@
 namespace App\Services\Shopify;
 
 use App\Contracts\ShopifyGraphqlClientInterface;
+use App\Enums\EcommercePlatform;
 use App\Enums\ShopifyAuthMode;
 use App\Exceptions\ShopifyConnectionException;
 use App\Jobs\ImportShopifyProductsPageJob;
@@ -12,6 +13,7 @@ use App\Models\Product;
 use App\Models\ShopifyIntegration;
 use App\Models\ShopifyLocationMapping;
 use App\Models\User;
+use App\Services\EcommerceAccessService;
 use App\Support\ShopifyGid;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Facades\DB;
@@ -32,7 +34,8 @@ class ShopifySettingsService
         protected ShopifyGraphqlClientInterface $graphqlClient,
         protected ShopifyAuthService $authService,
         protected ShopifyProductImportService $importService,
-        protected ShopifyBulkStockPushService $bulkStockPushService
+        protected ShopifyBulkStockPushService $bulkStockPushService,
+        protected EcommerceAccessService $ecommerceAccess
     ) {}
 
     public function findForAccount(int $accountId, bool $withRelations = false): ?ShopifyIntegration
@@ -57,6 +60,10 @@ class ShopifySettingsService
 
     public function saveSettings(int $accountId, array $validated): ShopifyIntegration
     {
+        if ((bool) ($validated['is_active'] ?? true)) {
+            $this->ecommerceAccess->assertPlatformAllowed($accountId, EcommercePlatform::SHOPIFY);
+        }
+
         $integration = ShopifyIntegration::firstOrNew(['user_id' => $accountId]);
         $integration->shop_domain = ShopifyGid::normalizeShopDomain((string) $validated['shop_domain']);
         $integration->auth_mode = $validated['auth_mode'] ?? ($integration->auth_mode?->value ?? ShopifyAuthMode::ACCESS_TOKEN->value);

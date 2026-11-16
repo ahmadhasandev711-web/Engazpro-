@@ -56,6 +56,11 @@ export enum SubscriptionPlan {
   BASIC = 'BASIC',
 }
 
+export enum EcommercePlatform {
+  WOOCOMMERCE = 'woocommerce',
+  SHOPIFY = 'shopify',
+}
+
 export enum UserRole {
   OWNER = 'OWNER',
   ADMIN = 'ADMIN',

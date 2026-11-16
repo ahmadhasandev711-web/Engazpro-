@@ -37,7 +37,7 @@ class StockAdjustmentAndMovementsTest extends TestCase
     {
         parent::setUp();
 
-        $this->owner = User::factory()->create(['role' => UserRole::OWNER->value]);
+        $this->owner = User::factory()->create(['role' => UserRole::OWNER->value, 'ecommerce_enabled' => true]);
         Subscription::create([
             'user_id' => $this->owner->id,
             'start_date' => now()->toDateString(),

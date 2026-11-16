@@ -15,6 +15,7 @@ class ActivationCode extends Model
         'duration_days',
         'plan',
         'price',
+        'ecommerce_enabled',
         'is_used',
         'is_revoked',
         'used_by_user_id',
@@ -26,6 +27,7 @@ class ActivationCode extends Model
 
     protected $casts = [
         'price' => 'decimal:2',
+        'ecommerce_enabled' => 'boolean',
         'is_used' => 'boolean',
         'is_revoked' => 'boolean',
         'used_at' => 'datetime',

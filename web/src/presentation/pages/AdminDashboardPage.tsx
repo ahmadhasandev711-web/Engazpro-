@@ -25,6 +25,7 @@ import {
   useForceLogoutStore,
   useRevokeLicense,
   useToggleUserStatus,
+  useToggleUserEcommerce,
   useResetUserPassword,
 } from '../../hooks/useAdmin';
 import { AdminKPICards } from '../components/admin/AdminKPICards';
@@ -86,9 +87,16 @@ export const AdminDashboardPage: React.FC = () => {
   const forceLogoutMutation = useForceLogoutStore();
   const revokeLicenseMutation = useRevokeLicense();
   const toggleStatusMutation = useToggleUserStatus();
+  const toggleEcommerceMutation = useToggleUserEcommerce();
   const resetPasswordMutation = useResetUserPassword();
 
-  const handleGenerate = (payload: { count: number; duration_days: number; notes: string; price?: number | null }) => {
+  const handleGenerate = (payload: {
+    count: number;
+    duration_days: number;
+    notes: string;
+    price?: number | null;
+    ecommerce_enabled?: boolean;
+  }) => {
     generateMutation.mutate(payload, {
       onSuccess: () => toast.success('تم توليد أكواد التفعيل بنجاح!'),
       onError: (err: any) => toast.error(err.response?.data?.message || 'حدث خطأ أثناء توليد الأكواد'),
@@ -146,8 +154,18 @@ export const AdminDashboardPage: React.FC = () => {
     });
   };
 
+  const handleToggleEcommerce = (user: User) => {
+    toggleEcommerceMutation.mutate(user.id, {
+      onSuccess: (data: any) => toast.success(data.message || 'تم تحديث صلاحية المتجر الإلكتروني بنجاح.'),
+      onError: (err: any) => toast.error(err.response?.data?.message || 'تعذر تعديل صلاحية المتجر الإلكتروني'),
+    });
+  };
+
   const isAnyUserMutationPending =
-    toggleStatusMutation.isPending || revokeSubscriptionMutation.isPending || forceLogoutMutation.isPending;
+    toggleStatusMutation.isPending ||
+    toggleEcommerceMutation.isPending ||
+    revokeSubscriptionMutation.isPending ||
+    forceLogoutMutation.isPending;
 
   return (
     <div className="min-h-screen bg-canvas text-ink pb-16 transition-colors" dir="rtl">
@@ -298,6 +316,7 @@ export const AdminDashboardPage: React.FC = () => {
             onSelectUserForResetPassword={setSelectedUserForResetPassword}
             onInspectStore={(uid) => setInspectedStoreId(uid)}
             onToggleStatus={handleToggleStatus}
+            onToggleEcommerce={handleToggleEcommerce}
             onRevokeSubscription={handleRevokeSubscription}
             onForceLogout={handleForceLogout}
             isMutating={isAnyUserMutationPending}

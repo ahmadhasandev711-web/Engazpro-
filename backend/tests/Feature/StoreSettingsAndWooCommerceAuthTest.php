@@ -24,6 +24,7 @@ class StoreSettingsAndWooCommerceAuthTest extends TestCase
             'password' => bcrypt('password'),
             'role' => 'OWNER',
             'status' => 'ACTIVE',
+            'ecommerce_enabled' => true,
         ]);
 
         Subscription::create([

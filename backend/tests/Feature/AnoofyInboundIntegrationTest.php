@@ -33,7 +33,7 @@ class AnoofyInboundIntegrationTest extends TestCase
     {
         parent::setUp();
 
-        $this->owner = User::factory()->create(['role' => UserRole::OWNER]);
+        $this->owner = User::factory()->create(['role' => UserRole::OWNER, 'ecommerce_enabled' => true]);
         \App\Models\Subscription::create([
             'user_id' => $this->owner->id,
             'start_date' => now()->toDateString(),

@@ -1,5 +1,5 @@
 import { useAuthStore } from '../data/store/useAuthStore';
-import { UserRole } from '@pos-mandob/shared';
+import { EcommercePlatform, UserRole } from '@pos-mandob/shared';
 
 export const usePermissions = () => {
   const user = useAuthStore((state) => state.user);
@@ -11,6 +11,8 @@ export const usePermissions = () => {
   const isAdmin = user?.role === UserRole.ADMIN;
   const isOwner = !user?.owner_id && (user?.role === UserRole.OWNER || !user?.role);
   const isOwnerOrAdmin = isOwner || isAdmin;
+  const hasEcommerceAddon = Boolean(user?.ecommerce_enabled);
+  const activeEcommercePlatform = user?.active_ecommerce_platform ?? null;
 
   return {
     user,
@@ -56,7 +58,12 @@ export const usePermissions = () => {
     canManageStockOperations: isOwnerOrAdmin || isManager,
     canManageEmployees: isOwnerOrAdmin || isManager,
     canManageBranches: isOwnerOrAdmin,
-    canManageWooCommerce: isOwnerOrAdmin,
+    canManageWooCommerce: isOwnerOrAdmin && hasEcommerceAddon,
+    hasEcommerceAddon,
+    activeEcommercePlatform,
+    canManageEcommerceSettings: isOwnerOrAdmin && hasEcommerceAddon,
+    canViewWooOrders: hasEcommerceAddon && activeEcommercePlatform === EcommercePlatform.WOOCOMMERCE,
+    canViewShopifyOrders: hasEcommerceAddon && activeEcommercePlatform === EcommercePlatform.SHOPIFY,
     canManageSettings: isOwnerOrAdmin,
   };
 };

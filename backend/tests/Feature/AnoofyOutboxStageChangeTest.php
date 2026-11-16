@@ -34,7 +34,7 @@ class AnoofyOutboxStageChangeTest extends TestCase
         parent::setUp();
         $this->setUpSimulatesHttpContext();
 
-        $this->owner = User::factory()->create(['role' => UserRole::OWNER]);
+        $this->owner = User::factory()->create(['role' => UserRole::OWNER, 'ecommerce_enabled' => true]);
 
         Subscription::create([
             'user_id' => $this->owner->id,

@@ -26,7 +26,7 @@ class WooCommerceStockReservationTest extends TestCase
     {
         parent::setUp();
 
-        $this->owner = User::factory()->create(['role' => 'OWNER']);
+        $this->owner = User::factory()->create(['role' => 'OWNER', 'ecommerce_enabled' => true]);
         $this->mainBranch = Branch::create([
             'user_id' => $this->owner->id,
             'name' => 'الفرع الرئيسي',

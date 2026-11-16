@@ -25,17 +25,27 @@ class UserResource extends JsonResource
             'owner_id' => $this->owner_id,
             'role' => $this->role instanceof \BackedEnum ? $this->role->value : ($this->role ?? UserRole::OWNER->value),
             'branch_id' => $this->branch_id,
-            'branch' => $this->branch ? [
-                'id' => $this->branch->id,
-                'name' => $this->branch->name,
-                'code' => $this->branch->code,
-                'type' => $this->branch->type instanceof \BackedEnum ? $this->branch->type->value : $this->branch->type,
-            ] : null,
+            'branch' => $this->branch ? ['id' => $this->branch->id, 'name' => $this->branch->name, 'code' => $this->branch->code, 'type' => $this->branch->type instanceof \BackedEnum ? $this->branch->type->value : $this->branch->type] : null,
             'status' => $this->status instanceof \BackedEnum ? $this->status->value : ($this->status ?? UserStatus::ACTIVE->value),
+            ...$this->resolveEcommerceFlags(),
             'permissions' => $this->permissions ?? [],
             'subscription' => $effectiveSubscription ? new SubscriptionResource($effectiveSubscription) : null,
             'store_identity' => app(\App\Services\SettingService::class)->getStoreIdentity($this->resource),
             'created_at' => $this->created_at?->toIso8601String(),
+        ];
+    }
+
+    private function resolveEcommerceFlags(): array
+    {
+        $owner = $this->owner_id ? $this->owner : $this->resource;
+        $enabled = (bool) ($owner?->ecommerce_enabled ?? false);
+        $activePlatform = $enabled
+            ? app(\App\Services\EcommerceAccessService::class)->activePlatformForAccount($this->getAccountId())?->value
+            : null;
+
+        return [
+            'ecommerce_enabled' => $enabled,
+            'active_ecommerce_platform' => $activePlatform,
         ];
     }
 }

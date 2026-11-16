@@ -20,7 +20,7 @@ class WooCommerceOrderDateAndPhoneTest extends TestCase
 
     public function test_incoming_order_extracts_order_date_and_falls_back_from_empty_shipping_phone(): void
     {
-        $user = User::factory()->create(['role' => UserRole::OWNER->value]);
+        $user = User::factory()->create(['role' => UserRole::OWNER->value, 'ecommerce_enabled' => true]);
         \App\Models\Subscription::create([
             'user_id' => $user->id,
             'start_date' => now()->toDateString(),
@@ -102,7 +102,7 @@ class WooCommerceOrderDateAndPhoneTest extends TestCase
 
     public function test_order_date_updated_unconditionally_and_items_enriched_with_images_and_attributes(): void
     {
-        $user = User::factory()->create(['role' => UserRole::OWNER->value]);
+        $user = User::factory()->create(['role' => UserRole::OWNER->value, 'ecommerce_enabled' => true]);
         \App\Models\Subscription::create([
             'user_id' => $user->id,
             'start_date' => now()->toDateString(),

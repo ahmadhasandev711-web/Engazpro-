@@ -2,6 +2,7 @@
 
 namespace App\Services\WooCommerce;
 
+use App\Models\User;
 use App\Models\WooCommerceIntegration;
 use Illuminate\Support\Facades\Cache;
 
@@ -12,6 +13,10 @@ class WooStockSyncGate
         $cacheKey = "wc_stock_sync_active_{$userId}";
 
         return Cache::remember($cacheKey, 60, function () use ($userId) {
+            if (!User::withoutGlobalScopes()->whereKey($userId)->where('ecommerce_enabled', true)->exists()) {
+                return false;
+            }
+
             return WooCommerceIntegration::withoutGlobalScopes()
                 ->where('user_id', $userId)
                 ->where('is_active', true)
