@@ -56,7 +56,7 @@ class ShopifyAuthAndSettingsTest extends TestCase
     public function test_owner_can_save_access_token_settings_and_test_connection_with_locations_sync(): void
     {
         Http::fake([
-            'https://my-fashion.myshopify.com/admin/api/2026-04/graphql.json' => Http::sequence()
+            'https://my-fashion.myshopify.com/admin/api/2026-10/graphql.json' => Http::sequence()
                 ->push(['data' => ['locations' => ['edges' => [
                     ['node' => ['id' => 'gid://shopify/Location/1001', 'name' => 'Main Warehouse', 'isActive' => true]],
                     ['node' => ['id' => 'gid://shopify/Location/1002', 'name' => 'Retail Store', 'isActive' => true]],
@@ -106,7 +106,7 @@ class ShopifyAuthAndSettingsTest extends TestCase
                 'access_token' => 'shpat_generated_token_xyz',
                 'expires_in' => 86399,
             ], 200),
-            'https://new-shop.myshopify.com/admin/api/2026-04/graphql.json' => Http::response([
+            'https://new-shop.myshopify.com/admin/api/2026-10/graphql.json' => Http::response([
                 'data' => ['shop' => ['name' => 'New Shop', 'currencyCode' => 'EGP', 'myshopifyDomain' => 'new-shop.myshopify.com']],
             ], 200),
         ]);
@@ -135,7 +135,7 @@ class ShopifyAuthAndSettingsTest extends TestCase
 
         Http::fake([
             'https://oauth-shop.myshopify.com/admin/oauth/access_token' => Http::response(['access_token' => 'shpat_oauth_999'], 200),
-            'https://oauth-shop.myshopify.com/admin/api/2026-04/graphql.json' => Http::response(['data' => ['locations' => ['edges' => []]]], 200),
+            'https://oauth-shop.myshopify.com/admin/api/2026-10/graphql.json' => Http::response(['data' => ['locations' => ['edges' => []]]], 200),
         ]);
 
         $authUrlRes = $this->actingAs($this->owner)->getJson('/api/shopify/authorize-url?shop_domain=oauth-shop.myshopify.com');

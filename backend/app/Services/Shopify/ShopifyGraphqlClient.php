@@ -127,7 +127,7 @@ class ShopifyGraphqlClient implements ShopifyGraphqlClientInterface
 
     private function sendGraphqlRequest(ShopifyIntegration $integration, string $token, string $query, array $variables)
     {
-        $version = (string) config('services.shopify.api_version', '2026-04');
+        $version = (string) config('services.shopify.api_version', '2026-10');
         $url = "https://{$integration->shop_domain}/admin/api/{$version}/graphql.json";
 
         return Http::timeout(30)
