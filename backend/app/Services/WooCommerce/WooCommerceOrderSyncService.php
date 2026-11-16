@@ -174,148 +174,123 @@ class WooCommerceOrderSyncService
     public function deliverOrder(User $user, WcOrder $order, array $deliveryData = []): Invoice
     {
         $accountId = $user->getAccountId();
-
-        $invoice = DB::transaction(function () use ($user, $accountId, $order, $deliveryData) {
-            $lockedOrder = WcOrder::where('user_id', $accountId)
-                ->lockForUpdate()
-                ->findOrFail($order->id);
-
-            if ($lockedOrder->status === WcOrderStatus::DELIVERED && $lockedOrder->invoice_id) {
-                return Invoice::findOrFail($lockedOrder->invoice_id);
-            }
-
-            if (!$lockedOrder->status->canTransitionTo(WcOrderStatus::DELIVERED)) {
-                throw new PosDomainException(
-                    message: "لا يمكن تسليم الطلب وهو بحالة '{$lockedOrder->status->label()}'.",
-                    errorCode: 'INVALID_ORDER_STATUS_TRANSITION',
-                    statusCode: 422
-                );
-            }
-
-            // تسوية تحويل مخزون سيارة المندوب إن وجد
-            $transfer = $this->vanTransferService->settleForDelivery($user, $lockedOrder);
-            $executingBranchId = $transfer?->to_branch_id ?? $lockedOrder->mandob?->branch_id ?? $lockedOrder->branch_id;
-
-            // Map items for InvoiceService
-            $invoiceItems = [];
-            foreach ($lockedOrder->items_snapshot ?? [] as $item) {
-                $wcProductId = (int) ($item['product_id'] ?? 0);
-                $wcVarId = !empty($item['variation_id']) ? (int) $item['variation_id'] : null;
-                $qty = Quantity::of($item['quantity'] ?? 1)->toFloat();
-                if (isset($item['price'])) {
-                    $unitPrice = Money::of($item['price'])->getAmount();
-                } elseif (isset($item['subtotal'])) {
-                    $unitPrice = Money::of($item['subtotal'])->divide(max(1, $qty))->getAmount();
-                } else {
-                    $unitPrice = Money::of($item['total'] ?? 0)->divide(max(1, $qty))->getAmount();
-                }
-
-                $product = Product::where('user_id', $accountId)->where('wc_product_id', $wcProductId)->first();
-                if (!$product && !empty($item['product_id'])) {
-                    $product = Product::where('user_id', $accountId)->find($item['product_id']);
-                }
-                $variant = $product && $wcVarId ? $product->variants()->where('wc_variation_id', $wcVarId)->first() : null;
-
-                if ($product) {
-                    $invoiceItems[] = [
-                        'product_id' => $product->id,
-                        'product_variant_id' => $variant?->id,
-                        'quantity' => $qty,
-                        'unit_price' => $unitPrice,
-                        'variant_name' => $variant?->name,
-                    ];
-                }
-            }
-
-            $isPaidOnline = $lockedOrder->payment_status === WcPaymentStatus::PAID_ONLINE;
-            $orderTotal = Money::of($lockedOrder->total);
-            $rawCollected = isset($deliveryData['collected_amount'])
-                ? Money::of($deliveryData['collected_amount'])
-                : $orderTotal;
-
-            if ($rawCollected->isGreaterThan($orderTotal)) {
-                throw new PosDomainException("المبلغ المحصل ({$rawCollected->getAmount()}) لا يمكن أن يتجاوز إجمالي الطلب ({$orderTotal->getAmount()}).", 'COLLECTED_AMOUNT_EXCEEDS_TOTAL');
-            }
-
-            if ($lockedOrder->courier_party_id) {
-                if ($isPaidOnline || $rawCollected->isZeroOrNegative()) {
-                    $paymentMethod = $deliveryData['payment_method'] ?? PaymentMethod::TRANSFER->value;
-                    $actualCollected = Money::zero();
-                    $paidAmount = $orderTotal;
-                } else {
-                    $paymentMethod = PaymentMethod::COURIER_COD->value;
-                    $actualCollected = $rawCollected;
-                    $paidAmount = $rawCollected;
-                }
-            } else {
-                $paymentMethod = $deliveryData['payment_method'] ?? ($isPaidOnline ? PaymentMethod::TRANSFER->value : PaymentMethod::CASH->value);
-                $actualCollected = $rawCollected;
-                $paidAmount = $rawCollected;
-            }
-
-            $shippingInfo = '';
-            if ($lockedOrder->courier_name) {
-                $shippingInfo .= " [شركة شحن: {$lockedOrder->courier_name}";
-                if ($lockedOrder->tracking_number) {
-                    $shippingInfo .= " - بوليصة: {$lockedOrder->tracking_number}";
-                }
-                $shippingInfo .= ']';
-            } elseif ($lockedOrder->mandob) {
-                $shippingInfo .= " [مندوب: {$lockedOrder->mandob->name}]";
-            }
-
-            $mandob = $lockedOrder->mandob;
-            $mandobTreasury = $mandob?->assignedTreasury;
-            $mandobShift = $mandob ? $this->shiftService->getActiveShift($mandob) : null;
-
-            $invoiceData = [
-                'type' => InvoiceType::SALE->value,
-                'party_id' => $lockedOrder->party_id,
-                'courier_party_id' => $lockedOrder->courier_party_id,
-                'branch_id' => $executingBranchId,
-                'items' => $invoiceItems,
-                'discount' => $lockedOrder->discount_total,
-                'shipping_amount' => $lockedOrder->shipping_cost,
-                'paid_amount' => $paidAmount->getAmount(),
-                'payment_method' => $paymentMethod,
-                'wc_order_id' => $lockedOrder->wc_order_id,
-                'notes' => "أوردر ووكومرس #{$lockedOrder->wc_order_id}{$shippingInfo}" . ($lockedOrder->notes ? " | {$lockedOrder->notes}" : ''),
-            ];
-
-            // إذا كان الطلب مسنداً لمندوب وكان التحصيل نقداً، تُنسب الفاتورة والخزينة لعهدة المندوب
-            if ($mandob && $paymentMethod === PaymentMethod::CASH->value) {
-                $invoiceData['created_by'] = $mandob->id;
-                if ($mandobTreasury) {
-                    $invoiceData['treasury_id'] = $mandobTreasury->id;
-                }
-                if ($mandobShift) {
-                    $invoiceData['shift_id'] = $mandobShift->id;
-                }
-            }
-
-            $invoice = $this->invoiceService->createInvoice($user, $invoiceData);
-
-            if ($lockedOrder->courier_party_id && $actualCollected->isPositive()) {
-                $this->courierService->recordDeliveryCollection($user, $invoice, $lockedOrder, $actualCollected->getAmount());
-            }
-
-            $lockedOrder->update([
-                'invoice_id' => $invoice->id,
-                'status' => WcOrderStatus::DELIVERED,
-                'payment_status' => WcPaymentStatus::COLLECTED,
-            ]);
-
-            return $invoice;
-        });
-
-        // إشعار WooCommerce خارج كتلة Transaction عبر Job غير متزامن
-        try {
-            SyncOrderStatusToWooCommerceJob::dispatch($accountId, $order->wc_order_id, 'completed')->afterCommit();
-        } catch (\Throwable $e) {
-            Log::warning("Failed to dispatch WooCommerce status sync for order #{$order->wc_order_id}: " . $e->getMessage());
-        }
+        $invoice = DB::transaction(fn () => $this->deliverOrderInsideTransaction($user, $accountId, $order, $deliveryData));
+        $this->dispatchOrderStatusSync($accountId, $order->wc_order_id, 'completed');
 
         return $invoice;
+    }
+
+    private function deliverOrderInsideTransaction(User $user, int $accountId, WcOrder $order, array $deliveryData): Invoice
+    {
+        $lockedOrder = WcOrder::where('user_id', $accountId)->lockForUpdate()->findOrFail($order->id);
+        if ($lockedOrder->status === WcOrderStatus::DELIVERED && $lockedOrder->invoice_id) {
+            return Invoice::findOrFail($lockedOrder->invoice_id);
+        }
+        if (!$lockedOrder->status->canTransitionTo(WcOrderStatus::DELIVERED)) {
+            throw new PosDomainException("لا يمكن تسليم الطلب وهو بحالة '{$lockedOrder->status->label()}'.", 'INVALID_ORDER_STATUS_TRANSITION', 422);
+        }
+
+        $transfer = $this->vanTransferService->settleForDelivery($user, $lockedOrder);
+        $executingBranchId = $transfer?->to_branch_id ?? $lockedOrder->mandob?->branch_id ?? $lockedOrder->branch_id;
+        $invoiceItems = $this->resolveDeliveryItemsPayload($accountId, $lockedOrder->items_snapshot ?? []);
+        $settlement = $this->resolveDeliveryPaymentSettlement($lockedOrder, $deliveryData);
+        $invoiceData = $this->buildDeliveryInvoicePayload($lockedOrder, $invoiceItems, $executingBranchId, $settlement);
+        $invoice = $this->invoiceService->createInvoice($user, $invoiceData);
+
+        if ($lockedOrder->courier_party_id && $settlement['actual_collected']->isPositive()) {
+            $this->courierService->recordDeliveryCollection($user, $invoice, $lockedOrder, $settlement['actual_collected']->getAmount());
+        }
+
+        $lockedOrder->update(['invoice_id' => $invoice->id, 'status' => WcOrderStatus::DELIVERED, 'payment_status' => WcPaymentStatus::COLLECTED]);
+
+        return $invoice;
+    }
+
+    private function resolveDeliveryItemsPayload(int $accountId, array $itemsSnapshot): array
+    {
+        $invoiceItems = [];
+        foreach ($itemsSnapshot as $item) {
+            $qty = Quantity::of($item['quantity'] ?? 1)->toFloat();
+            $unitPrice = match (true) {
+                isset($item['price']) => Money::of($item['price'])->getAmount(),
+                isset($item['subtotal']) => Money::of($item['subtotal'])->divide(max(1, $qty))->getAmount(),
+                default => Money::of($item['total'] ?? 0)->divide(max(1, $qty))->getAmount(),
+            };
+
+            $product = Product::where('user_id', $accountId)->where('wc_product_id', (int) ($item['product_id'] ?? 0))->first()
+                ?? (!empty($item['product_id']) ? Product::where('user_id', $accountId)->find($item['product_id']) : null);
+            $variant = ($product && !empty($item['variation_id']))
+                ? $product->variants()->where('wc_variation_id', (int) $item['variation_id'])->first()
+                : null;
+
+            if ($product) {
+                $invoiceItems[] = [
+                    'product_id' => $product->id, 'product_variant_id' => $variant?->id,
+                    'quantity' => $qty, 'unit_price' => $unitPrice, 'variant_name' => $variant?->name,
+                ];
+            }
+        }
+
+        return $invoiceItems;
+    }
+
+    private function resolveDeliveryPaymentSettlement(WcOrder $lockedOrder, array $deliveryData): array
+    {
+        $isPaidOnline = $lockedOrder->payment_status === WcPaymentStatus::PAID_ONLINE;
+        $orderTotal = Money::of($lockedOrder->total);
+        $rawCollected = isset($deliveryData['collected_amount']) ? Money::of($deliveryData['collected_amount']) : $orderTotal;
+
+        if ($rawCollected->isGreaterThan($orderTotal)) {
+            throw new PosDomainException("المبلغ المحصل ({$rawCollected->getAmount()}) لا يمكن أن يتجاوز إجمالي الطلب ({$orderTotal->getAmount()}).", 'COLLECTED_AMOUNT_EXCEEDS_TOTAL');
+        }
+
+        if ($lockedOrder->courier_party_id) {
+            if ($isPaidOnline || $rawCollected->isZeroOrNegative()) {
+                return ['method' => $deliveryData['payment_method'] ?? PaymentMethod::TRANSFER->value, 'actual_collected' => Money::zero(), 'paid_amount' => $orderTotal];
+            }
+
+            return ['method' => PaymentMethod::COURIER_COD->value, 'actual_collected' => $rawCollected, 'paid_amount' => $rawCollected];
+        }
+
+        $method = $deliveryData['payment_method'] ?? ($isPaidOnline ? PaymentMethod::TRANSFER->value : PaymentMethod::CASH->value);
+
+        return ['method' => $method, 'actual_collected' => $rawCollected, 'paid_amount' => $rawCollected];
+    }
+
+    private function buildDeliveryInvoicePayload(WcOrder $lockedOrder, array $invoiceItems, ?int $executingBranchId, array $settlement): array
+    {
+        $shippingInfo = $this->formatDeliveryShippingTag($lockedOrder);
+        $mandob = $lockedOrder->mandob;
+        $invoiceData = [
+            'type' => InvoiceType::SALE->value, 'party_id' => $lockedOrder->party_id,
+            'courier_party_id' => $lockedOrder->courier_party_id, 'branch_id' => $executingBranchId,
+            'items' => $invoiceItems, 'discount' => $lockedOrder->discount_total, 'shipping_amount' => $lockedOrder->shipping_cost,
+            'paid_amount' => $settlement['paid_amount']->getAmount(), 'payment_method' => $settlement['method'],
+            'wc_order_id' => $lockedOrder->wc_order_id,
+            'notes' => "أوردر ووكومرس #{$lockedOrder->wc_order_id}{$shippingInfo}" . ($lockedOrder->notes ? " | {$lockedOrder->notes}" : ''),
+        ];
+
+        if ($mandob && $settlement['method'] === PaymentMethod::CASH->value) {
+            $invoiceData['created_by'] = $mandob->id;
+            if ($treasury = $mandob->assignedTreasury) {
+                $invoiceData['treasury_id'] = $treasury->id;
+            }
+            if ($shift = $this->shiftService->getActiveShift($mandob)) {
+                $invoiceData['shift_id'] = $shift->id;
+            }
+        }
+
+        return $invoiceData;
+    }
+
+    private function formatDeliveryShippingTag(WcOrder $lockedOrder): string
+    {
+        if ($lockedOrder->courier_name) {
+            $tracking = $lockedOrder->tracking_number ? " - بوليصة: {$lockedOrder->tracking_number}" : '';
+            return " [شركة شحن: {$lockedOrder->courier_name}{$tracking}]";
+        }
+
+        return $lockedOrder->mandob ? " [مندوب: {$lockedOrder->mandob->name}]" : '';
     }
 
     /**

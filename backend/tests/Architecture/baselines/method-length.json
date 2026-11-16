@@ -1,7 +1,4 @@
 {
     "Services/CourierService.php::getCourierManifest": 239,
-    "Services/InvoiceService.php::doCreateInvoice": 519,
-    "Services/WooCommerce/WooCommerceOrderSyncService.php::deliverOrder": 146,
-    "Services/WooCommerce/WooCommerceProductImportService.php::syncSingleProduct": 147,
-    "Services/WooCommerce/WooCommerceProductImportService.php::syncVariations": 91
+    "Services/InvoiceService.php::doCreateInvoice": 519
 }

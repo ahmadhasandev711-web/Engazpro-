@@ -92,150 +92,145 @@ class WooCommerceProductImportService
      */
     protected function syncSingleProduct(User $user, WooCommerceIntegration $integration, array $wcProduct, bool $importStock = false): string
     {
-        $accountId = $user->getAccountId();
-        $wcId = (int) $wcProduct['id'];
-        $sku = !empty($wcProduct['sku']) ? trim($wcProduct['sku']) : null;
         $name = trim($wcProduct['name'] ?? '');
-
-        // Skip WooCommerce temporary import placeholders or empty names
         if (empty($name) || str_starts_with($name, 'Import placeholder for')) {
             return 'skipped';
         }
 
-        $regularPrice = isset($wcProduct['regular_price']) && is_numeric($wcProduct['regular_price']) ? Money::of($wcProduct['regular_price'])->getAmount() : null;
-        $salePrice = $this->resolveSellingPrice($wcProduct, 0);
-        $isVariable = ($wcProduct['type'] ?? '') === 'variable';
-        $imageUrl = !empty($wcProduct['images'][0]['src']) ? (string) $wcProduct['images'][0]['src'] : null;
-
-        // Resolve category from WooCommerce
-        $categoryId = null;
-        if (!empty($wcProduct['categories']) && is_array($wcProduct['categories'])) {
-            $rawCat = $wcProduct['categories'][0]['name'] ?? '';
-            $firstCat = html_entity_decode(trim($rawCat), ENT_QUOTES | ENT_HTML5, 'UTF-8');
-            if (!empty($firstCat)) {
-                $category = \App\Models\Category::firstOrCreate([
-                    'user_id' => $accountId,
-                    'name' => $firstCat,
-                ]);
-                $categoryId = $category->id;
-            }
-        }
-
-        // 1. Search for existing product by wc_product_id or SKU
-        $product = Product::where('user_id', $accountId)
-            ->where(function ($query) use ($wcId, $sku) {
-                $query->where('wc_product_id', $wcId);
-                if ($sku) {
-                    $query->orWhere('barcode', $sku)->orWhere('code', $sku);
-                }
-            })
-            ->first();
+        $accountId = $user->getAccountId();
+        $meta = $this->extractWcProductMetadata($accountId, $wcProduct, $name);
+        $product = $this->findExistingWcProduct($accountId, $meta['wc_id'], $meta['sku']);
 
         if ($product) {
-            // Update existing product
-            $updateData = [
-                'name' => $name,
-                'wc_product_id' => $wcId,
-            ];
-            if ($regularPrice !== null) {
-                $updateData['regular_price'] = $regularPrice;
-            }
-            if ($salePrice > 0) {
-                $updateData['sale_price'] = $salePrice;
-            }
-            if ($sku && empty($product->barcode)) {
-                $updateData['barcode'] = $sku;
-            }
-            if ($categoryId) {
-                $updateData['category_id'] = $categoryId;
-            }
-            if ($imageUrl) {
-                $updateData['image_url'] = $imageUrl;
-            }
-
-            $product->update($updateData);
-
-            if ($importStock && !$isVariable && Quantity::of($product->quantity ?? 0)->isZero() && !empty($wcProduct['manage_stock']) && isset($wcProduct['stock_quantity']) && Quantity::of($wcProduct['stock_quantity'])->isPositive()) {
-                $this->stockService->recordMovement(
-                    $user,
-                    $product,
-                    StockMovementType::IN->value,
-                    StockMovementSource::INITIAL->value,
-                    $product->id,
-                    Quantity::of($wcProduct['stock_quantity'])->toFloat(),
-                    $product->purchase_price,
-                    'رصيد أول المدة مستورد من ووكومرس',
-                    branchId: $integration->online_branch_id
-                );
-            }
-
-            if ($isVariable) {
-                $this->syncVariations($user, $integration, $product, $wcId, $importStock);
-            }
-
+            $this->updateExistingWcProduct($user, $integration, $product, $wcProduct, $meta, $importStock);
             return 'updated';
         }
 
-        // 2. Create new product
-        $initialQty = 0;
-        if ($importStock && !$isVariable && !empty($wcProduct['manage_stock']) && isset($wcProduct['stock_quantity']) && Quantity::of($wcProduct['stock_quantity'])->isPositive()) {
-            $initialQty = Quantity::of($wcProduct['stock_quantity'])->toFloat();
+        $this->createNewWcProduct($user, $integration, $wcProduct, $meta, $importStock);
+        return 'created';
+    }
+
+    private function extractWcProductMetadata(int $accountId, array $wcProduct, string $name): array
+    {
+        $categoryId = null;
+        if (!empty($wcProduct['categories']) && is_array($wcProduct['categories'])) {
+            $firstCat = html_entity_decode(trim($wcProduct['categories'][0]['name'] ?? ''), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            if (!empty($firstCat)) {
+                $categoryId = \App\Models\Category::firstOrCreate(['user_id' => $accountId, 'name' => $firstCat])->id;
+            }
         }
 
-        $productData = [
+        return [
+            'wc_id' => (int) $wcProduct['id'],
+            'sku' => !empty($wcProduct['sku']) ? trim($wcProduct['sku']) : null,
             'name' => $name,
+            'regular_price' => isset($wcProduct['regular_price']) && is_numeric($wcProduct['regular_price']) ? Money::of($wcProduct['regular_price'])->getAmount() : null,
+            'sale_price' => $this->resolveSellingPrice($wcProduct, 0),
+            'is_variable' => ($wcProduct['type'] ?? '') === 'variable',
+            'image_url' => !empty($wcProduct['images'][0]['src']) ? (string) $wcProduct['images'][0]['src'] : null,
             'category_id' => $categoryId,
-            'code' => $sku,
-            'barcode' => $sku,
-            'purchase_price' => 0,
-            'regular_price' => $regularPrice,
-            'sale_price' => $salePrice,
-            'quantity' => $initialQty,
-            'min_quantity' => 5,
-            'unit' => 'قطعة',
-            'wc_product_id' => $wcId,
-            'image_url' => $imageUrl,
-            'type' => $isVariable ? ProductType::VARIABLE->value : ProductType::STANDARD->value,
+        ];
+    }
+
+    private function findExistingWcProduct(int $accountId, int $wcId, ?string $sku): ?Product
+    {
+        return Product::where('user_id', $accountId)->where(function ($query) use ($wcId, $sku) {
+            $query->where('wc_product_id', $wcId);
+            if ($sku) {
+                $query->orWhere('barcode', $sku)->orWhere('code', $sku);
+            }
+        })->first();
+    }
+
+    private function updateExistingWcProduct(User $user, WooCommerceIntegration $integration, Product $product, array $wcProduct, array $meta, bool $importStock): void
+    {
+        $updateData = array_filter([
+            'name' => $meta['name'],
+            'wc_product_id' => $meta['wc_id'],
+            'regular_price' => $meta['regular_price'],
+            'sale_price' => $meta['sale_price'] > 0 ? $meta['sale_price'] : null,
+            'barcode' => ($meta['sku'] && empty($product->barcode)) ? $meta['sku'] : null,
+            'category_id' => $meta['category_id'],
+            'image_url' => $meta['image_url'],
+        ], fn ($v) => $v !== null);
+
+        $product->update($updateData);
+
+        if (!$meta['is_variable'] && Quantity::of($product->quantity ?? 0)->isZero()) {
+            $qty = $this->extractWcStockQty($wcProduct, $importStock);
+            $this->recordWcInitialStock($user, $integration, $product, $qty, Money::of($product->purchase_price ?? 0)->getAmount(), 'رصيد أول المدة مستورد من ووكومرس');
+        }
+        if ($meta['is_variable']) {
+            $this->syncVariations($user, $integration, $product, $meta['wc_id'], $importStock);
+        }
+    }
+
+    private function createNewWcProduct(User $user, WooCommerceIntegration $integration, array $wcProduct, array $meta, bool $importStock): void
+    {
+        $initialQty = $meta['is_variable'] ? 0 : $this->extractWcStockQty($wcProduct, $importStock);
+        $productData = [
+            'name' => $meta['name'], 'category_id' => $meta['category_id'], 'code' => $meta['sku'], 'barcode' => $meta['sku'],
+            'purchase_price' => 0, 'regular_price' => $meta['regular_price'], 'sale_price' => $meta['sale_price'],
+            'quantity' => $initialQty, 'min_quantity' => 5, 'unit' => 'قطعة',
+            'wc_product_id' => $meta['wc_id'], 'image_url' => $meta['image_url'],
+            'type' => $meta['is_variable'] ? ProductType::VARIABLE->value : ProductType::STANDARD->value,
         ];
 
-        if ($isVariable) {
-            $variations = $this->apiClient->getProductVariations($integration, $wcId);
-            $variantsPayload = [];
-
-            foreach ($variations as $var) {
-                $attributes = $this->extractAttributes($var['attributes'] ?? []);
-                $varRegularPrice = isset($var['regular_price']) && is_numeric($var['regular_price']) ? Money::of($var['regular_price'])->getAmount() : null;
-                $varPrice = $this->resolveSellingPrice($var, $salePrice);
-                $varSku = !empty($var['sku']) ? trim($var['sku']) : null;
-                $varImageUrl = !empty($var['image']['src']) ? (string) $var['image']['src'] : $imageUrl;
-
-                $varQty = 0;
-                if ($importStock && !empty($var['manage_stock']) && isset($var['stock_quantity']) && Quantity::of($var['stock_quantity'])->isPositive()) {
-                    $varQty = Quantity::of($var['stock_quantity'])->toFloat();
-                }
-
-                $variantsPayload[] = [
-                    'name' => $attributes['name'] ?: "متغير #{$var['id']}",
-                    'size' => $attributes['size'],
-                    'color' => $attributes['color'],
-                    'barcode' => $varSku,
-                    'code' => $varSku,
-                    'purchase_price' => 0,
-                    'regular_price' => $varRegularPrice,
-                    'sale_price' => $varPrice,
-                    'quantity' => $varQty,
-                    'min_quantity' => 2,
-                    'wc_variation_id' => (int) $var['id'],
-                    'image_url' => $varImageUrl,
-                ];
-            }
-
-            $productData['variants'] = $variantsPayload;
+        if ($meta['is_variable']) {
+            $productData['variants'] = $this->buildWcVariantsPayload($integration, $meta['wc_id'], $meta['sale_price'], $meta['image_url'], $importStock);
         }
 
         $this->productService->createProduct($user, $productData, $integration->online_branch_id);
+    }
 
-        return 'created';
+    private function buildWcVariantsPayload(WooCommerceIntegration $integration, int $wcId, float $fallbackPrice, ?string $defaultImageUrl, bool $importStock): array
+    {
+        $variantsPayload = [];
+        foreach ($this->apiClient->getProductVariations($integration, $wcId) as $var) {
+            $varData = $this->extractWcVariationMetadata($var, $fallbackPrice, $defaultImageUrl);
+            $variantsPayload[] = [
+                'name' => $varData['attributes']['name'] ?: "متغير #{$varData['id']}",
+                'size' => $varData['attributes']['size'], 'color' => $varData['attributes']['color'],
+                'barcode' => $varData['sku'], 'code' => $varData['sku'], 'purchase_price' => 0,
+                'regular_price' => $varData['regular_price'], 'sale_price' => $varData['sale_price'],
+                'quantity' => $this->extractWcStockQty($var, $importStock), 'min_quantity' => 2,
+                'wc_variation_id' => $varData['id'], 'image_url' => $varData['image_url'],
+            ];
+        }
+
+        return $variantsPayload;
+    }
+
+    private function extractWcStockQty(array $wcItem, bool $importStock): float
+    {
+        if ($importStock && !empty($wcItem['manage_stock']) && isset($wcItem['stock_quantity']) && Quantity::of($wcItem['stock_quantity'])->isPositive()) {
+            return Quantity::of($wcItem['stock_quantity'])->toFloat();
+        }
+
+        return 0;
+    }
+
+    private function extractWcVariationMetadata(array $var, float $fallbackPrice, ?string $defaultImageUrl): array
+    {
+        return [
+            'id' => (int) $var['id'],
+            'sku' => !empty($var['sku']) ? trim($var['sku']) : null,
+            'regular_price' => isset($var['regular_price']) && is_numeric($var['regular_price']) ? Money::of($var['regular_price'])->getAmount() : null,
+            'sale_price' => $this->resolveSellingPrice($var, $fallbackPrice),
+            'attributes' => $this->extractAttributes($var['attributes'] ?? []),
+            'image_url' => !empty($var['image']['src']) ? (string) $var['image']['src'] : $defaultImageUrl,
+        ];
+    }
+
+    private function recordWcInitialStock(User $user, WooCommerceIntegration $integration, Product $product, float $qty, float $purchasePrice, string $note, $variant = null): void
+    {
+        if ($qty <= 0) {
+            return;
+        }
+        $this->stockService->recordMovement(
+            $user, $product, StockMovementType::IN->value, StockMovementSource::INITIAL->value,
+            $product->id, $qty, $purchasePrice, $note, variant: $variant, branchId: $integration->online_branch_id
+        );
     }
 
     /**
@@ -243,94 +238,59 @@ class WooCommerceProductImportService
      */
     protected function syncVariations(User $user, WooCommerceIntegration $integration, Product $product, int $wcId, bool $importStock = false): void
     {
-        $variations = $this->apiClient->getProductVariations($integration, $wcId);
-
-        foreach ($variations as $var) {
-            $varId = (int) $var['id'];
-            $varSku = !empty($var['sku']) ? trim($var['sku']) : null;
-            $varRegularPrice = isset($var['regular_price']) && is_numeric($var['regular_price']) ? Money::of($var['regular_price'])->getAmount() : null;
-            $varPrice = $this->resolveSellingPrice($var, Money::of($product->sale_price)->getAmount());
-            $attributes = $this->extractAttributes($var['attributes'] ?? []);
-            $varImageUrl = !empty($var['image']['src']) ? (string) $var['image']['src'] : $product->image_url;
-
-            $variant = $product->variants()
-                ->where(function ($query) use ($varId, $varSku) {
-                    $query->where('wc_variation_id', $varId);
-                    if ($varSku) {
-                        $query->orWhere('barcode', $varSku)->orWhere('code', $varSku);
-                    }
-                })
-                ->first();
-
-            if ($variant) {
-                $variantUpdate = [
-                    'wc_variation_id' => $varId,
-                    'name' => $attributes['name'] ?: $variant->name,
-                    'size' => $attributes['size'] ?: $variant->size,
-                    'color' => $attributes['color'] ?: $variant->color,
-                    'sale_price' => $varPrice > 0 ? $varPrice : $variant->sale_price,
-                    'barcode' => $varSku ?: $variant->barcode,
-                ];
-                if ($varRegularPrice !== null) {
-                    $variantUpdate['regular_price'] = $varRegularPrice;
-                }
-                if ($varImageUrl) {
-                    $variantUpdate['image_url'] = $varImageUrl;
-                }
-                $variant->update($variantUpdate);
-
-                if ($importStock && Quantity::of($variant->quantity ?? 0)->isZero() && !empty($var['manage_stock']) && isset($var['stock_quantity']) && Quantity::of($var['stock_quantity'])->isPositive()) {
-                    $this->stockService->recordMovement(
-                        $user,
-                        $product,
-                        StockMovementType::IN->value,
-                        StockMovementSource::INITIAL->value,
-                        $product->id,
-                        Quantity::of($var['stock_quantity'])->toFloat(),
-                        $variant->purchase_price,
-                        'رصيد أول المدة للمتغير مستورد من ووكومرس',
-                        variant: $variant,
-                        branchId: $integration->online_branch_id
-                    );
-                }
-            } else {
-                $varQty = 0;
-                if ($importStock && !empty($var['manage_stock']) && isset($var['stock_quantity']) && Quantity::of($var['stock_quantity'])->isPositive()) {
-                    $varQty = Quantity::of($var['stock_quantity'])->toFloat();
-                }
-
-                $newVar = $product->variants()->create([
-                    'user_id' => $user->getAccountId(),
-                    'wc_variation_id' => $varId,
-                    'name' => $attributes['name'] ?: "متغير #{$varId}",
-                    'size' => $attributes['size'],
-                    'color' => $attributes['color'],
-                    'barcode' => $varSku,
-                    'code' => $varSku,
-                    'purchase_price' => 0,
-                    'regular_price' => $varRegularPrice,
-                    'sale_price' => $varPrice,
-                    'quantity' => 0,
-                    'min_quantity' => 2,
-                    'image_url' => $varImageUrl,
-                ]);
-
-                if ($varQty > 0) {
-                    $this->stockService->recordMovement(
-                        $user,
-                        $product,
-                        StockMovementType::IN->value,
-                        StockMovementSource::INITIAL->value,
-                        $product->id,
-                        $varQty,
-                        $newVar->purchase_price,
-                        'رصيد أول المدة للمتغير مستورد من ووكومرس',
-                        variant: $newVar,
-                        branchId: $integration->online_branch_id
-                    );
-                }
-            }
+        $fallbackPrice = Money::of($product->sale_price)->getAmount();
+        foreach ($this->apiClient->getProductVariations($integration, $wcId) as $var) {
+            $varData = $this->extractWcVariationMetadata($var, $fallbackPrice, $product->image_url);
+            $this->syncSingleVariation($user, $integration, $product, $var, $varData, $importStock);
         }
+    }
+
+    private function syncSingleVariation(User $user, WooCommerceIntegration $integration, Product $product, array $var, array $varData, bool $importStock): void
+    {
+        $variant = $product->variants()->where(function ($query) use ($varData) {
+            $query->where('wc_variation_id', $varData['id']);
+            if ($varData['sku']) {
+                $query->orWhere('barcode', $varData['sku'])->orWhere('code', $varData['sku']);
+            }
+        })->first();
+
+        if ($variant) {
+            $this->updateExistingWcVariant($user, $integration, $product, $variant, $var, $varData, $importStock);
+        } else {
+            $this->createNewWcVariant($user, $integration, $product, $var, $varData, $importStock);
+        }
+    }
+
+    private function updateExistingWcVariant(User $user, WooCommerceIntegration $integration, Product $product, $variant, array $var, array $varData, bool $importStock): void
+    {
+        $update = array_filter([
+            'wc_variation_id' => $varData['id'],
+            'name' => $varData['attributes']['name'] ?: $variant->name,
+            'size' => $varData['attributes']['size'] ?: $variant->size,
+            'color' => $varData['attributes']['color'] ?: $variant->color,
+            'sale_price' => $varData['sale_price'] > 0 ? $varData['sale_price'] : $variant->sale_price,
+            'barcode' => $varData['sku'] ?: $variant->barcode,
+            'regular_price' => $varData['regular_price'],
+            'image_url' => $varData['image_url'],
+        ], fn ($v) => $v !== null);
+
+        $variant->update($update);
+        if (Quantity::of($variant->quantity ?? 0)->isZero()) {
+            $this->recordWcInitialStock($user, $integration, $product, $this->extractWcStockQty($var, $importStock), Money::of($variant->purchase_price ?? 0)->getAmount(), 'رصيد أول المدة للمتغير مستورد من ووكومرس', $variant);
+        }
+    }
+
+    private function createNewWcVariant(User $user, WooCommerceIntegration $integration, Product $product, array $var, array $varData, bool $importStock): void
+    {
+        $newVar = $product->variants()->create([
+            'user_id' => $user->getAccountId(), 'wc_variation_id' => $varData['id'],
+            'name' => $varData['attributes']['name'] ?: "متغير #{$varData['id']}",
+            'size' => $varData['attributes']['size'], 'color' => $varData['attributes']['color'],
+            'barcode' => $varData['sku'], 'code' => $varData['sku'], 'purchase_price' => 0,
+            'regular_price' => $varData['regular_price'], 'sale_price' => $varData['sale_price'],
+            'quantity' => 0, 'min_quantity' => 2, 'image_url' => $varData['image_url'],
+        ]);
+        $this->recordWcInitialStock($user, $integration, $product, $this->extractWcStockQty($var, $importStock), Money::of($newVar->purchase_price ?? 0)->getAmount(), 'رصيد أول المدة للمتغير مستورد من ووكومرس', $newVar);
     }
 
     /**
