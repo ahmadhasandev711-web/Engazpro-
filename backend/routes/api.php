@@ -204,6 +204,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
             Route::post('sync-locations', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'syncLocations']);
             Route::post('location-mappings', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'saveLocationMappings']);
             Route::post('register-webhooks', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'registerWebhooks']);
+            Route::post('import-products', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'importProducts']);
         });
 
         // Store Settings & Identity (هوية المنشأة والعملة)

@@ -85,6 +85,25 @@ class ShopifySettingsController extends Controller
         ], $success ? 200 : 422);
     }
 
+    public function importProducts(Request $request): JsonResponse
+    {
+        if ($err = $this->checkOwnerOrAdmin($request)) {
+            return $err;
+        }
+        $outcome = $this->settingsService->importProducts($request->user(), $request->boolean('import_stock', false));
+        if ($outcome['queued']) {
+            return response()->json(['success' => true, 'queued' => true, 'message' => 'بدأت عملية استيراد منتجات Shopify في الخلفية بنجاح'], 202);
+        }
+        $res = $outcome['result'];
+
+        return response()->json([
+            'success' => true,
+            'queued' => false,
+            'message' => "تم استيراد {$res['imported']} منتج جديد وتحديث {$res['updated']} منتج بنجاح",
+            'data' => $res,
+        ]);
+    }
+
     private function checkOwnerOrAdmin(Request $request): ?JsonResponse
     {
         return $request->user()->isOwnerOrAdmin()

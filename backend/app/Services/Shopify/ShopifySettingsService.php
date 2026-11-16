@@ -5,10 +5,12 @@ namespace App\Services\Shopify;
 use App\Contracts\ShopifyGraphqlClientInterface;
 use App\Enums\ShopifyAuthMode;
 use App\Exceptions\ShopifyConnectionException;
+use App\Jobs\ImportShopifyProductsPageJob;
 use App\Models\Branch;
 use App\Models\Product;
 use App\Models\ShopifyIntegration;
 use App\Models\ShopifyLocationMapping;
+use App\Models\User;
 use App\Support\ShopifyGid;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Facades\DB;
@@ -27,7 +29,8 @@ class ShopifySettingsService
 
     public function __construct(
         protected ShopifyGraphqlClientInterface $graphqlClient,
-        protected ShopifyAuthService $authService
+        protected ShopifyAuthService $authService,
+        protected ShopifyProductImportService $importService
     ) {}
 
     public function findForAccount(int $accountId, bool $withRelations = false): ?ShopifyIntegration
@@ -151,6 +154,22 @@ class ShopifySettingsService
     public function countLinkedProducts(int $accountId): int
     {
         return Product::where('user_id', $accountId)->whereNotNull('shopify_product_id')->count();
+    }
+
+    public function importProducts(User $user, bool $importStock = false): array
+    {
+        $integration = $this->findActiveOrFail($user->getAccountId());
+        if (!$integration->is_active) {
+            throw new ShopifyConnectionException('ربط متجر Shopify غير نشط حالياً، يرجى تفعيله أولاً.', 422);
+        }
+
+        if (config('queue.default') === 'sync') {
+            return ['queued' => false, 'result' => $this->importService->importProducts($user, $integration, $importStock)];
+        }
+
+        ImportShopifyProductsPageJob::dispatch($user->getAccountId(), $user->id, null, $importStock);
+
+        return ['queued' => true];
     }
 
     private function applyCredentialsAndFlags(ShopifyIntegration $integration, array $validated): void
