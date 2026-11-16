@@ -47,23 +47,12 @@ class BranchService
     {
         return DB::transaction(function () use ($user, $data) {
             $accountId = $user->getAccountId();
-
-            // توليد كود الفرع إن لم يُحدد
-            if (empty($data['code'])) {
-                $seq = $this->sequenceService->next($accountId, DocumentType::BRANCH);
-                $data['code'] = 'BR-' . str_pad((string) $seq, 2, '0', STR_PAD_LEFT);
-            }
-
-            // فحص تكرار الكود
-            $exists = Branch::where('user_id', $accountId)->where('code', $data['code'])->exists();
-            if ($exists) {
-                throw new BranchDomainException("كود الفرع {$data['code']} مستخدم مسبقاً في متجرك.", 'BRANCH_CODE_EXISTS');
-            }
+            $code = $this->resolveUniqueBranchCode($accountId, $data['code'] ?? null);
 
             $branch = Branch::create([
                 'user_id' => $accountId,
                 'name' => $data['name'],
-                'code' => $data['code'],
+                'code' => $code,
                 'type' => $data['type'] ?? BranchType::STORE->value,
                 'phone' => $data['phone'] ?? null,
                 'address' => $data['address'] ?? null,
@@ -71,46 +60,57 @@ class BranchService
                 'is_active' => $data['is_active'] ?? true,
             ]);
 
-            // تهيئة سجلات المخزون للفرع الجديد برصيد 0 لكافة أصناف المتجر
-            $products = Product::where('user_id', $accountId)->with('variants')->get();
-            foreach ($products as $prod) {
-                if ($prod->variants->count() > 0) {
-                    foreach ($prod->variants as $variant) {
-                        BranchStock::firstOrCreate([
-                            'branch_id' => $branch->id,
-                            'product_id' => $prod->id,
-                            'product_variant_id' => $variant->id,
-                        ], [
-                            'quantity' => 0,
-                            'min_quantity' => $variant->min_quantity,
-                        ]);
-                    }
-                } else {
-                    BranchStock::firstOrCreate([
-                        'branch_id' => $branch->id,
-                        'product_id' => $prod->id,
-                        'product_variant_id' => null,
-                    ], [
-                        'quantity' => 0,
-                        'min_quantity' => $prod->min_quantity,
-                    ]);
-                }
-            }
-
-            // إنشاء خزينة الفرع التشغيلية تلقائياً
-            \App\Models\Treasury::firstOrCreate([
-                'user_id' => $accountId,
-                'branch_id' => $branch->id,
-                'type' => \App\Enums\TreasuryType::BRANCH_SAFE,
-            ], [
-                'name' => "خزينة مبيعات ({$branch->name})",
-                'balance' => 0.00,
-                'is_active' => true,
-                'notes' => "الخزينة التشغيلية المعتمدة لاستقبال تقفيل ورديات فرع {$branch->name}",
-            ]);
+            $this->initializeBranchStock($branch, $accountId);
+            $this->ensureBranchSafe($branch, $accountId);
 
             return $branch;
         });
+    }
+
+    private function resolveUniqueBranchCode(int $accountId, ?string $code): string
+    {
+        if (empty($code)) {
+            $seq = $this->sequenceService->next($accountId, DocumentType::BRANCH);
+            $code = 'BR-' . str_pad((string) $seq, 2, '0', STR_PAD_LEFT);
+        }
+
+        if (Branch::where('user_id', $accountId)->where('code', $code)->exists()) {
+            throw new BranchDomainException("كود الفرع {$code} مستخدم مسبقاً في متجرك.", 'BRANCH_CODE_EXISTS');
+        }
+
+        return $code;
+    }
+
+    private function initializeBranchStock(Branch $branch, int $accountId): void
+    {
+        $products = Product::where('user_id', $accountId)->with('variants')->get();
+        foreach ($products as $prod) {
+            $variants = $prod->variants->count() > 0 ? $prod->variants : [null];
+            foreach ($variants as $variant) {
+                BranchStock::firstOrCreate([
+                    'branch_id' => $branch->id,
+                    'product_id' => $prod->id,
+                    'product_variant_id' => $variant?->id,
+                ], [
+                    'quantity' => 0,
+                    'min_quantity' => $variant?->min_quantity ?? $prod->min_quantity,
+                ]);
+            }
+        }
+    }
+
+    private function ensureBranchSafe(Branch $branch, int $accountId): void
+    {
+        \App\Models\Treasury::firstOrCreate([
+            'user_id' => $accountId,
+            'branch_id' => $branch->id,
+            'type' => \App\Enums\TreasuryType::BRANCH_SAFE,
+        ], [
+            'name' => "خزينة مبيعات ({$branch->name})",
+            'balance' => 0.00,
+            'is_active' => true,
+            'notes' => "الخزينة التشغيلية المعتمدة لاستقبال تقفيل ورديات فرع {$branch->name}",
+        ]);
     }
 
     /**

@@ -28,72 +28,70 @@ class EmployeeService
      */
     public function getEmployeesWithTodayStats(User $user): Collection
     {
-        $today = Carbon::today()->toDateString();
-        $accountId = $user->getAccountId();
-
-        $query = User::with('branch:id,name,code,type')
-            ->where('owner_id', $accountId);
-
-        if ($user->isManager()) {
-            $query->where('branch_id', $user->branch_id);
-        }
-
-        $employeeList = $query->orderBy('name')->get();
+        $dayRange = [Carbon::today()->toDateString(), Carbon::today()->toDateString() . ' 23:59:59'];
+        $employeeList = User::with('branch:id,name,code,type')
+            ->where('owner_id', $user->getAccountId())
+            ->when($user->isManager(), fn($q) => $q->where('branch_id', $user->branch_id))
+            ->orderBy('name')
+            ->get();
 
         $employeeIds = $employeeList->pluck('id');
+        $salesStats = $this->fetchTodaySalesStats($employeeIds, $dayRange);
+        $collectionsStats = $this->fetchTodayCollectionStats($employeeIds, $dayRange);
+        $isManagement = $user->isOwnerOrAdmin() || $user->isManager();
 
-        $dayRange = [$today, $today . ' 23:59:59'];
+        return $employeeList->map(fn($emp) => $this->formatEmployeeRow(
+            $emp,
+            $salesStats->get($emp->id),
+            $collectionsStats->get($emp->id),
+            $isManagement
+        ))->values();
+    }
 
-        // استعلام تجميعي واحد لمبيعات اليوم
-        $salesStats = Invoice::selectRaw('created_by, SUM(total) as total_sales, COUNT(*) as invoices_count')
+    private function fetchTodaySalesStats(Collection $employeeIds, array $dayRange): Collection
+    {
+        return Invoice::selectRaw('created_by, SUM(total) as total_sales, COUNT(*) as invoices_count')
             ->whereIn('created_by', $employeeIds)
             ->where('type', InvoiceType::SALE->value)
             ->whereBetween('date', $dayRange)
             ->groupBy('created_by')
             ->get()
             ->keyBy('created_by');
+    }
 
-        // استعلام تجميعي واحد لتحصيلات اليوم
-        $collectionsStats = Payment::selectRaw('created_by, SUM(amount) as total_collections')
+    private function fetchTodayCollectionStats(Collection $employeeIds, array $dayRange): Collection
+    {
+        return Payment::selectRaw('created_by, SUM(amount) as total_collections')
             ->whereIn('created_by', $employeeIds)
             ->where('type', PaymentType::RECEIPT->value)
             ->whereBetween('date', $dayRange)
             ->groupBy('created_by')
             ->get()
             ->keyBy('created_by');
+    }
 
-        $isManagement = $user->isOwnerOrAdmin() || $user->isManager();
-
-        return $employeeList->map(function ($emp) use ($salesStats, $collectionsStats, $isManagement) {
-            $empSales = $salesStats->get($emp->id);
-            $empCollections = $collectionsStats->get($emp->id);
-
-            return [
-                'id' => $emp->id,
-                'name' => $emp->name,
-                'phone' => $emp->phone,
-                'email' => $emp->email,
-                'branch_id' => $emp->branch_id,
-                'branch' => $emp->branch ? [
-                    'id' => $emp->branch->id,
-                    'name' => $emp->branch->name,
-                    'code' => $emp->branch->code,
-                    'type' => $emp->branch->type,
-                ] : null,
-                'role' => $emp->role,
-                'status' => $emp->status,
-                'base_salary' => Money::of($emp->base_salary ?? 0)->getAmount(),
-                'commission_type' => $emp->commission_type?->value ?? ($emp->commission_type ?? CommissionType::NONE->value),
-                'commission_rate' => Money::of($emp->commission_rate ?? 0)->getAmount(),
-                'is_eligible_for_payroll' => $emp->isEligibleForPayroll(),
-                'created_at' => $emp->created_at->toIso8601String(),
-                'today_stats' => $isManagement ? [
-                    'sales' => Money::of($empSales->total_sales ?? 0)->getAmount(),
-                    'invoices_count' => (int) ($empSales->invoices_count ?? 0),
-                    'collections' => Money::of($empCollections->total_collections ?? 0)->getAmount(),
-                ] : null,
-            ];
-        })->values();
+    private function formatEmployeeRow(User $emp, ?object $empSales, ?object $empCollections, bool $isManagement): array
+    {
+        return [
+            'id' => $emp->id,
+            'name' => $emp->name,
+            'phone' => $emp->phone,
+            'email' => $emp->email,
+            'branch_id' => $emp->branch_id,
+            'branch' => $emp->branch ? ['id' => $emp->branch->id, 'name' => $emp->branch->name, 'code' => $emp->branch->code, 'type' => $emp->branch->type] : null,
+            'role' => $emp->role,
+            'status' => $emp->status,
+            'base_salary' => Money::of($emp->base_salary ?? 0)->getAmount(),
+            'commission_type' => $emp->commission_type?->value ?? ($emp->commission_type ?? CommissionType::NONE->value),
+            'commission_rate' => Money::of($emp->commission_rate ?? 0)->getAmount(),
+            'is_eligible_for_payroll' => $emp->isEligibleForPayroll(),
+            'created_at' => $emp->created_at->toIso8601String(),
+            'today_stats' => $isManagement ? [
+                'sales' => Money::of($empSales->total_sales ?? 0)->getAmount(),
+                'invoices_count' => (int) ($empSales->invoices_count ?? 0),
+                'collections' => Money::of($empCollections->total_collections ?? 0)->getAmount(),
+            ] : null,
+        ];
     }
 
     /**
@@ -134,33 +132,32 @@ class EmployeeService
     public function updateEmployee(User $employee, array $data): User
     {
         return DB::transaction(function () use ($employee, $data) {
-            $updateData = [
-                'name' => $data['name'],
-                'phone' => $data['phone'],
-                'email' => $data['email'] ?? null,
-                'branch_id' => $data['branch_id'] ?? null,
-            ];
-
-            if (isset($data['base_salary'])) {
-                $updateData['base_salary'] = $data['base_salary'];
-            }
-            if (isset($data['commission_type'])) {
-                $updateData['commission_type'] = $data['commission_type'];
-            }
-            if (isset($data['commission_rate'])) {
-                $updateData['commission_rate'] = $data['commission_rate'];
-            }
-
-            if (!empty($data['password'])) {
-                $updateData['password'] = Hash::make($data['password']);
-            }
-
-            $employee->update($updateData);
+            $employee->update($this->extractEmployeeUpdatePayload($data));
             $employee->role = $data['role'] instanceof UserRole ? $data['role'] : UserRole::from($data['role']);
             $employee->save();
 
             return $employee->fresh()->load('branch:id,name,code,type');
         });
+    }
+
+    private function extractEmployeeUpdatePayload(array $data): array
+    {
+        $updateData = [
+            'name' => $data['name'],
+            'phone' => $data['phone'],
+            'email' => $data['email'] ?? null,
+            'branch_id' => $data['branch_id'] ?? null,
+        ];
+        foreach (['base_salary', 'commission_type', 'commission_rate'] as $field) {
+            if (isset($data[$field])) {
+                $updateData[$field] = $data[$field];
+            }
+        }
+        if (!empty($data['password'])) {
+            $updateData['password'] = Hash::make($data['password']);
+        }
+
+        return $updateData;
     }
 
     /**

@@ -24,38 +24,35 @@ class ExpenseService
             ->with(['treasury', 'creator'])
             ->when($user->isMandob() || $user->isCashier(), fn($q) => $q->where('created_by', $user->id));
 
+        $this->applyExpenseFilters($query, $filters);
+
+        $totalAmount = Money::of((clone $query)->sum('amount') ?? 0)->getAmount();
+        $perPage = min((int) ($filters['per_page'] ?? 20), 100);
+
+        return [
+            'paginator' => $query->latest()->paginate($perPage),
+            'total_amount' => $totalAmount,
+        ];
+    }
+
+    private function applyExpenseFilters($query, array $filters): void
+    {
         if (!empty($filters['search'])) {
             $search = $filters['search'];
-            $query->where(function ($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('category', 'like', "%{$search}%")
-                  ->orWhere('notes', 'like', "%{$search}%");
-            });
+            $query->where(fn($q) => $q->where('title', 'like', "%{$search}%")->orWhere('category', 'like', "%{$search}%")->orWhere('notes', 'like', "%{$search}%"));
         }
-
         if (!empty($filters['category'])) {
             $query->where('category', $filters['category']);
         }
-
         if (!empty($filters['payment_method'])) {
             $query->where('payment_method', $filters['payment_method']);
         }
-
         if (!empty($filters['date_from'])) {
             $query->where('date', '>=', $filters['date_from']);
         }
         if (!empty($filters['date_to'])) {
             $query->where('date', '<=', $filters['date_to'] . ' 23:59:59');
         }
-
-        $totalAmount = Money::of((clone $query)->sum('amount') ?? 0)->getAmount();
-        $perPage = min((int) ($filters['per_page'] ?? 20), 100);
-        $expenses = $query->latest()->paginate($perPage);
-
-        return [
-            'paginator' => $expenses,
-            'total_amount' => $totalAmount,
-        ];
     }
 
     /**
@@ -66,14 +63,14 @@ class ExpenseService
         $method = !empty($data['payment_method'])
             ? ($data['payment_method'] instanceof PaymentMethod ? $data['payment_method'] : PaymentMethod::from($data['payment_method']))
             : PaymentMethod::CASH;
+        $treasury = $this->treasuryService->getTreasuryForPaymentMethod($user, $method, !empty($data['treasury_id']) ? (int) $data['treasury_id'] : null);
+        $activeShift = ($method === PaymentMethod::CASH) ? $this->shiftService->getActiveShift($user) : null;
 
-        $explicitTreasuryId = !empty($data['treasury_id']) ? (int) $data['treasury_id'] : null;
-        $treasury = $this->treasuryService->getTreasuryForPaymentMethod($user, $method, $explicitTreasuryId);
+        return $this->persistExpenseWithWithdrawal($user, $data, $method, $treasury, $activeShift);
+    }
 
-        $activeShift = ($method === PaymentMethod::CASH)
-            ? $this->shiftService->getActiveShift($user)
-            : null;
-
+    private function persistExpenseWithWithdrawal(User $user, array $data, PaymentMethod $method, $treasury, $activeShift): Expense
+    {
         $expenseData = array_merge($data, [
             'created_by' => $user->id,
             'payment_method' => $method->value,
@@ -83,7 +80,6 @@ class ExpenseService
 
         return DB::transaction(function () use ($expenseData, $user, $treasury, $activeShift) {
             $expense = Expense::create($expenseData);
-
             $this->treasuryService->recordWithdrawal(
                 treasury: $treasury,
                 amount: Money::of($expense->amount),
@@ -93,7 +89,6 @@ class ExpenseService
                 notes: "مصروفات ({$expense->payment_method->label()}): {$expense->title}",
                 shiftId: $activeShift?->id
             );
-
             if ($activeShift) {
                 $this->shiftService->syncShiftFinancials($activeShift);
             }

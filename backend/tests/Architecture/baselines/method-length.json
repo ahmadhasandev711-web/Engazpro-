@@ -1,6 +1,4 @@
 {
-    "Services/BarcodeService.php::validateUniqueBarcode": 43,
-    "Services/BranchService.php::createBranch": 69,
     "Services/CourierService.php::getCourierManifest": 239,
     "Services/CourierService.php::getCouriersWithMetrics": 92,
     "Services/CourierService.php::recordDeliveryCollection": 41,
@@ -8,11 +6,6 @@
     "Services/DashboardService.php::calculateTodayCashFlow": 96,
     "Services/DashboardService.php::computeDashboardData": 48,
     "Services/DashboardService.php::getRecentActivities": 88,
-    "Services/EmployeeService.php::getEmployeesWithTodayStats": 69,
-    "Services/EmployeeService.php::updateEmployee": 31,
-    "Services/ExpenseCategoryService.php::updateCategory": 37,
-    "Services/ExpenseService.php::createExpense": 40,
-    "Services/ExpenseService.php::getExpensesPaginated": 39,
     "Services/ImportService.php::commitProducts": 147,
     "Services/ImportService.php::previewProducts": 158,
     "Services/InvoiceService.php::buildFilteredInvoicesQuery": 34,

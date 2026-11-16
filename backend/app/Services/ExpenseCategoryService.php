@@ -94,34 +94,30 @@ class ExpenseCategoryService
         if ($category->user_id !== $accountId) {
             throw new PosDomainException('غير مصرح لك بتعديل هذا التصنيف.', 'UNAUTHORIZED', 403);
         }
-
         if ($category->name === $newName) {
             return $category;
         }
-
-        $exists = ExpenseCategory::where('user_id', $accountId)
-            ->where('name', $newName)
-            ->where('id', '!=', $category->id)
-            ->exists();
-
-        if ($exists) {
-            throw new PosDomainException("يوجد تصنيف آخر بالفعل باسم '{$newName}'.", 'DUPLICATE_CATEGORY', 422);
-        }
+        $this->assertCategoryNameUnique($accountId, $newName, $category->id);
 
         return DB::transaction(function () use ($category, $newName, $accountId) {
             $oldName = $category->name;
-
-            $category->update([
-                'name' => $newName,
-            ]);
-
-            // مزامنة الاسم الجديد في سجل المصروفات الحالية للحساب
-            Expense::where('user_id', $accountId)
-                ->where('category', $oldName)
-                ->update(['category' => $newName]);
+            $category->update(['name' => $newName]);
+            Expense::where('user_id', $accountId)->where('category', $oldName)->update(['category' => $newName]);
 
             return $category;
         });
+    }
+
+    private function assertCategoryNameUnique(int $accountId, string $name, int $ignoreId): void
+    {
+        $exists = ExpenseCategory::where('user_id', $accountId)
+            ->where('name', $name)
+            ->where('id', '!=', $ignoreId)
+            ->exists();
+
+        if ($exists) {
+            throw new PosDomainException("يوجد تصنيف آخر بالفعل باسم '{$name}'.", 'DUPLICATE_CATEGORY', 422);
+        }
     }
 
     /**

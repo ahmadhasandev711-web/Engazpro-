@@ -68,34 +68,21 @@ class BarcodeService
 
         $accountId = $user->getAccountId();
 
-        // 1. Check existing products in this store
-        $productQuery = Product::withoutGlobalScopes()
+        return !$this->barcodeExistsForModel(Product::class, $accountId, $barcode, $ignoreProductId)
+            && !$this->barcodeExistsForModel(ProductVariant::class, $accountId, $barcode, $ignoreVariantId);
+    }
+
+    private function barcodeExistsForModel(string $modelClass, int $accountId, string $barcode, ?int $ignoreId): bool
+    {
+        $query = $modelClass::withoutGlobalScopes()
             ->where('user_id', $accountId)
             ->where('barcode', $barcode)
             ->whereNull('deleted_at');
 
-        if ($ignoreProductId !== null) {
-            $productQuery->where('id', '!=', $ignoreProductId);
+        if ($ignoreId !== null) {
+            $query->where('id', '!=', $ignoreId);
         }
 
-        if ($productQuery->exists()) {
-            return false;
-        }
-
-        // 2. Check existing product variants in this store
-        $variantQuery = ProductVariant::withoutGlobalScopes()
-            ->where('user_id', $accountId)
-            ->where('barcode', $barcode)
-            ->whereNull('deleted_at');
-
-        if ($ignoreVariantId !== null) {
-            $variantQuery->where('id', '!=', $ignoreVariantId);
-        }
-
-        if ($variantQuery->exists()) {
-            return false;
-        }
-
-        return true;
+        return $query->exists();
     }
 }
