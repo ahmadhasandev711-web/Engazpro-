@@ -2,6 +2,8 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\UserRole;
+use App\Enums\UserStatus;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -21,7 +23,7 @@ class UserResource extends JsonResource
             'email' => $this->email,
             'is_admin' => (bool) $this->is_admin,
             'owner_id' => $this->owner_id,
-            'role' => $this->role instanceof \BackedEnum ? $this->role->value : ($this->role ?? 'OWNER'),
+            'role' => $this->role instanceof \BackedEnum ? $this->role->value : ($this->role ?? UserRole::OWNER->value),
             'branch_id' => $this->branch_id,
             'branch' => $this->branch ? [
                 'id' => $this->branch->id,
@@ -29,7 +31,7 @@ class UserResource extends JsonResource
                 'code' => $this->branch->code,
                 'type' => $this->branch->type instanceof \BackedEnum ? $this->branch->type->value : $this->branch->type,
             ] : null,
-            'status' => $this->status instanceof \BackedEnum ? $this->status->value : ($this->status ?? 'ACTIVE'),
+            'status' => $this->status instanceof \BackedEnum ? $this->status->value : ($this->status ?? UserStatus::ACTIVE->value),
             'permissions' => $this->permissions ?? [],
             'subscription' => $effectiveSubscription ? new SubscriptionResource($effectiveSubscription) : null,
             'store_identity' => app(\App\Services\SettingService::class)->getStoreIdentity($this->resource),

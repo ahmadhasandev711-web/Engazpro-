@@ -3,6 +3,9 @@
 namespace App\Services\WooCommerce;
 
 use App\Contracts\WooCommerceApiClientInterface;
+use App\Enums\ProductType;
+use App\Enums\StockMovementSource;
+use App\Enums\StockMovementType;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\User;
@@ -166,8 +169,8 @@ class WooCommerceProductImportService
                 $this->stockService->recordMovement(
                     $user,
                     $product,
-                    'IN',
-                    'INITIAL',
+                    StockMovementType::IN->value,
+                    StockMovementSource::INITIAL->value,
                     $product->id,
                     (float)$wcProduct['stock_quantity'],
                     $product->purchase_price,
@@ -202,7 +205,7 @@ class WooCommerceProductImportService
             'unit' => 'قطعة',
             'wc_product_id' => $wcId,
             'image_url' => $imageUrl,
-            'type' => $isVariable ? 'VARIABLE' : 'STANDARD',
+            'type' => $isVariable ? ProductType::VARIABLE->value : ProductType::STANDARD->value,
         ];
 
         if ($isVariable) {
@@ -290,8 +293,8 @@ class WooCommerceProductImportService
                     $this->stockService->recordMovement(
                         $user,
                         $product,
-                        'IN',
-                        'INITIAL',
+                        StockMovementType::IN->value,
+                        StockMovementSource::INITIAL->value,
                         $product->id,
                         (float)$var['stock_quantity'],
                         $variant->purchase_price,
@@ -326,8 +329,8 @@ class WooCommerceProductImportService
                     $this->stockService->recordMovement(
                         $user,
                         $product,
-                        'IN',
-                        'INITIAL',
+                        StockMovementType::IN->value,
+                        StockMovementSource::INITIAL->value,
                         $product->id,
                         $varQty,
                         $newVar->purchase_price,

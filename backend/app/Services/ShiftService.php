@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Enums\DocumentType;
 use App\Enums\InvoiceType;
+use App\Enums\PaymentMethod;
+use App\Enums\PaymentType;
 use App\Enums\ShiftStatus;
 use App\Enums\TreasuryTransactionType;
 use App\Exceptions\ShiftDomainException;
@@ -106,14 +108,14 @@ class ShiftService
         $cashSalesDirect = Invoice::withoutGlobalScopes()
             ->where('shift_id', $shiftId)
             ->where('type', InvoiceType::SALE)
-            ->where('payment_method', 'CASH')
+            ->where('payment_method', PaymentMethod::CASH->value)
             ->sum('paid_amount');
 
         $cashSalesSplit = Payment::withoutGlobalScopes()
             ->where('shift_id', $shiftId)
-            ->where('type', 'RECEIPT')
-            ->where('method', 'CASH')
-            ->whereHas('invoice', fn($q) => $q->where('payment_method', 'SPLIT'))
+            ->where('type', PaymentType::RECEIPT->value)
+            ->where('method', PaymentMethod::CASH->value)
+            ->whereHas('invoice', fn($q) => $q->where('payment_method', PaymentMethod::SPLIT->value))
             ->sum('amount');
 
         $cashSales = Money::of($cashSalesDirect)->add(Money::of($cashSalesSplit));
@@ -122,14 +124,14 @@ class ShiftService
         $electronicDirect = Invoice::withoutGlobalScopes()
             ->where('shift_id', $shiftId)
             ->where('type', InvoiceType::SALE)
-            ->whereIn('payment_method', ['CARD', 'TRANSFER', 'INSTAPAY', 'VODAFONE_CASH'])
+            ->whereIn('payment_method', [PaymentMethod::CARD->value, PaymentMethod::TRANSFER->value, PaymentMethod::INSTAPAY->value, PaymentMethod::VODAFONE_CASH->value])
             ->sum('paid_amount');
 
         $electronicSplit = Payment::withoutGlobalScopes()
             ->where('shift_id', $shiftId)
-            ->where('type', 'RECEIPT')
-            ->whereIn('method', ['CARD', 'TRANSFER', 'INSTAPAY', 'VODAFONE_CASH'])
-            ->whereHas('invoice', fn($q) => $q->where('payment_method', 'SPLIT'))
+            ->where('type', PaymentType::RECEIPT->value)
+            ->whereIn('method', [PaymentMethod::CARD->value, PaymentMethod::TRANSFER->value, PaymentMethod::INSTAPAY->value, PaymentMethod::VODAFONE_CASH->value])
+            ->whereHas('invoice', fn($q) => $q->where('payment_method', PaymentMethod::SPLIT->value))
             ->sum('amount');
 
         $electronicSales = Money::of($electronicDirect)->add(Money::of($electronicSplit));
@@ -143,8 +145,8 @@ class ShiftService
         // سندات القبض النقدية الحرة غير المرتبطة بفاتورة مبيعات مباشرة
         $cashReceipts = Money::of(Payment::withoutGlobalScopes()
             ->where('shift_id', $shiftId)
-            ->where('type', 'RECEIPT')
-            ->where('method', 'CASH')
+            ->where('type', PaymentType::RECEIPT->value)
+            ->where('method', PaymentMethod::CASH->value)
             ->whereNull('invoice_id')
             ->sum('amount'));
 

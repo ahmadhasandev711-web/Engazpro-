@@ -67,11 +67,11 @@ class Payment extends Model
 
     public function isReceipt(): bool
     {
-        return $this->type === PaymentType::RECEIPT || $this->type?->value === 'RECEIPT';
+        return $this->type === PaymentType::RECEIPT || $this->type?->value === PaymentType::RECEIPT->value;
     }
 
     public function isPayment(): bool
     {
-        return $this->type === PaymentType::PAYMENT || $this->type?->value === 'PAYMENT';
+        return $this->type === PaymentType::PAYMENT || $this->type?->value === PaymentType::PAYMENT->value;
     }
 }

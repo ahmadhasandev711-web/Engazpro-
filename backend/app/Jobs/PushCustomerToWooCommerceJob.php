@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Enums\PartyType;
 use App\Enums\QueueName;
 use App\Models\Party;
 use App\Models\User;
@@ -25,7 +26,7 @@ class PushCustomerToWooCommerceJob implements ShouldQueue
     public function handle(WooCommerceCustomerSyncService $customerSyncService): void
     {
         $party = Party::find($this->partyId);
-        if (!$party || $party->type !== 'CUSTOMER') {
+        if (!$party || $party->type !== PartyType::CUSTOMER->value) {
             return;
         }
 

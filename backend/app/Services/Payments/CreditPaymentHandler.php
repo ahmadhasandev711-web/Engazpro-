@@ -3,6 +3,7 @@
 namespace App\Services\Payments;
 
 use App\Contracts\PaymentHandlerInterface;
+use App\Enums\PaymentMethod;
 use App\Models\Party;
 use App\Models\Payment;
 use App\Models\Shift;
@@ -13,7 +14,7 @@ class CreditPaymentHandler implements PaymentHandlerInterface
 {
     public function supports(string $method): bool
     {
-        return strtoupper($method) === 'CREDIT';
+        return strtoupper($method) === PaymentMethod::CREDIT->value;
     }
 
     public function handle(

@@ -2,8 +2,11 @@
 
 namespace App\Services;
 
+use App\Enums\LedgerSource;
 use App\Enums\PartyType;
+use App\Enums\PaymentMethod;
 use App\Enums\PaymentType;
+use App\Enums\StockTransferStatus;
 use App\Enums\WcOrderStatus;
 use App\Enums\WcPaymentStatus;
 use App\Http\Resources\PartyResource;
@@ -196,11 +199,11 @@ class CourierService
         $search = trim((string) ($filters['search'] ?? ''));
 
         $wcFiltered = clone $wcBaseQuery;
-        if ($statusFilter === 'IN_TRANSIT') {
+        if ($statusFilter === StockTransferStatus::IN_TRANSIT->value) {
             $wcFiltered->where('status', WcOrderStatus::SHIPPED_VIA_COURIER->value);
-        } elseif ($statusFilter === 'DELIVERED') {
+        } elseif ($statusFilter === WcOrderStatus::DELIVERED->value) {
             $wcFiltered->where('status', WcOrderStatus::DELIVERED->value);
-        } elseif ($statusFilter === 'RETURNED') {
+        } elseif ($statusFilter === WcOrderStatus::RETURNED->value) {
             $wcFiltered->where('status', WcOrderStatus::RETURNED->value);
         }
 
@@ -220,11 +223,11 @@ class CourierService
         }
 
         $invFiltered = clone $invBaseQuery;
-        if ($statusFilter === 'IN_TRANSIT') {
+        if ($statusFilter === StockTransferStatus::IN_TRANSIT->value) {
             $invFiltered->where('remaining_amount', '>', 0);
-        } elseif ($statusFilter === 'DELIVERED') {
+        } elseif ($statusFilter === WcOrderStatus::DELIVERED->value) {
             $invFiltered->where('remaining_amount', '<=', 0);
-        } elseif ($statusFilter === 'RETURNED') {
+        } elseif ($statusFilter === WcOrderStatus::RETURNED->value) {
             $invFiltered->whereRaw('0 = 1');
         }
 
@@ -331,9 +334,9 @@ class CourierService
                         'total' => Money::of($inv->total)->getAmount(),
                         'shipping_cost' => Money::of($inv->shipping_amount)->getAmount(),
                         'cod_amount' => $isPrepaid ? 0.0 : Money::of($inv->total)->getAmount(),
-                        'status' => $isFullyPaid ? 'DELIVERED' : 'IN_TRANSIT',
+                        'status' => $isFullyPaid ? WcOrderStatus::DELIVERED->value : StockTransferStatus::IN_TRANSIT->value,
                         'status_label' => $isFullyPaid ? 'تم التحصيل والتسليم' : 'قيد التوصيل والتحصيل',
-                        'payment_status' => $isFullyPaid ? ($isCourierCod ? 'COLLECTED_COD' : 'PAID') : 'PENDING_COD',
+                        'payment_status' => $isFullyPaid ? ($isCourierCod ? 'COLLECTED_COD' : 'PAID') : WcPaymentStatus::PENDING_COD->value,
                         'payment_status_label' => $isFullyPaid ? ($isCourierCod ? 'تحصيل عبر شركة شحن' : 'مدفوعة مقدماً') : 'متبقي تحصيل',
                         'is_paid_online' => $isPrepaid,
                         'shipped_at' => null,
@@ -385,7 +388,7 @@ class CourierService
 
             // منع تكرار قيد التحصيل لنفس الفاتورة
             $alreadyRecorded = LedgerEntry::where('party_id', $courier->id)
-                ->where('source_type', 'INVOICE')
+                ->where('source_type', LedgerSource::INVOICE->value)
                 ->where('source_id', $invoice->id)
                 ->where('debit', '>', 0)
                 ->exists();
@@ -399,7 +402,7 @@ class CourierService
             $this->ledgerService->recordEntry(
                 user: $user,
                 party: $courier,
-                sourceType: 'INVOICE',
+                sourceType: LedgerSource::INVOICE->value,
                 sourceId: $invoice->id,
                 date: $invoice->date->format('Y-m-d'),
                 description: $desc,
@@ -452,7 +455,7 @@ class CourierService
             $type = $courierBalanceMoney->greaterThan(Money::zero()) ? PaymentType::RECEIPT : PaymentType::PAYMENT;
         }
 
-        $method = $data['method'] ?? 'CASH';
+        $method = $data['method'] ?? PaymentMethod::CASH->value;
         $notes = $data['notes'] ?? ($type === PaymentType::RECEIPT
             ? "تصفية مستحقات شحن COD - شركة {$courier->name}"
             : "سداد أتعاب ومصاريف شحن - شركة {$courier->name}");

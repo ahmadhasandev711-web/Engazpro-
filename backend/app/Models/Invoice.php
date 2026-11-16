@@ -118,11 +118,11 @@ class Invoice extends Model
 
     public function scopeSales(Builder $query): Builder
     {
-        return $query->where('type', 'SALE');
+        return $query->where('type', InvoiceType::SALE->value);
     }
 
     public function scopePurchases(Builder $query): Builder
     {
-        return $query->where('type', 'PURCHASE');
+        return $query->where('type', InvoiceType::PURCHASE->value);
     }
 }

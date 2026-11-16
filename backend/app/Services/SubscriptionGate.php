@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\SubscriptionStatus;
 use App\Enums\UserStatus;
 use App\Models\User;
 use Illuminate\Support\Facades\Cache;
@@ -33,14 +34,14 @@ class SubscriptionGate
                 return [
                     'active' => false,
                     'frozen' => false,
-                    'subscription_status' => 'NONE',
+                    'subscription_status' => SubscriptionStatus::NONE->value,
                 ];
             }
 
             $frozen = ($owner->status === UserStatus::INACTIVE);
             $subscription = $owner->subscription;
             $active = !$frozen && (bool) ($subscription && $subscription->isActive());
-            $subscriptionStatus = $subscription?->status?->value ?? 'NONE';
+            $subscriptionStatus = $subscription?->status?->value ?? SubscriptionStatus::NONE->value;
 
             return [
                 'active' => $active,

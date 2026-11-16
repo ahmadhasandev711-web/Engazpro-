@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\CommissionType;
 use App\Enums\EmployeeAdjustmentType;
+use App\Enums\InvoiceType;
 use App\Enums\PaymentMethod;
 use App\Enums\UserRole;
 use App\Exceptions\PayrollDomainException;
@@ -40,7 +41,7 @@ class PayrollService
             // المدير: مبيعات الفرع المباشرة فقط بدون أوردرات ووكومرس
             $salesQuery = Invoice::where('user_id', $accountId)
                 ->where('branch_id', $employee->branch_id)
-                ->where('type', 'SALE')
+                ->where('type', InvoiceType::SALE->value)
                 ->whereNull('wc_order_id')
                 ->whereBetween('date', [$startDate, $endDate]);
         } else {
@@ -52,7 +53,7 @@ class PayrollService
                           $sub->whereNull('salesperson_id')->where('created_by', $employee->id);
                       });
                 })
-                ->where('type', 'SALE')
+                ->where('type', InvoiceType::SALE->value)
                 ->whereBetween('date', [$startDate, $endDate]);
         }
 

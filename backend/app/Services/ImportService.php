@@ -2,6 +2,9 @@
 
 namespace App\Services;
 
+use App\Enums\ImportRowStatus;
+use App\Enums\StockMovementSource;
+use App\Enums\StockMovementType;
 use App\Models\Category;
 use App\Models\Party;
 use App\Models\Product;
@@ -82,7 +85,7 @@ class ImportService
             $row = $this->normalizeProductRow($rawRow);
 
             $errors = [];
-            $status = 'VALID';
+            $status = ImportRowStatus::VALID->value;
             $duplicateInfo = null;
 
             // 1. التحقق من الحقول الإلزامية
@@ -125,7 +128,7 @@ class ImportService
 
             // 2. إذا وُجدت أخطاء تنسيق أساسية
             if (!empty($errors)) {
-                $status = 'INVALID';
+                $status = ImportRowStatus::INVALID->value;
                 $invalidCount++;
             } else {
                 // 3. التحقق من التكرار داخل نفس الملف
@@ -144,7 +147,7 @@ class ImportService
                 }
 
                 if ($isBatchDuplicate) {
-                    $status = 'DUPLICATE_IN_FILE';
+                    $status = ImportRowStatus::DUPLICATE_IN_FILE->value;
                     $duplicateCount++;
                 } else {
                     // 4. التحقق من التكرار مع قاعدة البيانات
@@ -163,7 +166,7 @@ class ImportService
                     }
 
                     if ($matchedId) {
-                        $status = 'DUPLICATE';
+                        $status = ImportRowStatus::DUPLICATE->value;
                         $duplicateCount++;
                         $existingProd = $existingProducts->firstWhere('id', $matchedId);
                         $duplicateInfo = [
@@ -311,8 +314,8 @@ class ImportService
                         $this->stockService->recordMovement(
                             $user,
                             $existingProduct,
-                            'IN',
-                            'INITIAL',
+                            StockMovementType::IN->value,
+                            StockMovementSource::INITIAL->value,
                             null,
                             $quantityToAdd,
                             (float)$purchasePrice,
@@ -343,8 +346,8 @@ class ImportService
                         $this->stockService->recordMovement(
                             $user,
                             $product,
-                            'IN',
-                            'INITIAL',
+                            StockMovementType::IN->value,
+                            StockMovementSource::INITIAL->value,
                             null,
                             $quantityToAdd,
                             (float)$purchasePrice,

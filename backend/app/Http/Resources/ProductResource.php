@@ -2,6 +2,8 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\ProductType;
+use App\Enums\StockMovementSource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -37,7 +39,7 @@ class ProductResource extends JsonResource
             'id' => $this->id,
             'category_id' => $this->category_id,
             'category_name' => $this->category?->name,
-            'type' => $this->type ?? 'STANDARD',
+            'type' => $this->type ?? ProductType::STANDARD->value,
             'has_expiry' => (bool) $this->has_expiry,
             'has_variants' => (bool) $this->has_variants,
             'code' => $this->code,
@@ -103,8 +105,8 @@ class ProductResource extends JsonResource
                 (isset($this->non_initial_stock_movements_exists)
                     ? (bool) $this->non_initial_stock_movements_exists
                     : ($this->relationLoaded('stockMovements')
-                        ? $this->stockMovements->where('source_type', '!=', 'INITIAL')->isNotEmpty()
-                        : $this->stockMovements()->where('source_type', '!=', 'INITIAL')->exists()))
+                        ? $this->stockMovements->where('source_type', '!=', StockMovementSource::INITIAL->value)->isNotEmpty()
+                        : $this->stockMovements()->where('source_type', '!=', StockMovementSource::INITIAL->value)->exists()))
             ),
             'created_at' => $this->created_at?->toIso8601String(),
         ];

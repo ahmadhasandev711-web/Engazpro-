@@ -2,6 +2,12 @@
 
 namespace App\Services;
 
+use App\Enums\InvoiceType;
+use App\Enums\LedgerSource;
+use App\Enums\PaymentMethod;
+use App\Enums\PaymentType;
+use App\Enums\TreasuryType;
+use App\Enums\UserRole;
 use App\Models\Expense;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
@@ -105,12 +111,12 @@ class DashboardService
             ->where('date', '>=', $startDate)
             ->where('date', '<=', $endDate . ' 23:59:59');
 
-        $gross = Money::of((clone $query)->where('type', 'SALE')->sum('total') ?? 0);
-        $cashSales = Money::of((clone $query)->where('type', 'SALE')->where('payment_method', 'CASH')->sum('paid_amount') ?? 0);
-        $courierPendingSales = Money::of((clone $query)->where('type', 'SALE')->where('payment_method', 'COURIER_COD')->sum('paid_amount') ?? 0);
-        $electronicSales = Money::of((clone $query)->where('type', 'SALE')->whereIn('payment_method', ['CARD', 'INSTAPAY', 'VODAFONE_CASH', 'TRANSFER', 'BANK', 'WALLET'])->sum('paid_amount') ?? 0);
-        $creditSales = Money::of((clone $query)->where('type', 'SALE')->sum('remaining_amount') ?? 0);
-        $returns = Money::of((clone $query)->where('type', 'SALE_RETURN')->sum('total') ?? 0);
+        $gross = Money::of((clone $query)->where('type', InvoiceType::SALE->value)->sum('total') ?? 0);
+        $cashSales = Money::of((clone $query)->where('type', InvoiceType::SALE->value)->where('payment_method', PaymentMethod::CASH->value)->sum('paid_amount') ?? 0);
+        $courierPendingSales = Money::of((clone $query)->where('type', InvoiceType::SALE->value)->where('payment_method', PaymentMethod::COURIER_COD->value)->sum('paid_amount') ?? 0);
+        $electronicSales = Money::of((clone $query)->where('type', InvoiceType::SALE->value)->whereIn('payment_method', [PaymentMethod::CARD->value, PaymentMethod::INSTAPAY->value, PaymentMethod::VODAFONE_CASH->value, PaymentMethod::TRANSFER->value, TreasuryType::BANK->value, TreasuryType::WALLET->value])->sum('paid_amount') ?? 0);
+        $creditSales = Money::of((clone $query)->where('type', InvoiceType::SALE->value)->sum('remaining_amount') ?? 0);
+        $returns = Money::of((clone $query)->where('type', InvoiceType::SALE_RETURN->value)->sum('total') ?? 0);
         $net = $gross->subtract($returns);
 
         return [
@@ -131,10 +137,10 @@ class DashboardService
     {
         $dayRange = [$today, $today . ' 23:59:59'];
 
-        $cogsSales = InvoiceItem::whereHas('invoice', fn($q) => $q->where('type', 'SALE')->whereBetween('date', $dayRange))
+        $cogsSales = InvoiceItem::whereHas('invoice', fn($q) => $q->where('type', InvoiceType::SALE->value)->whereBetween('date', $dayRange))
             ->sum(DB::raw('quantity * purchase_price_at_sale'));
 
-        $cogsReturns = InvoiceItem::whereHas('invoice', fn($q) => $q->where('type', 'SALE_RETURN')->whereBetween('date', $dayRange))
+        $cogsReturns = InvoiceItem::whereHas('invoice', fn($q) => $q->where('type', InvoiceType::SALE_RETURN->value)->whereBetween('date', $dayRange))
             ->sum(DB::raw('quantity * purchase_price_at_sale'));
 
         $netCogs = Money::of($cogsSales ?? 0)->subtract(Money::of($cogsReturns ?? 0));
@@ -158,16 +164,16 @@ class DashboardService
         $isManager = $user->isManager() && $user->branch_id;
         $dayRange = [$today, $today . ' 23:59:59'];
 
-        $directCashSales = Invoice::where('type', 'SALE')
-            ->where('payment_method', 'CASH')
+        $directCashSales = Invoice::where('type', InvoiceType::SALE->value)
+            ->where('payment_method', PaymentMethod::CASH->value)
             ->whereBetween('date', $dayRange)
             ->when($isEmployee, fn($q) => $q->where('created_by', $user->id))
             ->when($isManager, fn($q) => $q->where('branch_id', $user->branch_id))
             ->sum('paid_amount');
 
-        $splitCashSales = Payment::where('type', 'RECEIPT')
-            ->where('method', 'CASH')
-            ->whereHas('invoice', fn($q) => $q->where('payment_method', 'SPLIT')->when($isManager, fn($inv) => $inv->where('branch_id', $user->branch_id)))
+        $splitCashSales = Payment::where('type', PaymentType::RECEIPT->value)
+            ->where('method', PaymentMethod::CASH->value)
+            ->whereHas('invoice', fn($q) => $q->where('payment_method', PaymentMethod::SPLIT->value)->when($isManager, fn($inv) => $inv->where('branch_id', $user->branch_id)))
             ->whereBetween('date', $dayRange)
             ->when($isEmployee, fn($q) => $q->where('created_by', $user->id))
             ->when($isManager, fn($q) => $q->where(fn($sub) => $sub->whereHas('treasury', fn($t) => $t->where('branch_id', $user->branch_id))->orWhereHas('creator', fn($c) => $c->where('branch_id', $user->branch_id))))
@@ -175,16 +181,16 @@ class DashboardService
 
         $cashSales = Money::of($directCashSales ?? 0)->add(Money::of($splitCashSales ?? 0))->getAmount();
 
-        $directElectronicSales = Invoice::where('type', 'SALE')
-            ->whereIn('payment_method', ['BANK', 'CARD', 'WALLET', 'INSTAPAY', 'VODAFONE_CASH', 'TRANSFER'])
+        $directElectronicSales = Invoice::where('type', InvoiceType::SALE->value)
+            ->whereIn('payment_method', [TreasuryType::BANK->value, PaymentMethod::CARD->value, TreasuryType::WALLET->value, PaymentMethod::INSTAPAY->value, PaymentMethod::VODAFONE_CASH->value, PaymentMethod::TRANSFER->value])
             ->whereBetween('date', $dayRange)
             ->when($isEmployee, fn($q) => $q->where('created_by', $user->id))
             ->when($isManager, fn($q) => $q->where('branch_id', $user->branch_id))
             ->sum('paid_amount');
 
-        $splitElectronicSales = Payment::where('type', 'RECEIPT')
-            ->whereIn('method', ['BANK', 'CARD', 'WALLET', 'INSTAPAY', 'VODAFONE_CASH', 'TRANSFER'])
-            ->whereHas('invoice', fn($q) => $q->where('payment_method', 'SPLIT')->when($isManager, fn($inv) => $inv->where('branch_id', $user->branch_id)))
+        $splitElectronicSales = Payment::where('type', PaymentType::RECEIPT->value)
+            ->whereIn('method', [TreasuryType::BANK->value, PaymentMethod::CARD->value, TreasuryType::WALLET->value, PaymentMethod::INSTAPAY->value, PaymentMethod::VODAFONE_CASH->value, PaymentMethod::TRANSFER->value])
+            ->whereHas('invoice', fn($q) => $q->where('payment_method', PaymentMethod::SPLIT->value)->when($isManager, fn($inv) => $inv->where('branch_id', $user->branch_id)))
             ->whereBetween('date', $dayRange)
             ->when($isEmployee, fn($q) => $q->where('created_by', $user->id))
             ->when($isManager, fn($q) => $q->where(fn($sub) => $sub->whereHas('treasury', fn($t) => $t->where('branch_id', $user->branch_id))->orWhereHas('creator', fn($c) => $c->where('branch_id', $user->branch_id))))
@@ -192,35 +198,35 @@ class DashboardService
 
         $electronicSales = Money::of($directElectronicSales ?? 0)->add(Money::of($splitElectronicSales ?? 0))->getAmount();
 
-        $cashReceipts = Money::of(Payment::where('type', 'RECEIPT')
-            ->where('method', 'CASH')
+        $cashReceipts = Money::of(Payment::where('type', PaymentType::RECEIPT->value)
+            ->where('method', PaymentMethod::CASH->value)
             ->whereNull('invoice_id')
             ->whereBetween('date', $dayRange)
             ->when($isEmployee, fn($q) => $q->where('created_by', $user->id))
             ->when($isManager, fn($q) => $q->where(fn($sub) => $sub->whereHas('treasury', fn($t) => $t->where('branch_id', $user->branch_id))->orWhereHas('creator', fn($c) => $c->where('branch_id', $user->branch_id))))
             ->sum('amount') ?? 0)->getAmount();
 
-        $cashPurchaseReturns = $isEmployee ? 0.0 : Money::of(Invoice::where('type', 'PURCHASE_RETURN')
-            ->where('payment_method', 'CASH')
+        $cashPurchaseReturns = $isEmployee ? 0.0 : Money::of(Invoice::where('type', InvoiceType::PURCHASE_RETURN->value)
+            ->where('payment_method', PaymentMethod::CASH->value)
             ->whereBetween('date', $dayRange)
             ->when($isManager, fn($q) => $q->where('branch_id', $user->branch_id))
             ->sum('paid_amount') ?? 0)->getAmount();
 
-        $cashPurchases = $isEmployee ? 0.0 : Money::of(Invoice::where('type', 'PURCHASE')
-            ->where('payment_method', 'CASH')
+        $cashPurchases = $isEmployee ? 0.0 : Money::of(Invoice::where('type', InvoiceType::PURCHASE->value)
+            ->where('payment_method', PaymentMethod::CASH->value)
             ->whereBetween('date', $dayRange)
             ->when($isManager, fn($q) => $q->where('branch_id', $user->branch_id))
             ->sum('paid_amount') ?? 0)->getAmount();
 
-        $cashPayments = $isEmployee ? 0.0 : Money::of(Payment::where('type', 'PAYMENT')
-            ->where('method', 'CASH')
+        $cashPayments = $isEmployee ? 0.0 : Money::of(Payment::where('type', PaymentType::PAYMENT->value)
+            ->where('method', PaymentMethod::CASH->value)
             ->whereNull('invoice_id')
             ->whereBetween('date', $dayRange)
             ->when($isManager, fn($q) => $q->where(fn($sub) => $sub->whereHas('treasury', fn($t) => $t->where('branch_id', $user->branch_id))->orWhereHas('creator', fn($c) => $c->where('branch_id', $user->branch_id))))
             ->sum('amount') ?? 0)->getAmount();
 
-        $cashSaleReturns = Money::of(Invoice::where('type', 'SALE_RETURN')
-            ->where('payment_method', 'CASH')
+        $cashSaleReturns = Money::of(Invoice::where('type', InvoiceType::SALE_RETURN->value)
+            ->where('payment_method', PaymentMethod::CASH->value)
             ->whereBetween('date', $dayRange)
             ->when($isEmployee, fn($q) => $q->where('created_by', $user->id))
             ->when($isManager, fn($q) => $q->where('branch_id', $user->branch_id))
@@ -265,16 +271,16 @@ class DashboardService
             ->get()
             ->map(function ($inv) {
                 $labels = [
-                    'SALE' => 'فاتورة بيع',
-                    'PURCHASE' => 'فاتورة شراء',
-                    'SALE_RETURN' => 'مرتجع بيع',
-                    'PURCHASE_RETURN' => 'مرتجع شراء',
+                    InvoiceType::SALE->value => 'فاتورة بيع',
+                    InvoiceType::PURCHASE->value => 'فاتورة شراء',
+                    InvoiceType::SALE_RETURN->value => 'مرتجع بيع',
+                    InvoiceType::PURCHASE_RETURN->value => 'مرتجع شراء',
                 ];
                 $typeStr = $inv->type instanceof \BackedEnum ? $inv->type->value : (string) $inv->type;
-                $roleStr = $inv->creator?->role instanceof \BackedEnum ? $inv->creator?->role->value : ($inv->creator?->role ?? 'OWNER');
+                $roleStr = $inv->creator?->role instanceof \BackedEnum ? $inv->creator?->role->value : ($inv->creator?->role ?? UserRole::OWNER->value);
                 return [
                     'id' => $inv->id,
-                    'category' => 'INVOICE',
+                    'category' => LedgerSource::INVOICE->value,
                     'type' => $typeStr,
                     'type_label' => ($inv->type instanceof \BackedEnum && method_exists($inv->type, 'label')) ? $inv->type->label() : ($labels[$typeStr] ?? $typeStr),
                     'reference' => $inv->invoice_number,
@@ -296,12 +302,12 @@ class DashboardService
             ->get()
             ->map(function ($pay) {
                 $typeStr = $pay->type instanceof \BackedEnum ? $pay->type->value : (string) $pay->type;
-                $roleStr = $pay->creator?->role instanceof \BackedEnum ? $pay->creator?->role->value : ($pay->creator?->role ?? 'OWNER');
+                $roleStr = $pay->creator?->role instanceof \BackedEnum ? $pay->creator?->role->value : ($pay->creator?->role ?? UserRole::OWNER->value);
                 return [
                     'id' => $pay->id,
-                    'category' => 'PAYMENT',
+                    'category' => LedgerSource::PAYMENT->value,
                     'type' => $typeStr,
-                    'type_label' => ($pay->type instanceof \BackedEnum && method_exists($pay->type, 'label')) ? $pay->type->label() : ($typeStr === 'RECEIPT' ? 'سند قبض' : 'سند صرف'),
+                    'type_label' => ($pay->type instanceof \BackedEnum && method_exists($pay->type, 'label')) ? $pay->type->label() : ($typeStr === PaymentType::RECEIPT->value ? 'سند قبض' : 'سند صرف'),
                     'reference' => 'سند #' . $pay->id,
                     'party_name' => $pay->party?->name ?? '-',
                     'created_by_name' => $pay->creator?->name ?? 'صاحب المتجر',
@@ -319,7 +325,7 @@ class DashboardService
             ->limit(5)
             ->get()
             ->map(function ($exp) {
-                $roleStr = $exp->creator?->role instanceof \BackedEnum ? $exp->creator?->role->value : ($exp->creator?->role ?? 'OWNER');
+                $roleStr = $exp->creator?->role instanceof \BackedEnum ? $exp->creator?->role->value : ($exp->creator?->role ?? UserRole::OWNER->value);
                 return [
                     'id' => $exp->id,
                     'category' => 'EXPENSE',

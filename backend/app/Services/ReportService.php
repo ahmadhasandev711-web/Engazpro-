@@ -2,6 +2,9 @@
 
 namespace App\Services;
 
+use App\Enums\InvoiceType;
+use App\Enums\PaymentMethod;
+use App\Enums\PaymentType;
 use App\Models\Expense;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
@@ -19,11 +22,11 @@ class ReportService
     public function getProfitReport(?string $fromDate = null, ?string $toDate = null): array
     {
         // 1. استعلامات المبيعات ومرتجعاتها
-        $salesQuery = Invoice::where('type', 'SALE')
+        $salesQuery = Invoice::where('type', InvoiceType::SALE->value)
             ->when($fromDate, fn($q) => $q->where('date', '>=', $fromDate))
             ->when($toDate, fn($q) => $q->where('date', '<=', $toDate . ' 23:59:59'));
 
-        $returnsQuery = Invoice::where('type', 'SALE_RETURN')
+        $returnsQuery = Invoice::where('type', InvoiceType::SALE_RETURN->value)
             ->when($fromDate, fn($q) => $q->where('date', '>=', $fromDate))
             ->when($toDate, fn($q) => $q->where('date', '<=', $toDate . ' 23:59:59'));
 
@@ -35,8 +38,8 @@ class ReportService
         $discounts = Money::of($salesQuery->sum('discount') ?? 0);
 
         // 2. حساب تكلفة البضاعة المباعة (COGS)
-        $cogsSales = $this->calculateCogs('SALE', $fromDate, $toDate);
-        $cogsReturns = $this->calculateCogs('SALE_RETURN', $fromDate, $toDate);
+        $cogsSales = $this->calculateCogs(InvoiceType::SALE->value, $fromDate, $toDate);
+        $cogsReturns = $this->calculateCogs(InvoiceType::SALE_RETURN->value, $fromDate, $toDate);
         $netCogs = $cogsSales->subtract($cogsReturns);
 
         // 3. إجمالي وصافي الربح
@@ -120,13 +123,13 @@ class ReportService
             ->get()
             ->keyBy('type');
 
-        $saleRow = $aggregates->get('SALE');
-        $purchaseRow = $user->isMandob() ? null : $aggregates->get('PURCHASE');
-        $saleReturnRow = $aggregates->get('SALE_RETURN');
-        $purchaseReturnRow = $user->isMandob() ? null : $aggregates->get('PURCHASE_RETURN');
+        $saleRow = $aggregates->get(InvoiceType::SALE->value);
+        $purchaseRow = $user->isMandob() ? null : $aggregates->get(InvoiceType::PURCHASE->value);
+        $saleReturnRow = $aggregates->get(InvoiceType::SALE_RETURN->value);
+        $purchaseReturnRow = $user->isMandob() ? null : $aggregates->get(InvoiceType::PURCHASE_RETURN->value);
 
         $paymentMethodsBreakdown = (clone $query)
-            ->where('type', 'SALE')
+            ->where('type', InvoiceType::SALE->value)
             ->select('payment_method', DB::raw('COALESCE(SUM(total), 0) as total_amount'), DB::raw('COUNT(*) as count'))
             ->groupBy('payment_method')
             ->get();
@@ -241,11 +244,11 @@ class ReportService
      */
     public function getCashFlowReport(?string $fromDate = null, ?string $toDate = null): array
     {
-        $cashTreasury = $this->calculateTreasury('CASH', true, $fromDate, $toDate);
-        $cardTreasury = $this->calculateTreasury('CARD', false, $fromDate, $toDate);
-        $instapayTreasury = $this->calculateTreasury('INSTAPAY', false, $fromDate, $toDate);
-        $vodafoneTreasury = $this->calculateTreasury('VODAFONE_CASH', false, $fromDate, $toDate);
-        $transferTreasury = $this->calculateTreasury('TRANSFER', false, $fromDate, $toDate);
+        $cashTreasury = $this->calculateTreasury(PaymentMethod::CASH->value, true, $fromDate, $toDate);
+        $cardTreasury = $this->calculateTreasury(PaymentMethod::CARD->value, false, $fromDate, $toDate);
+        $instapayTreasury = $this->calculateTreasury(PaymentMethod::INSTAPAY->value, false, $fromDate, $toDate);
+        $vodafoneTreasury = $this->calculateTreasury(PaymentMethod::VODAFONE_CASH->value, false, $fromDate, $toDate);
+        $transferTreasury = $this->calculateTreasury(PaymentMethod::TRANSFER->value, false, $fromDate, $toDate);
 
         $totalFunds = Money::of($cashTreasury['net_balance'])
             ->add($cardTreasury['net_balance'])
@@ -276,31 +279,31 @@ class ReportService
             'treasuries' => [
                 'cash' => [
                     'name' => 'خزينة الكاش (النقدية)',
-                    'code' => 'CASH',
+                    'code' => PaymentMethod::CASH->value,
                     'icon' => 'cash-outline',
                     ...$cashTreasury,
                 ],
                 'card' => [
                     'name' => 'خزينة البطاقة (فيزا / شبكة)',
-                    'code' => 'CARD',
+                    'code' => PaymentMethod::CARD->value,
                     'icon' => 'card-outline',
                     ...$cardTreasury,
                 ],
                 'instapay' => [
                     'name' => 'إنستاباي (InstaPay)',
-                    'code' => 'INSTAPAY',
+                    'code' => PaymentMethod::INSTAPAY->value,
                     'icon' => 'swap-horizontal-outline',
                     ...$instapayTreasury,
                 ],
                 'vodafone_cash' => [
                     'name' => 'فودافون كاش والمحافظ',
-                    'code' => 'VODAFONE_CASH',
+                    'code' => PaymentMethod::VODAFONE_CASH->value,
                     'icon' => 'phone-portrait-outline',
                     ...$vodafoneTreasury,
                 ],
                 'transfer' => [
                     'name' => 'التحويلات البنكية (أخرى)',
-                    'code' => 'TRANSFER',
+                    'code' => PaymentMethod::TRANSFER->value,
                     'icon' => 'business-outline',
                     ...$transferTreasury,
                 ],
@@ -314,16 +317,16 @@ class ReportService
      */
     protected function calculateTreasury(string $method, bool $includeExpenses, ?string $fromDate, ?string $toDate): array
     {
-        $salesQuery = Invoice::where('type', 'SALE')->where('payment_method', $method);
-        $splitSalesQuery = Payment::where('type', 'RECEIPT')
+        $salesQuery = Invoice::where('type', InvoiceType::SALE->value)->where('payment_method', $method);
+        $splitSalesQuery = Payment::where('type', PaymentType::RECEIPT->value)
             ->where('method', $method)
-            ->whereHas('invoice', fn($q) => $q->where('payment_method', 'SPLIT'));
-        $receiptsQuery = Payment::where('type', 'RECEIPT')->where('method', $method)->whereNull('invoice_id');
-        $purchaseReturnsQuery = Invoice::where('type', 'PURCHASE_RETURN')->where('payment_method', $method);
+            ->whereHas('invoice', fn($q) => $q->where('payment_method', PaymentMethod::SPLIT->value));
+        $receiptsQuery = Payment::where('type', PaymentType::RECEIPT->value)->where('method', $method)->whereNull('invoice_id');
+        $purchaseReturnsQuery = Invoice::where('type', InvoiceType::PURCHASE_RETURN->value)->where('payment_method', $method);
 
-        $purchasesQuery = Invoice::where('type', 'PURCHASE')->where('payment_method', $method);
-        $paymentsQuery = Payment::where('type', 'PAYMENT')->where('method', $method)->whereNull('invoice_id');
-        $saleReturnsQuery = Invoice::where('type', 'SALE_RETURN')->where('payment_method', $method);
+        $purchasesQuery = Invoice::where('type', InvoiceType::PURCHASE->value)->where('payment_method', $method);
+        $paymentsQuery = Payment::where('type', PaymentType::PAYMENT->value)->where('method', $method)->whereNull('invoice_id');
+        $saleReturnsQuery = Invoice::where('type', InvoiceType::SALE_RETURN->value)->where('payment_method', $method);
         $expensesQuery = Expense::query();
 
         if ($fromDate) {
@@ -395,19 +398,19 @@ class ReportService
 
         $shouldIncludeInvoices = true;
         $shouldIncludePayments = true;
-        $shouldIncludeExpenses = ($channel === 'CASH');
+        $shouldIncludeExpenses = ($channel === PaymentMethod::CASH->value);
 
         if ($flowType === 'INFLOW') {
             $shouldIncludeExpenses = false;
         }
 
         if ($movementCategory) {
-            $invoiceCategories = ['SALE', 'PURCHASE', 'SALE_RETURN', 'PURCHASE_RETURN'];
+            $invoiceCategories = [InvoiceType::SALE->value, InvoiceType::PURCHASE->value, InvoiceType::SALE_RETURN->value, InvoiceType::PURCHASE_RETURN->value];
             $paymentCategories = ['RECEIPT_VOUCHER', 'PAYMENT_VOUCHER', 'SPLIT_SALE'];
 
             $shouldIncludeInvoices = in_array($movementCategory, $invoiceCategories, true);
             $shouldIncludePayments = in_array($movementCategory, $paymentCategories, true);
-            $shouldIncludeExpenses = ($movementCategory === 'EXPENSE' && $channel === 'CASH');
+            $shouldIncludeExpenses = ($movementCategory === 'EXPENSE' && $channel === PaymentMethod::CASH->value);
         }
 
         $queries = [];
@@ -435,14 +438,14 @@ class ReportService
                 ->where('invoices.payment_method', $channel)
                 ->where('invoices.paid_amount', '>', 0);
 
-            if ($movementCategory && in_array($movementCategory, ['SALE', 'PURCHASE', 'SALE_RETURN', 'PURCHASE_RETURN'], true)) {
+            if ($movementCategory && in_array($movementCategory, [InvoiceType::SALE->value, InvoiceType::PURCHASE->value, InvoiceType::SALE_RETURN->value, InvoiceType::PURCHASE_RETURN->value], true)) {
                 $invoiceQuery->where('invoices.type', $movementCategory);
             } else {
-                $invoiceQuery->whereIn('invoices.type', ['SALE', 'PURCHASE', 'SALE_RETURN', 'PURCHASE_RETURN']);
+                $invoiceQuery->whereIn('invoices.type', [InvoiceType::SALE->value, InvoiceType::PURCHASE->value, InvoiceType::SALE_RETURN->value, InvoiceType::PURCHASE_RETURN->value]);
                 if ($flowType === 'INFLOW') {
-                    $invoiceQuery->whereIn('invoices.type', ['SALE', 'PURCHASE_RETURN']);
+                    $invoiceQuery->whereIn('invoices.type', [InvoiceType::SALE->value, InvoiceType::PURCHASE_RETURN->value]);
                 } elseif ($flowType === 'OUTFLOW') {
-                    $invoiceQuery->whereIn('invoices.type', ['PURCHASE', 'SALE_RETURN']);
+                    $invoiceQuery->whereIn('invoices.type', [InvoiceType::PURCHASE->value, InvoiceType::SALE_RETURN->value]);
                 }
             }
 
@@ -483,21 +486,21 @@ class ReportService
                 ->where('payments.method', $channel)
                 ->where(function ($q) {
                     $q->whereNull('payments.invoice_id')
-                      ->orWhereHas('invoice', fn($iq) => $iq->where('payment_method', 'SPLIT'));
+                      ->orWhereHas('invoice', fn($iq) => $iq->where('payment_method', PaymentMethod::SPLIT->value));
                 });
 
             if ($movementCategory === 'SPLIT_SALE') {
                 $paymentQuery->whereNotNull('payments.invoice_id')
-                    ->whereHas('invoice', fn($iq) => $iq->where('payment_method', 'SPLIT'));
+                    ->whereHas('invoice', fn($iq) => $iq->where('payment_method', PaymentMethod::SPLIT->value));
             } elseif ($movementCategory === 'RECEIPT_VOUCHER') {
-                $paymentQuery->where('payments.type', 'RECEIPT')->whereNull('payments.invoice_id');
+                $paymentQuery->where('payments.type', PaymentType::RECEIPT->value)->whereNull('payments.invoice_id');
             } elseif ($movementCategory === 'PAYMENT_VOUCHER') {
-                $paymentQuery->where('payments.type', 'PAYMENT')->whereNull('payments.invoice_id');
+                $paymentQuery->where('payments.type', PaymentType::PAYMENT->value)->whereNull('payments.invoice_id');
             } else {
                 if ($flowType === 'INFLOW') {
-                    $paymentQuery->where('payments.type', 'RECEIPT');
+                    $paymentQuery->where('payments.type', PaymentType::RECEIPT->value);
                 } elseif ($flowType === 'OUTFLOW') {
-                    $paymentQuery->where('payments.type', 'PAYMENT');
+                    $paymentQuery->where('payments.type', PaymentType::PAYMENT->value);
                 }
             }
 
@@ -531,10 +534,10 @@ class ReportService
                 ")
                 ->leftJoin('users', 'expenses.created_by', '=', 'users.id');
 
-            if ($channel === 'CASH') {
+            if ($channel === PaymentMethod::CASH->value) {
                 $expenseQuery->where(function ($q) {
                     $q->whereNull('expenses.payment_method')
-                      ->orWhere('expenses.payment_method', 'CASH');
+                      ->orWhere('expenses.payment_method', PaymentMethod::CASH->value);
                 });
             } else {
                 $expenseQuery->where('expenses.payment_method', $channel);

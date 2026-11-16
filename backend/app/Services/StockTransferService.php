@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Enums\DocumentType;
+use App\Enums\StockMovementSource;
+use App\Enums\StockMovementType;
 use App\Enums\StockTransferStatus;
 use App\Exceptions\StockTransferDomainException;
 use App\Models\Branch;
@@ -133,7 +135,7 @@ class StockTransferService
                     'branch_id' => $fromBranchId,
                     'product_id' => $productId,
                     'product_variant_id' => $variantId,
-                    'type' => 'OUT',
+                    'type' => StockMovementType::OUT->value,
                     'source_type' => 'TRANSFER_OUT',
                     'source_id' => $transfer->id,
                     'quantity' => $qty,
@@ -236,7 +238,7 @@ class StockTransferService
                     'branch_id' => $toBranchId,
                     'product_id' => $item->product_id,
                     'product_variant_id' => $item->product_variant_id,
-                    'type' => 'IN',
+                    'type' => StockMovementType::IN->value,
                     'source_type' => 'TRANSFER_IN',
                     'source_id' => $lockedTransfer->id,
                     'quantity' => $qtyReceived,
@@ -287,8 +289,8 @@ class StockTransferService
                     'branch_id' => $fromBranchId,
                     'product_id' => $item->product_id,
                     'product_variant_id' => $item->product_variant_id,
-                    'type' => 'IN',
-                    'source_type' => 'ADJUSTMENT',
+                    'type' => StockMovementType::IN->value,
+                    'source_type' => StockMovementSource::ADJUSTMENT->value,
                     'source_id' => $lockedTransfer->id,
                     'quantity' => $qty,
                     'balance_after' => $fromStock->quantity,

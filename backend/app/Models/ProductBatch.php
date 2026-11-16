@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\BatchExpiryStatus;
 use App\Models\Concerns\BelongsToStore;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
@@ -78,12 +79,12 @@ class ProductBatch extends Model
     public function getExpiryStatusAttribute(): string
     {
         if ($this->isExpired()) {
-            return 'EXPIRED';
+            return BatchExpiryStatus::EXPIRED->value;
         }
         if ($this->isNearExpiry()) {
-            return 'NEAR_EXPIRY';
+            return BatchExpiryStatus::NEAR_EXPIRY->value;
         }
-        return 'VALID';
+        return BatchExpiryStatus::VALID->value;
     }
 
     public function getEffectiveSalePrice(): float

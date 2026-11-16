@@ -3,6 +3,9 @@
 namespace App\Services\Payments;
 
 use App\Contracts\PaymentHandlerInterface;
+use App\Enums\LedgerSource;
+use App\Enums\PaymentMethod;
+use App\Enums\TreasuryType;
 use App\Models\Party;
 use App\Models\Payment;
 use App\Models\Shift;
@@ -20,7 +23,13 @@ class TransferPaymentHandler implements PaymentHandlerInterface
 
     public function supports(string $method): bool
     {
-        return in_array(strtoupper($method), ['TRANSFER', 'BANK', 'WALLET', 'VODAFONE_CASH', 'INSTAPAY']);
+        return in_array(strtoupper($method), [
+            PaymentMethod::TRANSFER->value,
+            TreasuryType::BANK->value,
+            TreasuryType::WALLET->value,
+            PaymentMethod::VODAFONE_CASH->value,
+            PaymentMethod::INSTAPAY->value,
+        ]);
     }
 
     public function handle(
@@ -47,7 +56,7 @@ class TransferPaymentHandler implements PaymentHandlerInterface
             $this->treasuryService->recordDeposit(
                 treasury: $targetTreasury,
                 amount: $money,
-                sourceType: 'PAYMENT',
+                sourceType: LedgerSource::PAYMENT->value,
                 sourceId: $payment->id,
                 actor: $user,
                 notes: "سداد إلكتروني ({$methodStr}) #{$payment->id} من ({$party->name})",
@@ -57,7 +66,7 @@ class TransferPaymentHandler implements PaymentHandlerInterface
             $this->treasuryService->recordWithdrawal(
                 treasury: $targetTreasury,
                 amount: $money,
-                sourceType: 'PAYMENT',
+                sourceType: LedgerSource::PAYMENT->value,
                 sourceId: $payment->id,
                 actor: $user,
                 notes: "صرف إلكتروني ({$methodStr}) #{$payment->id} إلى ({$party->name})",

@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Enums\SubscriptionStatus;
 use App\Models\Subscription;
 use App\Models\User;
 use Carbon\Carbon;
@@ -48,7 +49,7 @@ class MakeAdminCommand extends Command
             [
                 'start_date' => Carbon::today()->toDateString(),
                 'end_date' => Carbon::today()->addYears(10)->toDateString(),
-                'status' => 'ACTIVE',
+                'status' => SubscriptionStatus::ACTIVE,
                 'plan' => 'ANNUAL',
                 'price' => 0.00,
                 'notes' => 'حساب مدير عام معتمد مدى الحياة',

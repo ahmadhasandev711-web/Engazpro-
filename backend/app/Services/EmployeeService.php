@@ -2,6 +2,9 @@
 
 namespace App\Services;
 
+use App\Enums\CommissionType;
+use App\Enums\InvoiceType;
+use App\Enums\PaymentType;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Models\Invoice;
@@ -44,7 +47,7 @@ class EmployeeService
         // استعلام تجميعي واحد لمبيعات اليوم
         $salesStats = Invoice::selectRaw('created_by, SUM(total) as total_sales, COUNT(*) as invoices_count')
             ->whereIn('created_by', $employeeIds)
-            ->where('type', 'SALE')
+            ->where('type', InvoiceType::SALE->value)
             ->whereBetween('date', $dayRange)
             ->groupBy('created_by')
             ->get()
@@ -53,7 +56,7 @@ class EmployeeService
         // استعلام تجميعي واحد لتحصيلات اليوم
         $collectionsStats = Payment::selectRaw('created_by, SUM(amount) as total_collections')
             ->whereIn('created_by', $employeeIds)
-            ->where('type', 'RECEIPT')
+            ->where('type', PaymentType::RECEIPT->value)
             ->whereBetween('date', $dayRange)
             ->groupBy('created_by')
             ->get()
@@ -80,7 +83,7 @@ class EmployeeService
                 'role' => $emp->role,
                 'status' => $emp->status,
                 'base_salary' => Money::of($emp->base_salary ?? 0)->getAmount(),
-                'commission_type' => $emp->commission_type?->value ?? ($emp->commission_type ?? 'NONE'),
+                'commission_type' => $emp->commission_type?->value ?? ($emp->commission_type ?? CommissionType::NONE->value),
                 'commission_rate' => Money::of($emp->commission_rate ?? 0)->getAmount(),
                 'is_eligible_for_payroll' => $emp->isEligibleForPayroll(),
                 'created_at' => $emp->created_at->toIso8601String(),
@@ -108,7 +111,7 @@ class EmployeeService
                 'email' => $data['email'] ?? null,
                 'password' => Hash::make($data['password']),
                 'base_salary' => $data['base_salary'] ?? 0.00,
-                'commission_type' => $data['commission_type'] ?? 'NONE',
+                'commission_type' => $data['commission_type'] ?? CommissionType::NONE->value,
                 'commission_rate' => $data['commission_rate'] ?? 0.00,
                 'status' => UserStatus::ACTIVE,
             ]);
@@ -166,7 +169,7 @@ class EmployeeService
     public function toggleStatus(User $employee): User
     {
         $currentStatus = $employee->status instanceof \BackedEnum ? $employee->status->value : (string) $employee->status;
-        $isCurrentlyActive = ($currentStatus === 'ACTIVE' || $employee->status === \App\Enums\UserStatus::ACTIVE);
+        $isCurrentlyActive = ($currentStatus === UserStatus::ACTIVE->value || $employee->status === UserStatus::ACTIVE);
         $newStatus = $isCurrentlyActive ? \App\Enums\UserStatus::INACTIVE : \App\Enums\UserStatus::ACTIVE;
 
         $employee->status = $newStatus;
