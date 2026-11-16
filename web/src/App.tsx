@@ -33,6 +33,7 @@ const EmployeesPage = lazy(() => import('./presentation/pages/EmployeesPage').th
 const TreasuriesPage = lazy(() => import('./presentation/pages/TreasuriesPage').then((m) => ({ default: m.TreasuriesPage })));
 const BranchesPage = lazy(() => import('./presentation/pages/BranchesPage').then((m) => ({ default: m.BranchesPage })));
 const StockTransfersPage = lazy(() => import('./presentation/pages/StockTransfersPage').then((m) => ({ default: m.StockTransfersPage })));
+const StockOperationsPage = lazy(() => import('./presentation/pages/StockOperationsPage').then((m) => ({ default: m.StockOperationsPage })));
 const PosPage = lazy(() => import('./presentation/pages/PosPage').then((m) => ({ default: m.PosPage })));
 const AdminDashboardPage = lazy(() => import('./presentation/pages/AdminDashboardPage').then((m) => ({ default: m.AdminDashboardPage })));
 const WooCommerceSettingsPage = lazy(() => import('./presentation/pages/WooCommerceSettingsPage').then((m) => ({ default: m.WooCommerceSettingsPage })));
@@ -136,6 +137,7 @@ export const App: React.FC = () => {
                     <Route path="/reports" element={<ReportsPage />} />
                     <Route path="/excel" element={<ExcelPage />} />
                     <Route path="/transfers" element={<StockTransfersPage />} />
+                    <Route path="/stock-operations" element={<StockOperationsPage />} />
                     <Route path="/employees" element={<EmployeesPage />} />
                   </Route>
 

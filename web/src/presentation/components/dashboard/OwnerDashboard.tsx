@@ -12,10 +12,12 @@ import {
   FileText,
   Clock,
   RefreshCw,
+  AlertTriangle,
 } from 'lucide-react';
 import { formatCurrency } from '@pos-mandob/shared';
 import { PWAInstallBanner } from '../pwa/PWAInstallBanner';
 import { usePermissions } from '../../../hooks/usePermissions';
+import { useStockAlertsSummary } from '../../../hooks/useStockOperations';
 import { RecentActivityMobileCard } from '../mobile/RecentActivityMobileCard';
 import {
   Badge,
@@ -98,7 +100,8 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
   refetch,
 }) => {
   const navigate = useNavigate();
-  const { isManager, canViewProfitReport } = usePermissions();
+  const { isManager, canViewProfitReport, canManageStockOperations } = usePermissions();
+  const { data: alertsSummary } = useStockAlertsSummary(canManageStockOperations);
   const kpis = data?.kpis;
   const showProfitCard =
     canViewProfitReport && kpis?.today_profit !== null && kpis?.today_profit !== undefined;
@@ -180,6 +183,36 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
           سند قبض / صرف
         </Button>
       </div>
+
+      {/* Low Stock / Expiring Batch Alert Banner */}
+      {canManageStockOperations && (alertsSummary?.total_alerts ?? 0) > 0 && (
+        <Card className="p-3.5 sm:p-4 bg-warn-soft/50 border-warn/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-warn-soft text-warn flex items-center justify-center flex-shrink-0">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-sm font-black text-ink">
+                تنبيهات المخزون تحتاج مراجعة ({alertsSummary?.total_alerts} تنبيه)
+              </p>
+              <p className="text-xs text-muted tabular-nums">
+                {alertsSummary?.low_stock_count ?? 0} صنف تحت حد الأمان
+                {(alertsSummary?.expiring_batches_count ?? 0) > 0
+                  ? ` • ${alertsSummary?.expiring_batches_count} تشغيلة منتهية أو قريبة الانتهاء`
+                  : ''}
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="secondary"
+            size="md"
+            onClick={() => navigate('/stock-operations')}
+            className="border-warn/40 bg-panel hover:bg-warn-soft text-ink text-xs font-bold shrink-0"
+          >
+            عرض النواقص وإعادة الطلب
+          </Button>
+        </Card>
+      )}
 
       {/* Main KPI Cards Grid */}
       <div

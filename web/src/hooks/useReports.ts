@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../data/api/client';
 import {
   ProfitReportData,
+  PurchaseReportData,
   SalesReportData,
   StockReportData,
   CashFlowReportData,
@@ -32,6 +33,23 @@ export const useSalesReport = (fromDate: string, toDate: string, enabled: boolea
         params: {
           from_date: fromDate || undefined,
           to_date: toDate || undefined,
+        },
+      });
+      return res.data?.data;
+    },
+    enabled,
+  });
+};
+
+export const usePurchaseReport = (fromDate: string, toDate: string, enabled: boolean = true, branchId?: number | null) => {
+  return useQuery<PurchaseReportData>({
+    queryKey: ['reports', 'purchases', fromDate, toDate, branchId],
+    queryFn: async () => {
+      const res = await apiClient.get('/reports/purchases', {
+        params: {
+          from_date: fromDate || undefined,
+          to_date: toDate || undefined,
+          branch_id: branchId || undefined,
         },
       });
       return res.data?.data;

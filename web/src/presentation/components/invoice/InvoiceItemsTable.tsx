@@ -62,7 +62,7 @@ export const InvoiceItemsTable: React.FC<InvoiceItemsTableProps> = ({
                     <tr key={field.id}>
                       <td className="py-3 px-3 text-muted tabular-nums">{index + 1}</td>
                       <td className="py-3 px-3 font-bold text-ink">
-                        <div>{product?.name || `صنف #${field.product_id}`}</div>
+                        <div>{product?.name || field.product_name || currentItem?.product_name || `صنف #${field.product_id}`}</div>
                         <div className="flex flex-wrap gap-1.5 mt-1">
                           {(field.variant_name || currentItem?.variant_name) && (
                             <Badge tone="info" className="text-[11px]">
@@ -170,7 +170,7 @@ export const InvoiceItemsTable: React.FC<InvoiceItemsTableProps> = ({
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         <span className="font-bold text-ink text-sm block">
-                          {product?.name || `صنف #${field.product_id}`}
+                          {product?.name || field.product_name || currentItem?.product_name || `صنف #${field.product_id}`}
                         </span>
                         <div className="flex flex-wrap items-center gap-1.5 mt-1">
                           {(field.variant_name || currentItem?.variant_name) && (

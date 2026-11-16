@@ -95,10 +95,50 @@ export const InvoiceFormPage: React.FC = () => {
     },
   });
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, replace } = useFieldArray({
     control,
     name: 'items',
   });
+
+  const hasPrefilledRef = React.useRef(false);
+  React.useEffect(() => {
+    if (hasPrefilledRef.current || !isPurchase) return;
+    const navState = location.state as {
+      prefillItems?: Array<{
+        product_id: number;
+        product_name?: string;
+        product_variant_id?: number | null;
+        variant_name?: string | null;
+        unit_name?: string | null;
+        quantity: number;
+        unit_price: number;
+      }>;
+      branch_id?: number;
+      party_id?: number;
+    } | null;
+
+    if (!navState) return;
+    if (navState.prefillItems && navState.prefillItems.length > 0) {
+      replace(
+        navState.prefillItems.map((item) => ({
+          product_id: item.product_id,
+          product_name: item.product_name,
+          product_variant_id: item.product_variant_id ?? null,
+          variant_name: item.variant_name ?? null,
+          unit_name: item.unit_name ?? null,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+        })) as any
+      );
+    }
+    if (navState.branch_id) {
+      setValue('branch_id', navState.branch_id);
+    }
+    if (navState.party_id) {
+      setValue('party_id', navState.party_id);
+    }
+    hasPrefilledRef.current = true;
+  }, [isPurchase, location.state, replace, setValue]);
 
   // Watch values to calculate totals
   const items = watch('items');

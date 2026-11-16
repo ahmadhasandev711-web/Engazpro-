@@ -6,11 +6,13 @@ import {
   Printer,
   Wallet,
   Download,
+  ShoppingBag,
 } from 'lucide-react';
 
 import {
   useProfitReport,
   useSalesReport,
+  usePurchaseReport,
   useStockReport,
   useCashFlowReport,
   fetchAllCashFlowTransactions,
@@ -20,13 +22,14 @@ import { formatCurrency } from '@pos-mandob/shared';
 import { usePermissions } from '../../hooks/usePermissions';
 import { ProfitReportTab } from '../components/reports/ProfitReportTab';
 import { SalesReportTab } from '../components/reports/SalesReportTab';
+import { PurchaseReportTab } from '../components/reports/PurchaseReportTab';
 import { CashFlowTab, CashFlowPrintData } from '../components/reports/CashFlowTab';
 import { StockReportTab } from '../components/reports/StockReportTab';
 import { DateRangeFilter, DatePreset, calculatePresetDates } from '../components/common/DateRangeFilter';
 import { useToast } from '../context/ToastContext';
 import { Button, Card, PageHeader, Tabs } from '../components/ui';
 
-type ActiveTab = 'profit' | 'sales' | 'cash-flow' | 'stock';
+type ActiveTab = 'profit' | 'sales' | 'purchases' | 'cash-flow' | 'stock';
 
 const getTreasuryLabel = (t: string) => {
   switch (t) {
@@ -67,7 +70,7 @@ const getPresetLabel = (p: DatePreset | string) => {
 export const ReportsPage: React.FC = () => {
   const toast = useToast();
   const user = useAuthStore((state) => state.user);
-  const { canViewProfitReport } = usePermissions();
+  const { canViewProfitReport, canViewPurchaseReport } = usePermissions();
   const storeIdentity = user?.store_identity;
   const storeName = storeIdentity?.business_name || (user as any)?.store_name || user?.name || 'متجر إنجاز برو';
   const storePhone = storeIdentity?.store_phone || user?.phone;
@@ -88,6 +91,11 @@ export const ReportsPage: React.FC = () => {
   const [stockSearch, setStockSearch] = useState('');
   const { data: profitData, isLoading: isProfitLoading } = useProfitReport(fromDate, toDate, canViewProfitReport && activeTab === 'profit');
   const { data: salesData, isLoading: isSalesLoading } = useSalesReport(fromDate, toDate, activeTab === 'sales');
+  const { data: purchaseData, isLoading: isPurchaseLoading } = usePurchaseReport(
+    fromDate,
+    toDate,
+    canViewPurchaseReport && activeTab === 'purchases'
+  );
   const { data: stockData, isLoading: isStockLoading, isFetching: isStockFetching } = useStockReport(
     { page: stockPage, search: stockSearch },
     activeTab === 'stock'
@@ -158,6 +166,16 @@ export const ReportsPage: React.FC = () => {
         'إجمالي الإيراد': p.total_revenue,
       }));
       exportJsonToExcel(rows, `تقرير_المبيعات_${fromDate}_${toDate}`, 'المبيعات');
+    } else if (activeTab === 'purchases' && canViewPurchaseReport && purchaseData?.top_suppliers) {
+      const rows = purchaseData.top_suppliers.map((s, idx) => ({
+        'م': idx + 1,
+        'المورد': s.supplier_name,
+        'عدد الفواتير': s.invoices_count,
+        'إجمالي المشتريات': s.total_amount,
+        'المدفوع': s.paid_amount,
+        'المتبقي': s.remaining_amount,
+      }));
+      exportJsonToExcel(rows, `تقرير_المشتريات_${fromDate}_${toDate}`, 'المشتريات والموردين');
     }
   } catch (err) {
     console.error('Excel load failed:', err);
@@ -170,6 +188,9 @@ export const ReportsPage: React.FC = () => {
       ? [{ id: 'profit', label: 'الأرباح والخسائر', icon: <TrendingUp className="w-4 h-4" /> }]
       : []),
     { id: 'sales', label: 'المبيعات', icon: <Receipt className="w-4 h-4" /> },
+    ...(canViewPurchaseReport
+      ? [{ id: 'purchases', label: 'المشتريات والموردين', icon: <ShoppingBag className="w-4 h-4" /> }]
+      : []),
     { id: 'cash-flow', label: 'الخزينة والنقدية', icon: <Wallet className="w-4 h-4" /> },
     { id: 'stock', label: 'تقييم المخزون', icon: <Package className="w-4 h-4" /> },
   ];
@@ -285,6 +306,9 @@ export const ReportsPage: React.FC = () => {
       {/* Tab Panels */}
       {activeTab === 'profit' && canViewProfitReport && <ProfitReportTab data={profitData} isLoading={isProfitLoading} />}
       {activeTab === 'sales' && <SalesReportTab data={salesData} isLoading={isSalesLoading} />}
+      {activeTab === 'purchases' && canViewPurchaseReport && (
+        <PurchaseReportTab data={purchaseData} isLoading={isPurchaseLoading} />
+      )}
       {activeTab === 'cash-flow' && (
         <CashFlowTab
           data={cashFlowData}
@@ -330,6 +354,7 @@ export const ReportsPage: React.FC = () => {
             <div className="inline-block bg-paper-ink text-paper font-black px-3 py-1 rounded text-sm">
               {activeTab === 'profit' && 'تقرير الأرباح والخسائر الشامل'}
               {activeTab === 'sales' && 'كشف حركة المبيعات والمتحصلات'}
+              {activeTab === 'purchases' && 'تقرير المشتريات والموردين'}
               {activeTab === 'cash-flow' && `كشف حركة ${cashFlowPrintData?.treasuryName || getTreasuryLabel(selectedTreasury)}`}
               {activeTab === 'stock' && 'تقرير جرد وتقييم المخزون'}
             </div>
