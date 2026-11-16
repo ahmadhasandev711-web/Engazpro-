@@ -22,69 +22,42 @@ class ReportService
      */
     public function getProfitReport(?string $fromDate = null, ?string $toDate = null): array
     {
-        // 1. استعلامات المبيعات ومرتجعاتها
-        $salesQuery = Invoice::where('type', InvoiceType::SALE->value)
-            ->when($fromDate, fn($q) => $q->where('date', '>=', $fromDate))
-            ->when($toDate, fn($q) => $q->where('date', '<=', $toDate . ' 23:59:59'));
-
-        $returnsQuery = Invoice::where('type', InvoiceType::SALE_RETURN->value)
-            ->when($fromDate, fn($q) => $q->where('date', '>=', $fromDate))
-            ->when($toDate, fn($q) => $q->where('date', '<=', $toDate . ' 23:59:59'));
+        $salesQuery = $this->applyDateBounds(Invoice::where('type', InvoiceType::SALE->value), $fromDate, $toDate);
+        $returnsQuery = $this->applyDateBounds(Invoice::where('type', InvoiceType::SALE_RETURN->value), $fromDate, $toDate);
+        $expensesQuery = $this->applyDateBounds(Expense::query(), $fromDate, $toDate);
 
         $grossSales = Money::of($salesQuery->sum('total') ?? 0);
         $saleReturns = Money::of($returnsQuery->sum('total') ?? 0);
         $netSales = $grossSales->subtract($saleReturns);
-        $shippingRevenue = Money::of($salesQuery->sum('shipping_amount') ?? 0);
-        $productSales = Money::of($salesQuery->sum('subtotal') ?? 0);
-        $discounts = Money::of($salesQuery->sum('discount') ?? 0);
-
-        // 2. حساب تكلفة البضاعة المباعة (COGS)
         $cogsSales = $this->calculateCogs(InvoiceType::SALE->value, $fromDate, $toDate);
         $cogsReturns = $this->calculateCogs(InvoiceType::SALE_RETURN->value, $fromDate, $toDate);
         $netCogs = $cogsSales->subtract($cogsReturns);
-
-        // 3. إجمالي وصافي الربح
         $grossProfit = $netSales->subtract($netCogs);
-
-        $expensesQuery = Expense::query()
-            ->when($fromDate, fn($q) => $q->where('date', '>=', $fromDate))
-            ->when($toDate, fn($q) => $q->where('date', '<=', $toDate . ' 23:59:59'));
-
         $totalExpenses = Money::of($expensesQuery->sum('amount') ?? 0);
         $netProfit = $grossProfit->subtract($totalExpenses);
 
+        return $this->assembleProfitReportPayload($fromDate, $toDate, $salesQuery, $returnsQuery, $expensesQuery, $grossSales, $saleReturns, $netSales, $cogsSales, $cogsReturns, $netCogs, $grossProfit, $totalExpenses, $netProfit);
+    }
+
+    private function assembleProfitReportPayload(
+        ?string $fromDate, ?string $toDate, $salesQuery, $returnsQuery, $expensesQuery,
+        Money $grossSales, Money $saleReturns, Money $netSales, Money $cogsSales, Money $cogsReturns, Money $netCogs,
+        Money $grossProfit, Money $totalExpenses, Money $netProfit
+    ): array {
         $netSalesAmount = $netSales->getAmount();
-        $profitMargin = $netSalesAmount > 0 
-            ? round(($netProfit->getAmount() / $netSalesAmount) * 100, 2) 
-            : 0;
+        $profitMargin = $netSalesAmount > 0 ? round(($netProfit->getAmount() / $netSalesAmount) * 100, 2) : 0;
 
         return [
-            'period' => [
-                'from_date' => $fromDate,
-                'to_date' => $toDate,
-            ],
+            'period' => ['from_date' => $fromDate, 'to_date' => $toDate],
             'sales' => [
-                'gross_sales' => $grossSales->getAmount(),
-                'product_sales' => $productSales->getAmount(),
-                'shipping_revenue' => $shippingRevenue->getAmount(),
-                'discounts' => $discounts->getAmount(),
-                'sale_returns' => $saleReturns->getAmount(),
-                'net_sales' => $netSales->getAmount(),
-                'sales_count' => $salesQuery->count(),
-                'returns_count' => $returnsQuery->count(),
+                'gross_sales' => $grossSales->getAmount(), 'product_sales' => Money::of($salesQuery->sum('subtotal') ?? 0)->getAmount(),
+                'shipping_revenue' => Money::of($salesQuery->sum('shipping_amount') ?? 0)->getAmount(),
+                'discounts' => Money::of($salesQuery->sum('discount') ?? 0)->getAmount(),
+                'sale_returns' => $saleReturns->getAmount(), 'net_sales' => $netSalesAmount,
+                'sales_count' => $salesQuery->count(), 'returns_count' => $returnsQuery->count(),
             ],
-            'cogs' => [
-                'cogs_sales' => $cogsSales->getAmount(),
-                'cogs_returns' => $cogsReturns->getAmount(),
-                'net_cogs' => $netCogs->getAmount(),
-            ],
-            'profit' => [
-                'gross_profit' => $grossProfit->getAmount(),
-                'total_expenses' => $totalExpenses->getAmount(),
-                'expenses_count' => $expensesQuery->count(),
-                'net_profit' => $netProfit->getAmount(),
-                'profit_margin' => $profitMargin,
-            ],
+            'cogs' => ['cogs_sales' => $cogsSales->getAmount(), 'cogs_returns' => $cogsReturns->getAmount(), 'net_cogs' => $netCogs->getAmount()],
+            'profit' => ['gross_profit' => $grossProfit->getAmount(), 'total_expenses' => $totalExpenses->getAmount(), 'expenses_count' => $expensesQuery->count(), 'net_profit' => $netProfit->getAmount(), 'profit_margin' => $profitMargin],
         ];
     }
 
@@ -107,33 +80,13 @@ class ReportService
      */
     public function getSalesReport(User $user, ?string $fromDate = null, ?string $toDate = null): array
     {
-        $query = Invoice::query()
-            ->when($user->isMandob(), fn($q) => $q->where('created_by', $user->id))
-            ->when($fromDate, fn($q) => $q->where('date', '>=', $fromDate))
-            ->when($toDate, fn($q) => $q->where('date', '<=', $toDate . ' 23:59:59'));
-
-        $aggregates = (clone $query)
-            ->select(
-                'type',
-                DB::raw('COALESCE(SUM(total), 0) as total_amount'),
-                DB::raw('COALESCE(SUM(shipping_amount), 0) as shipping_amount'),
-                DB::raw('COALESCE(SUM(paid_amount), 0) as paid_amount'),
-                DB::raw('COALESCE(SUM(remaining_amount), 0) as remaining_amount')
-            )
-            ->groupBy('type')
-            ->get()
-            ->keyBy('type');
+        $query = $this->applyDateBounds(Invoice::query()->when($user->isMandob(), fn($q) => $q->where('created_by', $user->id)), $fromDate, $toDate);
+        $aggregates = (clone $query)->select('type', DB::raw('COALESCE(SUM(total), 0) as total_amount'), DB::raw('COALESCE(SUM(shipping_amount), 0) as shipping_amount'), DB::raw('COALESCE(SUM(paid_amount), 0) as paid_amount'), DB::raw('COALESCE(SUM(remaining_amount), 0) as remaining_amount'))->groupBy('type')->get()->keyBy('type');
 
         $saleRow = $aggregates->get(InvoiceType::SALE->value);
         $purchaseRow = $user->isMandob() ? null : $aggregates->get(InvoiceType::PURCHASE->value);
         $saleReturnRow = $aggregates->get(InvoiceType::SALE_RETURN->value);
         $purchaseReturnRow = $user->isMandob() ? null : $aggregates->get(InvoiceType::PURCHASE_RETURN->value);
-
-        $paymentMethodsBreakdown = (clone $query)
-            ->where('type', InvoiceType::SALE->value)
-            ->select('payment_method', DB::raw('COALESCE(SUM(total), 0) as total_amount'), DB::raw('COUNT(*) as count'))
-            ->groupBy('payment_method')
-            ->get();
 
         return [
             'total_sales' => Money::of($saleRow?->total_amount ?? 0)->getAmount(),
@@ -143,7 +96,7 @@ class ReportService
             'total_purchase_returns' => Money::of($purchaseReturnRow?->total_amount ?? 0)->getAmount(),
             'sales_paid' => Money::of($saleRow?->paid_amount ?? 0)->getAmount(),
             'sales_remaining' => Money::of($saleRow?->remaining_amount ?? 0)->getAmount(),
-            'payment_methods' => $paymentMethodsBreakdown,
+            'payment_methods' => (clone $query)->where('type', InvoiceType::SALE->value)->select('payment_method', DB::raw('COALESCE(SUM(total), 0) as total_amount'), DB::raw('COUNT(*) as count'))->groupBy('payment_method')->get(),
         ];
     }
 
@@ -245,71 +198,32 @@ class ReportService
      */
     public function getCashFlowReport(?string $fromDate = null, ?string $toDate = null): array
     {
-        $cashTreasury = $this->calculateTreasury(PaymentMethod::CASH->value, true, $fromDate, $toDate);
-        $cardTreasury = $this->calculateTreasury(PaymentMethod::CARD->value, false, $fromDate, $toDate);
-        $instapayTreasury = $this->calculateTreasury(PaymentMethod::INSTAPAY->value, false, $fromDate, $toDate);
-        $vodafoneTreasury = $this->calculateTreasury(PaymentMethod::VODAFONE_CASH->value, false, $fromDate, $toDate);
-        $transferTreasury = $this->calculateTreasury(PaymentMethod::TRANSFER->value, false, $fromDate, $toDate);
+        $cash = $this->calculateTreasury(PaymentMethod::CASH->value, true, $fromDate, $toDate);
+        $card = $this->calculateTreasury(PaymentMethod::CARD->value, false, $fromDate, $toDate);
+        $instapay = $this->calculateTreasury(PaymentMethod::INSTAPAY->value, false, $fromDate, $toDate);
+        $vodafone = $this->calculateTreasury(PaymentMethod::VODAFONE_CASH->value, false, $fromDate, $toDate);
+        $transfer = $this->calculateTreasury(PaymentMethod::TRANSFER->value, false, $fromDate, $toDate);
 
-        $totalFunds = Money::of($cashTreasury['net_balance'])
-            ->add($cardTreasury['net_balance'])
-            ->add($instapayTreasury['net_balance'])
-            ->add($vodafoneTreasury['net_balance'])
-            ->add($transferTreasury['net_balance'])
-            ->getAmount();
+        $totalFunds = Money::of($cash['net_balance'])->add($card['net_balance'])->add($instapay['net_balance'])->add($vodafone['net_balance'])->add($transfer['net_balance'])->getAmount();
 
         return [
-            'period' => [
-                'from_date' => $fromDate,
-                'to_date' => $toDate,
-            ],
-            'inflow' => [
-                'cash_sales' => $cashTreasury['inflow']['sales'],
-                'receipt_vouchers' => $cashTreasury['inflow']['receipt_vouchers'],
-                'purchase_returns' => $cashTreasury['inflow']['purchase_returns'],
-                'total_inflow' => $cashTreasury['inflow']['total'],
-            ],
-            'outflow' => [
-                'cash_purchases' => $cashTreasury['outflow']['purchases'],
-                'payment_vouchers' => $cashTreasury['outflow']['payment_vouchers'],
-                'sale_returns' => $cashTreasury['outflow']['sale_returns'],
-                'expenses' => $cashTreasury['outflow']['expenses'],
-                'total_outflow' => $cashTreasury['outflow']['total'],
-            ],
-            'net_cash_flow' => $cashTreasury['net_balance'],
-            'treasuries' => [
-                'cash' => [
-                    'name' => 'خزينة الكاش (النقدية)',
-                    'code' => PaymentMethod::CASH->value,
-                    'icon' => 'cash-outline',
-                    ...$cashTreasury,
-                ],
-                'card' => [
-                    'name' => 'خزينة البطاقة (فيزا / شبكة)',
-                    'code' => PaymentMethod::CARD->value,
-                    'icon' => 'card-outline',
-                    ...$cardTreasury,
-                ],
-                'instapay' => [
-                    'name' => 'إنستاباي (InstaPay)',
-                    'code' => PaymentMethod::INSTAPAY->value,
-                    'icon' => 'swap-horizontal-outline',
-                    ...$instapayTreasury,
-                ],
-                'vodafone_cash' => [
-                    'name' => 'فودافون كاش والمحافظ',
-                    'code' => PaymentMethod::VODAFONE_CASH->value,
-                    'icon' => 'phone-portrait-outline',
-                    ...$vodafoneTreasury,
-                ],
-                'transfer' => [
-                    'name' => 'التحويلات البنكية (أخرى)',
-                    'code' => PaymentMethod::TRANSFER->value,
-                    'icon' => 'business-outline',
-                    ...$transferTreasury,
-                ],
-            ],
+            'period' => ['from_date' => $fromDate, 'to_date' => $toDate],
+            'inflow' => ['cash_sales' => $cash['inflow']['sales'], 'receipt_vouchers' => $cash['inflow']['receipt_vouchers'], 'purchase_returns' => $cash['inflow']['purchase_returns'], 'total_inflow' => $cash['inflow']['total']],
+            'outflow' => ['cash_purchases' => $cash['outflow']['purchases'], 'payment_vouchers' => $cash['outflow']['payment_vouchers'], 'sale_returns' => $cash['outflow']['sale_returns'], 'expenses' => $cash['outflow']['expenses'], 'total_outflow' => $cash['outflow']['total']],
+            'net_cash_flow' => $cash['net_balance'],
+            'treasuries' => $this->formatCashFlowTreasuries($cash, $card, $instapay, $vodafone, $transfer),
             'total_funds' => $totalFunds,
+        ];
+    }
+
+    private function formatCashFlowTreasuries(array $cash, array $card, array $instapay, array $vodafone, array $transfer): array
+    {
+        return [
+            'cash' => ['name' => 'خزينة الكاش (النقدية)', 'code' => PaymentMethod::CASH->value, 'icon' => 'cash-outline', ...$cash],
+            'card' => ['name' => 'خزينة البطاقة (فيزا / شبكة)', 'code' => PaymentMethod::CARD->value, 'icon' => 'card-outline', ...$card],
+            'instapay' => ['name' => 'إنستاباي (InstaPay)', 'code' => PaymentMethod::INSTAPAY->value, 'icon' => 'swap-horizontal-outline', ...$instapay],
+            'vodafone_cash' => ['name' => 'فودافون كاش والمحافظ', 'code' => PaymentMethod::VODAFONE_CASH->value, 'icon' => 'phone-portrait-outline', ...$vodafone],
+            'transfer' => ['name' => 'التحويلات البنكية (أخرى)', 'code' => PaymentMethod::TRANSFER->value, 'icon' => 'business-outline', ...$transfer],
         ];
     }
 
@@ -318,69 +232,29 @@ class ReportService
      */
     protected function calculateTreasury(string $method, bool $includeExpenses, ?string $fromDate, ?string $toDate): array
     {
-        $salesQuery = Invoice::where('type', InvoiceType::SALE->value)->where('payment_method', $method);
-        $splitSalesQuery = Payment::where('type', PaymentType::RECEIPT->value)
-            ->where('method', $method)
-            ->whereHas('invoice', fn($q) => $q->where('payment_method', PaymentMethod::SPLIT->value));
-        $receiptsQuery = Payment::where('type', PaymentType::RECEIPT->value)->where('method', $method)->whereNull('invoice_id');
-        $purchaseReturnsQuery = Invoice::where('type', InvoiceType::PURCHASE_RETURN->value)->where('payment_method', $method);
-
-        $purchasesQuery = Invoice::where('type', InvoiceType::PURCHASE->value)->where('payment_method', $method);
-        $paymentsQuery = Payment::where('type', PaymentType::PAYMENT->value)->where('method', $method)->whereNull('invoice_id');
-        $saleReturnsQuery = Invoice::where('type', InvoiceType::SALE_RETURN->value)->where('payment_method', $method);
-        $expensesQuery = Expense::query();
-
-        if ($fromDate) {
-            $salesQuery->where('date', '>=', $fromDate);
-            $splitSalesQuery->where('date', '>=', $fromDate);
-            $receiptsQuery->where('date', '>=', $fromDate);
-            $purchaseReturnsQuery->where('date', '>=', $fromDate);
-            $purchasesQuery->where('date', '>=', $fromDate);
-            $paymentsQuery->where('date', '>=', $fromDate);
-            $saleReturnsQuery->where('date', '>=', $fromDate);
-            $expensesQuery->where('date', '>=', $fromDate);
-        }
-        if ($toDate) {
-            $endBound = $toDate . ' 23:59:59';
-            $salesQuery->where('date', '<=', $endBound);
-            $splitSalesQuery->where('date', '<=', $endBound);
-            $receiptsQuery->where('date', '<=', $endBound);
-            $purchaseReturnsQuery->where('date', '<=', $endBound);
-            $purchasesQuery->where('date', '<=', $endBound);
-            $paymentsQuery->where('date', '<=', $endBound);
-            $saleReturnsQuery->where('date', '<=', $endBound);
-            $expensesQuery->where('date', '<=', $endBound);
-        }
-
-        $directSales = Money::of($salesQuery->sum('paid_amount') ?? 0);
-        $splitSales = Money::of($splitSalesQuery->sum('amount') ?? 0);
-        $sales = $directSales->add($splitSales);
-        $receipts = Money::of($receiptsQuery->sum('amount') ?? 0);
-        $purchaseReturns = Money::of($purchaseReturnsQuery->sum('paid_amount') ?? 0);
+        $sales = Money::of($this->applyDateBounds(Invoice::where('type', InvoiceType::SALE->value)->where('payment_method', $method), $fromDate, $toDate)->sum('paid_amount') ?? 0)
+            ->add(Money::of($this->applyDateBounds(Payment::where('type', PaymentType::RECEIPT->value)->where('method', $method)->whereHas('invoice', fn($q) => $q->where('payment_method', PaymentMethod::SPLIT->value)), $fromDate, $toDate)->sum('amount') ?? 0));
+        $receipts = Money::of($this->applyDateBounds(Payment::where('type', PaymentType::RECEIPT->value)->where('method', $method)->whereNull('invoice_id'), $fromDate, $toDate)->sum('amount') ?? 0);
+        $purchaseReturns = Money::of($this->applyDateBounds(Invoice::where('type', InvoiceType::PURCHASE_RETURN->value)->where('payment_method', $method), $fromDate, $toDate)->sum('paid_amount') ?? 0);
         $totalInflow = $sales->add($receipts)->add($purchaseReturns);
 
-        $purchases = Money::of($purchasesQuery->sum('paid_amount') ?? 0);
-        $payments = Money::of($paymentsQuery->sum('amount') ?? 0);
-        $saleReturns = Money::of($saleReturnsQuery->sum('paid_amount') ?? 0);
-        $expenses = $includeExpenses ? Money::of($expensesQuery->sum('amount') ?? 0) : Money::zero();
+        $purchases = Money::of($this->applyDateBounds(Invoice::where('type', InvoiceType::PURCHASE->value)->where('payment_method', $method), $fromDate, $toDate)->sum('paid_amount') ?? 0);
+        $payments = Money::of($this->applyDateBounds(Payment::where('type', PaymentType::PAYMENT->value)->where('method', $method)->whereNull('invoice_id'), $fromDate, $toDate)->sum('amount') ?? 0);
+        $saleReturns = Money::of($this->applyDateBounds(Invoice::where('type', InvoiceType::SALE_RETURN->value)->where('payment_method', $method), $fromDate, $toDate)->sum('paid_amount') ?? 0);
+        $expenses = $includeExpenses ? Money::of($this->applyDateBounds(Expense::query(), $fromDate, $toDate)->sum('amount') ?? 0) : Money::zero();
         $totalOutflow = $purchases->add($payments)->add($saleReturns)->add($expenses);
 
         return [
-            'inflow' => [
-                'sales' => $sales->getAmount(),
-                'receipt_vouchers' => $receipts->getAmount(),
-                'purchase_returns' => $purchaseReturns->getAmount(),
-                'total' => $totalInflow->getAmount(),
-            ],
-            'outflow' => [
-                'purchases' => $purchases->getAmount(),
-                'payment_vouchers' => $payments->getAmount(),
-                'sale_returns' => $saleReturns->getAmount(),
-                'expenses' => $expenses->getAmount(),
-                'total' => $totalOutflow->getAmount(),
-            ],
+            'inflow' => ['sales' => $sales->getAmount(), 'receipt_vouchers' => $receipts->getAmount(), 'purchase_returns' => $purchaseReturns->getAmount(), 'total' => $totalInflow->getAmount()],
+            'outflow' => ['purchases' => $purchases->getAmount(), 'payment_vouchers' => $payments->getAmount(), 'sale_returns' => $saleReturns->getAmount(), 'expenses' => $expenses->getAmount(), 'total' => $totalOutflow->getAmount()],
             'net_balance' => $totalInflow->subtract($totalOutflow)->getAmount(),
         ];
+    }
+
+    private function applyDateBounds($query, ?string $fromDate, ?string $toDate, string $column = 'date')
+    {
+        return $query->when($fromDate, fn($q) => $q->where($column, '>=', $fromDate))
+            ->when($toDate, fn($q) => $q->where($column, '<=', $toDate . ' 23:59:59'));
     }
 
     /**
