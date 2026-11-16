@@ -112,6 +112,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('view-cash-flow', [ReportPolicy::class, 'viewCashFlow']);
         Gate::define('view-sales', [ReportPolicy::class, 'viewSales']);
         Gate::define('view-stock', [ReportPolicy::class, 'viewStock']);
+        Gate::define('view-purchases', [ReportPolicy::class, 'viewPurchases']);
     }
 
     private function registerObservers(): void

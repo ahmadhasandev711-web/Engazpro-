@@ -34,4 +34,11 @@ class ReportPolicy
             ? Response::deny('عذراً، تقرير المخزون متاح للإدارة فقط')
             : Response::allow();
     }
+
+    public function viewPurchases(User $user): Response
+    {
+        return !($user->isOwnerOrAdmin() || $user->isManager())
+            ? Response::deny('عذراً، تقرير المشتريات والموردين متاح للإدارة فقط')
+            : Response::allow();
+    }
 }
