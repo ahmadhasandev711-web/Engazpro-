@@ -60,29 +60,11 @@ class WcOrderVanTransferService
      */
     public function createForDispatch(User $user, WcOrder $order, User $mandob, Branch $van): ?StockTransfer
     {
-        $accountId = $user->getAccountId();
         if ($van->id === $order->branch_id) {
             return null;
         }
 
-        $transferItems = [];
-        foreach ($order->items_snapshot ?? [] as $item) {
-            $wcProductId = (int) ($item['product_id'] ?? 0);
-            $wcVarId = !empty($item['variation_id']) ? (int) $item['variation_id'] : null;
-
-            $product = Product::where('user_id', $accountId)->where('wc_product_id', $wcProductId)->first();
-            $variant = $product && $wcVarId ? $product->variants()->where('wc_variation_id', $wcVarId)->first() : null;
-
-            if ($product) {
-                $transferItems[] = [
-                    'product_id' => $product->id,
-                    'product_variant_id' => $variant?->id,
-                    'quantity_sent' => Quantity::of($item['quantity'] ?? 1)->toFloat(),
-                    'unit_name' => $product->unit,
-                ];
-            }
-        }
-
+        $transferItems = $this->buildTransferItems($user->getAccountId(), $order->items_snapshot ?? []);
         if (empty($transferItems)) {
             return null;
         }
@@ -93,6 +75,28 @@ class WcOrderVanTransferService
             'items' => $transferItems,
             'notes' => self::buildTransferNote($order->wc_order_id, $mandob->name),
         ]);
+    }
+
+    private function buildTransferItems(int $accountId, array $snapshot): array
+    {
+        $items = [];
+        foreach ($snapshot as $item) {
+            $wcProductId = (int) ($item['product_id'] ?? 0);
+            $wcVarId = !empty($item['variation_id']) ? (int) $item['variation_id'] : null;
+            $product = Product::where('user_id', $accountId)->where('wc_product_id', $wcProductId)->first();
+            $variant = $product && $wcVarId ? $product->variants()->where('wc_variation_id', $wcVarId)->first() : null;
+
+            if ($product) {
+                $items[] = [
+                    'product_id' => $product->id,
+                    'product_variant_id' => $variant?->id,
+                    'quantity_sent' => Quantity::of($item['quantity'] ?? 1)->toFloat(),
+                    'unit_name' => $product->unit,
+                ];
+            }
+        }
+
+        return $items;
     }
 
     /**

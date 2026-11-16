@@ -132,51 +132,49 @@ class WooCommerceCustomerSyncService
      */
     public function pushCustomerToWooCommerce(User $user, Party $party): void
     {
-        $integration = WooCommerceIntegration::where('user_id', $user->getAccountId())
-            ->where('is_active', true)
-            ->first();
-
+        $integration = WooCommerceIntegration::where('user_id', $user->getAccountId())->where('is_active', true)->first();
         if (!$integration) {
             return;
         }
 
-        $names = explode(' ', trim($party->name), 2);
-        $firstName = $names[0] ?? '';
-        $lastName = $names[1] ?? '';
-
-        $payload = [
-            'first_name' => $firstName,
-            'last_name' => $lastName,
-            'billing' => [
-                'first_name' => $firstName,
-                'last_name' => $lastName,
-                'phone' => $party->phone ?? '',
-                'address_1' => $party->address ?? '',
-            ],
-        ];
-
-        if (!empty($party->wc_email)) {
-            $payload['email'] = $party->wc_email;
-        }
+        $payload = $this->buildOutboundCustomerPayload($party);
 
         try {
             if ($party->wc_customer_id) {
                 $this->apiClient->updateCustomer($integration, $party->wc_customer_id, $payload);
-            } else {
-                if (empty($payload['email']) && !empty($party->phone)) {
-                    $payload['email'] = $party->phone . '@customer.local';
-                }
-                $payload['username'] = $party->phone ?: ('cust_' . $party->id);
-
-                $created = $this->apiClient->createCustomer($integration, $payload);
-                if ($created && !empty($created['id'])) {
-                    $party->update([
-                        'wc_customer_id' => (int) $created['id'],
-                    ]);
-                }
+                return;
             }
+            $this->createRemoteCustomer($integration, $party, $payload);
         } catch (Exception $e) {
             Log::warning("Failed to push customer #{$party->id} to WooCommerce: " . $e->getMessage());
+        }
+    }
+
+    private function buildOutboundCustomerPayload(Party $party): array
+    {
+        [$firstName, $lastName] = array_pad(explode(' ', trim($party->name), 2), 2, '');
+        $payload = [
+            'first_name' => $firstName,
+            'last_name' => $lastName,
+            'billing' => ['first_name' => $firstName, 'last_name' => $lastName, 'phone' => $party->phone ?? '', 'address_1' => $party->address ?? ''],
+        ];
+        if (!empty($party->wc_email)) {
+            $payload['email'] = $party->wc_email;
+        }
+
+        return $payload;
+    }
+
+    private function createRemoteCustomer(WooCommerceIntegration $integration, Party $party, array $payload): void
+    {
+        if (empty($payload['email']) && !empty($party->phone)) {
+            $payload['email'] = $party->phone . '@customer.local';
+        }
+        $payload['username'] = $party->phone ?: ('cust_' . $party->id);
+
+        $created = $this->apiClient->createCustomer($integration, $payload);
+        if ($created && !empty($created['id'])) {
+            $party->update(['wc_customer_id' => (int) $created['id']]);
         }
     }
 

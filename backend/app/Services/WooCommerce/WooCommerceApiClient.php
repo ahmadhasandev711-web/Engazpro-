@@ -274,74 +274,35 @@ class WooCommerceApiClient implements WooCommerceApiClientInterface
         try {
             $deliveryUrl = url("/api/webhooks/woocommerce/{$config->user_id}");
             $webhooksUrl = rtrim($config->store_url, '/') . '/wp-json/wc/v3/webhooks';
-
-            // 1. Fetch existing webhooks to prevent duplicate creation
-            $listResp = Http::timeout(15)
-                ->withBasicAuth($config->consumer_key, $config->consumer_secret)
-                ->get($webhooksUrl, ['per_page' => 100]);
-
+            $listResp = Http::timeout(15)->withBasicAuth($config->consumer_key, $config->consumer_secret)->get($webhooksUrl, ['per_page' => 100]);
             $existing = $listResp->successful() ? (array) $listResp->json() : [];
-            $hasOrderCreated = false;
-            $hasOrderUpdated = false;
 
-            foreach ($existing as $wh) {
-                if (($wh['delivery_url'] ?? '') === $deliveryUrl) {
-                    if (($wh['topic'] ?? '') === 'order.created') {
-                        $hasOrderCreated = true;
-                        // Reactivate if disabled
-                        if (($wh['status'] ?? '') !== 'active' && !empty($wh['id'])) {
-                            Http::timeout(10)
-                                ->withBasicAuth($config->consumer_key, $config->consumer_secret)
-                                ->put("{$webhooksUrl}/{$wh['id']}", ['status' => 'active']);
-                        }
-                    }
-                    if (($wh['topic'] ?? '') === 'order.updated') {
-                        $hasOrderUpdated = true;
-                        if (($wh['status'] ?? '') !== 'active' && !empty($wh['id'])) {
-                            Http::timeout(10)
-                                ->withBasicAuth($config->consumer_key, $config->consumer_secret)
-                                ->put("{$webhooksUrl}/{$wh['id']}", ['status' => 'active']);
-                        }
-                    }
-                }
-            }
-
-            // 2. Register order.created if not already present
-            if (!$hasOrderCreated) {
-                $createResp = Http::timeout(15)
-                    ->withBasicAuth($config->consumer_key, $config->consumer_secret)
-                    ->post($webhooksUrl, [
-                        'name' => 'إنجاز برو - مزامنة الطلبيات اللحظية',
-                        'topic' => 'order.created',
-                        'delivery_url' => $deliveryUrl,
-                        'secret' => $config->webhook_secret,
-                        'status' => 'active',
-                    ]);
-
-                if ($createResp->successful()) {
-                    Log::info("Successfully auto-registered order.created webhook for store #{$config->user_id}");
-                } else {
-                    Log::warning("Failed to auto-register order.created webhook for store #{$config->user_id}: " . $createResp->body());
-                }
-            }
-
-            // 3. Register order.updated if not already present
-            if (!$hasOrderUpdated) {
-                Http::timeout(15)
-                    ->withBasicAuth($config->consumer_key, $config->consumer_secret)
-                    ->post($webhooksUrl, [
-                        'name' => 'إنجاز برو - تحديث الطلبيات',
-                        'topic' => 'order.updated',
-                        'delivery_url' => $deliveryUrl,
-                        'secret' => $config->webhook_secret,
-                        'status' => 'active',
-                    ]);
-            }
+            $this->ensureWebhookTopic($config, $webhooksUrl, $deliveryUrl, $existing, 'order.created', 'إنجاز برو - مزامنة الطلبيات اللحظية');
+            $this->ensureWebhookTopic($config, $webhooksUrl, $deliveryUrl, $existing, 'order.updated', 'إنجاز برو - تحديث الطلبيات');
 
             return true;
         } catch (Exception $e) {
             Log::warning("WooCommerce registerWebhooks exception for store #{$config->user_id}: " . $e->getMessage());
             return false;
+        }
+    }
+
+    private function ensureWebhookTopic(WooCommerceIntegration $config, string $webhooksUrl, string $deliveryUrl, array $existing, string $topic, string $name): void
+    {
+        foreach ($existing as $wh) {
+            if (($wh['delivery_url'] ?? '') === $deliveryUrl && ($wh['topic'] ?? '') === $topic) {
+                if (($wh['status'] ?? '') !== 'active' && !empty($wh['id'])) {
+                    Http::timeout(10)->withBasicAuth($config->consumer_key, $config->consumer_secret)->put("{$webhooksUrl}/{$wh['id']}", ['status' => 'active']);
+                }
+                return;
+            }
+        }
+
+        $resp = Http::timeout(15)->withBasicAuth($config->consumer_key, $config->consumer_secret)->post($webhooksUrl, [
+            'name' => $name, 'topic' => $topic, 'delivery_url' => $deliveryUrl, 'secret' => $config->webhook_secret, 'status' => 'active',
+        ]);
+        if ($topic === 'order.created' && !$resp->successful()) {
+            Log::warning("Failed to auto-register order.created webhook for store #{$config->user_id}: " . $resp->body());
         }
     }
 }

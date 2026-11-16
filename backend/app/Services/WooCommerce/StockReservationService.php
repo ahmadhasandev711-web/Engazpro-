@@ -37,18 +37,19 @@ class StockReservationService
             ->whereIn('wc_orders.branch_id', $branchIds)
             ->whereIn('wc_orders.status', $reservingStatuses);
 
-        if ($variantId !== null) {
-            $query->where('wc_order_items.product_variant_id', $variantId);
-        } else {
-            $query->whereNull('wc_order_items.product_variant_id');
-        }
+        $this->applyOptionalFilters($query, $variantId, $excludeWcOrderId);
+
+        return Quantity::of($query->sum('wc_order_items.quantity') ?? 0);
+    }
+
+    private function applyOptionalFilters($query, ?int $variantId, ?int $excludeWcOrderId): void
+    {
+        $variantId !== null
+            ? $query->where('wc_order_items.product_variant_id', $variantId)
+            : $query->whereNull('wc_order_items.product_variant_id');
 
         if ($excludeWcOrderId !== null) {
             $query->where('wc_orders.id', '!=', $excludeWcOrderId);
         }
-
-        $sum = $query->sum('wc_order_items.quantity');
-
-        return Quantity::of($sum ?? 0);
     }
 }

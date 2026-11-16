@@ -36,39 +36,28 @@ class WooCommerceProductImportService
         $imported = 0;
         $updated = 0;
         $errors = [];
-
         $wcProducts = $this->apiClient->getProducts($integration, $page, $perPage);
 
-        if (!empty($wcProducts)) {
-            foreach ($wcProducts as $wcProduct) {
-                try {
-                    $result = $this->syncSingleProduct($user, $integration, $wcProduct, $importStock);
-                    if ($result === 'created') {
-                        $imported++;
-                    } elseif ($result === 'updated') {
-                        $updated++;
-                    }
-                } catch (Exception $e) {
-                    Log::error("Failed to import WC Product #{$wcProduct['id']}: " . $e->getMessage());
-                    $errors[] = "منتج #{$wcProduct['id']} ({$wcProduct['name']}): " . $e->getMessage();
-                }
-            }
+        foreach ($wcProducts as $wcProduct) {
+            $result = $this->syncPageItemSafely($user, $integration, $wcProduct, $importStock, $errors);
+            $result === 'created' ? $imported++ : ($result === 'updated' ? $updated++ : null);
         }
 
-        $integration->update([
-            'last_synced_at' => now(),
-            'last_error' => !empty($errors) ? implode("\n", array_slice($errors, 0, 5)) : null,
-        ]);
-
+        $integration->update(['last_synced_at' => now(), 'last_error' => !empty($errors) ? implode("\n", array_slice($errors, 0, 5)) : null]);
         $count = count($wcProducts);
 
-        return [
-            'imported' => $imported,
-            'updated' => $updated,
-            'errors' => $errors,
-            'count' => $count,
-            'has_more' => $count === $perPage,
-        ];
+        return ['imported' => $imported, 'updated' => $updated, 'errors' => $errors, 'count' => $count, 'has_more' => $count === $perPage];
+    }
+
+    private function syncPageItemSafely(User $user, WooCommerceIntegration $integration, array $wcProduct, bool $importStock, array &$errors): ?string
+    {
+        try {
+            return $this->syncSingleProduct($user, $integration, $wcProduct, $importStock);
+        } catch (Exception $e) {
+            Log::error("Failed to import WC Product #{$wcProduct['id']}: " . $e->getMessage());
+            $errors[] = "منتج #{$wcProduct['id']} ({$wcProduct['name']}): " . $e->getMessage();
+            return null;
+        }
     }
 
     /**
