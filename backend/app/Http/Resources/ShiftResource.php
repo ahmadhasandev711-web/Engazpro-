@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Support\Money;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -33,16 +34,16 @@ class ShiftResource extends JsonResource
                 'id' => $this->settledByUser->id,
                 'name' => $this->settledByUser->name,
             ] : null,
-            'opening_balance' => (float) $this->opening_balance,
-            'cash_sales' => (float) $this->cash_sales,
-            'electronic_sales' => (float) $this->electronic_sales,
-            'credit_sales' => (float) $this->credit_sales,
-            'cash_receipts' => (float) $this->cash_receipts,
-            'cash_returns' => (float) $this->cash_returns,
-            'expenses' => (float) $this->expenses,
-            'expected_cash' => (float) $this->expected_cash,
-            'actual_cash' => $this->actual_cash !== null ? (float) $this->actual_cash : null,
-            'difference' => $this->difference !== null ? (float) $this->difference : null,
+            'opening_balance' => Money::of($this->opening_balance ?? 0)->getAmount(),
+            'cash_sales' => Money::of($this->cash_sales ?? 0)->getAmount(),
+            'electronic_sales' => Money::of($this->electronic_sales ?? 0)->getAmount(),
+            'credit_sales' => Money::of($this->credit_sales ?? 0)->getAmount(),
+            'cash_receipts' => Money::of($this->cash_receipts ?? 0)->getAmount(),
+            'cash_returns' => Money::of($this->cash_returns ?? 0)->getAmount(),
+            'expenses' => Money::of($this->expenses ?? 0)->getAmount(),
+            'expected_cash' => Money::of($this->expected_cash ?? 0)->getAmount(),
+            'actual_cash' => $this->actual_cash !== null ? Money::of($this->actual_cash)->getAmount() : null,
+            'difference' => $this->difference !== null ? Money::of($this->difference)->getAmount() : null,
             'notes' => $this->notes,
             'settlement_notes' => $this->settlement_notes,
             'created_at' => $this->created_at?->toIso8601String(),

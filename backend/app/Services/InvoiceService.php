@@ -23,6 +23,7 @@ use App\Models\TreasuryTransaction;
 use App\Models\User;
 use App\Services\DocumentSequenceService;
 use App\Support\Money;
+use App\Support\Quantity;
 use Exception;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
@@ -93,10 +94,10 @@ class InvoiceService
             }
             $items = $data['items'];
             $partyId = $data['party_id'] ?? null;
-            $discount = (float) ($data['discount'] ?? 0);
-            $tax = (float) ($data['tax'] ?? 0);
+            $discount = Money::of($data['discount'] ?? 0)->getAmount();
+            $tax = Money::of($data['tax'] ?? 0)->getAmount();
             $paymentMethod = $data['payment_method'] ?? PaymentMethod::CASH->value;
-            $paidAmount = (float) ($data['paid_amount'] ?? 0);
+            $paidAmount = Money::of($data['paid_amount'] ?? 0)->getAmount();
 
             // توليد رقم الفاتورة
             $prefix = match ($docType) {
@@ -120,7 +121,7 @@ class InvoiceService
 
             foreach ($items as $itemData) {
                 $product = Product::where('user_id', $user->getAccountId())->findOrFail($itemData['product_id']);
-                $qty = (float) $itemData['quantity'];
+                $qty = Quantity::of($itemData['quantity'])->toFloat();
                 $unitPriceMoney = Money::of($itemData['unit_price']);
                 $itemTotalMoney = $unitPriceMoney->multiply($qty);
                 $subtotalMoney = $subtotalMoney->add($itemTotalMoney);
@@ -133,7 +134,7 @@ class InvoiceService
                 // دعم الوحدات المتعددة وتحويل الكمية للمخزون
                 $unitName = $itemData['unit_name'] ?? $product->unit;
                 $isSubUnit = ($itemData['is_sub_unit'] ?? false) || ($product->sub_unit && $unitName === $product->sub_unit);
-                $stockFactor = ($isSubUnit && (float) $product->sub_unit_factor > 0) ? (float) $product->sub_unit_factor : 1.0;
+                $stockFactor = ($isSubUnit && Quantity::of($product->sub_unit_factor ?? 0)->isPositive()) ? Quantity::of($product->sub_unit_factor)->toFloat() : 1.0;
                 $stockDeductQty = $qty * $stockFactor;
 
                 $batch = null;

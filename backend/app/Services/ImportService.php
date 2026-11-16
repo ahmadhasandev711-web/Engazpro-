@@ -10,6 +10,7 @@ use App\Models\Party;
 use App\Models\Product;
 use App\Models\User;
 use App\Support\Money;
+use App\Support\Quantity;
 use Exception;
 use Illuminate\Support\Facades\DB;
 
@@ -110,12 +111,12 @@ class ImportService
             }
 
             $quantity = $row['quantity'] ?? 0;
-            if ($quantity !== null && (!is_numeric($quantity) || (float)$quantity < 0)) {
+            if ($quantity !== null && (!is_numeric($quantity) || Quantity::of($quantity)->isNegative())) {
                 $errors[] = 'الكمية الافتتاحية يجب أن تكون رقماً غير سالب.';
             }
 
             $minQuantity = $row['min_quantity'];
-            if ($minQuantity !== null && (!is_numeric($minQuantity) || (float)$minQuantity < 0)) {
+            if ($minQuantity !== null && (!is_numeric($minQuantity) || Quantity::of($minQuantity)->isNegative())) {
                 $errors[] = 'الحد الأدنى للكمية يجب أن يكون رقماً غير سالب.';
             }
 
@@ -173,9 +174,9 @@ class ImportService
                             'existing_id' => $matchedId,
                             'reason' => $matchedReason,
                             'existing_name' => $existingProd->name ?? '',
-                            'existing_quantity' => (float)($existingProd->quantity ?? 0),
-                            'existing_purchase_price' => (float)($existingProd->purchase_price ?? 0),
-                            'existing_sale_price' => (float)($existingProd->sale_price ?? 0),
+                            'existing_quantity' => Quantity::of($existingProd->quantity ?? 0)->toFloat(),
+                            'existing_purchase_price' => Money::of($existingProd->purchase_price ?? 0)->getAmount(),
+                            'existing_sale_price' => Money::of($existingProd->sale_price ?? 0)->getAmount(),
                         ];
                     } else {
                         $validCount++;
@@ -198,11 +199,11 @@ class ImportService
                     'code' => $code,
                     'barcode' => $barcode,
                     'unit' => $row['unit'] ? trim((string)$row['unit']) : 'قطعة',
-                    'purchase_price' => is_numeric($purchasePrice) ? (float)$purchasePrice : null,
-                    'sale_price' => is_numeric($salePrice) ? (float)$salePrice : null,
-                    'min_sale_price' => is_numeric($minSalePrice) ? (float)$minSalePrice : null,
-                    'quantity' => is_numeric($quantity) ? (float)$quantity : 0,
-                    'min_quantity' => is_numeric($minQuantity) ? (float)$minQuantity : null,
+                    'purchase_price' => is_numeric($purchasePrice) ? Money::of($purchasePrice)->getAmount() : null,
+                    'sale_price' => is_numeric($salePrice) ? Money::of($salePrice)->getAmount() : null,
+                    'min_sale_price' => is_numeric($minSalePrice) ? Money::of($minSalePrice)->getAmount() : null,
+                    'quantity' => is_numeric($quantity) ? Quantity::of($quantity)->toFloat() : 0,
+                    'min_quantity' => is_numeric($minQuantity) ? Quantity::of($minQuantity)->toFloat() : null,
                     'notes' => $row['notes'] ? trim((string)$row['notes']) : null,
                 ],
                 'duplicate_info' => $duplicateInfo,
@@ -281,7 +282,7 @@ class ImportService
                     $q->orWhere('name', $name);
                 })->first();
 
-                $quantityToAdd = is_numeric($data['quantity'] ?? null) ? (float)$data['quantity'] : 0;
+                $quantityToAdd = is_numeric($data['quantity'] ?? null) ? Quantity::of($data['quantity'])->toFloat() : 0;
 
                 if ($existingProduct) {
                     if ($duplicateAction === 'skip') {
@@ -293,13 +294,13 @@ class ImportService
                     $existingProduct->category_id = $categoryId ?? $existingProduct->category_id;
                     if ($code) $existingProduct->code = $code;
                     if ($barcode) $existingProduct->barcode = $barcode;
-                    $existingProduct->purchase_price = (float)$purchasePrice;
-                    $existingProduct->sale_price = (float)$salePrice;
+                    $existingProduct->purchase_price = Money::of($purchasePrice)->getAmount();
+                    $existingProduct->sale_price = Money::of($salePrice)->getAmount();
                     if (isset($data['min_sale_price']) && is_numeric($data['min_sale_price'])) {
-                        $existingProduct->min_sale_price = (float)$data['min_sale_price'];
+                        $existingProduct->min_sale_price = Money::of($data['min_sale_price'])->getAmount();
                     }
                     if (isset($data['min_quantity']) && is_numeric($data['min_quantity'])) {
-                        $existingProduct->min_quantity = (float)$data['min_quantity'];
+                        $existingProduct->min_quantity = Quantity::of($data['min_quantity'])->toFloat();
                     }
                     if (!empty($data['unit'])) {
                         $existingProduct->unit = $data['unit'];
@@ -318,7 +319,7 @@ class ImportService
                             StockMovementSource::INITIAL->value,
                             null,
                             $quantityToAdd,
-                            (float)$purchasePrice,
+                            Money::of($purchasePrice)->getAmount(),
                             'تحديث رصيد عبر استيراد Excel'
                         );
                     }
@@ -333,11 +334,11 @@ class ImportService
                         'barcode' => $barcode,
                         'name' => $name,
                         'unit' => !empty($data['unit']) ? $data['unit'] : 'قطعة',
-                        'purchase_price' => (float)$purchasePrice,
-                        'sale_price' => (float)$salePrice,
-                        'min_sale_price' => (isset($data['min_sale_price']) && is_numeric($data['min_sale_price'])) ? (float)$data['min_sale_price'] : null,
+                        'purchase_price' => Money::of($purchasePrice)->getAmount(),
+                        'sale_price' => Money::of($salePrice)->getAmount(),
+                        'min_sale_price' => (isset($data['min_sale_price']) && is_numeric($data['min_sale_price'])) ? Money::of($data['min_sale_price'])->getAmount() : null,
                         'quantity' => 0,
-                        'min_quantity' => (isset($data['min_quantity']) && is_numeric($data['min_quantity'])) ? (float)$data['min_quantity'] : null,
+                        'min_quantity' => (isset($data['min_quantity']) && is_numeric($data['min_quantity'])) ? Quantity::of($data['min_quantity'])->toFloat() : null,
                         'notes' => $data['notes'] ?? null,
                     ]);
 
@@ -350,7 +351,7 @@ class ImportService
                             StockMovementSource::INITIAL->value,
                             null,
                             $quantityToAdd,
-                            (float)$purchasePrice,
+                            Money::of($purchasePrice)->getAmount(),
                             'رصيد افتتاحي عبر استيراد Excel'
                         );
                     }

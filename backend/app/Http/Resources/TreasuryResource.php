@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Support\Money;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -14,8 +15,8 @@ class TreasuryResource extends JsonResource
             'name' => $this->name,
             'type' => $this->type,
             'type_label' => $this->type?->label() ?? $this->type,
-            'balance' => (float) $this->balance,
-            'current_balance' => (float) $this->balance,
+            'balance' => Money::of($this->balance ?? 0)->getAmount(),
+            'current_balance' => Money::of($this->balance ?? 0)->getAmount(),
             'assigned_user_id' => $this->assigned_user_id,
             'assigned_user_name' => $this->assignedUser?->name,
             'employee' => $this->assignedUser ? [

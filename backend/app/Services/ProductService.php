@@ -9,6 +9,7 @@ use App\Exceptions\PosDomainException;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\User;
+use App\Support\Quantity;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 
@@ -24,7 +25,7 @@ class ProductService
      */
     public function createProduct(User $user, array $data, ?int $branchId = null): Product
     {
-        $initialQty = (float) ($data['quantity'] ?? 0);
+        $initialQty = Quantity::of($data['quantity'] ?? 0)->toFloat();
         $variantsData = $data['variants'] ?? [];
         $batchesData = $data['batches'] ?? [];
 
@@ -78,7 +79,7 @@ class ProductService
             // 1. معالجة المتغيرات (Variants)
             if (!empty($variantsData)) {
                 foreach ($variantsData as $varData) {
-                    $varQty = (float) ($varData['quantity'] ?? 0);
+                    $varQty = Quantity::of($varData['quantity'] ?? 0)->toFloat();
                     $varDataToSave = $varData;
                     $varDataToSave['quantity'] = 0;
                     $varDataToSave['user_id'] = $user->getAccountId();
@@ -106,7 +107,7 @@ class ProductService
             // 2. معالجة التشغيلات وتواريخ الصلاحية (Batches)
             elseif (!empty($batchesData)) {
                 foreach ($batchesData as $batchData) {
-                    $batchQty = (float) ($batchData['quantity'] ?? 0);
+                    $batchQty = Quantity::of($batchData['quantity'] ?? 0)->toFloat();
                     $batchDataToSave = $batchData;
                     $batchDataToSave['quantity'] = 0;
                     $batchDataToSave['user_id'] = $user->getAccountId();
@@ -223,7 +224,7 @@ class ProductService
                             $variant->update($varData);
                         }
                     } else {
-                        $varQty = (float) ($varData['quantity'] ?? 0);
+                        $varQty = Quantity::of($varData['quantity'] ?? 0)->toFloat();
                         $varDataToSave = $varData;
                         $varDataToSave['quantity'] = 0;
                         $varDataToSave['user_id'] = $product->user_id;
@@ -257,7 +258,7 @@ class ProductService
     public function addBatch(User $user, Product $product, array $batchData): \App\Models\ProductBatch
     {
         return DB::transaction(function () use ($user, $product, $batchData) {
-            $batchQty = (float) ($batchData['quantity'] ?? 0);
+            $batchQty = Quantity::of($batchData['quantity'] ?? 0)->toFloat();
             $batchDataToSave = $batchData;
             $batchDataToSave['quantity'] = 0;
             $batchDataToSave['user_id'] = $user->getAccountId();

@@ -24,6 +24,8 @@ class FloatCastTest extends TestCase
     private const ALLOWLIST = [
         // كائن القيمة Quantity: دالة __construct تقبل float|int كـ fallback وتقوم بالتقريب والتحويل إلى مئات
         'Support/Quantity.php::__construct' => 1,
+        // كائن القيمة Money: دالة parseToCents تحوّل السلاسل العشرية بدقة مع fallback وحيد للأنواع الرقمية عند الحدود
+        'Support/Money.php::parseToCents' => 1,
     ];
 
     public function test_float_casts_must_not_exceed_ratchet_baseline_with_documented_boundary_allowlist(): void

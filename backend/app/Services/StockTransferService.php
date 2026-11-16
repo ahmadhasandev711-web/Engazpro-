@@ -16,6 +16,7 @@ use App\Models\StockTransfer;
 use App\Models\StockTransferItem;
 use App\Models\User;
 use App\Services\DocumentSequenceService;
+use App\Support\Quantity;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 
@@ -103,7 +104,7 @@ class StockTransferService
             foreach ($data['items'] as $itemData) {
                 $productId = (int) $itemData['product_id'];
                 $variantId = !empty($itemData['product_variant_id']) ? (int) $itemData['product_variant_id'] : null;
-                $qty = (float) $itemData['quantity_sent'];
+                $qty = Quantity::of($itemData['quantity_sent'])->toFloat();
 
                 if ($qty <= 0) {
                     throw new StockTransferDomainException('كمية التحويل يجب أن تكون أكبر من صفر.', 'INVALID_QUANTITY');
@@ -119,7 +120,7 @@ class StockTransferService
                     ->lockForUpdate()
                     ->first();
 
-                $availableQty = (float) ($fromStock?->quantity ?? 0);
+                $availableQty = Quantity::of($fromStock?->quantity ?? 0)->toFloat();
                 if ($availableQty < $qty) {
                     $itemLabel = $variant ? "{$product->name} ({$variant->name})" : $product->name;
                     throw new StockTransferDomainException("الرصيد غير كافٍ في {$fromBranch->name} للصنف {$itemLabel}. المتاح: {$availableQty}، المطلوب: {$qty}", 'INSUFFICIENT_TRANSFER_STOCK');
@@ -206,14 +207,14 @@ class StockTransferService
 
             foreach ($lockedTransfer->items as $item) {
                 $qtyReceived = isset($data['items'][$item->id]['quantity_received'])
-                    ? (float) $data['items'][$item->id]['quantity_received']
-                    : (float) $item->quantity_sent;
+                    ? Quantity::of($data['items'][$item->id]['quantity_received'])->toFloat()
+                    : Quantity::of($item->quantity_sent)->toFloat();
 
                 if ($qtyReceived < 0) {
                     throw new StockTransferDomainException('الكمية المستلمة لا يمكن أن تكون سالبة.', 'INVALID_QUANTITY');
                 }
 
-                if ($qtyReceived > (float) $item->quantity_sent) {
+                if ($qtyReceived > Quantity::of($item->quantity_sent)->toFloat()) {
                     throw new StockTransferDomainException("الكمية المستلمة ({$qtyReceived}) لا يمكن أن تتجاوز الكمية المرسلة ({$item->quantity_sent}) للصنف.", 'EXCESSIVE_QUANTITY');
                 }
 
@@ -273,7 +274,7 @@ class StockTransferService
 
             // إعادة الكميات المحولة لفرع المصدر مع القفل التشاؤمي الفعلي
             foreach ($lockedTransfer->items as $item) {
-                $qty = (float) $item->quantity_sent;
+                $qty = Quantity::of($item->quantity_sent)->toFloat();
 
                 $fromStock = $this->lockBranchStock(
                     $fromBranchId,

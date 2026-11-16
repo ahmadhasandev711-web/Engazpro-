@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\PaymentMethod;
+use App\Support\Money;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -21,10 +22,10 @@ class InvoiceRequest extends FormRequest
             'party_id' => ($this->party_id === '' || $this->party_id === 0 || $this->party_id === '0') ? null : $this->party_id,
             'courier_party_id' => ($this->courier_party_id === '' || $this->courier_party_id === 0 || $this->courier_party_id === '0') ? null : $this->courier_party_id,
             'parent_invoice_id' => ($this->parent_invoice_id === '' || $this->parent_invoice_id === 0 || $this->parent_invoice_id === '0') ? null : $this->parent_invoice_id,
-            'discount' => (float) ($this->discount ?? 0),
-            'tax' => (float) ($this->tax ?? 0),
-            'shipping_amount' => (float) ($this->shipping_amount ?? 0),
-            'paid_amount' => (float) ($this->paid_amount ?? 0),
+            'discount' => Money::of($this->discount ?? 0)->getAmount(),
+            'tax' => Money::of($this->tax ?? 0)->getAmount(),
+            'shipping_amount' => Money::of($this->shipping_amount ?? 0)->getAmount(),
+            'paid_amount' => Money::of($this->paid_amount ?? 0)->getAmount(),
             'payment_method' => $this->payment_method ?: PaymentMethod::CASH->value,
         ]);
     }

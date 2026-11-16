@@ -236,7 +236,7 @@ class WooCommerceOrderSyncService
             foreach ($lockedOrder->items_snapshot ?? [] as $item) {
                 $wcProductId = (int) ($item['product_id'] ?? 0);
                 $wcVarId = !empty($item['variation_id']) ? (int) $item['variation_id'] : null;
-                $qty = (float) ($item['quantity'] ?? 1);
+                $qty = Quantity::of($item['quantity'] ?? 1)->toFloat();
                 if (isset($item['price'])) {
                     $unitPrice = Money::of($item['price'])->getAmount();
                 } elseif (isset($item['subtotal'])) {

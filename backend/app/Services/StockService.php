@@ -13,6 +13,8 @@ use App\Models\ProductBatch;
 use App\Models\ProductVariant;
 use App\Models\StockMovement;
 use App\Models\User;
+use App\Support\Money;
+use App\Support\Quantity;
 use Illuminate\Support\Facades\DB;
 
 class StockService
@@ -47,7 +49,7 @@ class StockService
 
         // القفل التشاؤمي للمنتج لمنع تضارب التزامن (Race Conditions)
         $lockedProduct = Product::where('id', $product->id)->lockForUpdate()->first() ?? $product;
-        $currentQty = (float) $lockedProduct->quantity;
+        $currentQty = Quantity::of($lockedProduct->quantity ?? 0)->toFloat();
 
         if ($type === StockMovementType::OUT->value && $currentQty < $quantity) {
             throw new PosDomainException("الرصيد المتاح من الصنف '{$lockedProduct->name}' غير كافٍ لإتمام العملية (الرصيد الحالي: {$currentQty}).", 'INSUFFICIENT_STOCK');
@@ -61,7 +63,7 @@ class StockService
         // تحديث كمية المتغير إن وجد مع القفل التشاؤمي
         if ($variant) {
             $lockedVariant = ProductVariant::where('id', $variant->id)->lockForUpdate()->first() ?? $variant;
-            $varQty = (float) $lockedVariant->quantity;
+            $varQty = Quantity::of($lockedVariant->quantity ?? 0)->toFloat();
             if ($type === StockMovementType::OUT->value && $varQty < $quantity) {
                 throw new PosDomainException("الرصيد المتاح من المتغير غير كافٍ (الرصيد الحالي: {$varQty}).", 'INSUFFICIENT_STOCK');
             }
@@ -72,7 +74,7 @@ class StockService
         // تحديث كمية التشغيلة / تاريخ الصلاحية إن وجدت مع القفل التشاؤمي
         if ($batch) {
             $lockedBatch = ProductBatch::where('id', $batch->id)->lockForUpdate()->first() ?? $batch;
-            $batchQty = (float) $lockedBatch->quantity;
+            $batchQty = Quantity::of($lockedBatch->quantity ?? 0)->toFloat();
             if ($type === StockMovementType::OUT->value && $batchQty < $quantity) {
                 throw new PosDomainException("الرصيد المتاح من التشغيلة '{$lockedBatch->batch_number}' غير كافٍ (الرصيد الحالي: {$batchQty}).", 'INSUFFICIENT_STOCK');
             }
@@ -106,7 +108,7 @@ class StockService
                     ->firstOrFail();
             }
 
-            $currentBranchQty = (float) $branchStock->quantity;
+            $currentBranchQty = Quantity::of($branchStock->quantity ?? 0)->toFloat();
             if ($type === StockMovementType::OUT->value && $currentBranchQty < $quantity) {
                 $allowNegative = $this->settingService->allowsNegativeBranchStock($user);
                 if (!$allowNegative) {
@@ -167,8 +169,8 @@ class StockService
             foreach ($items as $item) {
                 $productId = $item['product_id'];
                 $variantId = $item['product_variant_id'] ?? null;
-                $quantity = (float) ($item['quantity'] ?? 0);
-                $costPrice = isset($item['cost_price']) && is_numeric($item['cost_price']) ? (float) $item['cost_price'] : null;
+                $quantity = Quantity::of($item['quantity'] ?? 0)->toFloat();
+                $costPrice = isset($item['cost_price']) && is_numeric($item['cost_price']) ? Money::of($item['cost_price'])->getAmount() : null;
 
                 if ($quantity <= 0) {
                     continue;

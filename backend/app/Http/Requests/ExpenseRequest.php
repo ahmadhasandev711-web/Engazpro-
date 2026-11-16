@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\PaymentMethod;
+use App\Support\Money;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ExpenseRequest extends FormRequest
@@ -16,7 +17,7 @@ class ExpenseRequest extends FormRequest
     {
         $this->merge([
             'payment_method' => $this->payment_method ?: PaymentMethod::CASH->value,
-            'amount' => (float) ($this->amount ?? 0),
+            'amount' => Money::of($this->amount ?? 0)->getAmount(),
         ]);
     }
 

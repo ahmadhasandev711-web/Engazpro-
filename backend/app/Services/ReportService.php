@@ -12,6 +12,7 @@ use App\Models\Payment;
 use App\Models\Product;
 use App\Models\User;
 use App\Support\Money;
+use App\Support\Quantity;
 use Illuminate\Support\Facades\DB;
 
 class ReportService
@@ -186,12 +187,12 @@ class ReportService
 
         $stockList = [];
         foreach ($paginator->items() as $product) {
-            $qty = (float) $product->quantity;
+            $qty = Quantity::of($product->quantity ?? 0)->toFloat();
             $purchasePriceMoney = Money::of($product->purchase_price ?? 0);
             $salePriceMoney = Money::of($product->sale_price ?? 0);
             $purchasePrice = $user->isMandob() ? null : $purchasePriceMoney->getAmount();
             $salePrice = $salePriceMoney->getAmount();
-            $minQty = $product->min_quantity !== null ? ((float) $product->min_quantity) : null;
+            $minQty = $product->min_quantity !== null ? Quantity::of($product->min_quantity)->toFloat() : null;
 
             $costValMoney = $user->isMandob() ? null : $purchasePriceMoney->multiply($qty);
             $retailValMoney = $salePriceMoney->multiply($qty);
@@ -217,7 +218,7 @@ class ReportService
         return [
             'summary' => [
                 'products_count' => (int) ($rawSummary->products_count ?? 0),
-                'total_quantity' => (float) ($rawSummary->total_quantity ?? 0),
+                'total_quantity' => Quantity::of($rawSummary->total_quantity ?? 0)->toFloat(),
                 'total_cost_value' => $user->isMandob() ? null : $totalCost->getAmount(),
                 'total_retail_value' => $totalRetail->getAmount(),
                 'expected_gross_margin' => $user->isMandob() ? null : $grossMargin,

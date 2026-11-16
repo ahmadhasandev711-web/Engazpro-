@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Support\Money;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -15,11 +16,11 @@ class PaymentResource extends JsonResource
             'party_name' => $this->party?->name,
             'party_type' => $this->party?->type,
             'party_phone' => $this->party?->phone,
-            'party_balance' => (float) ($this->party?->balance ?? 0),
+            'party_balance' => Money::of($this->party?->balance ?? 0)->getAmount(),
             'invoice_id' => $this->invoice_id,
             'invoice_number' => $this->invoice?->invoice_number,
             'type' => $this->type instanceof \BackedEnum ? $this->type->value : $this->type,
-            'amount' => (float) $this->amount,
+            'amount' => Money::of($this->amount ?? 0)->getAmount(),
             'method' => $this->method instanceof \BackedEnum ? $this->method->value : $this->method,
             'date' => $this->date ? $this->date->format('Y-m-d') : null,
             'notes' => $this->notes,

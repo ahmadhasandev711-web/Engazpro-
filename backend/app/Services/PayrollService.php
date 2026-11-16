@@ -57,7 +57,7 @@ class PayrollService
                 ->whereBetween('date', [$startDate, $endDate]);
         }
 
-        $totalSalesAmount = (float) $salesQuery->sum('total');
+        $totalSalesAmount = Money::of($salesQuery->sum('total') ?? 0)->getAmount();
         $invoicesCount = (int) $salesQuery->count();
 
         // 2. حساب العمولة بدقة عبر Money
@@ -65,7 +65,7 @@ class PayrollService
             ? $employee->commission_type
             : CommissionType::tryFrom($employee->commission_type ?? '') ?? CommissionType::NONE;
 
-        $commissionRate = (float) ($employee->commission_rate ?? 0);
+        $commissionRate = Money::of($employee->commission_rate ?? 0)->getAmount();
         $commissionMoney = Money::zero();
 
         if ($commissionType === CommissionType::PERCENTAGE_OF_SALES && $commissionRate > 0) {
@@ -115,7 +115,7 @@ class PayrollService
                 'name' => $employee->name,
                 'role' => $employee->role,
                 'branch_id' => $employee->branch_id,
-                'base_salary' => (float) $employee->base_salary,
+                'base_salary' => $baseSalaryMoney->getAmount(),
                 'commission_type' => $commissionType->value,
                 'commission_rate' => $commissionRate,
             ],
@@ -131,7 +131,7 @@ class PayrollService
             'is_paid' => (bool) $payout,
             'payout' => $payout ? [
                 'id' => $payout->id,
-                'net_paid' => (float) $payout->net_paid,
+                'net_paid' => Money::of($payout->net_paid ?? 0)->getAmount(),
                 'payment_method' => $payout->payment_method?->value ?? $payout->payment_method,
                 'treasury' => $payout->treasury ? [
                     'id' => $payout->treasury->id,
@@ -144,7 +144,7 @@ class PayrollService
             'adjustments' => $adjustments->map(fn($adj) => [
                 'id' => $adj->id,
                 'type' => $adj->type?->value ?? $adj->type,
-                'amount' => (float) $adj->amount,
+                'amount' => Money::of($adj->amount ?? 0)->getAmount(),
                 'date' => $adj->date->toDateString(),
                 'reason' => $adj->reason,
                 'created_by_name' => $adj->creator?->name,
@@ -164,7 +164,7 @@ class PayrollService
             ? $data['type']
             : EmployeeAdjustmentType::from($data['type']);
 
-        $amount = (float) $data['amount'];
+        $amount = Money::of($data['amount'])->getAmount();
         if ($amount <= 0) {
             throw new PayrollDomainException('قيمة التسوية يجب أن تكون أكبر من الصفر.', 'INVALID_AMOUNT');
         }
@@ -239,7 +239,7 @@ class PayrollService
         }
 
         $summary = $this->calculateMonthlyPayroll($employee, $month);
-        $netPayable = (float) $summary['net_payable'];
+        $netPayable = Money::of($summary['net_payable'])->getAmount();
 
         if ($netPayable <= 0) {
             throw new PayrollDomainException('صافي الراتب المستحق يجب أن يكون أكبر من الصفر لإتمام الصرف.', 'ZERO_NET_PAYABLE');
