@@ -10,24 +10,13 @@ use App\Services\WooCommerce\WooCommerceSettingsService;
 use App\Services\WooCommerce\WooStockPushService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class WooCommerceSettingsController extends Controller
 {
     public function __construct(
         protected WooCommerceSettingsService $settingsService
     ) {}
-
-    protected function checkOwnerOrAdmin(Request $request): ?JsonResponse
-    {
-        if (!$request->user()->isOwnerOrAdmin()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'عذراً، إعدادات وربط متجر ووكومرس مخصصة لمالك المنشأة ومدير النظام فقط.',
-            ], 403);
-        }
-
-        return null;
-    }
 
     private function presentSettings(WooCommerceIntegration $integration): array
     {
@@ -52,10 +41,7 @@ class WooCommerceSettingsController extends Controller
 
     public function getSettings(Request $request): JsonResponse
     {
-        if ($err = $this->checkOwnerOrAdmin($request)) {
-            return $err;
-        }
-
+        Gate::authorize('manage-ecommerce');
         $integration = $this->settingsService->findForAccount($request->user()->getAccountId(), true);
 
         return response()->json([
@@ -80,16 +66,10 @@ class WooCommerceSettingsController extends Controller
 
     public function testConnection(Request $request): JsonResponse
     {
-        if ($err = $this->checkOwnerOrAdmin($request)) {
-            return $err;
-        }
-
+        Gate::authorize('manage-ecommerce');
         $integration = $this->settingsService->findForAccount($request->user()->getAccountId());
         if (!$integration || !$integration->consumer_key || !$integration->consumer_secret) {
-            return response()->json([
-                'success' => false,
-                'message' => 'يرجى إدخال مفاتيح الربط أولاً وحفظ الإعدادات',
-            ], 422);
+            return response()->json(['success' => false, 'message' => 'يرجى إدخال مفاتيح الربط أولاً وحفظ الإعدادات'], 422);
         }
 
         $connected = $this->settingsService->testConnection($integration);
@@ -104,16 +84,10 @@ class WooCommerceSettingsController extends Controller
 
     public function autoRegisterWebhooks(Request $request): JsonResponse
     {
-        if ($err = $this->checkOwnerOrAdmin($request)) {
-            return $err;
-        }
-
+        Gate::authorize('manage-ecommerce');
         $integration = $this->settingsService->findForAccount($request->user()->getAccountId());
         if (!$integration || !$integration->consumer_key || !$integration->consumer_secret) {
-            return response()->json([
-                'success' => false,
-                'message' => 'يرجى ربط المتجر أولاً قبل تفعيل خطاف الويب',
-            ], 422);
+            return response()->json(['success' => false, 'message' => 'يرجى ربط المتجر أولاً قبل تفعيل خطاف الويب'], 422);
         }
 
         $success = $this->settingsService->registerWebhooks($integration);
@@ -128,58 +102,33 @@ class WooCommerceSettingsController extends Controller
 
     public function importProducts(Request $request): JsonResponse
     {
-        if ($err = $this->checkOwnerOrAdmin($request)) {
-            return $err;
-        }
-
+        Gate::authorize('manage-ecommerce');
         $integration = $this->settingsService->findForAccount($request->user()->getAccountId());
         if (!$integration || !$integration->is_active) {
-            return response()->json([
-                'success' => false,
-                'message' => 'ربط ووكومرس غير نشط أو غير مهيأ بعد',
-            ], 422);
+            return response()->json(['success' => false, 'message' => 'ربط ووكومرس غير نشط أو غير مهيأ بعد'], 422);
         }
 
-        $outcome = $this->settingsService->importProducts(
-            $request->user(),
-            $integration,
-            $request->boolean('import_stock', false)
+        return $this->importProductsResponse(
+            $this->settingsService->importProducts($request->user(), $integration, $request->boolean('import_stock', false))
         );
-
-        return $this->importProductsResponse($outcome);
     }
 
     public function syncCustomers(Request $request): JsonResponse
     {
-        if ($err = $this->checkOwnerOrAdmin($request)) {
-            return $err;
-        }
-
+        Gate::authorize('manage-ecommerce');
         $integration = $this->settingsService->findForAccount($request->user()->getAccountId());
         if (!$integration || !$integration->is_active) {
-            return response()->json([
-                'success' => false,
-                'message' => 'ربط ووكومرس غير مفعل',
-            ], 422);
+            return response()->json(['success' => false, 'message' => 'ربط ووكومرس غير مفعل'], 422);
         }
 
         $synced = $this->settingsService->syncCustomers($request->user(), $integration);
 
-        return response()->json([
-            'success' => true,
-            'message' => "تم استيراد ومزامنة {$synced} عميل من متجر ووكومرس بنجاح.",
-        ]);
+        return response()->json(['success' => true, 'message' => "تم استيراد ومزامنة {$synced} عميل من متجر ووكومرس بنجاح."]);
     }
 
-    public function pushProductStock(
-        Request $request,
-        Product $product,
-        WooStockPushService $stockPushService
-    ): JsonResponse {
-        if ($err = $this->checkOwnerOrAdmin($request)) {
-            return $err;
-        }
-
+    public function pushProductStock(Request $request, Product $product, WooStockPushService $stockPushService): JsonResponse
+    {
+        Gate::authorize('manage-ecommerce');
         $result = $stockPushService->pushProductForAccount($request->user()->getAccountId(), $product);
 
         return response()->json([
@@ -195,25 +144,16 @@ class WooCommerceSettingsController extends Controller
 
     public function pushAllStocks(Request $request): JsonResponse
     {
-        if ($err = $this->checkOwnerOrAdmin($request)) {
-            return $err;
-        }
-
+        Gate::authorize('manage-ecommerce');
         $accountId = $request->user()->getAccountId();
         $integration = $this->settingsService->findForAccount($accountId);
         if (!$integration || !$integration->is_active || !$integration->consumer_key || !$integration->consumer_secret) {
-            return response()->json([
-                'success' => false,
-                'message' => 'ربط متجر ووكومرس غير نشط أو غير مهيأ بعد بالمفاتيح.',
-            ], 422);
+            return response()->json(['success' => false, 'message' => 'ربط متجر ووكومرس غير نشط أو غير مهيأ بعد بالمفاتيح.'], 422);
         }
 
         $linkedCount = $this->settingsService->countLinkedProducts($accountId);
         if ($linkedCount === 0) {
-            return response()->json([
-                'success' => false,
-                'message' => 'لا توجد أصناف مرتبطة بمتجر ووكومرس حالياً لمزامنة أرصدتها.',
-            ], 422);
+            return response()->json(['success' => false, 'message' => 'لا توجد أصناف مرتبطة بمتجر ووكومرس حالياً لمزامنة أرصدتها.'], 422);
         }
 
         return $this->pushAllStocksResponse($this->settingsService->pushAllStocks($request->user(), $linkedCount));
@@ -253,10 +193,7 @@ class WooCommerceSettingsController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'بدأت مزامنة الأرصدة مع ووكومرس في الخلفية. قد تستغرق العملية عدة دقائق حسب حجم الكتالوج.',
-            'data' => [
-                'status' => 'queued',
-                'total_linked_products' => $outcome['total_linked_products'],
-            ],
+            'data' => ['status' => 'queued', 'total_linked_products' => $outcome['total_linked_products']],
         ], 202);
     }
 }

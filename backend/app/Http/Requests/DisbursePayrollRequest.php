@@ -3,11 +3,14 @@
 namespace App\Http\Requests;
 
 use App\Enums\PaymentMethod;
+use App\Http\Requests\Concerns\HasScopedValidation;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Enum;
 
 class DisbursePayrollRequest extends FormRequest
 {
+    use HasScopedValidation;
+
     public function authorize(): bool
     {
         return true;
@@ -17,7 +20,7 @@ class DisbursePayrollRequest extends FormRequest
     {
         return [
             'month' => ['required', 'regex:/^\d{4}-(0[1-9]|1[0-2])$/'],
-            'treasury_id' => ['required', 'integer', 'exists:treasuries,id'],
+            'treasury_id' => ['required', 'integer', $this->scopedExists('treasuries')],
             'payment_method' => ['required', new Enum(PaymentMethod::class)],
             'notes' => ['nullable', 'string', 'max:500'],
         ];

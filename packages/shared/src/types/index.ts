@@ -651,8 +651,6 @@ export interface WcOrder extends BaseEntity {
   items?: WcOrderItem[];
 }
 
-export type StockAdjustmentMode = 'INCREASE' | 'DECREASE' | 'SET_ACTUAL';
-
 export interface StockAlertsSummary {
   out_of_stock_count: number;
   low_stock_count: number;

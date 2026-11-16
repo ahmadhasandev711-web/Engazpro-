@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Enums\PaymentMethod;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ConfirmOnlineOrderRequest;
+use App\Http\Requests\DeliverOnlineOrderRequest;
 use App\Http\Requests\DispatchCourierRequest;
+use App\Http\Requests\DispatchMandobRequest;
+use App\Http\Requests\ReturnOnlineOrderRequest;
 use App\Http\Resources\ShopifyOrderResource;
 use App\Jobs\PullShopifyOrdersJob;
 use App\Models\ShopifyOrder;
@@ -13,7 +16,7 @@ use App\Services\Shopify\ShopifyOrderSyncService;
 use App\Services\Shopify\ShopifySettingsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Gate;
 
 class ShopifyOrderController extends Controller
 {
@@ -43,10 +46,7 @@ class ShopifyOrderController extends Controller
 
     public function pull(Request $request): JsonResponse
     {
-        if ($request->user()->isMandob()) {
-            return $this->forbidden('عذراً، سحب الطلبات متاح للمشرف والكاشير والإدارة فقط.');
-        }
-
+        Gate::authorize('pull-online-orders');
         $integration = $this->settingsService->findActiveOrFail($request->user()->getAccountId());
         if (config('queue.default') === 'sync') {
             $count = $this->orderSyncService->pullRecentOrders($request->user(), $integration);
@@ -59,42 +59,18 @@ class ShopifyOrderController extends Controller
         return response()->json(['success' => true, 'queued' => true, 'message' => 'بدأت عملية سحب طلبات Shopify في الخلفية'], 202);
     }
 
-    public function confirm(Request $request, int $id): JsonResponse
+    public function confirm(ConfirmOnlineOrderRequest $request, int $id): JsonResponse
     {
-        $user = $request->user();
-        if ($user->isMandob()) {
-            return $this->forbidden('عذراً، تأكيد وتجهيز الطلبات متاح للمشرف والكاشير والإدارة فقط.');
-        }
-
-        $validated = $request->validate(['branch_id' => ['required', 'exists:branches,id'], 'force' => ['nullable', 'boolean']]);
-        $branchId = $user->isManager() && $user->branch_id ? (int) $user->branch_id : (int) $validated['branch_id'];
-        if ($user->isManager() && $user->branch_id && (int) $validated['branch_id'] !== (int) $user->branch_id) {
-            return $this->forbidden('عذراً، كمدير فرع يمكنك تأكيد الطلبات من مخزن فرعك فقط.');
-        }
-
-        $order = $this->orderQueryService->findForAccountOrFail($user, $id);
-        $updated = $this->orderSyncService->confirmOrder($user, $order, $branchId, (bool) ($validated['force'] ?? false));
+        $order = $this->orderQueryService->findForAccountOrFail($request->user(), $id);
+        $updated = $this->orderSyncService->confirmOrder($request->user(), $order, $request->resolvedBranchId(), $request->boolean('force'));
 
         return response()->json(['success' => true, 'message' => 'تم تأكيد طلب Shopify وتحديد فرع التجهيز بنجاح', 'data' => $updated]);
     }
 
-    public function dispatchToMandob(Request $request, int $id): JsonResponse
+    public function dispatchToMandob(DispatchMandobRequest $request, int $id): JsonResponse
     {
-        $user = $request->user();
-        if ($user->isMandob()) {
-            return $this->forbidden('عذراً، إسناد الطلبات للمناديب متاح للمشرف والكاشير والإدارة فقط.');
-        }
-
-        $order = $this->orderQueryService->findForAccountOrFail($user, $id);
-        $validated = $request->validate(['mandob_id' => ['required', 'exists:users,id']]);
-        if ($user->isManager() && $user->branch_id) {
-            $mandob = $this->orderQueryService->findAccountUserOrFail($user->getAccountId(), (int) $validated['mandob_id']);
-            if ($mandob->branch_id !== $user->branch_id) {
-                return $this->forbidden('عذراً، يمكنك إسناد الطلبات لمناديب فرعك فقط.');
-            }
-        }
-
-        $updated = $this->orderSyncService->dispatchToMandob($user, $order, (int) $validated['mandob_id']);
+        $order = $this->orderQueryService->findForAccountOrFail($request->user(), $id);
+        $updated = $this->orderSyncService->dispatchToMandob($request->user(), $order, (int) $request->validated('mandob_id'));
 
         return response()->json(['success' => true, 'message' => 'تم إسناد طلب Shopify للمندوب بنجاح', 'data' => $updated]);
     }
@@ -107,33 +83,20 @@ class ShopifyOrderController extends Controller
         return response()->json(['success' => true, 'message' => 'تم إسناد طلب Shopify لشركة الشحن بنجاح', 'data' => $updated]);
     }
 
-    public function deliver(Request $request, int $id): JsonResponse
+    public function deliver(DeliverOnlineOrderRequest $request, int $id): JsonResponse
     {
-        $user = $request->user();
-        $order = $this->orderQueryService->findForAccountOrFail($user, $id);
-        if ($user->isMandob() && (int) $order->mandob_id !== (int) $user->id) {
-            return $this->forbidden('عذراً، هذا الطلب غير مسند إليك للتوصيل.');
-        }
-
-        $validated = $request->validate([
-            'collected_amount' => ['nullable', 'numeric', 'min:0'],
-            'payment_method' => ['nullable', 'string', Rule::enum(PaymentMethod::class)],
-        ]);
-        $invoice = $this->orderSyncService->deliverOrder($user, $order, $validated);
+        $order = $this->orderQueryService->findForAccountOrFail($request->user(), $id);
+        Gate::authorize('deliver-online-order', $order);
+        $invoice = $this->orderSyncService->deliverOrder($request->user(), $order, $request->validated());
 
         return response()->json(['success' => true, 'message' => 'تم تسليم طلب Shopify وإصدار الفاتورة بنجاح', 'data' => $invoice]);
     }
 
-    public function returnOrder(Request $request, int $id): JsonResponse
+    public function returnOrder(ReturnOnlineOrderRequest $request, int $id): JsonResponse
     {
-        $user = $request->user();
-        if ($user->isMandob()) {
-            return $this->forbidden('عذراً، تسجيل مرتجعات المتجر متاح للمشرف والكاشير والإدارة فقط.');
-        }
-
-        $validated = $request->validate(['reason' => ['nullable', 'string', 'max:500']]);
-        $order = $this->orderQueryService->findForAccountOrFail($user, $id);
-        $this->orderSyncService->returnOrder($user, $order, $validated['reason'] ?? null);
+        Gate::authorize('operate-online-order');
+        $order = $this->orderQueryService->findForAccountOrFail($request->user(), $id);
+        $this->orderSyncService->returnOrder($request->user(), $order, $request->validated('reason'));
 
         return response()->json(['success' => true, 'message' => 'تم تسجيل طلب Shopify كمرتجع بنجاح']);
     }

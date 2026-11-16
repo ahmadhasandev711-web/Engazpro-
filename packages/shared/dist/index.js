@@ -48,6 +48,8 @@ __export(index_exports, {
   ProductVariantSchema: () => ProductVariantSchema,
   RegisterSchema: () => RegisterSchema,
   ShiftStatus: () => ShiftStatus,
+  ShopifyAuthMode: () => ShopifyAuthMode,
+  StockAdjustmentMode: () => StockAdjustmentMode,
   StockMovementSource: () => StockMovementSource,
   StockMovementType: () => StockMovementType,
   StockTransferItemSchema: () => StockTransferItemSchema,
@@ -151,6 +153,18 @@ var EcommercePlatform = /* @__PURE__ */ ((EcommercePlatform2) => {
   EcommercePlatform2["SHOPIFY"] = "shopify";
   return EcommercePlatform2;
 })(EcommercePlatform || {});
+var ShopifyAuthMode = /* @__PURE__ */ ((ShopifyAuthMode2) => {
+  ShopifyAuthMode2["ACCESS_TOKEN"] = "ACCESS_TOKEN";
+  ShopifyAuthMode2["CLIENT_CREDENTIALS"] = "CLIENT_CREDENTIALS";
+  ShopifyAuthMode2["OAUTH"] = "OAUTH";
+  return ShopifyAuthMode2;
+})(ShopifyAuthMode || {});
+var StockAdjustmentMode = /* @__PURE__ */ ((StockAdjustmentMode2) => {
+  StockAdjustmentMode2["INCREASE"] = "INCREASE";
+  StockAdjustmentMode2["DECREASE"] = "DECREASE";
+  StockAdjustmentMode2["SET_ACTUAL"] = "SET_ACTUAL";
+  return StockAdjustmentMode2;
+})(StockAdjustmentMode || {});
 var UserRole = /* @__PURE__ */ ((UserRole2) => {
   UserRole2["OWNER"] = "OWNER";
   UserRole2["ADMIN"] = "ADMIN";
@@ -659,6 +673,8 @@ function formatDateTime(dateString) {
   ProductVariantSchema,
   RegisterSchema,
   ShiftStatus,
+  ShopifyAuthMode,
+  StockAdjustmentMode,
   StockMovementSource,
   StockMovementType,
   StockTransferItemSchema,

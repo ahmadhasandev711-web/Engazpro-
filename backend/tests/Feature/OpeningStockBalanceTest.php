@@ -233,7 +233,7 @@ class OpeningStockBalanceTest extends TestCase
                 ],
             ]);
 
-        $response->assertNotFound();
+        $response->assertUnprocessable();
     }
 
     public function test_opening_balance_rejects_negative_or_zero_quantity(): void

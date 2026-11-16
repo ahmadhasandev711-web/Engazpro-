@@ -17,7 +17,6 @@ class StockAlertsService
 {
     public static function forgetForAccount(int $accountId): void
     {
-        Cache::forget("stock_alerts_summary_{$accountId}_all");
         Cache::increment("stock_alerts_ver_{$accountId}");
     }
 

@@ -9,6 +9,7 @@ use App\Services\StockAlertsService;
 use App\Services\StockOperationsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class StockOperationsController extends Controller
 {
@@ -19,22 +20,16 @@ class StockOperationsController extends Controller
 
     public function alertsSummary(Request $request): JsonResponse
     {
-        $user = $request->user();
-        if (!($user->isOwnerOrAdmin() || $user->isManager())) {
-            return $this->forbidden('عذراً، متابعة تنبيهات المخزون متاحة للإدارة فقط.');
-        }
+        Gate::authorize('stock-alerts');
 
-        return response()->json(['success' => true, 'data' => $this->alertsService->getSummary($user)]);
+        return response()->json(['success' => true, 'data' => $this->alertsService->getSummary($request->user())]);
     }
 
     public function alerts(Request $request): JsonResponse
     {
-        $user = $request->user();
-        if (!($user->isOwnerOrAdmin() || $user->isManager())) {
-            return $this->forbidden('عذراً، عرض نواقص المخزون وصلاحية الدفعات متاح للإدارة فقط.');
-        }
+        Gate::authorize('stock-alerts');
 
-        return response()->json(['success' => true, 'data' => $this->alertsService->getAlerts($user, $request->all())]);
+        return response()->json(['success' => true, 'data' => $this->alertsService->getAlerts($request->user(), $request->all())]);
     }
 
     public function adjust(AdjustStockRequest $request): JsonResponse
@@ -54,12 +49,8 @@ class StockOperationsController extends Controller
 
     public function movements(Request $request): JsonResponse
     {
-        $user = $request->user();
-        if (!($user->isOwnerOrAdmin() || $user->isManager())) {
-            return $this->forbidden('عذراً، دفتر حركات المخزون متاح للإدارة فقط.');
-        }
-
-        $paginator = $this->operationsService->getMovementsPaginated($user, $request->all());
+        Gate::authorize('stock-movements');
+        $paginator = $this->operationsService->getMovementsPaginated($request->user(), $request->all());
 
         return response()->json([
             'success' => true,

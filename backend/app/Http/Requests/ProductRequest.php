@@ -2,12 +2,15 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\HasScopedValidation;
 use App\Support\Money;
 use App\Support\Quantity;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ProductRequest extends FormRequest
 {
+    use HasScopedValidation;
+
     public function authorize(): bool
     {
         return true;
@@ -32,7 +35,7 @@ class ProductRequest extends FormRequest
             'has_variants' => ['nullable', 'boolean'],
             'code' => ['nullable', 'string', 'max:100'],
             'barcode' => ['nullable', 'string', 'max:100', 'regex:/^[ -~]+$/', 'not_regex:/[<>"\'`]/'],
-            'category_id' => ['nullable', 'exists:categories,id'],
+            'category_id' => ['nullable', 'integer', $this->scopedExists('categories')],
             'unit' => ['nullable', 'string', 'max:50'],
             'sub_unit' => ['nullable', 'string', 'max:50'],
             'sub_unit_factor' => ['nullable', 'numeric', 'min:0.01'],

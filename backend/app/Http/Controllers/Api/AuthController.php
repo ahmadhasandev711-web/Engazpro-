@@ -59,7 +59,14 @@ class AuthController extends Controller
 
     public function me(Request $request): JsonResponse
     {
-        $user = $request->user()->load('subscription');
+        $user = $request->user()->load([
+            'subscription',
+            'wooCommerceIntegration:id,user_id,is_active',
+            'shopifyIntegration:id,user_id,is_active',
+            'owner.subscription',
+            'owner.wooCommerceIntegration:id,user_id,is_active',
+            'owner.shopifyIntegration:id,user_id,is_active',
+        ]);
 
         return response()->json([
             'success' => true,

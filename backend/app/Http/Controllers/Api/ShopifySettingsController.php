@@ -11,6 +11,7 @@ use App\Services\Shopify\ShopifySettingsService;
 use App\Services\Shopify\ShopifyStockPushService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class ShopifySettingsController extends Controller
 {
@@ -20,9 +21,7 @@ class ShopifySettingsController extends Controller
 
     public function getSettings(Request $request): JsonResponse
     {
-        if ($err = $this->checkOwnerOrAdmin($request)) {
-            return $err;
-        }
+        Gate::authorize('manage-ecommerce');
         $integration = $this->settingsService->findForAccount($request->user()->getAccountId(), true);
 
         return response()->json(['success' => true, 'data' => $integration ? $this->presentSettings($integration) : null]);
@@ -41,9 +40,7 @@ class ShopifySettingsController extends Controller
 
     public function testConnection(Request $request): JsonResponse
     {
-        if ($err = $this->checkOwnerOrAdmin($request)) {
-            return $err;
-        }
+        Gate::authorize('manage-ecommerce');
         $result = $this->settingsService->testConnection($request->user()->getAccountId());
 
         return response()->json([
@@ -55,9 +52,7 @@ class ShopifySettingsController extends Controller
 
     public function syncLocations(Request $request): JsonResponse
     {
-        if ($err = $this->checkOwnerOrAdmin($request)) {
-            return $err;
-        }
+        Gate::authorize('manage-ecommerce');
         $integration = $this->settingsService->findActiveOrFail($request->user()->getAccountId());
         $mappings = $this->settingsService->syncLocations($integration);
 
@@ -76,9 +71,7 @@ class ShopifySettingsController extends Controller
 
     public function registerWebhooks(Request $request): JsonResponse
     {
-        if ($err = $this->checkOwnerOrAdmin($request)) {
-            return $err;
-        }
+        Gate::authorize('manage-ecommerce');
         $success = $this->settingsService->registerWebhooks($request->user()->getAccountId());
 
         return response()->json([
@@ -89,9 +82,7 @@ class ShopifySettingsController extends Controller
 
     public function importProducts(Request $request): JsonResponse
     {
-        if ($err = $this->checkOwnerOrAdmin($request)) {
-            return $err;
-        }
+        Gate::authorize('manage-ecommerce');
         $outcome = $this->settingsService->importProducts($request->user(), $request->boolean('import_stock', false));
         if ($outcome['queued']) {
             return response()->json(['success' => true, 'queued' => true, 'message' => 'بدأت عملية استيراد منتجات Shopify في الخلفية بنجاح'], 202);
@@ -106,11 +97,9 @@ class ShopifySettingsController extends Controller
         ]);
     }
 
-    public function pushProductStock(Request $request, Product $product, ShopifyStockPushService $pushService): JsonResponse
+    public function pushProductStock(Product $product, ShopifyStockPushService $pushService, Request $request): JsonResponse
     {
-        if ($err = $this->checkOwnerOrAdmin($request)) {
-            return $err;
-        }
+        Gate::authorize('manage-ecommerce');
         $result = $pushService->pushProductForAccount($request->user()->getAccountId(), $product);
 
         return response()->json(['success' => true, 'message' => $result['message'], 'data' => $result]);
@@ -118,22 +107,13 @@ class ShopifySettingsController extends Controller
 
     public function pushAllStocks(Request $request): JsonResponse
     {
-        if ($err = $this->checkOwnerOrAdmin($request)) {
-            return $err;
-        }
+        Gate::authorize('manage-ecommerce');
         $outcome = $this->settingsService->pushAllStocks($request->user());
         if ($outcome['queued']) {
             return response()->json(['success' => true, 'queued' => true, 'message' => "بدأت مزامنة رصيد {$outcome['linked_count']} منتج نحو Shopify في الخلفية"], 202);
         }
 
         return response()->json(['success' => true, 'queued' => false, 'message' => "تم دفع رصيد {$outcome['result']['synced_count']} منتج إلى مواقع Shopify بنجاح", 'data' => $outcome['result']]);
-    }
-
-    private function checkOwnerOrAdmin(Request $request): ?JsonResponse
-    {
-        return $request->user()->isOwnerOrAdmin()
-            ? null
-            : $this->forbidden('عذراً، إعدادات وربط متجر Shopify مخصصة لمالك المنشأة ومدير النظام فقط.');
     }
 
     private function presentSettings(ShopifyIntegration $integration): array
