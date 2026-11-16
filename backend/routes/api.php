@@ -36,6 +36,8 @@ Route::prefix('auth')->group(function () {
 Route::post('webhooks/woocommerce/{userId}', [\App\Http\Controllers\Api\WooCommerceWebhookController::class, 'handle'])->middleware('throttle:webhook');
 // WooCommerce 1-Click OAuth Callback (Public endpoint called by WordPress)
 Route::post('woocommerce/auth-callback', [\App\Http\Controllers\Api\WooCommerceAuthController::class, 'authCallback'])->middleware('throttle:webhook');
+// Shopify OAuth Callback (Public endpoint redirected from Shopify)
+Route::get('shopify/auth-callback', [\App\Http\Controllers\Api\ShopifyAuthController::class, 'callback'])->middleware('throttle:webhook');
 // Anoofy Inbound Events (Public endpoint with HMAC-SHA256 signature verification)
 Route::post('webhooks/anoofy/events', \App\Http\Controllers\Api\AnoofyInboundController::class)
     ->middleware('throttle:anoofy_inbound')
@@ -191,6 +193,17 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
             Route::post('/{id}/dispatch-courier', [\App\Http\Controllers\Api\WcOrderController::class, 'dispatchCourier']);
             Route::post('/{id}/deliver', [\App\Http\Controllers\Api\WcOrderController::class, 'deliver']);
             Route::post('/{id}/return', [\App\Http\Controllers\Api\WcOrderController::class, 'returnOrder']);
+        });
+
+        // Shopify Integration (ربط ومزامنة متجر شوبيفاي)
+        Route::prefix('shopify')->group(function () {
+            Route::get('authorize-url', [\App\Http\Controllers\Api\ShopifyAuthController::class, 'authorizeUrl']);
+            Route::get('settings', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'getSettings']);
+            Route::post('settings', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'saveSettings']);
+            Route::post('test-connection', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'testConnection']);
+            Route::post('sync-locations', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'syncLocations']);
+            Route::post('location-mappings', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'saveLocationMappings']);
+            Route::post('register-webhooks', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'registerWebhooks']);
         });
 
         // Store Settings & Identity (هوية المنشأة والعملة)

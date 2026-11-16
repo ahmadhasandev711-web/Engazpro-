@@ -27,11 +27,15 @@ class ProductVariant extends Model
         'quantity',
         'min_quantity',
         'wc_variation_id',
+        'shopify_variant_id',
+        'shopify_inventory_item_id',
         'image_url',
     ];
 
     protected $casts = [
         'wc_variation_id' => 'integer',
+        'shopify_variant_id' => 'integer',
+        'shopify_inventory_item_id' => 'integer',
         'purchase_price' => 'decimal:2',
         'regular_price' => 'decimal:2',
         'sale_price' => 'decimal:2',

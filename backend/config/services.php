@@ -35,4 +35,14 @@ return [
         ],
     ],
 
+    'shopify' => [
+        'api_version' => env('SHOPIFY_API_VERSION', '2026-04'),
+        'client_id' => env('SHOPIFY_CLIENT_ID'),
+        'client_secret' => env('SHOPIFY_CLIENT_SECRET'),
+        'scopes' => env(
+            'SHOPIFY_SCOPES',
+            'read_products,write_inventory,read_orders,write_orders,read_fulfillments,write_fulfillments,read_locations,read_customers'
+        ),
+    ],
+
 ];

@@ -25,10 +25,12 @@ class Party extends Model
         'notes',
         'wc_customer_id',
         'wc_email',
+        'shopify_customer_id',
     ];
 
     protected $casts = [
         'wc_customer_id' => 'integer',
+        'shopify_customer_id' => 'integer',
         'balance' => 'decimal:2',
     ];
 

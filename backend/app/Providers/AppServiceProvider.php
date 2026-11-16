@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Contracts\AnoofySignatureVerifierInterface;
 use App\Contracts\HostResolver;
+use App\Contracts\ShopifyGraphqlClientInterface;
 use App\Contracts\WooCommerceApiClientInterface;
 use App\Models\Branch;
 use App\Models\BranchStock;
@@ -54,6 +55,10 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(
             WooCommerceApiClientInterface::class,
             WooCommerceApiClient::class
+        );
+        $this->app->bind(
+            ShopifyGraphqlClientInterface::class,
+            \App\Services\Shopify\ShopifyGraphqlClient::class
         );
         $this->app->bind(
             HostResolver::class,
