@@ -372,44 +372,36 @@ class CourierService
      */
     public function recordDeliveryCollection(User $user, Invoice $invoice, WcOrder $order, float $collectedAmount): void
     {
-        if (!$order->courier_party_id) {
+        if (!$order->courier_party_id || $collectedAmount <= 0) {
             return;
         }
 
-        DB::transaction(function () use ($user, $invoice, $order, $collectedAmount) {
-            $courier = Party::where('user_id', $user->getAccountId())
-                ->where('type', PartyType::COURIER->value)
-                ->lockForUpdate()
-                ->find($order->courier_party_id);
+        DB::transaction(fn() => $this->persistDeliveryCollection($user, $invoice, $order, $collectedAmount));
+    }
 
-            if (!$courier || $collectedAmount <= 0) {
-                return;
-            }
+    private function persistDeliveryCollection(User $user, Invoice $invoice, WcOrder $order, float $collectedAmount): void
+    {
+        $courier = Party::where('user_id', $user->getAccountId())
+            ->where('type', PartyType::COURIER->value)
+            ->lockForUpdate()
+            ->find($order->courier_party_id);
 
-            // منع تكرار قيد التحصيل لنفس الفاتورة
-            $alreadyRecorded = LedgerEntry::where('party_id', $courier->id)
-                ->where('source_type', LedgerSource::INVOICE->value)
-                ->where('source_id', $invoice->id)
-                ->where('debit', '>', 0)
-                ->exists();
+        if (!$courier) {
+            return;
+        }
 
-            if ($alreadyRecorded) {
-                return;
-            }
+        $alreadyRecorded = LedgerEntry::where('party_id', $courier->id)
+            ->where('source_type', LedgerSource::INVOICE->value)
+            ->where('source_id', $invoice->id)
+            ->where('debit', '>', 0)
+            ->exists();
 
-            $desc = "تحصيل شحنة أوردر #{$order->wc_order_id} - العميل: " . ($order->customer_name ?: 'عميل ووكومرس');
+        if ($alreadyRecorded) {
+            return;
+        }
 
-            $this->ledgerService->recordEntry(
-                user: $user,
-                party: $courier,
-                sourceType: LedgerSource::INVOICE->value,
-                sourceId: $invoice->id,
-                date: $invoice->date->format('Y-m-d'),
-                description: $desc,
-                debit: $collectedAmount,
-                credit: 0.0
-            );
-        });
+        $desc = "تحصيل شحنة أوردر #{$order->wc_order_id} - العميل: " . ($order->customer_name ?: 'عميل ووكومرس');
+        $this->ledgerService->recordEntry($user, $courier, LedgerSource::INVOICE->value, $invoice->id, $invoice->date->format('Y-m-d'), $desc, $collectedAmount, 0.0);
     }
 
     /**
@@ -417,57 +409,16 @@ class CourierService
      */
     public function settleCourierNet(User $user, int $courierPartyId, array $data): array
     {
-        $accountId = $user->getAccountId();
-        $courier = Party::where('user_id', $accountId)
-            ->where('type', PartyType::COURIER->value)
-            ->findOrFail($courierPartyId);
+        $courier = Party::where('user_id', $user->getAccountId())->where('type', PartyType::COURIER->value)->findOrFail($courierPartyId);
+        $balanceMoney = Money::of($courier->balance);
+        $amountMoney = $this->validateSettlementAmount($balanceMoney, $data['amount'] ?? null);
+        $type = $this->resolveSettlementType($balanceMoney, $data['type'] ?? null);
 
-        $courierBalanceMoney = Money::of($courier->balance);
-        $maxAllowed = Money::of(abs($courierBalanceMoney->getAmount()));
-
-        if ($maxAllowed->isZero()) {
-            throw new PosDomainException("رصيد شركة الشحن مسوى بالكامل بالفعل.", "SETTLEMENT_EXCEEDS_BALANCE", 422);
-        }
-
-        $amountMoney = !empty($data['amount']) ? Money::of($data['amount']) : $maxAllowed;
-
-        if ($amountMoney->isZero() || $amountMoney->isNegative()) {
-            throw new PosDomainException("المبلغ المطلوب تصفيته يجب أن يكون أكبر من الصفر.", "INVALID_SETTLEMENT_AMOUNT", 422);
-        }
-
-        if ($amountMoney->greaterThan($maxAllowed)) {
-            throw new PosDomainException("المبلغ المطلوب تصفيته يتجاوز الرصيد المستحق لشركة الشحن.", "SETTLEMENT_EXCEEDS_BALANCE", 422);
-        }
-
-        // تحديد نوع السند بناءً على الرصيد أو التحقق من النوع المرسل
-        // إذا كان رصيد شركة الشحن مديناً (موجب) أي أنها حصلت كاش لصالح المتجر -> نوع السند قبض RECEIPT
-        // إذا كان الرصيد دائناً (سالب) أي أن المتجر مدين لها بمصاريف شحن -> نوع السند صرف PAYMENT
-        if (!empty($data['type'])) {
-            $requestedType = $data['type'] instanceof PaymentType ? $data['type'] : PaymentType::from($data['type']);
-            if ($courierBalanceMoney->greaterThan(Money::zero()) && $requestedType !== PaymentType::RECEIPT) {
-                throw new PosDomainException("نوع السند غير متوافق مع اتجاه رصيد شركة الشحن.", "SETTLEMENT_DIRECTION_MISMATCH", 422);
-            }
-            if ($courierBalanceMoney->lessThan(Money::zero()) && $requestedType !== PaymentType::PAYMENT) {
-                throw new PosDomainException("نوع السند غير متوافق مع اتجاه رصيد شركة الشحن.", "SETTLEMENT_DIRECTION_MISMATCH", 422);
-            }
-            $type = $requestedType;
-        } else {
-            $type = $courierBalanceMoney->greaterThan(Money::zero()) ? PaymentType::RECEIPT : PaymentType::PAYMENT;
-        }
-
-        $method = $data['method'] ?? PaymentMethod::CASH->value;
-        $notes = $data['notes'] ?? ($type === PaymentType::RECEIPT
-            ? "تصفية مستحقات شحن COD - شركة {$courier->name}"
-            : "سداد أتعاب ومصاريف شحن - شركة {$courier->name}");
-
+        $defaultNote = $type === PaymentType::RECEIPT ? "تصفية مستحقات شحن COD - شركة {$courier->name}" : "سداد أتعاب ومصاريف شحن - شركة {$courier->name}";
         $payment = $this->paymentService->createPayment($user, [
-            'party_id' => $courier->id,
-            'type' => $type->value,
-            'amount' => $amountMoney->getAmount(),
-            'method' => $method,
-            'date' => $data['date'] ?? now()->toDateString(),
-            'notes' => $notes,
-            'idempotency_key' => $data['idempotency_key'] ?? null,
+            'party_id' => $courier->id, 'type' => $type->value, 'amount' => $amountMoney->getAmount(),
+            'method' => $data['method'] ?? PaymentMethod::CASH->value, 'date' => $data['date'] ?? now()->toDateString(),
+            'notes' => $data['notes'] ?? $defaultNote, 'idempotency_key' => $data['idempotency_key'] ?? null,
         ]);
 
         $courier->refresh();
@@ -478,5 +429,38 @@ class CourierService
             'settled_amount' => $amountMoney->getAmount(),
             'remaining_balance' => Money::of($courier->balance)->getAmount(),
         ];
+    }
+
+    private function validateSettlementAmount(Money $balanceMoney, mixed $rawAmount): Money
+    {
+        $maxAllowed = Money::of(abs($balanceMoney->getAmount()));
+        if ($maxAllowed->isZero()) {
+            throw new PosDomainException("رصيد شركة الشحن مسوى بالكامل بالفعل.", "SETTLEMENT_EXCEEDS_BALANCE", 422);
+        }
+
+        $amountMoney = !empty($rawAmount) ? Money::of($rawAmount) : $maxAllowed;
+        if ($amountMoney->isZero() || $amountMoney->isNegative()) {
+            throw new PosDomainException("المبلغ المطلوب تصفيته يجب أن يكون أكبر من الصفر.", "INVALID_SETTLEMENT_AMOUNT", 422);
+        }
+        if ($amountMoney->greaterThan($maxAllowed)) {
+            throw new PosDomainException("المبلغ المطلوب تصفيته يتجاوز الرصيد المستحق لشركة الشحن.", "SETTLEMENT_EXCEEDS_BALANCE", 422);
+        }
+
+        return $amountMoney;
+    }
+
+    private function resolveSettlementType(Money $balanceMoney, mixed $requested): PaymentType
+    {
+        if (empty($requested)) {
+            return $balanceMoney->greaterThan(Money::zero()) ? PaymentType::RECEIPT : PaymentType::PAYMENT;
+        }
+
+        $type = $requested instanceof PaymentType ? $requested : PaymentType::from($requested);
+        if (($balanceMoney->greaterThan(Money::zero()) && $type !== PaymentType::RECEIPT)
+            || ($balanceMoney->lessThan(Money::zero()) && $type !== PaymentType::PAYMENT)) {
+            throw new PosDomainException("نوع السند غير متوافق مع اتجاه رصيد شركة الشحن.", "SETTLEMENT_DIRECTION_MISMATCH", 422);
+        }
+
+        return $type;
     }
 }

@@ -160,65 +160,13 @@ class StockService
         $accountId = $user->getAccountId();
 
         return DB::transaction(function () use ($user, $accountId, $branchId, $items) {
-            $branch = Branch::where('id', $branchId)
-                ->where('user_id', $accountId)
-                ->firstOrFail();
-
+            $branch = Branch::where('id', $branchId)->where('user_id', $accountId)->firstOrFail();
             $processedCount = 0;
 
             foreach ($items as $item) {
-                $productId = $item['product_id'];
-                $variantId = $item['product_variant_id'] ?? null;
-                $quantity = Quantity::of($item['quantity'] ?? 0)->toFloat();
-                $costPrice = isset($item['cost_price']) && is_numeric($item['cost_price']) ? Money::of($item['cost_price'])->getAmount() : null;
-
-                if ($quantity <= 0) {
-                    continue;
+                if ($this->processOpeningBalanceItem($user, $accountId, $branch, $item)) {
+                    $processedCount++;
                 }
-
-                $product = Product::where('id', $productId)
-                    ->where('user_id', $accountId)
-                    ->lockForUpdate()
-                    ->firstOrFail();
-
-                $variant = null;
-                if ($variantId) {
-                    $variant = ProductVariant::where('id', $variantId)
-                        ->where('product_id', $product->id)
-                        ->where('user_id', $accountId)
-                        ->lockForUpdate()
-                        ->firstOrFail();
-
-                    if ($costPrice !== null && $costPrice > 0) {
-                        $variant->purchase_price = $costPrice;
-                        $variant->save();
-                    }
-                } elseif ($costPrice !== null && $costPrice > 0) {
-                    $product->purchase_price = $costPrice;
-                    $product->save();
-                }
-
-                $unitPrice = $costPrice ?? ($variant?->purchase_price ?? $product->purchase_price);
-
-                $notes = 'رصيد أول المدة - فرع: ' . $branch->name;
-                if ($variant) {
-                    $notes .= ' (' . $variant->name . ')';
-                }
-
-                $this->recordMovement(
-                    user: $user,
-                    product: $product,
-                    type: StockMovementType::IN->value,
-                    sourceType: StockMovementSource::INITIAL->value,
-                    sourceId: null,
-                    quantity: $quantity,
-                    unitPrice: $unitPrice,
-                    notes: $notes,
-                    variant: $variant,
-                    branchId: $branchId
-                );
-
-                $processedCount++;
             }
 
             return [
@@ -227,5 +175,41 @@ class StockService
                 'branch_name' => $branch->name,
             ];
         });
+    }
+
+    private function processOpeningBalanceItem(User $user, int $accountId, Branch $branch, array $item): bool
+    {
+        $quantity = Quantity::of($item['quantity'] ?? 0)->toFloat();
+        if ($quantity <= 0) {
+            return false;
+        }
+
+        $product = Product::where('id', $item['product_id'])->where('user_id', $accountId)->lockForUpdate()->firstOrFail();
+        $costPrice = isset($item['cost_price']) && is_numeric($item['cost_price']) ? Money::of($item['cost_price'])->getAmount() : null;
+        $variant = $this->resolveOpeningVariant($product, $accountId, $item['product_variant_id'] ?? null, $costPrice);
+
+        if (!$variant && $costPrice !== null && $costPrice > 0) {
+            $product->update(['purchase_price' => $costPrice]);
+        }
+
+        $unitPrice = $costPrice ?? ($variant?->purchase_price ?? $product->purchase_price);
+        $notes = 'رصيد أول المدة - فرع: ' . $branch->name . ($variant ? ' (' . $variant->name . ')' : '');
+        $this->recordMovement($user, $product, StockMovementType::IN->value, StockMovementSource::INITIAL->value, null, $quantity, $unitPrice, $notes, $variant, null, $branch->id);
+
+        return true;
+    }
+
+    private function resolveOpeningVariant(Product $product, int $accountId, ?int $variantId, ?float $costPrice): ?ProductVariant
+    {
+        if (!$variantId) {
+            return null;
+        }
+
+        $variant = ProductVariant::where('id', $variantId)->where('product_id', $product->id)->where('user_id', $accountId)->lockForUpdate()->firstOrFail();
+        if ($costPrice !== null && $costPrice > 0) {
+            $variant->update(['purchase_price' => $costPrice]);
+        }
+
+        return $variant;
     }
 }

@@ -51,50 +51,48 @@ class DashboardService
      */
     protected function computeDashboardData(User $user, string $today, bool $canViewProfits): array
     {
-        $startOfMonth = now()->startOfMonth()->toDateString();
-        $endOfMonth = now()->endOfMonth()->toDateString();
-
         $todaySales = $this->calculateSalesBetween($user, $today, $today);
-        $monthSales = $this->calculateSalesBetween($user, $startOfMonth, $endOfMonth);
-
-        if ($canViewProfits) {
-            $profitData = $this->calculateTodayProfit($today, $todaySales['net']);
-            $todayExpenses = $profitData['today_expenses'];
-            $todayProfit = $profitData['today_net_profit'];
-        } else {
-            $expensesSum = Expense::whereBetween('date', [$today, $today . ' 23:59:59'])
-                ->when($user->isManager() && $user->branch_id, function ($q) use ($user) {
-                    $q->where(function ($sub) use ($user) {
-                        $sub->whereHas('treasury', fn($t) => $t->where('branch_id', $user->branch_id))
-                            ->orWhereHas('creator', fn($c) => $c->where('branch_id', $user->branch_id));
-                    });
-                })
-                ->when($user->isMandob() || $user->isCashier(), fn($q) => $q->where('created_by', $user->id))
-                ->sum('amount');
-            $todayExpenses = Money::of($expensesSum ?? 0)->getAmount();
-            $todayProfit = null;
-        }
-
+        $monthSales = $this->calculateSalesBetween($user, now()->startOfMonth()->toDateString(), now()->endOfMonth()->toDateString());
+        ['expenses' => $todayExpenses, 'profit' => $todayProfit] = $this->resolveTodayProfitAndExpenses($user, $today, $canViewProfits, $todaySales['net']);
         $cashFlowData = $this->calculateTodayCashFlow($user, $today, $todayExpenses);
-        $recentActivities = $this->getRecentActivities($user);
 
         return [
             'today' => $today,
-            'kpis' => [
-                'today_sales' => $todaySales['net'],
-                'today_gross_sales' => $todaySales['gross'],
-                'today_cash_sales' => $todaySales['cash'],
-                'today_courier_pending_sales' => $todaySales['courier_pending'],
-                'today_electronic_sales' => $todaySales['electronic'],
-                'today_credit_sales' => $todaySales['credit'],
-                'today_returns' => $todaySales['returns'],
-                'today_profit' => $todayProfit,
-                'today_expenses' => $todayExpenses,
-                'today_cash_flow' => $cashFlowData['net_cash_flow'],
-                'month_sales' => $monthSales['net'],
-            ],
+            'kpis' => $this->buildKpisPayload($todaySales, $monthSales['net'], $todayProfit, $todayExpenses, $cashFlowData['net_cash_flow']),
             'cash_flow' => $cashFlowData,
-            'recent_activities' => $recentActivities,
+            'recent_activities' => $this->getRecentActivities($user),
+        ];
+    }
+
+    private function resolveTodayProfitAndExpenses(User $user, string $today, bool $canViewProfits, float $todayNetSales): array
+    {
+        if ($canViewProfits) {
+            $profitData = $this->calculateTodayProfit($today, $todayNetSales);
+            return ['expenses' => $profitData['today_expenses'], 'profit' => $profitData['today_net_profit']];
+        }
+
+        $expensesSum = Expense::whereBetween('date', [$today, $today . ' 23:59:59'])
+            ->when($user->isManager() && $user->branch_id, fn($q) => $q->where(fn($sub) => $sub->whereHas('treasury', fn($t) => $t->where('branch_id', $user->branch_id))->orWhereHas('creator', fn($c) => $c->where('branch_id', $user->branch_id))))
+            ->when($user->isMandob() || $user->isCashier(), fn($q) => $q->where('created_by', $user->id))
+            ->sum('amount');
+
+        return ['expenses' => Money::of($expensesSum ?? 0)->getAmount(), 'profit' => null];
+    }
+
+    private function buildKpisPayload(array $todaySales, float $monthNet, ?float $todayProfit, float $todayExpenses, float $netCashFlow): array
+    {
+        return [
+            'today_sales' => $todaySales['net'],
+            'today_gross_sales' => $todaySales['gross'],
+            'today_cash_sales' => $todaySales['cash'],
+            'today_courier_pending_sales' => $todaySales['courier_pending'],
+            'today_electronic_sales' => $todaySales['electronic'],
+            'today_credit_sales' => $todaySales['credit'],
+            'today_returns' => $todaySales['returns'],
+            'today_profit' => $todayProfit,
+            'today_expenses' => $todayExpenses,
+            'today_cash_flow' => $netCashFlow,
+            'month_sales' => $monthNet,
         ];
     }
 

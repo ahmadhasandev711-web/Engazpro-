@@ -727,33 +727,18 @@ class InvoiceService
     protected function buildFilteredInvoicesQuery(User $user, array $filters = []): \Illuminate\Database\Eloquent\Builder
     {
         $isEmployee = $user->isMandob() || $user->isCashier();
-
         $query = Invoice::query()
             ->when($isEmployee, fn($q) => $q->where('created_by', $user->id))
             ->when($user->isManager() && $user->branch_id, fn($q) => $q->where('branch_id', $user->branch_id))
-            ->when(!empty($filters['branch_id']) && $user->isOwnerOrAdmin(), fn($q) => $q->where('branch_id', $filters['branch_id']));
-
-        if (!empty($filters['type'])) {
-            $query->where('type', $filters['type']);
-        }
-
-        if (!empty($filters['created_by']) && !$isEmployee) {
-            $query->where('created_by', $filters['created_by']);
-        }
+            ->when(!empty($filters['branch_id']) && $user->isOwnerOrAdmin(), fn($q) => $q->where('branch_id', $filters['branch_id']))
+            ->when(!empty($filters['type']), fn($q) => $q->where('type', $filters['type']))
+            ->when(!empty($filters['created_by']) && !$isEmployee, fn($q) => $q->where('created_by', $filters['created_by']))
+            ->when(!empty($filters['date_from']), fn($q) => $q->where('date', '>=', $filters['date_from']))
+            ->when(!empty($filters['date_to']), fn($q) => $q->where('date', '<=', $filters['date_to'] . ' 23:59:59'));
 
         if (!empty($filters['search'])) {
             $search = $filters['search'];
-            $query->where(function ($q) use ($search) {
-                $q->where('invoice_number', 'like', "%{$search}%")
-                  ->orWhereHas('party', fn($pq) => $pq->where('name', 'like', "%{$search}%"));
-            });
-        }
-
-        if (!empty($filters['date_from'])) {
-            $query->where('date', '>=', $filters['date_from']);
-        }
-        if (!empty($filters['date_to'])) {
-            $query->where('date', '<=', $filters['date_to'] . ' 23:59:59');
+            $query->where(fn($q) => $q->where('invoice_number', 'like', "%{$search}%")->orWhereHas('party', fn($pq) => $pq->where('name', 'like', "%{$search}%")));
         }
 
         return $query;

@@ -316,61 +316,37 @@ class ProductService
         $query = Product::with(['category', 'variants', 'batches'])
             ->withExists([
                 'invoiceItems',
-                'stockMovements as non_initial_stock_movements_exists' => function ($smq) {
-                    $smq->where('source_type', '!=', StockMovementSource::INITIAL->value);
-                },
-            ]);
+                'stockMovements as non_initial_stock_movements_exists' => fn($smq) => $smq->where('source_type', '!=', StockMovementSource::INITIAL->value),
+            ])
+            ->when($branchId, fn($q) => $q->with(['branchStocks' => fn($bsq) => $bsq->where('branch_id', $branchId)]));
 
-        if ($branchId) {
-            $query->with(['branchStocks' => function ($bsq) use ($branchId) {
-                $bsq->where('branch_id', $branchId);
-            }]);
-        }
+        $this->applyProductFilters($query, $filters);
 
+        return $query->orderBy('name')->paginate(min((int) ($filters['per_page'] ?? 20), 500));
+    }
+
+    private function applyProductFilters(Builder $query, array $filters): void
+    {
         if (!empty($filters['search'])) {
             $search = $filters['search'];
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('barcode', 'like', "%{$search}%")
-                  ->orWhere('code', 'like', "%{$search}%")
-                  ->orWhereHas('variants', function ($vq) use ($search) {
-                      $vq->where('barcode', 'like', "%{$search}%")
-                         ->orWhere('code', 'like', "%{$search}%")
-                         ->orWhere('name', 'like', "%{$search}%");
-                  });
-            });
+            $query->where(fn($q) => $q->where('name', 'like', "%{$search}%")->orWhere('barcode', 'like', "%{$search}%")->orWhere('code', 'like', "%{$search}%")
+                ->orWhereHas('variants', fn($vq) => $vq->where('barcode', 'like', "%{$search}%")->orWhere('code', 'like', "%{$search}%")->orWhere('name', 'like', "%{$search}%")));
         }
-
         if (!empty($filters['type'])) {
             $query->where('type', $filters['type']);
         }
-
         if (!empty($filters['category_id'])) {
             $query->where('category_id', $filters['category_id']);
         }
-
         if (!empty($filters['low_stock']) && filter_var($filters['low_stock'], FILTER_VALIDATE_BOOLEAN)) {
-            $query->whereNotNull('min_quantity')
-                  ->whereColumn('quantity', '<=', 'min_quantity');
+            $query->whereNotNull('min_quantity')->whereColumn('quantity', '<=', 'min_quantity');
         }
-
         if (!empty($filters['near_expiry']) && filter_var($filters['near_expiry'], FILTER_VALIDATE_BOOLEAN)) {
-            $query->whereHas('batches', function ($bq) {
-                $bq->where('quantity', '>', 0)
-                   ->where('expiry_date', '<=', now()->addDays(60))
-                   ->where('expiry_date', '>=', now()->startOfDay());
-            });
+            $query->whereHas('batches', fn($bq) => $bq->where('quantity', '>', 0)->where('expiry_date', '<=', now()->addDays(60))->where('expiry_date', '>=', now()->startOfDay()));
         }
-
         if (!empty($filters['expired']) && filter_var($filters['expired'], FILTER_VALIDATE_BOOLEAN)) {
-            $query->whereHas('batches', function ($bq) {
-                $bq->where('quantity', '>', 0)
-                   ->where('expiry_date', '<', now()->startOfDay());
-            });
+            $query->whereHas('batches', fn($bq) => $bq->where('quantity', '>', 0)->where('expiry_date', '<', now()->startOfDay()));
         }
-
-        $perPage = min((int) ($filters['per_page'] ?? 20), 500);
-        return $query->orderBy('name')->paginate($perPage);
     }
 
     public function getPosCatalog(?User $user, array $filters = []): \Illuminate\Contracts\Pagination\LengthAwarePaginator
