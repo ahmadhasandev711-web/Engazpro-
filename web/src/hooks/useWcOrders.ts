@@ -7,7 +7,17 @@ import { calculatePresetDates } from '../presentation/components/common/DateRang
 import { nativeBackButton } from '../platform/nativeBackButton';
 import { useHaptic } from '../presentation/hooks/useHaptic';
 
-export function useWcOrders() {
+export interface OrdersChannelConfig {
+  apiBase?: string;
+  queryKey?: string;
+  channelTitle?: string;
+}
+
+export function useWcOrders(config?: OrdersChannelConfig) {
+  const apiBase = config?.apiBase ?? '/wc-orders';
+  const orderQueryKey = config?.queryKey ?? 'wc-orders';
+  const channelTitle = config?.channelTitle ?? 'طلبيات ووكومرس والتوصيل الميداني';
+
   const queryClient = useQueryClient();
   const { selection } = useHaptic();
   const { isOwnerOrAdmin, isManager, isMandob } = usePermissions();
@@ -189,7 +199,7 @@ export function useWcOrders() {
 
   // Fetch WooCommerce Orders safely
   const { data: ordersData, isLoading } = useQuery({
-    queryKey: ['wc-orders', search, statusFilter, fromDate, toDate],
+    queryKey: [orderQueryKey, search, statusFilter, fromDate, toDate],
     queryFn: async () => {
       const params: any = {};
       if (search) params.search = search;
@@ -197,9 +207,14 @@ export function useWcOrders() {
       if (fromDate) params.date_from = fromDate;
       if (toDate) params.date_to = toDate;
 
-      const res = await apiClient.get('/wc-orders', { params });
+      const res = await apiClient.get(apiBase, { params });
       const raw = res.data?.data?.data ?? res.data?.data ?? res.data;
-      return Array.isArray(raw) ? raw : [];
+      if (!Array.isArray(raw)) return [];
+      return raw.map((o: any) => ({
+        ...o,
+        wc_order_id: o.wc_order_id ?? (o.shopify_order_number ? String(o.shopify_order_number).replace(/^#/, '') : o.shopify_order_id),
+        wc_coupon_codes: o.wc_coupon_codes ?? o.coupon_codes ?? [],
+      }));
     },
   });
   const orders = Array.isArray(ordersData) ? ordersData : [];
@@ -215,13 +230,13 @@ export function useWcOrders() {
       branchId: number;
       force?: boolean;
     }) => {
-      return apiClient.post(`/wc-orders/${orderId}/confirm`, {
+      return apiClient.post(`${apiBase}/${orderId}/confirm`, {
         branch_id: branchId,
         force: force || false,
       });
     },
     onSuccess: (res) => {
-      queryClient.invalidateQueries({ queryKey: ['wc-orders'] });
+      queryClient.invalidateQueries({ queryKey: [orderQueryKey] });
       setConfirmModalOrder(null);
       setConfirmError(null);
       setForceConfirm(false);
@@ -239,10 +254,10 @@ export function useWcOrders() {
   // Dispatch Mutation
   const dispatchMutation = useMutation({
     mutationFn: async ({ orderId, mandobId }: { orderId: number; mandobId: number }) => {
-      return apiClient.post(`/wc-orders/${orderId}/dispatch`, { mandob_id: mandobId });
+      return apiClient.post(`${apiBase}/${orderId}/dispatch`, { mandob_id: mandobId });
     },
     onSuccess: (res) => {
-      queryClient.invalidateQueries({ queryKey: ['wc-orders'] });
+      queryClient.invalidateQueries({ queryKey: [orderQueryKey] });
       setDispatchModalOrder(null);
       setFeedback({ type: 'success', message: res.data?.message || 'تم إسناد الطلب للمندوب' });
       setTimeout(() => setFeedback(null), 3500);
@@ -267,7 +282,7 @@ export function useWcOrders() {
       trackingNumber?: string | null;
       branchId?: number | null;
     }) => {
-      return apiClient.post(`/wc-orders/${orderId}/dispatch-courier`, {
+      return apiClient.post(`${apiBase}/${orderId}/dispatch-courier`, {
         courier_name: courierName,
         courier_party_id: courierPartyId || undefined,
         tracking_number: trackingNumber || undefined,
@@ -275,7 +290,7 @@ export function useWcOrders() {
       });
     },
     onSuccess: (res) => {
-      queryClient.invalidateQueries({ queryKey: ['wc-orders'] });
+      queryClient.invalidateQueries({ queryKey: [orderQueryKey] });
       setCourierModalOrder(null);
       setFeedback({ type: 'success', message: res.data?.message || 'تم إسناد الطلب لشركة الشحن بنجاح' });
       setTimeout(() => setFeedback(null), 3500);
@@ -329,13 +344,13 @@ export function useWcOrders() {
   // Deliver Mutation
   const deliverMutation = useMutation({
     mutationFn: async ({ orderId, amount, method }: { orderId: number; amount: number; method: string }) => {
-      return apiClient.post(`/wc-orders/${orderId}/deliver`, {
+      return apiClient.post(`${apiBase}/${orderId}/deliver`, {
         collected_amount: amount,
         payment_method: method,
       });
     },
     onSuccess: (res) => {
-      queryClient.invalidateQueries({ queryKey: ['wc-orders'] });
+      queryClient.invalidateQueries({ queryKey: [orderQueryKey] });
       queryClient.invalidateQueries({ queryKey: ['couriers'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       setDeliverModalOrder(null);
@@ -350,10 +365,10 @@ export function useWcOrders() {
   // Return Mutation
   const returnMutation = useMutation({
     mutationFn: async (orderId: number) => {
-      return apiClient.post(`/wc-orders/${orderId}/return`, { reason: 'رفض العميل الاستلام' });
+      return apiClient.post(`${apiBase}/${orderId}/return`, { reason: 'رفض العميل الاستلام' });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['wc-orders'] });
+      queryClient.invalidateQueries({ queryKey: [orderQueryKey] });
       setFeedback({ type: 'success', message: 'تم تسجيل الطلب كمرتجع' });
       setTimeout(() => setFeedback(null), 3500);
     },
@@ -365,17 +380,16 @@ export function useWcOrders() {
   // Pull Recent Orders Mutation (Instant Pull without webhook)
   const pullMutation = useMutation({
     mutationFn: async () => {
-      return apiClient.post('/wc-orders/pull');
+      return apiClient.post(`${apiBase}/pull`);
     },
     onSuccess: (res) => {
-      queryClient.invalidateQueries({ queryKey: ['wc-orders'] });
+      queryClient.invalidateQueries({ queryKey: [orderQueryKey] });
       setFeedback({
         type: 'success',
         message: res.data?.message || 'جاري سحب وتحديث الطلبات في الخلفية ⏳',
       });
-      // استعلام مجدداً بعد 10 ثوانٍ لظهور الطلبات المسحوبة حديثاً في الخلفية
       setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ['wc-orders'] });
+        queryClient.invalidateQueries({ queryKey: [orderQueryKey] });
       }, 10000);
       setTimeout(() => setFeedback(null), 6000);
     },
@@ -387,6 +401,7 @@ export function useWcOrders() {
     },
   });
   return {
+    channelTitle,
     selection,
     canPullOrders,
     isOwnerOrAdmin,

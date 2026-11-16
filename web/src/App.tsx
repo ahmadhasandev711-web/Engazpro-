@@ -36,7 +36,9 @@ const StockTransfersPage = lazy(() => import('./presentation/pages/StockTransfer
 const PosPage = lazy(() => import('./presentation/pages/PosPage').then((m) => ({ default: m.PosPage })));
 const AdminDashboardPage = lazy(() => import('./presentation/pages/AdminDashboardPage').then((m) => ({ default: m.AdminDashboardPage })));
 const WooCommerceSettingsPage = lazy(() => import('./presentation/pages/WooCommerceSettingsPage').then((m) => ({ default: m.WooCommerceSettingsPage })));
+const ShopifySettingsPage = lazy(() => import('./presentation/pages/ShopifySettingsPage').then((m) => ({ default: m.ShopifySettingsPage })));
 const WcOrdersPage = lazy(() => import('./presentation/pages/WcOrdersPage').then((m) => ({ default: m.WcOrdersPage })));
+const ShopifyOrdersPage = lazy(() => import('./presentation/pages/ShopifyOrdersPage').then((m) => ({ default: m.ShopifyOrdersPage })));
 const CouriersPage = lazy(() => import('./presentation/pages/CouriersPage').then((m) => ({ default: m.CouriersPage })));
 
 const queryClient = new QueryClient({
@@ -115,8 +117,9 @@ export const App: React.FC = () => {
                   <Route path="/expenses" element={<ExpensesPage />} />
                   <Route path="/ledger/:partyId" element={<LedgerPage />} />
                   
-                  {/* WooCommerce Orders (Accessible to Cashier, Supervisor, Mandob, Manager, Owner) */}
+                  {/* WooCommerce & Shopify Orders (Accessible to Cashier, Supervisor, Mandob, Manager, Owner) */}
                   <Route path="/wc-orders" element={<WcOrdersPage />} />
+                  <Route path="/shopify-orders" element={<ShopifyOrdersPage />} />
 
                   {/* Treasuries & Shifts Management (Owner, Admin, Manager, Supervisor) */}
                   <Route element={<RoleRoute allowedRoles={[UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPERVISOR]} />}>
@@ -140,6 +143,7 @@ export const App: React.FC = () => {
                   <Route element={<RoleRoute allowedRoles={[UserRole.OWNER, UserRole.ADMIN]} />}>
                     <Route path="/branches" element={<BranchesPage />} />
                     <Route path="/woocommerce" element={<WooCommerceSettingsPage />} />
+                    <Route path="/shopify" element={<ShopifySettingsPage />} />
                     <Route path="/settings" element={<SettingsPage />} />
                   </Route>
                 </Route>
