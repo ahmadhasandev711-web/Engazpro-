@@ -106,90 +106,77 @@ class ReportService
     public function getStockReport(User $user, ?string $search = null, int $perPage = 50): array
     {
         $baseQuery = Product::query();
+        $rawSummary = $this->fetchStockReportRawSummary(clone $baseQuery);
+        $actualPerPage = min(max(1, $perPage), (int) config('pos.pagination.max', 100));
+        $paginator = $this->buildStockListQuery(clone $baseQuery, $search)->paginate($actualPerPage);
+        $stockList = array_map(fn ($product) => $this->formatStockReportRow($product, $user), $paginator->items());
+        $pageMeta = ['current_page' => $paginator->currentPage(), 'last_page' => $paginator->lastPage(), 'per_page' => $paginator->perPage(), 'total' => $paginator->total()];
 
-        // إجماليات التقييم عبر SQL aggregates
-        $rawSummary = (clone $baseQuery)->selectRaw('
+        return [
+            'summary' => $this->formatStockReportSummary($rawSummary, $user),
+            'products' => $stockList,
+            'pagination' => $pageMeta,
+            'meta' => $pageMeta,
+        ];
+    }
+
+    private function fetchStockReportRawSummary($query): ?object
+    {
+        return $query->selectRaw('
             COUNT(*) as products_count,
             COALESCE(SUM(quantity), 0) as total_quantity,
             COALESCE(SUM(quantity * purchase_price), 0) as total_cost_value,
             COALESCE(SUM(quantity * sale_price), 0) as total_retail_value,
             COALESCE(SUM(CASE WHEN min_quantity IS NOT NULL AND quantity <= min_quantity THEN 1 ELSE 0 END), 0) as low_stock_count
         ')->first();
+    }
 
-        $totalCost = Money::of($rawSummary->total_cost_value ?? 0);
-        $totalRetail = Money::of($rawSummary->total_retail_value ?? 0);
-        $grossMargin = $totalRetail->subtract($totalCost)->getAmount();
-
-        $maxPerPage = (int) config('pos.pagination.max', 100);
-        $actualPerPage = min(max(1, $perPage), $maxPerPage);
-
-        $listQuery = (clone $baseQuery)->with('category:id,name')
+    private function buildStockListQuery($query, ?string $search)
+    {
+        $listQuery = $query->with('category:id,name')
             ->select(['id', 'category_id', 'name', 'code', 'barcode', 'quantity', 'unit', 'purchase_price', 'sale_price', 'min_quantity'])
             ->orderBy('name');
 
         if (!empty($search)) {
             $trimmed = trim($search);
             $listQuery->where(function ($q) use ($trimmed) {
-                $q->where('name', 'like', "%{$trimmed}%")
-                    ->orWhere('code', 'like', "%{$trimmed}%")
-                    ->orWhere('barcode', 'like', "%{$trimmed}%");
+                $q->where('name', 'like', "%{$trimmed}%")->orWhere('code', 'like', "%{$trimmed}%")->orWhere('barcode', 'like', "%{$trimmed}%");
             });
         }
 
-        $paginator = $listQuery->paginate($actualPerPage);
+        return $listQuery;
+    }
 
-        $stockList = [];
-        foreach ($paginator->items() as $product) {
-            $qty = Quantity::of($product->quantity ?? 0)->toFloat();
-            $purchasePriceMoney = Money::of($product->purchase_price ?? 0);
-            $salePriceMoney = Money::of($product->sale_price ?? 0);
-            $purchasePrice = $user->isMandob() ? null : $purchasePriceMoney->getAmount();
-            $salePrice = $salePriceMoney->getAmount();
-            $minQty = $product->min_quantity !== null ? Quantity::of($product->min_quantity)->toFloat() : null;
-
-            $costValMoney = $user->isMandob() ? null : $purchasePriceMoney->multiply($qty);
-            $retailValMoney = $salePriceMoney->multiply($qty);
-            $isLowStock = $minQty !== null && $qty <= $minQty;
-
-            $stockList[] = [
-                'id' => $product->id,
-                'name' => $product->name,
-                'code' => $product->code,
-                'barcode' => $product->barcode,
-                'category' => $product->category?->name,
-                'quantity' => $qty,
-                'unit' => $product->unit,
-                'purchase_price' => $purchasePrice,
-                'sale_price' => $salePrice,
-                'cost_value' => $costValMoney?->getAmount(),
-                'retail_value' => $retailValMoney->getAmount(),
-                'min_quantity' => $minQty,
-                'is_low_stock' => $isLowStock,
-            ];
-        }
+    private function formatStockReportRow($product, User $user): array
+    {
+        $qty = Quantity::of($product->quantity ?? 0)->toFloat();
+        $purchaseMoney = Money::of($product->purchase_price ?? 0);
+        $saleMoney = Money::of($product->sale_price ?? 0);
+        $minQty = $product->min_quantity !== null ? Quantity::of($product->min_quantity)->toFloat() : null;
 
         return [
-            'summary' => [
-                'products_count' => (int) ($rawSummary->products_count ?? 0),
-                'total_quantity' => Quantity::of($rawSummary->total_quantity ?? 0)->toFloat(),
-                'total_cost_value' => $user->isMandob() ? null : $totalCost->getAmount(),
-                'total_retail_value' => $totalRetail->getAmount(),
-                'expected_gross_margin' => $user->isMandob() ? null : $grossMargin,
-                'low_stock_count' => (int) ($rawSummary->low_stock_count ?? 0),
-            ],
-            'products' => $stockList,
-            'pagination' => [
-                'current_page' => $paginator->currentPage(),
-                'last_page' => $paginator->lastPage(),
-                'per_page' => $paginator->perPage(),
-                'total' => $paginator->total(),
-            ],
-            'meta' => [
-                'current_page' => $paginator->currentPage(),
-                'last_page' => $paginator->lastPage(),
-                'per_page' => $paginator->perPage(),
-                'total' => $paginator->total(),
-            ],
+            'id' => $product->id, 'name' => $product->name, 'code' => $product->code, 'barcode' => $product->barcode,
+            'category' => $product->category?->name, 'quantity' => $qty, 'unit' => $product->unit,
+            'purchase_price' => $user->isMandob() ? null : $purchaseMoney->getAmount(),
+            'sale_price' => $saleMoney->getAmount(),
+            'cost_value' => $user->isMandob() ? null : $purchaseMoney->multiply($qty)->getAmount(),
+            'retail_value' => $saleMoney->multiply($qty)->getAmount(),
+            'min_quantity' => $minQty, 'is_low_stock' => $minQty !== null && $qty <= $minQty,
+        ];
+    }
+
+    private function formatStockReportSummary(?object $rawSummary, User $user): array
+    {
+        $totalCost = Money::of($rawSummary->total_cost_value ?? 0);
+        $totalRetail = Money::of($rawSummary->total_retail_value ?? 0);
+
+        return [
+            'products_count' => (int) ($rawSummary->products_count ?? 0),
+            'total_quantity' => Quantity::of($rawSummary->total_quantity ?? 0)->toFloat(),
+            'total_cost_value' => $user->isMandob() ? null : $totalCost->getAmount(),
+            'total_retail_value' => $totalRetail->getAmount(),
+            'expected_gross_margin' => $user->isMandob() ? null : $totalRetail->subtract($totalCost)->getAmount(),
+            'low_stock_count' => (int) ($rawSummary->low_stock_count ?? 0),
         ];
     }
 
@@ -264,169 +251,13 @@ class ReportService
     {
         $fromDate = $filters['from_date'] ?? null;
         $toDate = $filters['to_date'] ?? null;
-        $flowType = strtoupper($filters['flow_type'] ?? 'ALL'); // ALL, INFLOW, OUTFLOW
+        $flowType = strtoupper($filters['flow_type'] ?? 'ALL');
         $movementCategory = !empty($filters['movement_category']) ? strtoupper($filters['movement_category']) : null;
-        $search = !empty($filters['search']) ? trim($filters['search']) : null;
-        $cashierId = !empty($filters['cashier_id']) ? (int) $filters['cashier_id'] : null;
         $perPage = min((int) ($filters['per_page'] ?? 15), 50);
         $page = (int) ($filters['page'] ?? 1);
 
-        $shouldIncludeInvoices = true;
-        $shouldIncludePayments = true;
-        $shouldIncludeExpenses = ($channel === PaymentMethod::CASH->value);
-
-        if ($flowType === 'INFLOW') {
-            $shouldIncludeExpenses = false;
-        }
-
-        if ($movementCategory) {
-            $invoiceCategories = [InvoiceType::SALE->value, InvoiceType::PURCHASE->value, InvoiceType::SALE_RETURN->value, InvoiceType::PURCHASE_RETURN->value];
-            $paymentCategories = ['RECEIPT_VOUCHER', 'PAYMENT_VOUCHER', 'SPLIT_SALE'];
-
-            $shouldIncludeInvoices = in_array($movementCategory, $invoiceCategories, true);
-            $shouldIncludePayments = in_array($movementCategory, $paymentCategories, true);
-            $shouldIncludeExpenses = ($movementCategory === 'EXPENSE' && $channel === PaymentMethod::CASH->value);
-        }
-
-        $queries = [];
-
-        // 1. Invoices Query
-        if ($shouldIncludeInvoices) {
-            $invoiceQuery = Invoice::query()
-                ->selectRaw("
-                    invoices.id,
-                    'INVOICE' as source_type,
-                    invoices.type as movement_category,
-                    invoices.invoice_number as reference_number,
-                    invoices.date,
-                    invoices.created_at,
-                    invoices.paid_amount as amount,
-                    case when invoices.type in ('SALE', 'PURCHASE_RETURN') then 'IN' else 'OUT' end as flow_direction,
-                    invoices.party_id,
-                    parties.name as party_name,
-                    invoices.created_by,
-                    users.name as creator_name,
-                    invoices.notes
-                ")
-                ->leftJoin('parties', 'invoices.party_id', '=', 'parties.id')
-                ->leftJoin('users', 'invoices.created_by', '=', 'users.id')
-                ->where('invoices.payment_method', $channel)
-                ->where('invoices.paid_amount', '>', 0);
-
-            if ($movementCategory && in_array($movementCategory, [InvoiceType::SALE->value, InvoiceType::PURCHASE->value, InvoiceType::SALE_RETURN->value, InvoiceType::PURCHASE_RETURN->value], true)) {
-                $invoiceQuery->where('invoices.type', $movementCategory);
-            } else {
-                $invoiceQuery->whereIn('invoices.type', [InvoiceType::SALE->value, InvoiceType::PURCHASE->value, InvoiceType::SALE_RETURN->value, InvoiceType::PURCHASE_RETURN->value]);
-                if ($flowType === 'INFLOW') {
-                    $invoiceQuery->whereIn('invoices.type', [InvoiceType::SALE->value, InvoiceType::PURCHASE_RETURN->value]);
-                } elseif ($flowType === 'OUTFLOW') {
-                    $invoiceQuery->whereIn('invoices.type', [InvoiceType::PURCHASE->value, InvoiceType::SALE_RETURN->value]);
-                }
-            }
-
-            if ($fromDate) {
-                $invoiceQuery->where('invoices.date', '>=', $fromDate);
-            }
-            if ($toDate) {
-                $invoiceQuery->where('invoices.date', '<=', $toDate . ' 23:59:59');
-            }
-
-            $queries[] = $invoiceQuery;
-        }
-
-        // 2. Payments Query
-        if ($shouldIncludePayments) {
-            $paymentQuery = Payment::query()
-                ->selectRaw("
-                    payments.id,
-                    'PAYMENT' as source_type,
-                    case 
-                        when payments.invoice_id is not null then 'SPLIT_SALE'
-                        when payments.type = 'RECEIPT' then 'RECEIPT_VOUCHER'
-                        else 'PAYMENT_VOUCHER'
-                    end as movement_category,
-                    payments.id as reference_number,
-                    payments.date,
-                    payments.created_at,
-                    payments.amount,
-                    case when payments.type = 'RECEIPT' then 'IN' else 'OUT' end as flow_direction,
-                    payments.party_id,
-                    parties.name as party_name,
-                    payments.created_by,
-                    users.name as creator_name,
-                    payments.notes
-                ")
-                ->leftJoin('parties', 'payments.party_id', '=', 'parties.id')
-                ->leftJoin('users', 'payments.created_by', '=', 'users.id')
-                ->where('payments.method', $channel)
-                ->where(function ($q) {
-                    $q->whereNull('payments.invoice_id')
-                      ->orWhereHas('invoice', fn($iq) => $iq->where('payment_method', PaymentMethod::SPLIT->value));
-                });
-
-            if ($movementCategory === 'SPLIT_SALE') {
-                $paymentQuery->whereNotNull('payments.invoice_id')
-                    ->whereHas('invoice', fn($iq) => $iq->where('payment_method', PaymentMethod::SPLIT->value));
-            } elseif ($movementCategory === 'RECEIPT_VOUCHER') {
-                $paymentQuery->where('payments.type', PaymentType::RECEIPT->value)->whereNull('payments.invoice_id');
-            } elseif ($movementCategory === 'PAYMENT_VOUCHER') {
-                $paymentQuery->where('payments.type', PaymentType::PAYMENT->value)->whereNull('payments.invoice_id');
-            } else {
-                if ($flowType === 'INFLOW') {
-                    $paymentQuery->where('payments.type', PaymentType::RECEIPT->value);
-                } elseif ($flowType === 'OUTFLOW') {
-                    $paymentQuery->where('payments.type', PaymentType::PAYMENT->value);
-                }
-            }
-
-            if ($fromDate) {
-                $paymentQuery->where('payments.date', '>=', $fromDate);
-            }
-            if ($toDate) {
-                $paymentQuery->where('payments.date', '<=', $toDate . ' 23:59:59');
-            }
-
-            $queries[] = $paymentQuery;
-        }
-
-        // 3. Expenses Query
-        if ($shouldIncludeExpenses) {
-            $expenseQuery = Expense::query()
-                ->selectRaw("
-                    expenses.id,
-                    'EXPENSE' as source_type,
-                    'EXPENSE' as movement_category,
-                    expenses.title as reference_number,
-                    expenses.date,
-                    expenses.created_at,
-                    expenses.amount,
-                    'OUT' as flow_direction,
-                    null as party_id,
-                    expenses.category as party_name,
-                    expenses.created_by,
-                    users.name as creator_name,
-                    expenses.notes
-                ")
-                ->leftJoin('users', 'expenses.created_by', '=', 'users.id');
-
-            if ($channel === PaymentMethod::CASH->value) {
-                $expenseQuery->where(function ($q) {
-                    $q->whereNull('expenses.payment_method')
-                      ->orWhere('expenses.payment_method', PaymentMethod::CASH->value);
-                });
-            } else {
-                $expenseQuery->where('expenses.payment_method', $channel);
-            }
-
-            if ($fromDate) {
-                $expenseQuery->where('expenses.date', '>=', $fromDate);
-            }
-            if ($toDate) {
-                $expenseQuery->where('expenses.date', '<=', $toDate . ' 23:59:59');
-            }
-
-            $queries[] = $expenseQuery;
-        }
+        $flags = $this->resolveCashFlowSourceFlags($channel, $flowType, $movementCategory);
+        $queries = $this->collectCashFlowUnionQueries($channel, $flowType, $movementCategory, $fromDate, $toDate, $flags);
 
         if (empty($queries)) {
             return new \Illuminate\Pagination\LengthAwarePaginator([], 0, $perPage, $page);
@@ -438,23 +269,128 @@ class ReportService
         }
 
         $outerQuery = DB::query()->fromSub($baseQuery, 'cash_flow_tx');
+        $this->applyCashFlowOuterFilters($outerQuery, !empty($filters['search']) ? trim($filters['search']) : null, !empty($filters['cashier_id']) ? (int) $filters['cashier_id'] : null);
 
-        if ($search) {
-            $outerQuery->where(function ($q) use ($search) {
-                $q->where('reference_number', 'like', "%{$search}%")
-                  ->orWhere('party_name', 'like', "%{$search}%")
-                  ->orWhere('creator_name', 'like', "%{$search}%")
-                  ->orWhere('notes', 'like', "%{$search}%");
-            });
+        return $outerQuery->orderBy('date', 'desc')->orderBy('created_at', 'desc')->paginate($perPage, ['*'], 'page', $page);
+    }
+
+    private function resolveCashFlowSourceFlags(string $channel, string $flowType, ?string $movementCategory): array
+    {
+        if (!$movementCategory) {
+            return ['invoices' => true, 'payments' => true, 'expenses' => ($channel === PaymentMethod::CASH->value && $flowType !== 'INFLOW')];
         }
 
+        $invoiceCategories = [InvoiceType::SALE->value, InvoiceType::PURCHASE->value, InvoiceType::SALE_RETURN->value, InvoiceType::PURCHASE_RETURN->value];
+
+        return [
+            'invoices' => in_array($movementCategory, $invoiceCategories, true),
+            'payments' => in_array($movementCategory, ['RECEIPT_VOUCHER', 'PAYMENT_VOUCHER', 'SPLIT_SALE'], true),
+            'expenses' => ($movementCategory === 'EXPENSE' && $channel === PaymentMethod::CASH->value && $flowType !== 'INFLOW'),
+        ];
+    }
+
+    private function collectCashFlowUnionQueries(string $channel, string $flowType, ?string $movementCategory, ?string $fromDate, ?string $toDate, array $flags): array
+    {
+        $queries = [];
+        if ($flags['invoices']) {
+            $queries[] = $this->buildCashFlowInvoicesQuery($channel, $flowType, $movementCategory, $fromDate, $toDate);
+        }
+        if ($flags['payments']) {
+            $queries[] = $this->buildCashFlowPaymentsQuery($channel, $flowType, $movementCategory, $fromDate, $toDate);
+        }
+        if ($flags['expenses']) {
+            $queries[] = $this->buildCashFlowExpensesQuery($channel, $fromDate, $toDate);
+        }
+
+        return $queries;
+    }
+
+    private function buildCashFlowInvoicesQuery(string $channel, string $flowType, ?string $movementCategory, ?string $fromDate, ?string $toDate)
+    {
+        $invoiceTypes = [InvoiceType::SALE->value, InvoiceType::PURCHASE->value, InvoiceType::SALE_RETURN->value, InvoiceType::PURCHASE_RETURN->value];
+        $query = Invoice::query()
+            ->selectRaw("invoices.id, 'INVOICE' as source_type, invoices.type as movement_category, invoices.invoice_number as reference_number, invoices.date, invoices.created_at, invoices.paid_amount as amount, case when invoices.type in ('SALE', 'PURCHASE_RETURN') then 'IN' else 'OUT' end as flow_direction, invoices.party_id, parties.name as party_name, invoices.created_by, users.name as creator_name, invoices.notes")
+            ->leftJoin('parties', 'invoices.party_id', '=', 'parties.id')->leftJoin('users', 'invoices.created_by', '=', 'users.id')
+            ->where('invoices.payment_method', $channel)->where('invoices.paid_amount', '>', 0);
+
+        if ($movementCategory && in_array($movementCategory, $invoiceTypes, true)) {
+            $query->where('invoices.type', $movementCategory);
+        } elseif ($flowType === 'INFLOW') {
+            $query->whereIn('invoices.type', [InvoiceType::SALE->value, InvoiceType::PURCHASE_RETURN->value]);
+        } elseif ($flowType === 'OUTFLOW') {
+            $query->whereIn('invoices.type', [InvoiceType::PURCHASE->value, InvoiceType::SALE_RETURN->value]);
+        } else {
+            $query->whereIn('invoices.type', $invoiceTypes);
+        }
+
+        $this->applyDateRangeFilter($query, 'invoices.date', $fromDate, $toDate);
+
+        return $query;
+    }
+
+    private function buildCashFlowPaymentsQuery(string $channel, string $flowType, ?string $movementCategory, ?string $fromDate, ?string $toDate)
+    {
+        $query = Payment::query()
+            ->selectRaw("payments.id, 'PAYMENT' as source_type, case when payments.invoice_id is not null then 'SPLIT_SALE' when payments.type = 'RECEIPT' then 'RECEIPT_VOUCHER' else 'PAYMENT_VOUCHER' end as movement_category, payments.id as reference_number, payments.date, payments.created_at, payments.amount, case when payments.type = 'RECEIPT' then 'IN' else 'OUT' end as flow_direction, payments.party_id, parties.name as party_name, payments.created_by, users.name as creator_name, payments.notes")
+            ->leftJoin('parties', 'payments.party_id', '=', 'parties.id')->leftJoin('users', 'payments.created_by', '=', 'users.id')
+            ->where('payments.method', $channel)
+            ->where(fn ($q) => $q->whereNull('payments.invoice_id')->orWhereHas('invoice', fn ($iq) => $iq->where('payment_method', PaymentMethod::SPLIT->value)));
+
+        $this->applyCashFlowPaymentCategoryFilter($query, $flowType, $movementCategory);
+        $this->applyDateRangeFilter($query, 'payments.date', $fromDate, $toDate);
+
+        return $query;
+    }
+
+    private function applyCashFlowPaymentCategoryFilter($paymentQuery, string $flowType, ?string $movementCategory): void
+    {
+        if ($movementCategory === 'SPLIT_SALE') {
+            $paymentQuery->whereNotNull('payments.invoice_id')->whereHas('invoice', fn ($iq) => $iq->where('payment_method', PaymentMethod::SPLIT->value));
+        } elseif ($movementCategory === 'RECEIPT_VOUCHER') {
+            $paymentQuery->where('payments.type', PaymentType::RECEIPT->value)->whereNull('payments.invoice_id');
+        } elseif ($movementCategory === 'PAYMENT_VOUCHER') {
+            $paymentQuery->where('payments.type', PaymentType::PAYMENT->value)->whereNull('payments.invoice_id');
+        } elseif ($flowType === 'INFLOW') {
+            $paymentQuery->where('payments.type', PaymentType::RECEIPT->value);
+        } elseif ($flowType === 'OUTFLOW') {
+            $paymentQuery->where('payments.type', PaymentType::PAYMENT->value);
+        }
+    }
+
+    private function buildCashFlowExpensesQuery(string $channel, ?string $fromDate, ?string $toDate)
+    {
+        $query = Expense::query()
+            ->selectRaw("expenses.id, 'EXPENSE' as source_type, 'EXPENSE' as movement_category, expenses.title as reference_number, expenses.date, expenses.created_at, expenses.amount, 'OUT' as flow_direction, null as party_id, expenses.category as party_name, expenses.created_by, users.name as creator_name, expenses.notes")
+            ->leftJoin('users', 'expenses.created_by', '=', 'users.id');
+
+        if ($channel === PaymentMethod::CASH->value) {
+            $query->where(fn ($q) => $q->whereNull('expenses.payment_method')->orWhere('expenses.payment_method', PaymentMethod::CASH->value));
+        } else {
+            $query->where('expenses.payment_method', $channel);
+        }
+
+        $this->applyDateRangeFilter($query, 'expenses.date', $fromDate, $toDate);
+
+        return $query;
+    }
+
+    private function applyDateRangeFilter($query, string $column, ?string $fromDate, ?string $toDate): void
+    {
+        if ($fromDate) {
+            $query->where($column, '>=', $fromDate);
+        }
+        if ($toDate) {
+            $query->where($column, '<=', $toDate . ' 23:59:59');
+        }
+    }
+
+    private function applyCashFlowOuterFilters($outerQuery, ?string $search, ?int $cashierId): void
+    {
+        if ($search) {
+            $outerQuery->where(fn ($q) => $q->where('reference_number', 'like', "%{$search}%")->orWhere('party_name', 'like', "%{$search}%")->orWhere('creator_name', 'like', "%{$search}%")->orWhere('notes', 'like', "%{$search}%"));
+        }
         if ($cashierId) {
             $outerQuery->where('created_by', $cashierId);
         }
-
-        return $outerQuery
-            ->orderBy('date', 'desc')
-            ->orderBy('created_at', 'desc')
-            ->paginate($perPage, ['*'], 'page', $page);
     }
 }

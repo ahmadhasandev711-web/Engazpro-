@@ -1,11 +1,6 @@
 {
     "Services/CourierService.php::getCourierManifest": 239,
-    "Services/ImportService.php::commitProducts": 147,
-    "Services/ImportService.php::previewProducts": 158,
     "Services/InvoiceService.php::doCreateInvoice": 519,
-    "Services/ReportService.php::getCashFlowTransactions": 197,
-    "Services/ReportService.php::getStockReport": 89,
-    "Services/WooCommerce/WooCommerceCustomerSyncService.php::syncCustomerFromWooCommerce": 108,
     "Services/WooCommerce/WooCommerceOrderSyncService.php::deliverOrder": 146,
     "Services/WooCommerce/WooCommerceProductImportService.php::syncSingleProduct": 147,
     "Services/WooCommerce/WooCommerceProductImportService.php::syncVariations": 91
