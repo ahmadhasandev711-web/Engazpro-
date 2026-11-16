@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SaveShopifyLocationMappingsRequest;
 use App\Http\Requests\SaveShopifySettingsRequest;
+use App\Models\Product;
 use App\Models\ShopifyIntegration;
 use App\Services\Shopify\ShopifySettingsService;
+use App\Services\Shopify\ShopifyStockPushService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -102,6 +104,29 @@ class ShopifySettingsController extends Controller
             'message' => "تم استيراد {$res['imported']} منتج جديد وتحديث {$res['updated']} منتج بنجاح",
             'data' => $res,
         ]);
+    }
+
+    public function pushProductStock(Request $request, Product $product, ShopifyStockPushService $pushService): JsonResponse
+    {
+        if ($err = $this->checkOwnerOrAdmin($request)) {
+            return $err;
+        }
+        $result = $pushService->pushProductForAccount($request->user()->getAccountId(), $product);
+
+        return response()->json(['success' => true, 'message' => $result['message'], 'data' => $result]);
+    }
+
+    public function pushAllStocks(Request $request): JsonResponse
+    {
+        if ($err = $this->checkOwnerOrAdmin($request)) {
+            return $err;
+        }
+        $outcome = $this->settingsService->pushAllStocks($request->user());
+        if ($outcome['queued']) {
+            return response()->json(['success' => true, 'queued' => true, 'message' => "بدأت مزامنة رصيد {$outcome['linked_count']} منتج نحو Shopify في الخلفية"], 202);
+        }
+
+        return response()->json(['success' => true, 'queued' => false, 'message' => "تم دفع رصيد {$outcome['result']['synced_count']} منتج إلى مواقع Shopify بنجاح", 'data' => $outcome['result']]);
     }
 
     private function checkOwnerOrAdmin(Request $request): ?JsonResponse

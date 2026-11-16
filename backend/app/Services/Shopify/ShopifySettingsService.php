@@ -6,6 +6,7 @@ use App\Contracts\ShopifyGraphqlClientInterface;
 use App\Enums\ShopifyAuthMode;
 use App\Exceptions\ShopifyConnectionException;
 use App\Jobs\ImportShopifyProductsPageJob;
+use App\Jobs\PushAllShopifyStocksJob;
 use App\Models\Branch;
 use App\Models\Product;
 use App\Models\ShopifyIntegration;
@@ -30,7 +31,8 @@ class ShopifySettingsService
     public function __construct(
         protected ShopifyGraphqlClientInterface $graphqlClient,
         protected ShopifyAuthService $authService,
-        protected ShopifyProductImportService $importService
+        protected ShopifyProductImportService $importService,
+        protected ShopifyBulkStockPushService $bulkStockPushService
     ) {}
 
     public function findForAccount(int $accountId, bool $withRelations = false): ?ShopifyIntegration
@@ -170,6 +172,22 @@ class ShopifySettingsService
         ImportShopifyProductsPageJob::dispatch($user->getAccountId(), $user->id, null, $importStock);
 
         return ['queued' => true];
+    }
+
+    public function pushAllStocks(User $user): array
+    {
+        $integration = $this->findActiveOrFail($user->getAccountId());
+        if (!$integration->is_active) {
+            throw new ShopifyConnectionException('ربط متجر Shopify غير نشط حالياً.', 422);
+        }
+
+        if (config('queue.default') === 'sync') {
+            return ['queued' => false, 'result' => $this->bulkStockPushService->pushAll($user, $integration)];
+        }
+
+        PushAllShopifyStocksJob::dispatch($user->getAccountId(), $user->id);
+
+        return ['queued' => true, 'linked_count' => $this->countLinkedProducts($user->getAccountId())];
     }
 
     private function applyCredentialsAndFlags(ShopifyIntegration $integration, array $validated): void

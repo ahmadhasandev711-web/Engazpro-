@@ -205,6 +205,8 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
             Route::post('location-mappings', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'saveLocationMappings']);
             Route::post('register-webhooks', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'registerWebhooks']);
             Route::post('import-products', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'importProducts']);
+            Route::post('products/{product}/push-stock', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'pushProductStock']);
+            Route::post('push-all-stocks', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'pushAllStocks']);
         });
 
         // Store Settings & Identity (هوية المنشأة والعملة)

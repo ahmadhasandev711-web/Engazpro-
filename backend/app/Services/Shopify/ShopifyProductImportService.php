@@ -46,6 +46,13 @@ class ShopifyProductImportService
 
     public function importPage(User $user, ShopifyIntegration $integration, ?string $cursor = null, int $first = 50, bool $importStock = false): array
     {
+        return ShopifyStockSyncGate::suppressDuring($integration->user_id, function () use ($user, $integration, $cursor, $first, $importStock) {
+            return $this->processImportPage($user, $integration, $cursor, $first, $importStock);
+        });
+    }
+
+    private function processImportPage(User $user, ShopifyIntegration $integration, ?string $cursor, int $first, bool $importStock): array
+    {
         $page = $this->graphqlClient->getProductsPage($integration, $cursor, $first);
         $locationMap = $this->loadLocationBranchMap($integration);
         $summary = ['imported' => 0, 'updated' => 0, 'errors' => [], 'count' => count($page['products']), 'has_more' => $page['has_next_page'], 'end_cursor' => $page['end_cursor']];
