@@ -106,111 +106,64 @@ class LedgerService
         $accountId = $user->getAccountId();
         $partyType = $party->type instanceof PartyType ? $party->type : PartyType::tryFrom((string) $party->type);
         $isCustomerOrCourier = ($partyType === PartyType::CUSTOMER || $partyType === PartyType::COURIER);
-
-        $periodQuery = LedgerEntry::where('user_id', $accountId)
-            ->where('party_id', $party->id);
-
         $fromDate = !empty($filters['from_date']) ? substr($filters['from_date'], 0, 10) : null;
         $toDate = !empty($filters['to_date']) ? substr($filters['to_date'], 0, 10) : null;
 
-        if ($fromDate) {
-            $periodQuery->where('date', '>=', $fromDate);
-        }
+        $periodQuery = LedgerEntry::where('user_id', $accountId)->where('party_id', $party->id)
+            ->when($fromDate, fn($q) => $q->where('date', '>=', $fromDate))
+            ->when($toDate, fn($q) => $q->where('date', '<=', $toDate));
 
-        if ($toDate) {
-            $periodQuery->where('date', '<=', $toDate);
-        }
-
-        // إجمالي المدين والدائن للفترة بـ SQL
-        $totalsRow = (clone $periodQuery)->selectRaw('
-            COALESCE(SUM(debit), 0) as total_debit,
-            COALESCE(SUM(credit), 0) as total_credit,
-            COUNT(*) as total_count
-        ')->first();
-
-        $totalDebit = Money::of($totalsRow->total_debit ?? 0)->getAmount();
-        $totalCredit = Money::of($totalsRow->total_credit ?? 0)->getAmount();
-        $currentBalance = Money::of($party->balance ?? 0)->getAmount();
-
-        // 1. حساب الرصيد التراكمي السابق للفترة (كل ما قبل from_date)
-        if ($fromDate) {
-            $beforePeriodRow = LedgerEntry::where('user_id', $accountId)
-                ->where('party_id', $party->id)
-                ->where('date', '<', $fromDate)
-                ->selectRaw('
-                    COALESCE(SUM(debit), 0) as sum_debit,
-                    COALESCE(SUM(credit), 0) as sum_credit
-                ')->first();
-
-            $priorDebit = Money::of($beforePeriodRow->sum_debit ?? 0);
-            $priorCredit = Money::of($beforePeriodRow->sum_credit ?? 0);
-            $beforePeriodBalance = $isCustomerOrCourier
-                ? $priorDebit->subtract($priorCredit)
-                : $priorCredit->subtract($priorDebit);
-        } else {
-            $beforePeriodBalance = Money::zero();
-        }
-
-        // 2. تقسيم الحركات بـ Pagination (100 لكل صفحة)
-        $perPage = 100;
+        $totalsRow = (clone $periodQuery)->selectRaw('COALESCE(SUM(debit), 0) as total_debit, COALESCE(SUM(credit), 0) as total_credit, COUNT(*) as total_count')->first();
         $page = max(1, (int) ($filters['page'] ?? request()->input('page', 1)));
-        $offset = ($page - 1) * $perPage;
+        $openingBalance = $this->computeBeforePeriodBalance($accountId, $party->id, $isCustomerOrCourier, $fromDate)
+            ->add($this->computeOffsetBalance($periodQuery, $isCustomerOrCourier, ($page - 1) * 100));
+        $paginator = (clone $periodQuery)->orderBy('date', 'asc')->orderBy('id', 'asc')->paginate(100, ['*'], 'page', $page);
 
-        // 3. حساب الرصيد التراكمي للحركات السابقة للصفحة الحالية ضمن الفترة
-        if ($offset > 0) {
-            $offsetIds = (clone $periodQuery)->orderBy('date', 'asc')
-                ->orderBy('id', 'asc')
-                ->limit($offset)
-                ->pluck('id');
+        return $this->formatStatementPayload($party, $totalsRow, $openingBalance->getAmount(), $paginator);
+    }
 
-            $offsetRow = LedgerEntry::whereIn('id', $offsetIds)->selectRaw('
-                COALESCE(SUM(debit), 0) as sum_debit,
-                COALESCE(SUM(credit), 0) as sum_credit
-            ')->first();
-
-            $offsetDebit = Money::of($offsetRow->sum_debit ?? 0);
-            $offsetCredit = Money::of($offsetRow->sum_credit ?? 0);
-            $offsetBalance = $isCustomerOrCourier
-                ? $offsetDebit->subtract($offsetCredit)
-                : $offsetCredit->subtract($offsetDebit);
-        } else {
-            $offsetBalance = Money::zero();
+    private function computeBeforePeriodBalance(int $accountId, int $partyId, bool $isCustomerOrCourier, ?string $fromDate): Money
+    {
+        if (!$fromDate) {
+            return Money::zero();
         }
+        $row = LedgerEntry::where('user_id', $accountId)->where('party_id', $partyId)->where('date', '<', $fromDate)
+            ->selectRaw('COALESCE(SUM(debit), 0) as sum_debit, COALESCE(SUM(credit), 0) as sum_credit')->first();
 
-        $openingBalance = $beforePeriodBalance->add($offsetBalance)->getAmount();
+        return $this->netMovementBalance($isCustomerOrCourier, $row->sum_debit ?? 0, $row->sum_credit ?? 0);
+    }
 
-        $paginator = (clone $periodQuery)->orderBy('date', 'asc')
-            ->orderBy('id', 'asc')
-            ->paginate($perPage, ['*'], 'page', $page);
+    private function computeOffsetBalance($periodQuery, bool $isCustomerOrCourier, int $offset): Money
+    {
+        if ($offset <= 0) {
+            return Money::zero();
+        }
+        $offsetIds = (clone $periodQuery)->orderBy('date', 'asc')->orderBy('id', 'asc')->limit($offset)->pluck('id');
+        $row = LedgerEntry::whereIn('id', $offsetIds)->selectRaw('COALESCE(SUM(debit), 0) as sum_debit, COALESCE(SUM(credit), 0) as sum_credit')->first();
+
+        return $this->netMovementBalance($isCustomerOrCourier, $row->sum_debit ?? 0, $row->sum_credit ?? 0);
+    }
+
+    private function netMovementBalance(bool $isCustomerOrCourier, mixed $debit, mixed $credit): Money
+    {
+        $debitMoney = Money::of($debit);
+        $creditMoney = Money::of($credit);
+
+        return $isCustomerOrCourier ? $debitMoney->subtract($creditMoney) : $creditMoney->subtract($debitMoney);
+    }
+
+    private function formatStatementPayload(Party $party, object $totalsRow, float $openingBalance, $paginator): array
+    {
+        $currentBalance = Money::of($party->balance ?? 0)->getAmount();
+        $meta = ['current_page' => $paginator->currentPage(), 'last_page' => $paginator->lastPage(), 'per_page' => $paginator->perPage(), 'total' => $paginator->total()];
 
         return [
-            'party' => [
-                'id' => $party->id,
-                'name' => $party->name,
-                'type' => $party->type,
-                'phone' => $party->phone,
-                'current_balance' => $currentBalance,
-            ],
-            'summary' => [
-                'total_debit' => $totalDebit,
-                'total_credit' => $totalCredit,
-                'current_balance' => $currentBalance,
-                'opening_balance' => $openingBalance,
-            ],
+            'party' => ['id' => $party->id, 'name' => $party->name, 'type' => $party->type, 'phone' => $party->phone, 'current_balance' => $currentBalance],
+            'summary' => ['total_debit' => Money::of($totalsRow->total_debit ?? 0)->getAmount(), 'total_credit' => Money::of($totalsRow->total_credit ?? 0)->getAmount(), 'current_balance' => $currentBalance, 'opening_balance' => $openingBalance],
             'opening_balance' => $openingBalance,
             'entries' => $paginator->items(),
-            'pagination' => [
-                'current_page' => $paginator->currentPage(),
-                'last_page' => $paginator->lastPage(),
-                'per_page' => $paginator->perPage(),
-                'total' => $paginator->total(),
-            ],
-            'meta' => [
-                'current_page' => $paginator->currentPage(),
-                'last_page' => $paginator->lastPage(),
-                'per_page' => $paginator->perPage(),
-                'total' => $paginator->total(),
-            ],
+            'pagination' => $meta,
+            'meta' => $meta,
         ];
     }
 

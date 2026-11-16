@@ -30,125 +30,76 @@ class PayrollService
     public function calculateMonthlyPayroll(User $employee, string $yearMonth): array
     {
         $this->assertEligibleForPayroll($employee);
-
         $date = Carbon::createFromFormat('Y-m', $yearMonth);
         $startDate = $date->copy()->startOfMonth()->toDateString();
         $endDate = $date->copy()->endOfMonth()->toDateString() . ' 23:59:59';
-        $accountId = $employee->getAccountId();
 
-        // 1. حساب مبيعات الشهر المؤهلة للعمولة
-        if ($employee->isManager()) {
-            // المدير: مبيعات الفرع المباشرة فقط بدون أوردرات ووكومرس
-            $salesQuery = Invoice::where('user_id', $accountId)
-                ->where('branch_id', $employee->branch_id)
-                ->where('type', InvoiceType::SALE->value)
-                ->whereNull('wc_order_id')
-                ->whereBetween('date', [$startDate, $endDate]);
-        } else {
-            // باقي الموظفين: المبيعات الشخصية المسندة للموظف
-            $salesQuery = Invoice::where('user_id', $accountId)
-                ->where(function ($q) use ($employee) {
-                    $q->where('salesperson_id', $employee->id)
-                      ->orWhere(function ($sub) use ($employee) {
-                          $sub->whereNull('salesperson_id')->where('created_by', $employee->id);
-                      });
-                })
-                ->where('type', InvoiceType::SALE->value)
-                ->whereBetween('date', [$startDate, $endDate]);
-        }
-
+        $salesQuery = $this->buildMonthlySalesQuery($employee, $startDate, $endDate);
         $totalSalesAmount = Money::of($salesQuery->sum('total') ?? 0)->getAmount();
         $invoicesCount = (int) $salesQuery->count();
 
-        // 2. حساب العمولة بدقة عبر Money
         $commissionType = $employee->commission_type instanceof CommissionType
             ? $employee->commission_type
             : CommissionType::tryFrom($employee->commission_type ?? '') ?? CommissionType::NONE;
-
         $commissionRate = Money::of($employee->commission_rate ?? 0)->getAmount();
-        $commissionMoney = Money::zero();
+        $commissionMoney = $this->computeCommissionMoney($commissionType, $commissionRate, $totalSalesAmount, $invoicesCount);
 
-        if ($commissionType === CommissionType::PERCENTAGE_OF_SALES && $commissionRate > 0) {
-            $commissionMoney = Money::of($totalSalesAmount)->multiply($commissionRate / 100);
-        } elseif ($commissionType === CommissionType::FIXED_PER_INVOICE && $commissionRate > 0) {
-            $commissionMoney = Money::of($commissionRate)->multiply($invoicesCount);
+        [$adjustments, $bonusesTotal, $deductionsTotal] = $this->aggregateMonthlyAdjustments($employee, $startDate, $endDate);
+        $payout = PayrollPayout::where('user_id', $employee->getAccountId())->where('employee_id', $employee->id)->where('month', $yearMonth)->with(['treasury:id,name,type', 'payer:id,name'])->first();
+
+        return $this->formatMonthlyPayrollSummary($employee, $yearMonth, $totalSalesAmount, $invoicesCount, $commissionType, $commissionRate, $commissionMoney, $bonusesTotal, $deductionsTotal, $payout, $adjustments);
+    }
+
+    private function buildMonthlySalesQuery(User $employee, string $startDate, string $endDate)
+    {
+        $query = Invoice::where('user_id', $employee->getAccountId())->where('type', InvoiceType::SALE->value)->whereBetween('date', [$startDate, $endDate]);
+
+        return $employee->isManager()
+            ? $query->where('branch_id', $employee->branch_id)->whereNull('wc_order_id')
+            : $query->where(fn($q) => $q->where('salesperson_id', $employee->id)->orWhere(fn($sub) => $sub->whereNull('salesperson_id')->where('created_by', $employee->id)));
+    }
+
+    private function computeCommissionMoney(CommissionType $type, float $rate, float $totalSales, int $invoicesCount): Money
+    {
+        if ($type === CommissionType::PERCENTAGE_OF_SALES && $rate > 0) {
+            return Money::of($totalSales)->multiply($rate / 100);
+        }
+        if ($type === CommissionType::FIXED_PER_INVOICE && $rate > 0) {
+            return Money::of($rate)->multiply($invoicesCount);
         }
 
-        // 3. جلب تسويات الشهر (الإضافي، الخصومات، السلف)
-        $adjustments = EmployeeAdjustment::where('user_id', $accountId)
-            ->where('employee_id', $employee->id)
-            ->whereBetween('date', [$startDate, $endDate])
-            ->with('creator:id,name')
-            ->orderBy('date', 'desc')
-            ->get();
+        return Money::zero();
+    }
 
-        $bonusesTotal = Money::zero();
-        $deductionsTotal = Money::zero();
+    private function aggregateMonthlyAdjustments(User $employee, string $startDate, string $endDate): array
+    {
+        $adjustments = EmployeeAdjustment::where('user_id', $employee->getAccountId())
+            ->where('employee_id', $employee->id)->whereBetween('date', [$startDate, $endDate])
+            ->with('creator:id,name')->orderBy('date', 'desc')->get();
 
+        $bonuses = Money::zero();
+        $deductions = Money::zero();
         foreach ($adjustments as $adj) {
             $adjMoney = Money::of($adj->amount);
-            if ($adj->type === EmployeeAdjustmentType::BONUS) {
-                $bonusesTotal = $bonusesTotal->add($adjMoney);
-            } else {
-                // DEDUCTION أو ADVANCE
-                $deductionsTotal = $deductionsTotal->add($adjMoney);
-            }
+            $adj->type === EmployeeAdjustmentType::BONUS ? ($bonuses = $bonuses->add($adjMoney)) : ($deductions = $deductions->add($adjMoney));
         }
 
-        // 4. احتساب صافي المستحق
-        $baseSalaryMoney = Money::of($employee->base_salary ?? 0);
-        $netPayableMoney = $baseSalaryMoney
-            ->add($commissionMoney)
-            ->add($bonusesTotal)
-            ->subtract($deductionsTotal);
+        return [$adjustments, $bonuses, $deductions];
+    }
 
-        // 5. التحقق مما إذا كان الراتب قد صُرف مسبقاً لهذا الشهر
-        $payout = PayrollPayout::where('user_id', $accountId)
-            ->where('employee_id', $employee->id)
-            ->where('month', $yearMonth)
-            ->with(['treasury:id,name,type', 'payer:id,name'])
-            ->first();
+    private function formatMonthlyPayrollSummary(User $employee, string $yearMonth, float $totalSales, int $invoicesCount, CommissionType $commType, float $commRate, Money $commMoney, Money $bonuses, Money $deductions, ?PayrollPayout $payout, $adjustments): array
+    {
+        $baseSalaryMoney = Money::of($employee->base_salary ?? 0);
+        $netPayableMoney = $baseSalaryMoney->add($commMoney)->add($bonuses)->subtract($deductions);
 
         return [
-            'employee' => [
-                'id' => $employee->id,
-                'name' => $employee->name,
-                'role' => $employee->role,
-                'branch_id' => $employee->branch_id,
-                'base_salary' => $baseSalaryMoney->getAmount(),
-                'commission_type' => $commissionType->value,
-                'commission_rate' => $commissionRate,
-            ],
-            'month' => $yearMonth,
-            'is_manager_scope' => $employee->isManager(),
-            'total_sales' => $totalSalesAmount,
-            'invoices_count' => $invoicesCount,
-            'base_salary' => $baseSalaryMoney->getAmount(),
-            'commission_amount' => $commissionMoney->getAmount(),
-            'total_bonuses' => $bonusesTotal->getAmount(),
-            'total_deductions' => $deductionsTotal->getAmount(),
-            'net_payable' => max(0, $netPayableMoney->getAmount()),
-            'is_paid' => (bool) $payout,
-            'payout' => $payout ? [
-                'id' => $payout->id,
-                'net_paid' => Money::of($payout->net_paid ?? 0)->getAmount(),
-                'payment_method' => $payout->payment_method?->value ?? $payout->payment_method,
-                'treasury' => $payout->treasury ? [
-                    'id' => $payout->treasury->id,
-                    'name' => $payout->treasury->name,
-                ] : null,
-                'paid_at' => $payout->paid_at->toIso8601String(),
-                'paid_by_name' => $payout->payer?->name,
-                'notes' => $payout->notes,
-            ] : null,
-            'adjustments' => $adjustments->map(fn($adj) => [
-                'id' => $adj->id,
-                'type' => $adj->type?->value ?? $adj->type,
-                'amount' => Money::of($adj->amount ?? 0)->getAmount(),
-                'date' => $adj->date->toDateString(),
-                'reason' => $adj->reason,
-                'created_by_name' => $adj->creator?->name,
-            ]),
+            'employee' => ['id' => $employee->id, 'name' => $employee->name, 'role' => $employee->role, 'branch_id' => $employee->branch_id, 'base_salary' => $baseSalaryMoney->getAmount(), 'commission_type' => $commType->value, 'commission_rate' => $commRate],
+            'month' => $yearMonth, 'is_manager_scope' => $employee->isManager(), 'total_sales' => $totalSales, 'invoices_count' => $invoicesCount,
+            'base_salary' => $baseSalaryMoney->getAmount(), 'commission_amount' => $commMoney->getAmount(),
+            'total_bonuses' => $bonuses->getAmount(), 'total_deductions' => $deductions->getAmount(),
+            'net_payable' => max(0, $netPayableMoney->getAmount()), 'is_paid' => (bool) $payout,
+            'payout' => $payout ? ['id' => $payout->id, 'net_paid' => Money::of($payout->net_paid ?? 0)->getAmount(), 'payment_method' => $payout->payment_method?->value ?? $payout->payment_method, 'treasury' => $payout->treasury ? ['id' => $payout->treasury->id, 'name' => $payout->treasury->name] : null, 'paid_at' => $payout->paid_at->toIso8601String(), 'paid_by_name' => $payout->payer?->name, 'notes' => $payout->notes] : null,
+            'adjustments' => $adjustments->map(fn($adj) => ['id' => $adj->id, 'type' => $adj->type?->value ?? $adj->type, 'amount' => Money::of($adj->amount ?? 0)->getAmount(), 'date' => $adj->date->toDateString(), 'reason' => $adj->reason, 'created_by_name' => $adj->creator?->name]),
         ];
     }
 

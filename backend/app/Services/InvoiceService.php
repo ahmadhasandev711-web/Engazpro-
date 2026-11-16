@@ -606,119 +606,60 @@ class InvoiceService
             $invoice = Invoice::where('user_id', $user->getAccountId())->findOrFail($invoiceId);
             $invoiceTypeStr = $invoice->type instanceof \BackedEnum ? $invoice->type->value : (string) $invoice->type;
 
-            // 1. عكس حركات المخزون
-            foreach ($invoice->items as $item) {
-                // تحديد الاتجاه العكسي
-                $movementType = match ($invoiceTypeStr) {
-                    InvoiceType::SALE->value, InvoiceType::PURCHASE_RETURN->value => StockMovementType::IN->value, // عكس الOUT
-                    InvoiceType::PURCHASE->value, InvoiceType::SALE_RETURN->value => StockMovementType::OUT->value, // عكس الIN
-                };
-
-                $this->stockService->recordMovement(
-                    $user,
-                    $item->product,
-                    $movementType,
-                    LedgerSource::REVERSAL->value,
-                    $invoice->id,
-                    $item->quantity,
-                    $item->unit_price,
-                    "إلغاء فاتورة {$invoice->invoice_number}"
-                );
-            }
-
-            // 2. عكس حركات الحساب (Ledger) إن وجدت
+            $this->reverseInvoiceStock($user, $invoice, $invoiceTypeStr);
             if ($invoice->party_id) {
-                $party = Party::where('user_id', $user->getAccountId())->findOrFail($invoice->party_id);
-
-                // عكس قيد الفاتورة
-                $debit = 0;
-                $credit = 0;
-                switch ($invoiceTypeStr) {
-                    case InvoiceType::SALE->value:
-                        $credit = $invoice->total; // نعكس المدين لدائن
-                        break;
-                    case InvoiceType::SALE_RETURN->value:
-                        $debit = $invoice->total; // نعكس الدائن لمدين
-                        break;
-                    case InvoiceType::PURCHASE->value:
-                        $debit = $invoice->total;
-                        break;
-                    case InvoiceType::PURCHASE_RETURN->value:
-                        $credit = $invoice->total;
-                        break;
-                }
-
-                $this->ledgerService->recordEntry(
-                    $user,
-                    $party,
-                    LedgerSource::REVERSAL->value,
-                    $invoice->id,
-                    now()->toDateString(),
-                    "إلغاء فاتورة {$invoice->invoice_number}",
-                    $debit,
-                    $credit
-                );
-
-                // عكس قيد الدفع إن وجد
-                if ($invoice->paid_amount > 0) {
-                    $paymentType = ($invoiceTypeStr === InvoiceType::SALE->value || $invoiceTypeStr === InvoiceType::PURCHASE_RETURN->value) ? PaymentType::RECEIPT->value : PaymentType::PAYMENT->value;
-                    $payDebit = ($paymentType === PaymentType::RECEIPT->value) ? $invoice->paid_amount : 0;
-                    $payCredit = ($paymentType === PaymentType::PAYMENT->value) ? $invoice->paid_amount : 0;
-
-                    $this->ledgerService->recordEntry(
-                        $user,
-                        $party,
-                        LedgerSource::REVERSAL->value,
-                        $invoice->id,
-                        now()->toDateString(),
-                        "إلغاء دفعة فاتورة {$invoice->invoice_number}",
-                        $payDebit,
-                        $payCredit
-                    );
-                }
-
-                // عكس حركات الخزينة النقدية المرتبطة بالفاتورة لمنع تسريب أو تضخيم أرصدة الصناديق
-                $treasuryTxns = TreasuryTransaction::where('user_id', $user->getAccountId())
-                    ->where('source_type', LedgerSource::INVOICE->value)
-                    ->where('source_id', $invoice->id)
-                    ->get();
-
-                foreach ($treasuryTxns as $txn) {
-                    $treasury = $txn->treasury;
-                    if ($treasury) {
-                        $txnMoney = Money::of($txn->amount);
-                        if ($txn->type === TreasuryTransactionType::DEPOSIT) {
-                            $this->treasuryService->recordWithdrawal(
-                                treasury: $treasury,
-                                amount: $txnMoney,
-                                sourceType: LedgerSource::REVERSAL->value,
-                                sourceId: $invoice->id,
-                                actor: $user,
-                                notes: "إلغاء إيداع نقدي لفاتورة {$invoice->invoice_number}",
-                                shiftId: $txn->shift_id
-                            );
-                        } elseif ($txn->type === TreasuryTransactionType::WITHDRAWAL) {
-                            $this->treasuryService->recordDeposit(
-                                treasury: $treasury,
-                                amount: $txnMoney,
-                                sourceType: LedgerSource::REVERSAL->value,
-                                sourceId: $invoice->id,
-                                actor: $user,
-                                notes: "إلغاء صرف نقدي لفاتورة {$invoice->invoice_number}",
-                                shiftId: $txn->shift_id
-                            );
-                        }
-                    }
-                }
-                
-                // حذف سندات الدفع المرتبطة
-                Payment::where('user_id', $user->getAccountId())->where('invoice_id', $invoice->id)->delete();
+                $this->reverseInvoiceFinancials($user, $invoice, $invoiceTypeStr);
             }
-
-            // 3. حذف الفاتورة وعناصرها (Soft Delete)
             $invoice->items()->delete();
             $invoice->delete();
         });
+    }
+
+    private function reverseInvoiceStock(User $user, Invoice $invoice, string $invoiceTypeStr): void
+    {
+        $movementType = match ($invoiceTypeStr) {
+            InvoiceType::SALE->value, InvoiceType::PURCHASE_RETURN->value => StockMovementType::IN->value,
+            InvoiceType::PURCHASE->value, InvoiceType::SALE_RETURN->value => StockMovementType::OUT->value,
+        };
+        foreach ($invoice->items as $item) {
+            $this->stockService->recordMovement($user, $item->product, $movementType, LedgerSource::REVERSAL->value, $invoice->id, $item->quantity, $item->unit_price, "إلغاء فاتورة {$invoice->invoice_number}");
+        }
+    }
+
+    private function reverseInvoiceFinancials(User $user, Invoice $invoice, string $invoiceTypeStr): void
+    {
+        $party = Party::where('user_id', $user->getAccountId())->findOrFail($invoice->party_id);
+        $this->reversePartyLedgerForInvoice($user, $party, $invoice, $invoiceTypeStr);
+        $this->reverseTreasuryTransactionsForInvoice($user, $invoice);
+        Payment::where('user_id', $user->getAccountId())->where('invoice_id', $invoice->id)->delete();
+    }
+
+    private function reversePartyLedgerForInvoice(User $user, Party $party, Invoice $invoice, string $invoiceTypeStr): void
+    {
+        $debit = in_array($invoiceTypeStr, [InvoiceType::SALE_RETURN->value, InvoiceType::PURCHASE->value], true) ? $invoice->total : 0;
+        $credit = in_array($invoiceTypeStr, [InvoiceType::SALE->value, InvoiceType::PURCHASE_RETURN->value], true) ? $invoice->total : 0;
+        $this->ledgerService->recordEntry($user, $party, LedgerSource::REVERSAL->value, $invoice->id, now()->toDateString(), "إلغاء فاتورة {$invoice->invoice_number}", $debit, $credit);
+
+        if ($invoice->paid_amount > 0) {
+            $isReceipt = ($invoiceTypeStr === InvoiceType::SALE->value || $invoiceTypeStr === InvoiceType::PURCHASE_RETURN->value);
+            $this->ledgerService->recordEntry($user, $party, LedgerSource::REVERSAL->value, $invoice->id, now()->toDateString(), "إلغاء دفعة فاتورة {$invoice->invoice_number}", $isReceipt ? $invoice->paid_amount : 0, $isReceipt ? 0 : $invoice->paid_amount);
+        }
+    }
+
+    private function reverseTreasuryTransactionsForInvoice(User $user, Invoice $invoice): void
+    {
+        $txns = TreasuryTransaction::where('user_id', $user->getAccountId())->where('source_type', LedgerSource::INVOICE->value)->where('source_id', $invoice->id)->get();
+        foreach ($txns as $txn) {
+            if (!$txn->treasury) {
+                continue;
+            }
+            $txnMoney = Money::of($txn->amount);
+            if ($txn->type === TreasuryTransactionType::DEPOSIT) {
+                $this->treasuryService->recordWithdrawal($txn->treasury, $txnMoney, LedgerSource::REVERSAL->value, $invoice->id, $user, "إلغاء إيداع نقدي لفاتورة {$invoice->invoice_number}", $txn->shift_id);
+            } elseif ($txn->type === TreasuryTransactionType::WITHDRAWAL) {
+                $this->treasuryService->recordDeposit($txn->treasury, $txnMoney, LedgerSource::REVERSAL->value, $invoice->id, $user, "إلغاء صرف نقدي لفاتورة {$invoice->invoice_number}", $txn->shift_id);
+            }
+        }
     }
 
     /**
