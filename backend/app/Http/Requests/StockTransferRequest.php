@@ -2,10 +2,13 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\HasScopedValidation;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StockTransferRequest extends FormRequest
 {
+    use HasScopedValidation;
+
     public function authorize(): bool
     {
         return true;
@@ -14,13 +17,13 @@ class StockTransferRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'from_branch_id' => ['required', 'integer', 'exists:branches,id'],
-            'to_branch_id' => ['required', 'integer', 'different:from_branch_id', 'exists:branches,id'],
+            'from_branch_id' => ['required', 'integer', $this->scopedExists('branches')],
+            'to_branch_id' => ['required', 'integer', 'different:from_branch_id', $this->scopedExists('branches')],
             'transfer_number' => ['nullable', 'string', 'max:50'],
             'notes' => ['nullable', 'string', 'max:500'],
             'items' => ['required', 'array', 'min:1'],
-            'items.*.product_id' => ['required', 'integer', 'exists:products,id'],
-            'items.*.product_variant_id' => ['nullable', 'integer', 'exists:product_variants,id'],
+            'items.*.product_id' => ['required', 'integer', $this->scopedExists('products')],
+            'items.*.product_variant_id' => ['nullable', 'integer', $this->scopedExists('product_variants')],
             'items.*.quantity_sent' => ['required', 'numeric', 'gt:0'],
             'items.*.unit_name' => ['nullable', 'string', 'max:50'],
             'items.*.notes' => ['nullable', 'string', 'max:255'],

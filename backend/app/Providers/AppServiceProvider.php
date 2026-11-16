@@ -31,12 +31,14 @@ use App\Policies\CategoryPolicy;
 use App\Policies\EmployeePolicy;
 use App\Policies\ExpensePolicy;
 use App\Policies\InvoicePolicy;
+use App\Policies\OnlineOrderPolicy;
 use App\Policies\PartyPolicy;
 use App\Enums\AnoofyEventType;
 use App\Policies\PaymentPolicy;
 use App\Policies\PayrollPolicy;
 use App\Policies\ProductPolicy;
 use App\Policies\ReportPolicy;
+use App\Policies\StockOperationsPolicy;
 use App\Policies\StockTransferPolicy;
 use App\Policies\TreasuryPolicy;
 use App\Services\Anoofy\AnoofyHandlerRegistry;
@@ -113,6 +115,12 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('view-sales', [ReportPolicy::class, 'viewSales']);
         Gate::define('view-stock', [ReportPolicy::class, 'viewStock']);
         Gate::define('view-purchases', [ReportPolicy::class, 'viewPurchases']);
+        Gate::define('stock-alerts', [StockOperationsPolicy::class, 'viewAlerts']);
+        Gate::define('stock-movements', [StockOperationsPolicy::class, 'viewMovements']);
+        Gate::define('manage-ecommerce', [OnlineOrderPolicy::class, 'manageSettings']);
+        Gate::define('pull-online-orders', [OnlineOrderPolicy::class, 'pullOrders']);
+        Gate::define('operate-online-order', [OnlineOrderPolicy::class, 'operateOrder']);
+        Gate::define('deliver-online-order', [OnlineOrderPolicy::class, 'deliverOrder']);
     }
 
     private function registerObservers(): void

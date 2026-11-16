@@ -3,11 +3,14 @@
 namespace App\Http\Requests;
 
 use App\Enums\PaymentMethod;
+use App\Http\Requests\Concerns\HasScopedValidation;
 use App\Support\Money;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ExpenseRequest extends FormRequest
 {
+    use HasScopedValidation;
+
     public function authorize(): bool
     {
         return true;
@@ -28,7 +31,7 @@ class ExpenseRequest extends FormRequest
             'category' => ['nullable', 'string', 'max:100'],
             'amount' => ['required', 'numeric', 'min:0.01'],
             'payment_method' => ['nullable', 'string', new \Illuminate\Validation\Rules\Enum(\App\Enums\PaymentMethod::class)],
-            'treasury_id' => ['nullable', 'exists:treasuries,id'],
+            'treasury_id' => ['nullable', 'integer', $this->scopedExists('treasuries')],
             'date' => ['required', 'date'],
             'notes' => ['nullable', 'string'],
         ];

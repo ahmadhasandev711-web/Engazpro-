@@ -8,6 +8,7 @@ use App\Services\Shopify\ShopifySettingsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class ShopifyAuthController extends Controller
 {
@@ -18,9 +19,7 @@ class ShopifyAuthController extends Controller
 
     public function authorizeUrl(Request $request): JsonResponse
     {
-        if (!$request->user()->isOwnerOrAdmin()) {
-            return $this->forbidden('عذراً، إعدادات وربط متجر Shopify مخصصة لمالك المنشأة ومدير النظام فقط.');
-        }
+        Gate::authorize('manage-ecommerce');
 
         $validated = $request->validate([
             'shop_domain' => ['required', 'string', 'max:255'],

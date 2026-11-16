@@ -21,7 +21,7 @@ class PurchaseReportService
             'period' => ['from_date' => $fromDate, 'to_date' => $toDate, 'branch_id' => $effectiveBranchId],
             'summary' => $this->buildPurchaseSummary($fromDate, $toDate, $effectiveBranchId),
             'top_suppliers' => $this->fetchTopSuppliers($fromDate, $toDate, $effectiveBranchId),
-            'top_products' => $this->fetchTopPurchasedProducts($fromDate, $toDate, $effectiveBranchId),
+            'top_products' => $this->fetchTopPurchasedProducts($user->getAccountId(), $fromDate, $toDate, $effectiveBranchId),
         ];
     }
 
@@ -69,23 +69,17 @@ class PurchaseReportService
         ])->values()->all();
     }
 
-    private function fetchTopPurchasedProducts(?string $fromDate, ?string $toDate, ?int $branchId): array
+    private function fetchTopPurchasedProducts(int $accountId, ?string $fromDate, ?string $toDate, ?int $branchId): array
     {
-        $query = InvoiceItem::query()
+        $rows = InvoiceItem::query()
             ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
-            ->where('invoices.type', InvoiceType::PURCHASE->value)->whereNull('invoices.deleted_at');
-
-        if ($fromDate) {
-            $query->where('invoices.date', '>=', $fromDate);
-        }
-        if ($toDate) {
-            $query->where('invoices.date', '<=', $toDate . ' 23:59:59');
-        }
-        if ($branchId) {
-            $query->where('invoices.branch_id', $branchId);
-        }
-
-        $rows = $query->selectRaw('invoice_items.product_id, invoice_items.product_name, COUNT(DISTINCT invoices.id) as invoices_count, COALESCE(SUM(invoice_items.quantity), 0) as total_quantity, COALESCE(SUM(invoice_items.total), 0) as total_cost')
+            ->where('invoices.user_id', $accountId)
+            ->where('invoices.type', InvoiceType::PURCHASE->value)
+            ->whereNull('invoices.deleted_at')
+            ->when($fromDate, fn ($q) => $q->where('invoices.date', '>=', $fromDate))
+            ->when($toDate, fn ($q) => $q->where('invoices.date', '<=', $toDate . ' 23:59:59'))
+            ->when($branchId, fn ($q) => $q->where('invoices.branch_id', $branchId))
+            ->selectRaw('invoice_items.product_id, invoice_items.product_name, COUNT(DISTINCT invoices.id) as invoices_count, COALESCE(SUM(invoice_items.quantity), 0) as total_quantity, COALESCE(SUM(invoice_items.total), 0) as total_cost')
             ->groupBy('invoice_items.product_id', 'invoice_items.product_name')->orderByDesc('total_cost')->limit(15)->get();
 
         return $rows->map(function ($r) {

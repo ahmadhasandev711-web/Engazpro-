@@ -122,11 +122,11 @@ class StockOperationsService
         if (!empty($filters['product_id'])) {
             $query->where('product_id', (int) $filters['product_id']);
         }
-        if (!empty($filters['type'])) {
-            $query->where('type', (string) $filters['type']);
+        if (!empty($filters['type']) && ($typeEnum = StockMovementType::tryFrom((string) $filters['type']))) {
+            $query->where('type', $typeEnum->value);
         }
-        if (!empty($filters['source_type'])) {
-            $query->where('source_type', (string) $filters['source_type']);
+        if (!empty($filters['source_type']) && ($sourceEnum = StockMovementSource::tryFrom((string) $filters['source_type']))) {
+            $query->where('source_type', $sourceEnum->value);
         }
         if (!empty($filters['date_from'])) {
             $query->whereDate('created_at', '>=', (string) $filters['date_from']);

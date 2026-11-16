@@ -2,12 +2,15 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\HasScopedValidation;
 use App\Rules\PublicHttpsUrl;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Http\FormRequest;
 
 class SaveWooCommerceSettingsRequest extends FormRequest
 {
+    use HasScopedValidation;
+
     public function authorize(): bool
     {
         return $this->user()?->isOwnerOrAdmin() ?? false;
@@ -26,7 +29,7 @@ class SaveWooCommerceSettingsRequest extends FormRequest
             'store_url' => ['required', 'url', new PublicHttpsUrl()],
             'consumer_key' => ['nullable', 'string'],
             'consumer_secret' => ['nullable', 'string'],
-            'online_branch_id' => ['nullable', 'exists:branches,id'],
+            'online_branch_id' => ['nullable', 'integer', $this->scopedExists('branches')],
             'auto_sync_stock' => ['boolean'],
             'is_active' => ['boolean'],
         ];

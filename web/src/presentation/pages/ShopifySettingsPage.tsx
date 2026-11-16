@@ -11,11 +11,9 @@ import {
   MapPin,
 } from 'lucide-react';
 import { apiClient } from '../../data/api/client';
-import { EcommercePlatform } from '@pos-mandob/shared';
+import { EcommercePlatform, ShopifyAuthMode } from '@pos-mandob/shared';
 import { useAuthStore } from '../../data/store/useAuthStore';
 import { Badge, Button, Card, Input, PageHeader, Select } from '../components/ui';
-
-type AuthMode = 'ACCESS_TOKEN' | 'CLIENT_CREDENTIALS' | 'OAUTH';
 
 interface LocationMappingRow {
   id: number;
@@ -29,7 +27,7 @@ interface LocationMappingRow {
 export const ShopifySettingsPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [shopDomain, setShopDomain] = useState('');
-  const [authMode, setAuthMode] = useState<AuthMode>('ACCESS_TOKEN');
+  const [authMode, setAuthMode] = useState<ShopifyAuthMode>(ShopifyAuthMode.ACCESS_TOKEN);
   const [accessToken, setAccessToken] = useState('');
   const [clientId, setClientId] = useState('');
   const [clientSecret, setClientSecret] = useState('');
@@ -68,7 +66,7 @@ export const ShopifySettingsPage: React.FC = () => {
   useEffect(() => {
     if (!settings) return;
     setShopDomain(settings.shop_domain || '');
-    setAuthMode((settings.auth_mode as AuthMode) || 'ACCESS_TOKEN');
+    setAuthMode((settings.auth_mode as ShopifyAuthMode) || ShopifyAuthMode.ACCESS_TOKEN);
     setClientId(settings.client_id || '');
     setDefaultBranchId(settings.default_branch_id || '');
     setAutoSyncStock(settings.auto_sync_stock ?? true);
@@ -218,11 +216,11 @@ export const ShopifySettingsPage: React.FC = () => {
             <Select
               label="طريقة المصادقة (Auth Mode)"
               value={authMode}
-              onChange={(e) => setAuthMode(e.target.value as AuthMode)}
+              onChange={(e) => setAuthMode(e.target.value as ShopifyAuthMode)}
               options={[
-                { value: 'ACCESS_TOKEN', label: 'رمز وصول مباشر (Access Token / shpat_)' },
-                { value: 'CLIENT_CREDENTIALS', label: 'Dev Dashboard 2026 (Client Credentials)' },
-                { value: 'OAUTH', label: 'ربط OAuth 2.0 التلقائي' },
+                { value: ShopifyAuthMode.ACCESS_TOKEN, label: 'رمز وصول مباشر (Access Token / shpat_)' },
+                { value: ShopifyAuthMode.CLIENT_CREDENTIALS, label: 'Dev Dashboard 2026 (Client Credentials)' },
+                { value: ShopifyAuthMode.OAUTH, label: 'ربط OAuth 2.0 التلقائي' },
               ]}
             />
           </div>

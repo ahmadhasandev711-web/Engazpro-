@@ -74,7 +74,7 @@ export const StockOperationsPage: React.FC = () => {
   const [adjBranchId, setAdjBranchId] = useState<number | ''>('');
   const [adjProductId, setAdjProductId] = useState<number | ''>('');
   const [adjVariantId, setAdjVariantId] = useState<number | ''>('');
-  const [adjMode, setAdjMode] = useState<StockAdjustmentMode>('SET_ACTUAL');
+  const [adjMode, setAdjMode] = useState<StockAdjustmentMode>(StockAdjustmentMode.SET_ACTUAL);
   const [adjQty, setAdjQty] = useState<string>('0');
   const [adjReason, setAdjReason] = useState<string>('جرد فعلي');
   const [adjNotes, setAdjNotes] = useState<string>('');
@@ -370,12 +370,12 @@ export const StockOperationsPage: React.FC = () => {
                 value={adjMode}
                 onChange={(e) => setAdjMode(e.target.value as StockAdjustmentMode)}
                 options={[
-                  { value: 'SET_ACTUAL', label: 'اعتماد الرصيد الفعلي (جرد)' },
-                  { value: 'INCREASE', label: 'زيادة رصيد (فائض)' },
-                  { value: 'DECREASE', label: 'خصم رصيد (تالف / هالك / عجز)' },
+                  { value: StockAdjustmentMode.SET_ACTUAL, label: 'اعتماد الرصيد الفعلي (جرد)' },
+                  { value: StockAdjustmentMode.INCREASE, label: 'زيادة رصيد (فائض)' },
+                  { value: StockAdjustmentMode.DECREASE, label: 'خصم رصيد (تالف / هالك / عجز)' },
                 ]}
               />
-              <Input label={adjMode === 'SET_ACTUAL' ? 'الرصيد الفعلي الموجود بالفرع' : 'كمية التسوية'} type="number" step="0.01" min="0" value={adjQty} onChange={(e) => setAdjQty(e.target.value)} />
+              <Input label={adjMode === StockAdjustmentMode.SET_ACTUAL ? 'الرصيد الفعلي الموجود بالفرع' : 'كمية التسوية'} type="number" step="0.01" min="0" value={adjQty} onChange={(e) => setAdjQty(e.target.value)} />
             </div>
 
             <Input label="سبب التسوية (مطلوب للتوثيق)" value={adjReason} onChange={(e) => setAdjReason(e.target.value)} placeholder="مثال: جرد نهاية الشهر / كسر أثناء الشحن" />

@@ -3,12 +3,14 @@
 namespace App\Http\Requests;
 
 use App\Enums\PaymentMethod;
+use App\Http\Requests\Concerns\HasScopedValidation;
 use App\Support\Money;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class InvoiceRequest extends FormRequest
 {
+    use HasScopedValidation;
+
     public function authorize(): bool
     {
         return true;
@@ -32,16 +34,14 @@ class InvoiceRequest extends FormRequest
 
     public function rules(): array
     {
-        $accountId = $this->user()?->getAccountId();
-
         return [
             'type' => ['required', 'in:SALE,PURCHASE,SALE_RETURN,PURCHASE_RETURN'],
             'idempotency_key' => ['nullable', 'string', 'max:100'],
-            'branch_id' => ['nullable', $this->scopedExists($accountId, 'branches')],
-            'salesperson_id' => ['nullable', 'exists:users,id'],
-            'party_id' => ['nullable', $this->scopedExists($accountId, 'parties')],
-            'courier_party_id' => ['nullable', $this->scopedExists($accountId, 'parties')],
-            'parent_invoice_id' => ['nullable', $this->scopedExists($accountId, 'invoices')],
+            'branch_id' => ['nullable', $this->scopedExists('branches')],
+            'salesperson_id' => ['nullable', $this->scopedAccountUserExists()],
+            'party_id' => ['nullable', $this->scopedExists('parties')],
+            'courier_party_id' => ['nullable', $this->scopedExists('parties')],
+            'parent_invoice_id' => ['nullable', $this->scopedExists('invoices')],
             'date' => ['required', 'date'],
             'discount' => ['nullable', 'numeric', 'min:0'],
             'tax' => ['nullable', 'numeric', 'min:0'],
@@ -53,17 +53,17 @@ class InvoiceRequest extends FormRequest
             'split_payments.*.amount' => ['required_with:split_payments', 'numeric', 'min:0.01'],
             'split_payments.*.notes' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string'],
-            ...$this->itemRules($accountId),
+            ...$this->itemRules(),
         ];
     }
 
-    private function itemRules(?int $accountId): array
+    private function itemRules(): array
     {
         return [
             'items' => ['required', 'array', 'min:1'],
-            'items.*.product_id' => ['required', $this->scopedExists($accountId, 'products')],
-            'items.*.product_variant_id' => ['nullable', 'exists:product_variants,id'],
-            'items.*.product_batch_id' => ['nullable', 'exists:product_batches,id'],
+            'items.*.product_id' => ['required', $this->scopedExists('products')],
+            'items.*.product_variant_id' => ['nullable', $this->scopedExists('product_variants')],
+            'items.*.product_batch_id' => ['nullable', $this->scopedExists('product_batches')],
             'items.*.variant_name' => ['nullable', 'string', 'max:255'],
             'items.*.batch_number' => ['nullable', 'string', 'max:100'],
             'items.*.expiry_date' => ['nullable', 'date'],
@@ -73,11 +73,6 @@ class InvoiceRequest extends FormRequest
             'items.*.unit_price' => ['required', 'numeric', 'min:0'],
             'items.*.notes' => ['nullable', 'string'],
         ];
-    }
-
-    private function scopedExists(?int $accountId, string $table): mixed
-    {
-        return $accountId ? Rule::exists($table, 'id')->where('user_id', $accountId) : "exists:{$table},id";
     }
 
     public function messages(): array

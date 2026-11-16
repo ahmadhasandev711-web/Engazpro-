@@ -39,13 +39,21 @@ class UserResource extends JsonResource
     {
         $owner = $this->owner_id ? $this->owner : $this->resource;
         $enabled = (bool) ($owner?->ecommerce_enabled ?? false);
-        $activePlatform = $enabled
-            ? app(\App\Services\EcommerceAccessService::class)->activePlatformForAccount($this->getAccountId())?->value
-            : null;
+        if (!$enabled) {
+            return ['ecommerce_enabled' => false, 'active_ecommerce_platform' => null];
+        }
+
+        if ($owner && $owner->relationLoaded('wooCommerceIntegration') && $owner->relationLoaded('shopifyIntegration')) {
+            $platform = $owner->wooCommerceIntegration?->is_active
+                ? \App\Enums\EcommercePlatform::WOOCOMMERCE->value
+                : ($owner->shopifyIntegration?->is_active ? \App\Enums\EcommercePlatform::SHOPIFY->value : null);
+
+            return ['ecommerce_enabled' => true, 'active_ecommerce_platform' => $platform];
+        }
 
         return [
-            'ecommerce_enabled' => $enabled,
-            'active_ecommerce_platform' => $activePlatform,
+            'ecommerce_enabled' => true,
+            'active_ecommerce_platform' => app(\App\Services\EcommerceAccessService::class)->activePlatformForAccount($this->getAccountId())?->value,
         ];
     }
 }

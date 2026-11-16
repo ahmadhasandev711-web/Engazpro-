@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ProductRequest;
+use App\Http\Requests\RecordOpeningBalanceRequest;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
 use App\Services\ProductService;
@@ -178,18 +179,9 @@ class ProductController extends Controller
     /**
      * تسجيل رصيد أول المدة لدفعة من الأصناف
      */
-    public function recordOpeningBalance(Request $request): JsonResponse
+    public function recordOpeningBalance(RecordOpeningBalanceRequest $request): JsonResponse
     {
-        Gate::authorize('create', Product::class);
-
-        $validated = $request->validate([
-            'branch_id' => ['required', 'integer', 'exists:branches,id'],
-            'items' => ['required', 'array', 'min:1'],
-            'items.*.product_id' => ['required', 'integer'],
-            'items.*.product_variant_id' => ['nullable', 'integer'],
-            'items.*.quantity' => ['required', 'numeric', 'gt:0'],
-            'items.*.cost_price' => ['nullable', 'numeric', 'min:0'],
-        ]);
+        $validated = $request->validated();
 
         $result = $this->stockService->recordOpeningBalance(
             $request->user(),

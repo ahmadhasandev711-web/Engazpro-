@@ -11,6 +11,7 @@ use App\Enums\WcPaymentStatus;
 use App\Exceptions\InsufficientStockException;
 use App\Exceptions\PosDomainException;
 use App\Jobs\SyncFulfillmentToShopifyJob;
+use App\Models\Branch;
 use App\Models\BranchStock;
 use App\Models\Invoice;
 use App\Models\Party;
@@ -64,6 +65,7 @@ class ShopifyOrderSyncService
     public function confirmOrder(User $user, ShopifyOrder $order, int $branchId, bool $force = false): ShopifyOrder
     {
         $accountId = $user->getAccountId();
+        Branch::where('user_id', $accountId)->findOrFail($branchId);
 
         return DB::transaction(function () use ($user, $accountId, $order, $branchId, $force) {
             $locked = ShopifyOrder::where('user_id', $accountId)->lockForUpdate()->findOrFail($order->id);
@@ -182,22 +184,34 @@ class ShopifyOrderSyncService
 
     private function collectBranchShortages(int $accountId, ShopifyOrder $order, int $branchId): array
     {
+        $items = $order->items()->with(['product:id,name', 'variant:id,name'])->get();
+        $productIds = $items->pluck('product_id')->filter()->unique()->values()->all();
+        if (empty($productIds)) {
+            return [];
+        }
+
+        $stocks = BranchStock::withoutGlobalScopes()
+            ->where('branch_id', $branchId)->whereIn('product_id', $productIds)->get()
+            ->keyBy(fn (BranchStock $bs) => "{$bs->product_id}:" . ($bs->product_variant_id ?? 0));
+
+        return $this->evaluateShortageMessages($items, $stocks, $accountId, $branchId, $order->id);
+    }
+
+    private function evaluateShortageMessages($items, $stocks, int $accountId, int $branchId, int $orderId): array
+    {
         $shortages = [];
-        foreach ($order->items()->get() as $item) {
-            $product = $item->product_id ? Product::where('user_id', $accountId)->find($item->product_id) : null;
-            if (!$product) {
+        foreach ($items as $item) {
+            if (!$item->product) {
                 continue;
             }
-            $variant = $item->product_variant_id ? ProductVariant::where('product_id', $product->id)->find($item->product_variant_id) : null;
-            $raw = BranchStock::withoutGlobalScopes()->where('branch_id', $branchId)->where('product_id', $product->id)
-                ->when($variant, fn ($q) => $q->where('product_variant_id', $variant->id), fn ($q) => $q->whereNull('product_variant_id'))
-                ->value('quantity') ?? 0;
-            $reserved = $this->reservationService->reservedQuantity($accountId, $product->id, $variant?->id, [$branchId], $order->id);
+            $stockKey = "{$item->product_id}:" . ($item->product_variant_id ?? 0);
+            $raw = $stocks->get($stockKey)?->quantity ?? 0;
+            $reserved = $this->reservationService->reservedQuantity($accountId, $item->product_id, $item->product_variant_id, [$branchId], $orderId);
             $available = Quantity::of($raw)->subtract($reserved)->maxZero();
             $needed = Quantity::of($item->quantity);
 
             if ($available->isLessThan($needed)) {
-                $label = $product->name . ($variant ? " ({$variant->name})" : '');
+                $label = $item->product->name . ($item->variant ? " ({$item->variant->name})" : '');
                 $shortages[] = "• {$label}: المتاح للتسليم {$available->toFloat()} والمطلوب {$needed->toFloat()}";
             }
         }
@@ -220,23 +234,38 @@ class ShopifyOrderSyncService
 
     private function buildInvoiceItems(int $accountId, array $snapshot): array
     {
+        $localIds = collect($snapshot)->pluck('product_id')->filter()->unique()->values()->all();
+        $shopifyIds = collect($snapshot)->pluck('shopify_product_id')->filter()->unique()->values()->all();
+        $products = (empty($localIds) && empty($shopifyIds))
+            ? collect()
+            : Product::where('user_id', $accountId)->with('variants')
+                ->where(fn ($q) => $q->whereIn('id', $localIds)->orWhereIn('shopify_product_id', $shopifyIds))
+                ->get();
+
+        return $this->mapSnapshotRowsToInvoiceItems(
+            $snapshot,
+            $products->keyBy('id'),
+            $products->whereNotNull('shopify_product_id')->keyBy('shopify_product_id')
+        );
+    }
+
+    private function mapSnapshotRowsToInvoiceItems(array $snapshot, $byId, $byShopifyId): array
+    {
         $items = [];
         foreach ($snapshot as $row) {
-            $product = !empty($row['product_id'])
-                ? Product::where('user_id', $accountId)->find($row['product_id'])
-                : Product::where('user_id', $accountId)->where('shopify_product_id', (int) ($row['shopify_product_id'] ?? 0))->first();
-            if ($product) {
-                $variant = !empty($row['product_variant_id'])
-                    ? $product->variants()->find($row['product_variant_id'])
-                    : (!empty($row['shopify_variant_id']) ? $product->variants()->where('shopify_variant_id', (int) $row['shopify_variant_id'])->first() : null);
-                $items[] = [
-                    'product_id' => $product->id,
-                    'product_variant_id' => $variant?->id,
-                    'quantity' => Quantity::of($row['quantity'] ?? 1)->toFloat(),
-                    'unit_price' => Money::of($row['price'] ?? 0)->getAmount(),
-                    'variant_name' => $variant?->name ?? ($row['variant_name'] ?? null),
-                ];
+            $product = !empty($row['product_id']) ? $byId->get((int) $row['product_id']) : $byShopifyId->get((int) ($row['shopify_product_id'] ?? 0));
+            if (!$product) {
+                continue;
             }
+            $variant = !empty($row['product_variant_id'])
+                ? $product->variants->firstWhere('id', (int) $row['product_variant_id'])
+                : (!empty($row['shopify_variant_id']) ? $product->variants->firstWhere('shopify_variant_id', (int) $row['shopify_variant_id']) : null);
+            $items[] = [
+                'product_id' => $product->id, 'product_variant_id' => $variant?->id,
+                'quantity' => Quantity::of($row['quantity'] ?? 1)->toFloat(),
+                'unit_price' => Money::of($row['price'] ?? 0)->getAmount(),
+                'variant_name' => $variant?->name ?? ($row['variant_name'] ?? null),
+            ];
         }
 
         return $items;

@@ -61,6 +61,18 @@ export enum EcommercePlatform {
   SHOPIFY = 'shopify',
 }
 
+export enum ShopifyAuthMode {
+  ACCESS_TOKEN = 'ACCESS_TOKEN',
+  CLIENT_CREDENTIALS = 'CLIENT_CREDENTIALS',
+  OAUTH = 'OAUTH',
+}
+
+export enum StockAdjustmentMode {
+  INCREASE = 'INCREASE',
+  DECREASE = 'DECREASE',
+  SET_ACTUAL = 'SET_ACTUAL',
+}
+
 export enum UserRole {
   OWNER = 'OWNER',
   ADMIN = 'ADMIN',
