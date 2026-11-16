@@ -179,57 +179,60 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
             Route::get('template/products', [ImportExportController::class, 'productsTemplate']);
         });
 
-        // WooCommerce Integration (ربط ومزامنة متجر ووكومرس)
-        Route::prefix('woocommerce')->group(function () {
-            Route::get('authorize-url', [\App\Http\Controllers\Api\WooCommerceAuthController::class, 'authorizeUrl']);
-            Route::get('settings', [\App\Http\Controllers\Api\WooCommerceSettingsController::class, 'getSettings']);
-            Route::post('settings', [\App\Http\Controllers\Api\WooCommerceSettingsController::class, 'saveSettings']);
-            Route::post('test-connection', [\App\Http\Controllers\Api\WooCommerceSettingsController::class, 'testConnection']);
-            Route::post('import-products', [\App\Http\Controllers\Api\WooCommerceSettingsController::class, 'importProducts']);
-            Route::post('sync-customers', [\App\Http\Controllers\Api\WooCommerceSettingsController::class, 'syncCustomers']);
-            Route::post('register-webhooks', [\App\Http\Controllers\Api\WooCommerceSettingsController::class, 'autoRegisterWebhooks']);
-            Route::post('products/{product}/push-stock', [\App\Http\Controllers\Api\WooCommerceSettingsController::class, 'pushProductStock']);
-            Route::post('push-all-stocks', [\App\Http\Controllers\Api\WooCommerceSettingsController::class, 'pushAllStocks']);
-            Route::post('anoofy/connection-key', [\App\Http\Controllers\Api\AnoofyConnectionController::class, 'generateKey']);
-            Route::delete('anoofy/connection', [\App\Http\Controllers\Api\AnoofyConnectionController::class, 'disconnect']);
-        });
+        // E-Commerce Store Integrations & Online Orders (مقفول افتراضياً ويُفتح من السوبر أدمن)
+        Route::middleware('ecommerce')->group(function () {
+            // WooCommerce Integration (ربط ومزامنة متجر ووكومرس)
+            Route::prefix('woocommerce')->group(function () {
+                Route::get('authorize-url', [\App\Http\Controllers\Api\WooCommerceAuthController::class, 'authorizeUrl']);
+                Route::get('settings', [\App\Http\Controllers\Api\WooCommerceSettingsController::class, 'getSettings']);
+                Route::post('settings', [\App\Http\Controllers\Api\WooCommerceSettingsController::class, 'saveSettings']);
+                Route::post('test-connection', [\App\Http\Controllers\Api\WooCommerceSettingsController::class, 'testConnection']);
+                Route::post('import-products', [\App\Http\Controllers\Api\WooCommerceSettingsController::class, 'importProducts']);
+                Route::post('sync-customers', [\App\Http\Controllers\Api\WooCommerceSettingsController::class, 'syncCustomers']);
+                Route::post('register-webhooks', [\App\Http\Controllers\Api\WooCommerceSettingsController::class, 'autoRegisterWebhooks']);
+                Route::post('products/{product}/push-stock', [\App\Http\Controllers\Api\WooCommerceSettingsController::class, 'pushProductStock']);
+                Route::post('push-all-stocks', [\App\Http\Controllers\Api\WooCommerceSettingsController::class, 'pushAllStocks']);
+                Route::post('anoofy/connection-key', [\App\Http\Controllers\Api\AnoofyConnectionController::class, 'generateKey']);
+                Route::delete('anoofy/connection', [\App\Http\Controllers\Api\AnoofyConnectionController::class, 'disconnect']);
+            });
 
-        // WooCommerce Orders & Dispatch (طلبات المتجر والشحن والتسليم الميداني)
-        Route::prefix('wc-orders')->group(function () {
-            Route::get('/', [\App\Http\Controllers\Api\WcOrderController::class, 'index']);
-            Route::post('pull', [\App\Http\Controllers\Api\WcOrderController::class, 'pull']);
-            Route::get('/{id}', [\App\Http\Controllers\Api\WcOrderController::class, 'show']);
-            Route::post('/{id}/confirm', [\App\Http\Controllers\Api\WcOrderController::class, 'confirm']);
-            Route::post('/{id}/dispatch', [\App\Http\Controllers\Api\WcOrderController::class, 'dispatchToMandob']);
-            Route::post('/{id}/dispatch-courier', [\App\Http\Controllers\Api\WcOrderController::class, 'dispatchCourier']);
-            Route::post('/{id}/deliver', [\App\Http\Controllers\Api\WcOrderController::class, 'deliver']);
-            Route::post('/{id}/return', [\App\Http\Controllers\Api\WcOrderController::class, 'returnOrder']);
-        });
+            // WooCommerce Orders & Dispatch (طلبات المتجر والشحن والتسليم الميداني)
+            Route::prefix('wc-orders')->group(function () {
+                Route::get('/', [\App\Http\Controllers\Api\WcOrderController::class, 'index']);
+                Route::post('pull', [\App\Http\Controllers\Api\WcOrderController::class, 'pull']);
+                Route::get('/{id}', [\App\Http\Controllers\Api\WcOrderController::class, 'show']);
+                Route::post('/{id}/confirm', [\App\Http\Controllers\Api\WcOrderController::class, 'confirm']);
+                Route::post('/{id}/dispatch', [\App\Http\Controllers\Api\WcOrderController::class, 'dispatchToMandob']);
+                Route::post('/{id}/dispatch-courier', [\App\Http\Controllers\Api\WcOrderController::class, 'dispatchCourier']);
+                Route::post('/{id}/deliver', [\App\Http\Controllers\Api\WcOrderController::class, 'deliver']);
+                Route::post('/{id}/return', [\App\Http\Controllers\Api\WcOrderController::class, 'returnOrder']);
+            });
 
-        // Shopify Integration (ربط ومزامنة متجر شوبيفاي)
-        Route::prefix('shopify')->group(function () {
-            Route::get('authorize-url', [\App\Http\Controllers\Api\ShopifyAuthController::class, 'authorizeUrl']);
-            Route::get('settings', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'getSettings']);
-            Route::post('settings', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'saveSettings']);
-            Route::post('test-connection', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'testConnection']);
-            Route::post('sync-locations', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'syncLocations']);
-            Route::post('location-mappings', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'saveLocationMappings']);
-            Route::post('register-webhooks', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'registerWebhooks']);
-            Route::post('import-products', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'importProducts']);
-            Route::post('products/{product}/push-stock', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'pushProductStock']);
-            Route::post('push-all-stocks', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'pushAllStocks']);
-        });
+            // Shopify Integration (ربط ومزامنة متجر شوبيفاي)
+            Route::prefix('shopify')->group(function () {
+                Route::get('authorize-url', [\App\Http\Controllers\Api\ShopifyAuthController::class, 'authorizeUrl']);
+                Route::get('settings', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'getSettings']);
+                Route::post('settings', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'saveSettings']);
+                Route::post('test-connection', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'testConnection']);
+                Route::post('sync-locations', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'syncLocations']);
+                Route::post('location-mappings', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'saveLocationMappings']);
+                Route::post('register-webhooks', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'registerWebhooks']);
+                Route::post('import-products', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'importProducts']);
+                Route::post('products/{product}/push-stock', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'pushProductStock']);
+                Route::post('push-all-stocks', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'pushAllStocks']);
+            });
 
-        // Shopify Orders & Dispatch (طلبات شوبيفاي والشحن والتسليم الميداني)
-        Route::prefix('shopify-orders')->group(function () {
-            Route::get('/', [\App\Http\Controllers\Api\ShopifyOrderController::class, 'index']);
-            Route::post('pull', [\App\Http\Controllers\Api\ShopifyOrderController::class, 'pull']);
-            Route::get('/{id}', [\App\Http\Controllers\Api\ShopifyOrderController::class, 'show']);
-            Route::post('/{id}/confirm', [\App\Http\Controllers\Api\ShopifyOrderController::class, 'confirm']);
-            Route::post('/{id}/dispatch', [\App\Http\Controllers\Api\ShopifyOrderController::class, 'dispatchToMandob']);
-            Route::post('/{id}/dispatch-courier', [\App\Http\Controllers\Api\ShopifyOrderController::class, 'dispatchCourier']);
-            Route::post('/{id}/deliver', [\App\Http\Controllers\Api\ShopifyOrderController::class, 'deliver']);
-            Route::post('/{id}/return', [\App\Http\Controllers\Api\ShopifyOrderController::class, 'returnOrder']);
+            // Shopify Orders & Dispatch (طلبات شوبيفاي والشحن والتسليم الميداني)
+            Route::prefix('shopify-orders')->group(function () {
+                Route::get('/', [\App\Http\Controllers\Api\ShopifyOrderController::class, 'index']);
+                Route::post('pull', [\App\Http\Controllers\Api\ShopifyOrderController::class, 'pull']);
+                Route::get('/{id}', [\App\Http\Controllers\Api\ShopifyOrderController::class, 'show']);
+                Route::post('/{id}/confirm', [\App\Http\Controllers\Api\ShopifyOrderController::class, 'confirm']);
+                Route::post('/{id}/dispatch', [\App\Http\Controllers\Api\ShopifyOrderController::class, 'dispatchToMandob']);
+                Route::post('/{id}/dispatch-courier', [\App\Http\Controllers\Api\ShopifyOrderController::class, 'dispatchCourier']);
+                Route::post('/{id}/deliver', [\App\Http\Controllers\Api\ShopifyOrderController::class, 'deliver']);
+                Route::post('/{id}/return', [\App\Http\Controllers\Api\ShopifyOrderController::class, 'returnOrder']);
+            });
         });
 
         // Store Settings & Identity (هوية المنشأة والعملة)
@@ -251,6 +254,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
         Route::post('/users/{user}/revoke-subscription', [\App\Http\Controllers\Api\AdminController::class, 'revokeSubscription']);
         Route::post('/users/{user}/force-logout', [\App\Http\Controllers\Api\AdminController::class, 'forceLogout']);
         Route::post('/users/{user}/toggle-status', [\App\Http\Controllers\Api\AdminController::class, 'toggleStatus']);
+        Route::post('/users/{user}/toggle-ecommerce', [\App\Http\Controllers\Api\AdminController::class, 'toggleEcommerce']);
         Route::post('/users/{user}/reset-password', [\App\Http\Controllers\Api\AdminController::class, 'resetPassword']);
         Route::get('/users/{user}/staff', [\App\Http\Controllers\Api\AdminController::class, 'storeStaff']);
         Route::post('/licenses/{id}/revoke', [\App\Http\Controllers\Api\AdminController::class, 'revokeLicense']);

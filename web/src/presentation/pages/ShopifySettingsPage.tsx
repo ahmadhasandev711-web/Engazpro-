@@ -11,6 +11,8 @@ import {
   MapPin,
 } from 'lucide-react';
 import { apiClient } from '../../data/api/client';
+import { EcommercePlatform } from '@pos-mandob/shared';
+import { useAuthStore } from '../../data/store/useAuthStore';
 import { Badge, Button, Card, Input, PageHeader, Select } from '../components/ui';
 
 type AuthMode = 'ACCESS_TOKEN' | 'CLIENT_CREDENTIALS' | 'OAUTH';
@@ -42,6 +44,7 @@ export const ShopifySettingsPage: React.FC = () => {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('auth') === 'success') {
+      useAuthStore.getState().fetchMe();
       setFeedback({ type: 'success', message: 'تم ربط متجر Shopify عبر OAuth ومزامنة المواقع بنجاح!' });
       queryClient.invalidateQueries({ queryKey: ['shopify-settings'] });
       window.history.replaceState({}, document.title, window.location.pathname);
@@ -96,6 +99,7 @@ export const ShopifySettingsPage: React.FC = () => {
       }),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['shopify-settings'] });
+      useAuthStore.getState().fetchMe();
       setAccessToken('');
       setClientSecret('');
       notify('success', res.data?.message || 'تم حفظ إعدادات Shopify بنجاح');
@@ -180,6 +184,15 @@ export const ShopifySettingsPage: React.FC = () => {
           </Badge>
         }
       />
+
+      {useAuthStore.getState().user?.active_ecommerce_platform === EcommercePlatform.WOOCOMMERCE && (
+        <div className="p-4 rounded-2xl border bg-warn-soft border-warn/30 text-warn flex items-center gap-3 text-xs font-bold">
+          <AlertCircle className="w-5 h-5 shrink-0" />
+          <span>
+            متجر WooCommerce مربوط ومفعّل حالياً. يدعم النظام منصة متجر إلكتروني واحدة فقط؛ قم بتعطيل تفعيل WooCommerce أولاً إذا أردت التحويل إلى Shopify.
+          </span>
+        </div>
+      )}
 
       {feedback && (
         <div className={`p-4 rounded-2xl border flex items-center gap-3 text-sm font-bold ${feedback.type === 'success' ? 'bg-ok-soft border-ok/20 text-ok' : 'bg-bad-soft border-bad/20 text-bad'}`}>

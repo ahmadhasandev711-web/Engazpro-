@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import { apiClient } from '../../data/api/client';
+import { EcommercePlatform } from '@pos-mandob/shared';
+import { useAuthStore } from '../../data/store/useAuthStore';
 import { useHaptic } from '../hooks/useHaptic';
 import { useConfirm } from '../context/ConfirmContext';
 import { Badge, Button, Card, Input, PageHeader, Select } from '../components/ui';
@@ -32,6 +34,7 @@ export const WooCommerceSettingsPage: React.FC = () => {
   const [consumerSecret, setConsumerSecret] = useState('');
   const [onlineBranchId, setOnlineBranchId] = useState<number | ''>('');
   const [autoSyncStock, setAutoSyncStock] = useState(true);
+  const [isActive, setIsActive] = useState(true);
   const [copiedWebhook, setCopiedWebhook] = useState(false);
   const [copiedSecret, setCopiedSecret] = useState(false);
   const [isConnectingOneClick, setIsConnectingOneClick] = useState(false);
@@ -50,6 +53,7 @@ export const WooCommerceSettingsPage: React.FC = () => {
         message: 'تم ربط متجر ووكومرس بنجاح وتفعيل المزامنة التلقائية!',
       });
       queryClient.invalidateQueries({ queryKey: ['woocommerce-settings'] });
+      useAuthStore.getState().fetchMe();
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, [queryClient]);
@@ -104,6 +108,7 @@ export const WooCommerceSettingsPage: React.FC = () => {
       setStoreUrl(settingsData.store_url || '');
       setOnlineBranchId(settingsData.online_branch_id || '');
       setAutoSyncStock(settingsData.auto_sync_stock ?? true);
+      setIsActive(settingsData.is_active ?? true);
     }
   }, [settingsData]);
 
@@ -114,7 +119,7 @@ export const WooCommerceSettingsPage: React.FC = () => {
         store_url: storeUrl,
         online_branch_id: onlineBranchId || null,
         auto_sync_stock: autoSyncStock,
-        is_active: true,
+        is_active: isActive,
       };
       if (consumerKey) payload.consumer_key = consumerKey;
       if (consumerSecret) payload.consumer_secret = consumerSecret;
@@ -123,6 +128,7 @@ export const WooCommerceSettingsPage: React.FC = () => {
     },
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['woocommerce-settings'] });
+      useAuthStore.getState().fetchMe();
       setConsumerKey('');
       setConsumerSecret('');
       setFeedback({ type: 'success', message: res.data?.message || 'تم حفظ الإعدادات بنجاح' });
@@ -361,6 +367,16 @@ export const WooCommerceSettingsPage: React.FC = () => {
         className="mb-0"
       />
 
+      {/* Conflict Banner if Shopify is Active */}
+      {useAuthStore.getState().user?.active_ecommerce_platform === EcommercePlatform.SHOPIFY && (
+        <div className="p-4 rounded-2xl border bg-warn-soft border-warn/30 text-warn flex items-center gap-3">
+          <AlertTriangle className="w-5 h-5 flex-shrink-0 text-warn" />
+          <span className="text-xs font-bold">
+            متجر Shopify مربوط ومفعّل حالياً. يدعم النظام منصة متجر إلكتروني واحدة فقط؛ قم بتعطيل تفعيل Shopify أولاً إذا أردت التحويل إلى WooCommerce.
+          </span>
+        </div>
+      )}
+
       {/* Feedback Banner */}
       {feedback && (
         <div
@@ -515,6 +531,23 @@ export const WooCommerceSettingsPage: React.FC = () => {
                 />
               </div>
 
+              <div className="p-4 bg-surface-2/60 border border-line rounded-2xl flex items-center justify-between gap-3">
+                <div>
+                  <span className="text-xs font-bold text-ink block">
+                    تفعيل ربط WooCommerce واستقبال الطلبات
+                  </span>
+                  <span className="text-xs text-muted block mt-0.5">
+                    إلغاء التفعيل يوقف استقبال طلبات ووكومرس ومزامنة مخزونه (يتيح لك تفعيل Shopify بدلاً منه).
+                  </span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={isActive}
+                  onChange={(e) => setIsActive(e.target.checked)}
+                  className="w-5 h-5 text-brand rounded-lg focus:ring-brand accent-brand cursor-pointer shrink-0"
+                />
+              </div>
+
               <Button
                 type="button"
                 variant="primary"
@@ -524,7 +557,7 @@ export const WooCommerceSettingsPage: React.FC = () => {
                 disabled={saveMutation.isPending || !storeUrl}
                 className="w-full"
               >
-                {saveMutation.isPending ? 'جاري الحفظ...' : 'حفظ وتفعيل إعدادات الربط'}
+                {saveMutation.isPending ? 'جاري الحفظ...' : isActive ? 'حفظ وتفعيل إعدادات الربط' : 'حفظ وإيقاف الربط'}
               </Button>
             </div>
           </Card>

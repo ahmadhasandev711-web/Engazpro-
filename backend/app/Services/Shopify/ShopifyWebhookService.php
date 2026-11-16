@@ -44,7 +44,11 @@ class ShopifyWebhookService
             throw new ShopifyConnectionException('Unauthorized Shopify webhook signature', 401);
         }
 
-        return User::withoutGlobalScopes()->find($userId)
-            ?? throw new ShopifyConnectionException('Store owner not found', 404);
+        $owner = User::withoutGlobalScopes()->find($userId);
+        if (!$owner || !$owner->ecommerce_enabled) {
+            throw new ShopifyConnectionException('Store owner not found or e-commerce addon disabled', 403);
+        }
+
+        return $owner;
     }
 }

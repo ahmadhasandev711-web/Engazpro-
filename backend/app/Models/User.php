@@ -29,6 +29,7 @@ class User extends Authenticatable
         'commission_rate',
         'role',
         'status',
+        'ecommerce_enabled',
     ];
 
     protected $hidden = [
@@ -42,6 +43,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_admin' => 'boolean',
+            'ecommerce_enabled' => 'boolean',
             'role' => UserRole::class,
             'status' => UserStatus::class,
             'base_salary' => 'decimal:2',
@@ -266,10 +268,20 @@ class User extends Authenticatable
         return $this->hasMany(Setting::class);
     }
 
+    public function wooCommerceIntegration(): HasOne
+    {
+        return $this->hasOne(WooCommerceIntegration::class);
+    }
+
+    public function shopifyIntegration(): HasOne
+    {
+        return $this->hasOne(ShopifyIntegration::class);
+    }
+
     protected static function booted(): void
     {
         static::saved(function (User $user) {
-            if ($user->isDirty('status')) {
+            if ($user->isDirty(['status', 'ecommerce_enabled'])) {
                 \App\Services\SubscriptionGate::clear((int) ($user->owner_id ?: $user->id));
             }
         });

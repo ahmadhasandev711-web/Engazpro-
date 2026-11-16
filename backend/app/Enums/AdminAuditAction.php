@@ -13,6 +13,7 @@ enum AdminAuditAction: string
     case USER_UNFROZEN = 'USER_UNFROZEN';
     case USER_PASSWORD_RESET = 'USER_PASSWORD_RESET';
     case STORE_SESSIONS_REVOKED = 'STORE_SESSIONS_REVOKED';
+    case STORE_ECOMMERCE_TOGGLED = 'STORE_ECOMMERCE_TOGGLED';
     case ADMIN_ACCESS_DENIED = 'ADMIN_ACCESS_DENIED';
     case INQUIRY_UPDATED = 'INQUIRY_UPDATED';
     case INQUIRY_DELETED = 'INQUIRY_DELETED';
@@ -29,6 +30,7 @@ enum AdminAuditAction: string
             self::USER_UNFROZEN => 'تنشيط متجر',
             self::USER_PASSWORD_RESET => 'تغيير كلمة مرور',
             self::STORE_SESSIONS_REVOKED => 'طرد جلسات متجر',
+            self::STORE_ECOMMERCE_TOGGLED => 'تعديل صلاحية المتجر الإلكتروني',
             self::ADMIN_ACCESS_DENIED => 'رفض وصول إداري',
             self::INQUIRY_UPDATED => 'تحديث طلب متجر',
             self::INQUIRY_DELETED => 'حذف طلب متجر',

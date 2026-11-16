@@ -28,6 +28,7 @@ __export(index_exports, {
   BranchType: () => BranchType,
   CategorySchema: () => CategorySchema,
   CommissionType: () => CommissionType,
+  EcommercePlatform: () => EcommercePlatform,
   EmployeeAdjustmentType: () => EmployeeAdjustmentType,
   EmployeeSchema: () => EmployeeSchema,
   ExpenseSchema: () => ExpenseSchema,
@@ -145,6 +146,11 @@ var SubscriptionPlan = /* @__PURE__ */ ((SubscriptionPlan2) => {
   SubscriptionPlan2["BASIC"] = "BASIC";
   return SubscriptionPlan2;
 })(SubscriptionPlan || {});
+var EcommercePlatform = /* @__PURE__ */ ((EcommercePlatform2) => {
+  EcommercePlatform2["WOOCOMMERCE"] = "woocommerce";
+  EcommercePlatform2["SHOPIFY"] = "shopify";
+  return EcommercePlatform2;
+})(EcommercePlatform || {});
 var UserRole = /* @__PURE__ */ ((UserRole2) => {
   UserRole2["OWNER"] = "OWNER";
   UserRole2["ADMIN"] = "ADMIN";
@@ -633,6 +639,7 @@ function formatDateTime(dateString) {
   BranchType,
   CategorySchema,
   CommissionType,
+  EcommercePlatform,
   EmployeeAdjustmentType,
   EmployeeSchema,
   ExpenseSchema,

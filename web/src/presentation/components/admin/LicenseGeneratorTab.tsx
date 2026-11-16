@@ -31,7 +31,13 @@ interface LicenseGeneratorTabProps {
   page: number;
   lastPage: number;
   onPageChange: (page: number) => void;
-  onGenerate: (payload: { count: number; duration_days: number; notes: string; price?: number | null }) => void;
+  onGenerate: (payload: {
+    count: number;
+    duration_days: number;
+    notes: string;
+    price?: number | null;
+    ecommerce_enabled?: boolean;
+  }) => void;
   onRevokeLicense?: (licenseId: number) => void;
   isGenerating: boolean;
 }
@@ -75,6 +81,7 @@ export const LicenseGeneratorTab: React.FC<LicenseGeneratorTabProps> = ({
   const [generateCount, setGenerateCount] = useState<number>(1);
   const [durationDays, setDurationDays] = useState<number>(365);
   const [customPrice, setCustomPrice] = useState<string>('');
+  const [ecommerceEnabled, setEcommerceEnabled] = useState<boolean>(false);
   const [batchNotes, setBatchNotes] = useState<string>('اشتراك سنوي (فودافون كاش / إنستاباي)');
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
@@ -184,6 +191,7 @@ export const LicenseGeneratorTab: React.FC<LicenseGeneratorTabProps> = ({
                   duration_days: durationDays,
                   notes: batchNotes,
                   price: customPrice.trim() !== '' ? Number(customPrice) : null,
+                  ecommerce_enabled: ecommerceEnabled,
                 })
               }
             >
@@ -191,6 +199,23 @@ export const LicenseGeneratorTab: React.FC<LicenseGeneratorTabProps> = ({
             </Button>
           </div>
         </div>
+
+        <label className="flex items-center gap-2.5 p-3 rounded-xl bg-surface-2 border border-line text-xs font-bold text-ink cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={ecommerceEnabled}
+            onChange={(e) => {
+              const checked = e.target.checked;
+              setEcommerceEnabled(checked);
+              if (checked && !customPrice) setCustomPrice('5000');
+              if (!checked && customPrice === '5000') setCustomPrice('');
+            }}
+            className="w-4 h-4 accent-brand rounded cursor-pointer"
+          />
+          <span>
+            تضمين موديول المتجر الإلكتروني (WooCommerce أو Shopify — الباقة السنوية 5000 ج شاملة إضافة +2000 ج)
+          </span>
+        </label>
       </Card>
 
       {/* Filters & Search */}
@@ -269,7 +294,10 @@ export const LicenseGeneratorTab: React.FC<LicenseGeneratorTabProps> = ({
                     </td>
                     <td className="px-5 py-3.5">{renderStatusBadge(license)}</td>
                     <td className="px-5 py-3.5 text-muted max-w-xs truncate">
-                      <div className="text-ink font-medium">{license.notes || 'بدون ملاحظات'}</div>
+                      <div className="text-ink font-medium flex items-center gap-1.5 flex-wrap">
+                        <span>{license.notes || 'بدون ملاحظات'}</span>
+                        {license.ecommerce_enabled && <Badge tone="brand">متجر إلكتروني</Badge>}
+                      </div>
                       <div className="text-[11px] font-mono mt-0.5">{license.batch_reference}</div>
                     </td>
                     <td className="px-5 py-3.5 text-muted font-mono">{formatDate(license.created_at)}</td>

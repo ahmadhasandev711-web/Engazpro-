@@ -27,7 +27,7 @@ class ShopifyAuthAndSettingsTest extends TestCase
     {
         parent::setUp();
 
-        $this->owner = User::factory()->create(['role' => UserRole::OWNER->value]);
+        $this->owner = User::factory()->create(['role' => UserRole::OWNER->value, 'ecommerce_enabled' => true]);
         Subscription::create([
             'user_id' => $this->owner->id,
             'start_date' => now()->toDateString(),
@@ -178,7 +178,7 @@ class ShopifyAuthAndSettingsTest extends TestCase
             'shopify_location_id' => 5001,
             'shopify_location_name' => 'Nasr City Hub',
         ]);
-        $otherOwner = User::factory()->create(['role' => UserRole::OWNER->value]);
+        $otherOwner = User::factory()->create(['role' => UserRole::OWNER->value, 'ecommerce_enabled' => true]);
         $foreignBranch = Branch::create(['user_id' => $otherOwner->id, 'name' => 'Foreign', 'code' => 'BR-F']);
 
         $this->actingAs($this->owner)->postJson('/api/shopify/location-mappings', [

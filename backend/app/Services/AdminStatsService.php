@@ -3,8 +3,11 @@
 namespace App\Services;
 
 use App\Enums\AdminAuditAction;
+use App\Enums\EcommercePlatform;
 use App\Enums\SubscriptionStatus;
 use App\Enums\UserStatus;
+use App\Services\Shopify\ShopifyStockSyncGate;
+use App\Services\WooCommerce\WooStockSyncGate;
 use App\Exceptions\PosDomainException;
 use App\Models\ActivationCode;
 use App\Models\Invoice;
@@ -70,7 +73,7 @@ class AdminStatsService
     public function getUsersPaginated(?string $status = null, ?string $search = null, int $perPage = 30): LengthAwarePaginator
     {
         $query = User::whereNull('owner_id')
-            ->with(['subscription', 'settings'])
+            ->with(['subscription', 'settings', 'wooCommerceIntegration:id,user_id,is_active', 'shopifyIntegration:id,user_id,is_active'])
             ->withCount(['employees', 'branches', 'invoices', 'products', 'parties'])
             ->orderByDesc('id');
 
@@ -84,7 +87,7 @@ class AdminStatsService
             });
         }
 
-        return $query->paginate(min(max($perPage, 1), 100));
+        return $query->paginate(min(max($perPage, 1), 100))->through(fn (User $merchant) => $this->appendMerchantIntegrationState($merchant));
     }
 
     public function extendUserSubscription(User $user, int $days, ?string $notes = null, ?float $price = null): Subscription
@@ -202,6 +205,43 @@ class AdminStatsService
 
             return $user->fresh();
         });
+    }
+
+    public function toggleEcommerceAddon(User $user): User
+    {
+        $this->assertNotAdminTarget($user);
+
+        return DB::transaction(function () use ($user) {
+            $newEnabled = !$user->ecommerce_enabled;
+            $user->forceFill(['ecommerce_enabled' => $newEnabled])->save();
+
+            SubscriptionGate::clear($user->id);
+            WooStockSyncGate::forget($user->id);
+            ShopifyStockSyncGate::forget($user->id);
+
+            $label = $newEnabled ? 'تفعيل' : 'إيقاف';
+            $this->auditService->record(
+                action: AdminAuditAction::STORE_ECOMMERCE_TOGGLED,
+                summary: "{$label} موديول المتجر الإلكتروني للمتجر ({$user->name})",
+                targetUser: $user,
+                metadata: ['ecommerce_enabled' => $newEnabled],
+            );
+
+            return $this->appendMerchantIntegrationState($user->fresh(['subscription', 'wooCommerceIntegration:id,user_id,is_active', 'shopifyIntegration:id,user_id,is_active']));
+        });
+    }
+
+    private function appendMerchantIntegrationState(User $merchant): User
+    {
+        $activePlatform = null;
+        if ($merchant->wooCommerceIntegration?->is_active) {
+            $activePlatform = EcommercePlatform::WOOCOMMERCE->value;
+        } elseif ($merchant->shopifyIntegration?->is_active) {
+            $activePlatform = EcommercePlatform::SHOPIFY->value;
+        }
+        $merchant->setAttribute('active_ecommerce_platform', $activePlatform);
+
+        return $merchant;
     }
 
     public function resetUserPassword(User $user, string $newPassword): void

@@ -2,10 +2,12 @@
 
 namespace App\Services\Shopify;
 
+use App\Enums\EcommercePlatform;
 use App\Enums\ShopifyAuthMode;
 use App\Exceptions\ShopifyConnectionException;
 use App\Models\ShopifyIntegration;
 use App\Models\User;
+use App\Services\EcommerceAccessService;
 use App\Support\ShopifyGid;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -13,6 +15,9 @@ use Illuminate\Support\Str;
 
 class ShopifyAuthService
 {
+    public function __construct(
+        protected EcommerceAccessService $ecommerceAccess
+    ) {}
     public function ensureValidAccessToken(ShopifyIntegration $integration, bool $forceRefresh = false): string
     {
         $hasToken = !empty($integration->access_token);
@@ -58,6 +63,7 @@ class ShopifyAuthService
     public function buildAuthorizeUrl(User $user, string $shopDomain, ?string $returnUrl = null): string
     {
         $accountId = $user->getAccountId();
+        $this->ecommerceAccess->assertPlatformAllowed($accountId, EcommercePlatform::SHOPIFY);
         $normalizedShop = ShopifyGid::normalizeShopDomain($shopDomain);
         $integration = ShopifyIntegration::where('user_id', $accountId)->first();
         $clientId = $integration?->client_id ?: config('services.shopify.client_id');
@@ -90,6 +96,7 @@ class ShopifyAuthService
         }
 
         $accountId = (int) $statePayload['account_id'];
+        $this->ecommerceAccess->assertPlatformAllowed($accountId, EcommercePlatform::SHOPIFY);
         $shop = ShopifyGid::normalizeShopDomain((string) $query['shop']);
         $existing = ShopifyIntegration::withoutGlobalScopes()->where('user_id', $accountId)->first();
         [$clientId, $clientSecret] = $this->resolveAppCredentials($existing);

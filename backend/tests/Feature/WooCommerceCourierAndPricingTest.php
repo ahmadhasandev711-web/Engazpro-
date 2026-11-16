@@ -34,6 +34,7 @@ class WooCommerceCourierAndPricingTest extends TestCase
             'name' => 'صاحب المتجر',
             'phone' => '01000000001',
             'password' => bcrypt('password123'),
+            'ecommerce_enabled' => true,
         ]);
 
         Subscription::create([

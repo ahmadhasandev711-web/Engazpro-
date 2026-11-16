@@ -12,6 +12,7 @@ import {
   XCircle,
   ChevronRight,
   ChevronLeft,
+  Globe,
 } from 'lucide-react';
 import { formatDate, User } from '@pos-mandob/shared';
 import clsx from 'clsx';
@@ -34,6 +35,7 @@ interface UsersManagementTabProps {
   onSelectUserForResetPassword: (user: User) => void;
   onInspectStore: (userId: number) => void;
   onToggleStatus: (user: User) => void;
+  onToggleEcommerce: (user: User) => void;
   onRevokeSubscription: (user: User) => void;
   onForceLogout: (user: User) => void;
   isMutating?: boolean;
@@ -62,6 +64,7 @@ export const UsersManagementTab: React.FC<UsersManagementTabProps> = ({
   onSelectUserForResetPassword,
   onInspectStore,
   onToggleStatus,
+  onToggleEcommerce,
   onRevokeSubscription,
   onForceLogout,
   isMutating = false,
@@ -78,6 +81,19 @@ export const UsersManagementTab: React.FC<UsersManagementTabProps> = ({
       confirmText: isStoreActive ? 'تأكيد التجميد' : 'تنشيط',
     });
     if (ok) onToggleStatus(usr);
+  };
+
+  const handleToggleEcommerceConfirm = async (usr: any) => {
+    const isEnabled = Boolean(usr.ecommerce_enabled);
+    const ok = await confirm({
+      title: isEnabled ? 'إيقاف موديول المتجر الإلكتروني' : 'تفعيل موديول المتجر الإلكتروني (+2000 ج/سنة)',
+      message: isEnabled
+        ? `هل تريد إيقاف ميزة ربط المتجر الإلكتروني لمتجر (${usr.name})؟ ستختفي صفحات WooCommerce و Shopify وتتوقف المزامنة دون مسح بياناته.`
+        : `هل تريد فتح موديول المتجر الإلكتروني (WooCommerce أو Shopify) لمتجر (${usr.name})؟`,
+      type: isEnabled ? 'warning' : 'info',
+      confirmText: isEnabled ? 'إيقاف الميزة' : 'تفعيل الميزة',
+    });
+    if (ok) onToggleEcommerce(usr);
   };
 
   const handleRevokeSubConfirm = async (usr: User) => {
@@ -204,11 +220,22 @@ export const UsersManagementTab: React.FC<UsersManagementTabProps> = ({
                     </td>
 
                     <td className="px-4 py-3.5">
-                      {isStoreActive ? (
-                        <Badge tone="ok" dot>نشط</Badge>
-                      ) : (
-                        <Badge tone="bad" dot>مجمد</Badge>
-                      )}
+                      <div className="space-y-1">
+                        {isStoreActive ? (
+                          <Badge tone="ok" dot>نشط</Badge>
+                        ) : (
+                          <Badge tone="bad" dot>مجمد</Badge>
+                        )}
+                        {!isAdminAccount && (
+                          <div>
+                            <Badge tone={usr.ecommerce_enabled ? 'brand' : 'neutral'}>
+                              {usr.ecommerce_enabled
+                                ? `أونلاين: ${usr.active_ecommerce_platform === 'shopify' ? 'Shopify' : usr.active_ecommerce_platform === 'woocommerce' ? 'WooCommerce' : 'متاح للربط'}`
+                                : 'POS فقط'}
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
                     </td>
 
                     <td className="px-4 py-3.5">
@@ -245,6 +272,16 @@ export const UsersManagementTab: React.FC<UsersManagementTabProps> = ({
                               leftIcon={<Key className="w-3.5 h-3.5 text-brand" />}
                             >
                               باسوورد
+                            </Button>
+
+                            <Button
+                              size="sm"
+                              variant={usr.ecommerce_enabled ? 'primary' : 'secondary'}
+                              disabled={isMutating}
+                              onClick={() => handleToggleEcommerceConfirm(usr)}
+                              leftIcon={<Globe className="w-3.5 h-3.5" />}
+                            >
+                              {usr.ecommerce_enabled ? 'إيقاف الأونلاين' : 'فتح الأونلاين'}
                             </Button>
 
                             <Button
@@ -302,7 +339,14 @@ export const UsersManagementTab: React.FC<UsersManagementTabProps> = ({
                       </div>
                       <div className="font-mono text-muted mt-0.5">{usr.phone}</div>
                     </div>
-                    {isStoreActive ? <Badge tone="ok" dot>نشط</Badge> : <Badge tone="bad" dot>مجمد</Badge>}
+                    <div className="flex flex-col items-end gap-1">
+                      {isStoreActive ? <Badge tone="ok" dot>نشط</Badge> : <Badge tone="bad" dot>مجمد</Badge>}
+                      {!isAdminAccount && (
+                        <Badge tone={usr.ecommerce_enabled ? 'brand' : 'neutral'}>
+                          {usr.ecommerce_enabled ? 'أونلاين مفعّل' : 'POS فقط'}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
 
                   <div className="flex items-center justify-between text-[11px]">
@@ -341,6 +385,16 @@ export const UsersManagementTab: React.FC<UsersManagementTabProps> = ({
                           leftIcon={<Key className="w-3.5 h-3.5 text-brand" />}
                         >
                           باسوورد
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={usr.ecommerce_enabled ? 'primary' : 'secondary'}
+                          className="min-h-[44px]"
+                          disabled={isMutating}
+                          onClick={() => handleToggleEcommerceConfirm(usr)}
+                          leftIcon={<Globe className="w-3.5 h-3.5" />}
+                        >
+                          {usr.ecommerce_enabled ? 'إيقاف الأونلاين' : 'فتح الأونلاين'}
                         </Button>
                         <Button
                           size="sm"

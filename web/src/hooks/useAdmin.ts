@@ -107,6 +107,7 @@ export const useGenerateLicenses = () => {
       duration_days: number;
       notes: string;
       price?: number | null;
+      ecommerce_enabled?: boolean;
     }) => {
       const res = await apiClient.post('/admin/licenses/generate', payload);
       return res.data;
@@ -222,6 +223,21 @@ export const useResetUserPassword = () => {
       const res = await apiClient.post(`/admin/users/${userId}/reset-password`, {
         password,
       });
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-audit-logs'] });
+    },
+  });
+};
+
+export const useToggleUserEcommerce = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (userId: number) => {
+      const res = await apiClient.post(`/admin/users/${userId}/toggle-ecommerce`);
       return res.data;
     },
     onSuccess: () => {

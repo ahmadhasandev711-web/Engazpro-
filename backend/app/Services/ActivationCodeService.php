@@ -17,12 +17,18 @@ class ActivationCodeService
 {
     public function __construct(protected AdminAuditService $auditService) {}
 
-    public function generateCodes(int $count = 1, int $durationDays = 365, string $plan = 'BASIC', ?string $notes = null, ?float $price = null): array
-    {
+    public function generateCodes(
+        int $count = 1,
+        int $durationDays = 365,
+        string $plan = 'BASIC',
+        ?string $notes = null,
+        ?float $price = null,
+        bool $ecommerceEnabled = false
+    ): array {
         $batchRef = 'BATCH-' . strtoupper(Str::random(6));
         $resolvedPrice = $price !== null ? Money::of($price)->getAmount() : null;
 
-        return DB::transaction(function () use ($count, $durationDays, $plan, $notes, $batchRef, $resolvedPrice) {
+        return DB::transaction(function () use ($count, $durationDays, $plan, $notes, $batchRef, $resolvedPrice, $ecommerceEnabled) {
             $generated = [];
             for ($i = 0; $i < $count; $i++) {
                 $generated[] = ActivationCode::create([
@@ -30,12 +36,13 @@ class ActivationCodeService
                     'duration_days' => $durationDays,
                     'plan' => $plan,
                     'price' => $resolvedPrice,
+                    'ecommerce_enabled' => $ecommerceEnabled,
                     'is_used' => false,
                     'batch_reference' => $batchRef,
                     'notes' => $notes,
                 ]);
             }
-            $this->auditService->record(AdminAuditAction::LICENSES_GENERATED, "توليد {$count} كود تفعيل ({$plan}) لمدة {$durationDays} يوم", null, compact('count', 'durationDays', 'plan', 'resolvedPrice', 'batchRef'));
+            $this->auditService->record(AdminAuditAction::LICENSES_GENERATED, "توليد {$count} كود تفعيل ({$plan}) لمدة {$durationDays} يوم", null, compact('count', 'durationDays', 'plan', 'resolvedPrice', 'ecommerceEnabled', 'batchRef'));
             return $generated;
         });
     }
@@ -148,6 +155,10 @@ class ActivationCodeService
             'notes' => 'تفعيل عبر كود: ' . $activationCode->code,
         ]);
         $subscription->save();
+        if ($activationCode->ecommerce_enabled && !$user->ecommerce_enabled) {
+            $user->forceFill(['ecommerce_enabled' => true])->save();
+            SubscriptionGate::clear($user->id);
+        }
 
         return [$subscription, $newEndDate];
     }

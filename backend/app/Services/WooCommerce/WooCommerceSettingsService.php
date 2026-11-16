@@ -2,11 +2,13 @@
 
 namespace App\Services\WooCommerce;
 
+use App\Enums\EcommercePlatform;
 use App\Jobs\ImportWooCommerceProductsPageJob;
 use App\Jobs\PushAllWooCommerceStocksJob;
 use App\Models\Product;
 use App\Models\User;
 use App\Models\WooCommerceIntegration;
+use App\Services\EcommerceAccessService;
 use Illuminate\Support\Str;
 
 class WooCommerceSettingsService
@@ -15,7 +17,8 @@ class WooCommerceSettingsService
         protected WooCommerceApiClient $apiClient,
         protected WooCommerceCustomerSyncService $customerSyncService,
         protected WooCommerceProductImportService $importService,
-        protected WooCommerceBulkStockPushService $bulkStockPushService
+        protected WooCommerceBulkStockPushService $bulkStockPushService,
+        protected EcommerceAccessService $ecommerceAccess
     ) {}
 
     public function findForAccount(int $accountId, bool $withBranch = false): ?WooCommerceIntegration
@@ -30,6 +33,10 @@ class WooCommerceSettingsService
 
     public function saveSettings(int $accountId, array $validated): WooCommerceIntegration
     {
+        if ((bool) ($validated['is_active'] ?? true)) {
+            $this->ecommerceAccess->assertPlatformAllowed($accountId, EcommercePlatform::WOOCOMMERCE);
+        }
+
         $integration = WooCommerceIntegration::firstOrNew(['user_id' => $accountId]);
         $integration->store_url = rtrim($validated['store_url'], '/');
         $this->applyCredentialsAndFlags($integration, $validated);

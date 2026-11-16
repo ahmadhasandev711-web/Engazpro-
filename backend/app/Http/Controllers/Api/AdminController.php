@@ -48,11 +48,12 @@ class AdminController extends Controller
         $validated = $request->validated();
         $count = (int) $validated['count'];
         $days = (int) $validated['duration_days'];
-        $plan = $validated['plan'] ?? 'BASIC';
+        $plan = $validated['plan'] ?? ($validated['ecommerce_enabled'] ?? false ? 'PRO_ECOMMERCE' : 'BASIC');
         $price = isset($validated['price']) ? (string) $validated['price'] : null;
+        $ecommerceEnabled = (bool) ($validated['ecommerce_enabled'] ?? false);
         $notes = $validated['notes'] ?? ('دفعة مولدة من لوحة الأدمن - ' . Carbon::now()->toDateTimeString());
 
-        $codes = $this->codeService->generateCodes($count, $days, $plan, $notes, $price !== null ? $price + 0 : null);
+        $codes = $this->codeService->generateCodes($count, $days, $plan, $notes, $price !== null ? $price + 0 : null, $ecommerceEnabled);
 
         return response()->json([
             'success' => true,
@@ -118,6 +119,18 @@ class AdminController extends Controller
         return response()->json([
             'success' => true,
             'message' => "تم {$actionWord} حساب المتجر ({$user->name}) بنجاح.",
+            'data' => $updatedUser,
+        ]);
+    }
+
+    public function toggleEcommerce(User $user): JsonResponse
+    {
+        $updatedUser = $this->statsService->toggleEcommerceAddon($user);
+        $actionWord = $updatedUser->ecommerce_enabled ? 'تفعيل' : 'إيقاف';
+
+        return response()->json([
+            'success' => true,
+            'message' => "تم {$actionWord} موديول المتجر الإلكتروني لمتجر ({$user->name}) بنجاح.",
             'data' => $updatedUser,
         ]);
     }

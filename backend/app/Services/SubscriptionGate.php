@@ -17,38 +17,44 @@ class SubscriptionGate
     }
 
     /**
-     * إرجاع حالة اشتراك وتجميد المتجر مع التخزين المؤقت لمدة 60 ثانية
+     * إرجاع حالة اشتراك وتجميد المتجر وصلاحية المتجر الإلكتروني مع الكاش 60 ثانية
      *
-     * @return array{active: bool, frozen: bool, subscription_status: string}
+     * @return array{active: bool, frozen: bool, subscription_status: string, ecommerce_enabled: bool}
      */
     public static function statusFor(User $user): array
     {
         $ownerId = (int) ($user->owner_id ?: $user->id);
 
         return Cache::remember(self::cacheKey($ownerId), self::CACHE_TTL, function () use ($ownerId, $user) {
-            $owner = ($user->id === $ownerId && !$user->owner_id)
-                ? $user
-                : User::find($ownerId);
+            $owner = ($user->id === $ownerId && !$user->owner_id) ? $user : User::find($ownerId);
 
-            if (!$owner) {
-                return [
-                    'active' => false,
-                    'frozen' => false,
-                    'subscription_status' => SubscriptionStatus::NONE->value,
-                ];
-            }
-
-            $frozen = ($owner->status === UserStatus::INACTIVE);
-            $subscription = $owner->subscription;
-            $active = !$frozen && (bool) ($subscription && $subscription->isActive());
-            $subscriptionStatus = $subscription?->status?->value ?? SubscriptionStatus::NONE->value;
-
-            return [
-                'active' => $active,
-                'frozen' => $frozen,
-                'subscription_status' => $subscriptionStatus,
-            ];
+            return self::resolveStatusPayload($owner);
         });
+    }
+
+    /**
+     * @return array{active: bool, frozen: bool, subscription_status: string, ecommerce_enabled: bool}
+     */
+    private static function resolveStatusPayload(?User $owner): array
+    {
+        if (!$owner) {
+            return [
+                'active' => false,
+                'frozen' => false,
+                'subscription_status' => SubscriptionStatus::NONE->value,
+                'ecommerce_enabled' => false,
+            ];
+        }
+
+        $frozen = ($owner->status === UserStatus::INACTIVE);
+        $subscription = $owner->subscription;
+
+        return [
+            'active' => !$frozen && (bool) ($subscription && $subscription->isActive()),
+            'frozen' => $frozen,
+            'subscription_status' => $subscription?->status?->value ?? SubscriptionStatus::NONE->value,
+            'ecommerce_enabled' => (bool) $owner->ecommerce_enabled,
+        ];
     }
 
     /**

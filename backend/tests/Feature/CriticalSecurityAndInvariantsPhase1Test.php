@@ -52,6 +52,7 @@ class CriticalSecurityAndInvariantsPhase1Test extends TestCase
             'role' => 'OWNER',
             'is_admin' => false,
             'status' => 'ACTIVE',
+            'ecommerce_enabled' => true,
         ]);
         Subscription::create([
             'user_id' => $this->ownerA->id,
@@ -85,6 +86,7 @@ class CriticalSecurityAndInvariantsPhase1Test extends TestCase
             'role' => 'OWNER',
             'is_admin' => false,
             'status' => 'ACTIVE',
+            'ecommerce_enabled' => true,
         ]);
         Subscription::create([
             'user_id' => $this->ownerB->id,

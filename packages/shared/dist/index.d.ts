@@ -62,6 +62,10 @@ declare enum SubscriptionStatus {
 declare enum SubscriptionPlan {
     BASIC = "BASIC"
 }
+declare enum EcommercePlatform {
+    WOOCOMMERCE = "woocommerce",
+    SHOPIFY = "shopify"
+}
 declare enum UserRole {
     OWNER = "OWNER",
     ADMIN = "ADMIN",
@@ -173,6 +177,8 @@ interface User extends BaseEntity {
     branch?: Branch | null;
     role?: UserRole;
     status?: UserStatus;
+    ecommerce_enabled?: boolean;
+    active_ecommerce_platform?: EcommercePlatform | null;
     permissions?: string[];
     subscription?: Subscription | null;
     store_identity?: StoreIdentity | null;
@@ -601,6 +607,7 @@ interface LicenseKey extends BaseEntity {
     duration_days: number;
     plan?: string;
     price?: number | null;
+    ecommerce_enabled?: boolean;
     is_used: boolean;
     is_revoked?: boolean;
     revoked_at?: string | null;
@@ -1652,4 +1659,4 @@ declare class Money {
     toString(): string;
 }
 
-export { type AdminAuditLogItem, type AdminStatsData, type ApiResponse, BarcodeFormat, BarcodeLabelSize, type BarcodePrintItemInput, BarcodePrintItemSchema, type BarcodePrintRequestInput, BarcodePrintRequestSchema, type BaseEntity, type Branch, type BranchInput, BranchSchema, type BranchStock, BranchType, type CalculationItem, type CashFlowReportData, type CashFlowTransaction, type CashFlowTransactionsResponse, type Category, CategorySchema, CommissionType, type DashboardSummary, EmployeeAdjustmentType, type EmployeeInput, EmployeeSchema, type Expense, type ExpenseInput, ExpenseSchema, type ExpiringBatchAlertItem, ExpiryStatus, type Invoice, type InvoiceCalculations, type InvoiceInput, type InvoiceItem, type InvoiceItemInput, InvoiceItemSchema, InvoiceSchema, InvoiceType, type LedgerEntry, LedgerSource, type LicenseKey, type LoginInput, LoginSchema, type LowStockAlertItem, Money, type PaginatedResponse, type Party, type PartyInput, PartySchema, PartyType, type Payment, type PaymentInput, PaymentMethod, PaymentSchema, type Product, type ProductBatch, type ProductInput, ProductSchema, ProductType, type ProductVariant, type ProductVariantInput, ProductVariantSchema, type ProfitReportData, type PurchaseReportData, type RegisterInput, RegisterSchema, type SalesReportData, ShiftStatus, type SplitPaymentItem, type StockAdjustmentMode, type StockAlertsResponse, type StockAlertsSummary, type StockMovement, type StockMovementRecord, StockMovementSource, StockMovementType, type StockReportData, type StockReportItem, type StockTransfer, type StockTransferInput, type StockTransferItem, type StockTransferItemInput, StockTransferItemSchema, StockTransferSchema, StockTransferStatus, type StoreIdentity, type Subscription, SubscriptionPlan, SubscriptionStatus, type Treasury, type TreasuryBreakdown, TreasuryTransactionSource, TreasuryTransactionType, TreasuryType, type Unit, type User, UserRole, UserStatus, type WcOrder, type WcOrderItem, WcOrderStatus, WcPaymentStatus, calculateInvoiceTotals, calculateNetProfit, calculatePartyBalanceImpact, formatCurrency, formatDate, formatDateTime, formatNumber };
+export { type AdminAuditLogItem, type AdminStatsData, type ApiResponse, BarcodeFormat, BarcodeLabelSize, type BarcodePrintItemInput, BarcodePrintItemSchema, type BarcodePrintRequestInput, BarcodePrintRequestSchema, type BaseEntity, type Branch, type BranchInput, BranchSchema, type BranchStock, BranchType, type CalculationItem, type CashFlowReportData, type CashFlowTransaction, type CashFlowTransactionsResponse, type Category, CategorySchema, CommissionType, type DashboardSummary, EcommercePlatform, EmployeeAdjustmentType, type EmployeeInput, EmployeeSchema, type Expense, type ExpenseInput, ExpenseSchema, type ExpiringBatchAlertItem, ExpiryStatus, type Invoice, type InvoiceCalculations, type InvoiceInput, type InvoiceItem, type InvoiceItemInput, InvoiceItemSchema, InvoiceSchema, InvoiceType, type LedgerEntry, LedgerSource, type LicenseKey, type LoginInput, LoginSchema, type LowStockAlertItem, Money, type PaginatedResponse, type Party, type PartyInput, PartySchema, PartyType, type Payment, type PaymentInput, PaymentMethod, PaymentSchema, type Product, type ProductBatch, type ProductInput, ProductSchema, ProductType, type ProductVariant, type ProductVariantInput, ProductVariantSchema, type ProfitReportData, type PurchaseReportData, type RegisterInput, RegisterSchema, type SalesReportData, ShiftStatus, type SplitPaymentItem, type StockAdjustmentMode, type StockAlertsResponse, type StockAlertsSummary, type StockMovement, type StockMovementRecord, StockMovementSource, StockMovementType, type StockReportData, type StockReportItem, type StockTransfer, type StockTransferInput, type StockTransferItem, type StockTransferItemInput, StockTransferItemSchema, StockTransferSchema, StockTransferStatus, type StoreIdentity, type Subscription, SubscriptionPlan, SubscriptionStatus, type Treasury, type TreasuryBreakdown, TreasuryTransactionSource, TreasuryTransactionType, TreasuryType, type Unit, type User, UserRole, UserStatus, type WcOrder, type WcOrderItem, WcOrderStatus, WcPaymentStatus, calculateInvoiceTotals, calculateNetProfit, calculatePartyBalanceImpact, formatCurrency, formatDate, formatDateTime, formatNumber };

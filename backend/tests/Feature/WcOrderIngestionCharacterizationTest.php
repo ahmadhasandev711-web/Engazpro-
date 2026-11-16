@@ -34,7 +34,7 @@ class WcOrderIngestionCharacterizationTest extends TestCase
     {
         parent::setUp();
 
-        $this->owner = User::factory()->create(['role' => 'OWNER']);
+        $this->owner = User::factory()->create(['role' => 'OWNER', 'ecommerce_enabled' => true]);
 
         Subscription::create([
             'user_id' => $this->owner->id,

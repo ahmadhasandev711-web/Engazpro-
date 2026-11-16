@@ -9,6 +9,7 @@ return [
 
     'trial_days' => (int) env('POS_TRIAL_DAYS', 14),
     'annual_subscription_price' => (float) env('POS_ANNUAL_PRICE', 3000.00),
+    'ecommerce_addon_annual_price' => (float) env('POS_ECOMMERCE_ADDON_PRICE', 2000.00),
     'currency' => env('POS_CURRENCY', 'EGP'),
 
     'pagination' => [

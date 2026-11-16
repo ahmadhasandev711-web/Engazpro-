@@ -130,6 +130,9 @@ export const Layout: React.FC = () => {
     canManageSettings,
     canViewProfitReport,
     canManageStockOperations,
+    canManageEcommerceSettings,
+    canViewWooOrders,
+    canViewShopifyOrders,
   } = usePermissions();
 
   const { data: alertsSummary } = useStockAlertsSummary(canManageStockOperations);
@@ -138,16 +141,24 @@ export const Layout: React.FC = () => {
   const salesGroup: NavItemDef[] = [
     { to: '/dashboard', label: 'الرئيسية', icon: LayoutDashboard },
     { to: '/pos', label: 'نقطة البيع (POS)', icon: Store },
-    {
-      to: '/wc-orders',
-      label: isMandob ? 'طلبات التوصيل والشحن' : 'طلبات المتجر (الشحن)',
-      icon: ShoppingBag,
-    },
-    {
-      to: '/shopify-orders',
-      label: isMandob ? 'توصيل Shopify' : 'طلبات Shopify',
-      icon: ShoppingBag,
-    },
+    ...(canViewWooOrders
+      ? [
+          {
+            to: '/wc-orders',
+            label: isMandob ? 'طلبات التوصيل والشحن' : 'طلبات المتجر (الشحن)',
+            icon: ShoppingBag,
+          },
+        ]
+      : []),
+    ...(canViewShopifyOrders
+      ? [
+          {
+            to: '/shopify-orders',
+            label: isMandob ? 'توصيل Shopify' : 'طلبات Shopify',
+            icon: ShoppingBag,
+          },
+        ]
+      : []),
     { to: '/couriers', label: 'شركات الشحن', icon: Truck },
   ];
 
@@ -191,11 +202,11 @@ export const Layout: React.FC = () => {
       : []),
   ];
 
-  // Bottom Group: الإعدادات والنظام (الإعدادات، ربط ووكومرس، استيراد وتصدير Excel، لوحة الإدارة)
+  // Bottom Group: الإعدادات والنظام (الإعدادات، ربط المتاجر الإلكترونية، استيراد وتصدير Excel، لوحة الإدارة)
   const bottomGroup: NavItemDef[] = [
     ...(canManageSettings ? [{ to: '/settings', label: 'الإعدادات والاشتراك', icon: Settings }] : []),
-    ...(isOwnerOrAdmin ? [{ to: '/woocommerce', label: 'ربط WooCommerce', icon: Globe }] : []),
-    ...(isOwnerOrAdmin ? [{ to: '/shopify', label: 'ربط Shopify', icon: ShoppingBag }] : []),
+    ...(canManageEcommerceSettings ? [{ to: '/woocommerce', label: 'ربط WooCommerce', icon: Globe }] : []),
+    ...(canManageEcommerceSettings ? [{ to: '/shopify', label: 'ربط Shopify', icon: ShoppingBag }] : []),
     ...(isOwner || isManager ? [{ to: '/excel', label: 'استيراد وتصدير Excel', icon: FileSpreadsheet }] : []),
     ...(user?.is_admin
       ? [{ to: '/admin-dashboard', label: '👑 لوحة تحكم الإدارة', icon: ShieldCheck }]
