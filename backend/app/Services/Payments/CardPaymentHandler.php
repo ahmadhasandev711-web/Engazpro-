@@ -32,12 +32,10 @@ class CardPaymentHandler implements PaymentHandlerInterface
         Treasury $treasury,
         ?Shift $activeShift
     ): void {
-        $amount = (float) $payment->amount;
-        if ($amount <= 0) {
+        $money = Money::of($payment->amount ?? 0);
+        if (!$money->isPositive()) {
             return;
         }
-
-        $money = Money::of($amount);
         $methodStr = $payment->method instanceof \BackedEnum ? $payment->method->value : (string) $payment->method;
         $targetTreasury = $this->treasuryService->getTreasuryForPaymentMethod($user, $methodStr);
 

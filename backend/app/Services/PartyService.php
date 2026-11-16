@@ -7,6 +7,7 @@ use App\Enums\PartyType;
 use App\Exceptions\PosDomainException;
 use App\Models\Party;
 use App\Models\User;
+use App\Support\Money;
 use Illuminate\Support\Facades\DB;
 
 class PartyService
@@ -20,7 +21,7 @@ class PartyService
      */
     public function createParty(User $user, array $data): Party
     {
-        $initialBalance = (float) ($data['initial_balance'] ?? 0);
+        $initialBalance = Money::of($data['initial_balance'] ?? 0)->getAmount();
 
         return DB::transaction(function () use ($user, $data, $initialBalance) {
             $party = Party::create([
@@ -87,7 +88,7 @@ class PartyService
     {
         $hasInvoices = $party->invoices()->exists();
         $hasPayments = $party->payments()->exists();
-        $hasBalance = (float) $party->balance != 0.0;
+        $hasBalance = !Money::of($party->balance ?? 0)->isZero();
 
         $typeArabic = PartyType::tryFrom($party->type)?->label() ?? 'الطرف';
 

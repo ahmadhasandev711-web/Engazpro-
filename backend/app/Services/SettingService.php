@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Setting;
 use App\Models\User;
+use App\Support\Money;
 
 class SettingService
 {
@@ -71,7 +72,7 @@ class SettingService
             return 100.0;
         }
 
-        return min(100.0, max(0.0, (float) trim($value)));
+        return min(100.0, max(0.0, Money::of(trim($value))->getAmount()));
     }
 
     /**

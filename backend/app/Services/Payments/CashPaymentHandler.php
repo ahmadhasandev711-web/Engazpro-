@@ -31,12 +31,10 @@ class CashPaymentHandler implements PaymentHandlerInterface
         Treasury $treasury,
         ?Shift $activeShift
     ): void {
-        $amount = (float) $payment->amount;
-        if ($amount <= 0) {
+        $money = Money::of($payment->amount ?? 0);
+        if (!$money->isPositive()) {
             return;
         }
-
-        $money = Money::of($amount);
 
         if ($payment->isReceipt()) {
             $this->treasuryService->recordDeposit(

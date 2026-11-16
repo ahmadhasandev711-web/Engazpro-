@@ -11,6 +11,7 @@ use App\Models\StockTransfer;
 use App\Models\User;
 use App\Models\WcOrder;
 use App\Services\StockTransferService;
+use App\Support\Quantity;
 
 class WcOrderVanTransferService
 {
@@ -76,7 +77,7 @@ class WcOrderVanTransferService
                 $transferItems[] = [
                     'product_id' => $product->id,
                     'product_variant_id' => $variant?->id,
-                    'quantity_sent' => (float) ($item['quantity'] ?? 1),
+                    'quantity_sent' => Quantity::of($item['quantity'] ?? 1)->toFloat(),
                     'unit_name' => $product->unit,
                 ];
             }

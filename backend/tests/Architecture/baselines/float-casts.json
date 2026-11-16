@@ -1,17 +1,5 @@
 {
     "Services/ImportService.php": 21,
     "Services/InvoiceService.php": 6,
-    "Services/PartyService.php": 2,
-    "Services/Payments/CardPaymentHandler.php": 1,
-    "Services/Payments/CashPaymentHandler.php": 1,
-    "Services/Payments/TransferPaymentHandler.php": 1,
-    "Services/PayrollService.php": 7,
-    "Services/ProductService.php": 5,
-    "Services/ReportService.php": 3,
-    "Services/SettingService.php": 1,
-    "Services/StockService.php": 6,
-    "Services/StockTransferService.php": 6,
-    "Services/WooCommerce/WcOrderVanTransferService.php": 1,
-    "Services/WooCommerce/WooCommerceOrderSyncService.php": 1,
     "Services/WooCommerce/WooCommerceProductImportService.php": 14
 }
