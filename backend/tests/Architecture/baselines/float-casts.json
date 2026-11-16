@@ -30,6 +30,5 @@
     "Services/StockTransferService.php": 6,
     "Services/WooCommerce/WcOrderVanTransferService.php": 1,
     "Services/WooCommerce/WooCommerceOrderSyncService.php": 1,
-    "Services/WooCommerce/WooCommerceProductImportService.php": 14,
-    "Support/Money.php": 9
+    "Services/WooCommerce/WooCommerceProductImportService.php": 14
 }

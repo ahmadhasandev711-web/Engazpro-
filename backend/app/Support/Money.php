@@ -15,8 +15,27 @@ class Money implements JsonSerializable, Stringable
 
     public function __construct(float|int|string $amount = 0, string $currency = 'EGP')
     {
-        $this->cents = (int) round(((float) $amount) * 100);
+        $this->cents = self::parseToCents($amount);
         $this->currency = $currency;
+    }
+
+    private static function parseToCents(float|int|string $amount): int
+    {
+        if (is_string($amount)) {
+            $trimmed = trim($amount);
+            if (preg_match('/^-?\d+(\.\d{1,2})?$/', $trimmed)) {
+                $isNegative = str_starts_with($trimmed, '-');
+                $clean = ltrim($trimmed, '-');
+                $parts = explode('.', $clean);
+                $whole = (int) ($parts[0] ?? 0);
+                $fraction = str_pad($parts[1] ?? '', 2, '0');
+                $c = ($whole * 100) + (int) $fraction;
+
+                return $isNegative ? -$c : $c;
+            }
+        }
+
+        return (int) round(((float) $amount) * 100);
     }
 
     public static function fromCents(int $cents, string $currency = 'EGP'): self
@@ -51,21 +70,21 @@ class Money implements JsonSerializable, Stringable
         return $this->currency;
     }
 
-    public function add(Money|float|int $other): self
+    public function add(Money|float|int|string $other): self
     {
-        $cents = $other instanceof Money ? $other->getCents() : (int) round(((float) $other) * 100);
+        $cents = $other instanceof Money ? $other->getCents() : self::parseToCents($other);
         return self::fromCents($this->cents + $cents, $this->currency);
     }
 
-    public function subtract(Money|float|int $other): self
+    public function subtract(Money|float|int|string $other): self
     {
-        $cents = $other instanceof Money ? $other->getCents() : (int) round(((float) $other) * 100);
+        $cents = $other instanceof Money ? $other->getCents() : self::parseToCents($other);
         return self::fromCents($this->cents - $cents, $this->currency);
     }
 
     public function multiply(float|int $multiplier): self
     {
-        return self::fromCents((int) round($this->cents * (float) $multiplier), $this->currency);
+        return self::fromCents((int) round($this->cents * $multiplier), $this->currency);
     }
 
     public function divide(float|int $divisor): self
@@ -73,7 +92,7 @@ class Money implements JsonSerializable, Stringable
         if ($divisor == 0) {
             return self::zero($this->currency);
         }
-        return self::fromCents((int) round($this->cents / (float) $divisor), $this->currency);
+        return self::fromCents((int) round($this->cents / $divisor), $this->currency);
     }
 
     public function isZero(): bool
@@ -106,37 +125,37 @@ class Money implements JsonSerializable, Stringable
         return $this->cents === $other->getCents();
     }
 
-    public function greaterThan(Money|float|int $other): bool
+    public function greaterThan(Money|float|int|string $other): bool
     {
-        $cents = $other instanceof Money ? $other->getCents() : (int) round(((float) $other) * 100);
+        $cents = $other instanceof Money ? $other->getCents() : self::parseToCents($other);
         return $this->cents > $cents;
     }
 
-    public function isGreaterThan(Money|float|int $other): bool
+    public function isGreaterThan(Money|float|int|string $other): bool
     {
         return $this->greaterThan($other);
     }
 
-    public function isGreaterThanOrEqualTo(Money|float|int $other): bool
+    public function isGreaterThanOrEqualTo(Money|float|int|string $other): bool
     {
-        $cents = $other instanceof Money ? $other->getCents() : (int) round(((float) $other) * 100);
+        $cents = $other instanceof Money ? $other->getCents() : self::parseToCents($other);
         return $this->cents >= $cents;
     }
 
-    public function lessThan(Money|float|int $other): bool
+    public function lessThan(Money|float|int|string $other): bool
     {
-        $cents = $other instanceof Money ? $other->getCents() : (int) round(((float) $other) * 100);
+        $cents = $other instanceof Money ? $other->getCents() : self::parseToCents($other);
         return $this->cents < $cents;
     }
 
-    public function isLessThan(Money|float|int $other): bool
+    public function isLessThan(Money|float|int|string $other): bool
     {
         return $this->lessThan($other);
     }
 
-    public function isLessThanOrEqualTo(Money|float|int $other): bool
+    public function isLessThanOrEqualTo(Money|float|int|string $other): bool
     {
-        $cents = $other instanceof Money ? $other->getCents() : (int) round(((float) $other) * 100);
+        $cents = $other instanceof Money ? $other->getCents() : self::parseToCents($other);
         return $this->cents <= $cents;
     }
 
