@@ -34,32 +34,30 @@ class CourierService
     public function getCouriersWithMetrics(User $user, ?string $search = null): array
     {
         $accountId = $user->getAccountId();
-
-        $query = Party::where('user_id', $accountId)
+        $couriers = Party::where('user_id', $accountId)
             ->where('type', PartyType::COURIER->value)
-            ->withExists(['invoices', 'payments']);
+            ->withExists(['invoices', 'payments'])
+            ->when(!empty($search), fn($q) => $q->where(fn($sq) => $sq->where('name', 'like', "%{$search}%")->orWhere('phone', 'like', "%{$search}%")->orWhere('notes', 'like', "%{$search}%")))
+            ->orderBy('name')
+            ->get();
 
-        if (!empty($search)) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('phone', 'like', "%{$search}%")
-                  ->orWhere('notes', 'like', "%{$search}%");
-            });
-        }
-
-        $couriers = $query->orderBy('name')->get();
         $courierIds = $couriers->pluck('id')->all();
+        $wcStats = $this->fetchCourierWcStats($accountId, $courierIds);
+        $invoiceStats = $this->fetchCourierDirectInvoiceStats($accountId, $courierIds);
 
-        // 1. استعلام تجميعي واحد لطلبات ووكومرس
-        $wcStats = WcOrder::where('user_id', $accountId)
+        $couriersWithStats = $couriers->map(fn(Party $courier) => $this->buildCourierMetricRow($courier, $wcStats->get($courier->id), $invoiceStats->get($courier->id)));
+
+        return [
+            'couriers' => $couriersWithStats,
+            'summary' => $this->buildCourierSummary($couriers->count(), $couriersWithStats),
+        ];
+    }
+
+    private function fetchCourierWcStats(int $accountId, array $courierIds)
+    {
+        return WcOrder::where('user_id', $accountId)
             ->whereIn('courier_party_id', $courierIds)
-            ->selectRaw('
-                courier_party_id,
-                COUNT(*) as total_orders_count,
-                COALESCE(SUM(CASE WHEN status = ? THEN 1 ELSE 0 END), 0) as active_orders_count,
-                COALESCE(SUM(CASE WHEN status = ? THEN 1 ELSE 0 END), 0) as delivered_orders_count,
-                COALESCE(SUM(CASE WHEN status = ? AND payment_status != ? THEN total ELSE 0 END), 0) as pending_cod_amount
-            ', [
+            ->selectRaw('courier_party_id, COUNT(*) as total_orders_count, COALESCE(SUM(CASE WHEN status = ? THEN 1 ELSE 0 END), 0) as active_orders_count, COALESCE(SUM(CASE WHEN status = ? THEN 1 ELSE 0 END), 0) as delivered_orders_count, COALESCE(SUM(CASE WHEN status = ? AND payment_status != ? THEN total ELSE 0 END), 0) as pending_cod_amount', [
                 WcOrderStatus::SHIPPED_VIA_COURIER->value,
                 WcOrderStatus::DELIVERED->value,
                 WcOrderStatus::SHIPPED_VIA_COURIER->value,
@@ -68,59 +66,40 @@ class CourierService
             ->groupBy('courier_party_id')
             ->get()
             ->keyBy('courier_party_id');
+    }
 
-        // 2. استعلام تجميعي واحد للفواتير المباشرة
-        $invoiceStats = Invoice::where('user_id', $accountId)
+    private function fetchCourierDirectInvoiceStats(int $accountId, array $courierIds)
+    {
+        return Invoice::where('user_id', $accountId)
             ->whereIn('courier_party_id', $courierIds)
             ->whereNull('wc_order_id')
-            ->selectRaw('
-                courier_party_id,
-                COUNT(*) as total_invoices_count,
-                COALESCE(SUM(CASE WHEN remaining_amount > 0 THEN 1 ELSE 0 END), 0) as active_invoices_count,
-                COALESCE(SUM(remaining_amount), 0) as pending_direct_amount
-            ')
+            ->selectRaw('courier_party_id, COUNT(*) as total_invoices_count, COALESCE(SUM(CASE WHEN remaining_amount > 0 THEN 1 ELSE 0 END), 0) as active_invoices_count, COALESCE(SUM(remaining_amount), 0) as pending_direct_amount')
             ->groupBy('courier_party_id')
             ->get()
             ->keyBy('courier_party_id');
+    }
 
-        $couriersWithStats = $couriers->map(function (Party $courier) use ($wcStats, $invoiceStats) {
-            $wc = $wcStats->get($courier->id);
-            $inv = $invoiceStats->get($courier->id);
+    private function buildCourierMetricRow(Party $courier, ?object $wc, ?object $inv): array
+    {
+        $data = (new PartyResource($courier))->resolve();
+        $data['active_shipments_count'] = (int) ($wc?->active_orders_count ?? 0) + (int) ($inv?->active_invoices_count ?? 0);
+        $data['delivered_shipments_count'] = (int) ($wc?->delivered_orders_count ?? 0);
+        $data['total_shipments_count'] = (int) ($wc?->total_orders_count ?? 0) + (int) ($inv?->total_invoices_count ?? 0);
+        $data['pending_cod_amount'] = Money::of($wc?->pending_cod_amount ?? 0)->add(Money::of($inv?->pending_direct_amount ?? 0))->getAmount();
 
-            $activeCount = (int) ($wc?->active_orders_count ?? 0) + (int) ($inv?->active_invoices_count ?? 0);
-            $deliveredCount = (int) ($wc?->delivered_orders_count ?? 0);
-            $totalCount = (int) ($wc?->total_orders_count ?? 0) + (int) ($inv?->total_invoices_count ?? 0);
-            $pendingCod = Money::of($wc?->pending_cod_amount ?? 0)
-                ->add(Money::of($inv?->pending_direct_amount ?? 0))
-                ->getAmount();
+        return $data;
+    }
 
-            $data = (new PartyResource($courier))->resolve();
-            $data['active_shipments_count'] = $activeCount;
-            $data['delivered_shipments_count'] = $deliveredCount;
-            $data['total_shipments_count'] = $totalCount;
-            $data['pending_cod_amount'] = $pendingCod;
-
-            return $data;
-        });
-
-        $globalActiveShipments = (int) $couriersWithStats->sum('active_shipments_count');
-        $globalPendingCod = $couriersWithStats->reduce(
-            fn (Money $carry, $c) => $carry->add(Money::of($c['pending_cod_amount'] ?? 0)),
-            Money::zero()
-        )->getAmount();
-        $globalNetBalance = $couriersWithStats->reduce(
-            fn (Money $carry, $c) => $carry->add(Money::of($c['balance'] ?? 0)),
-            Money::zero()
-        )->getAmount();
+    private function buildCourierSummary(int $totalCouriers, $couriersWithStats): array
+    {
+        $globalPendingCod = $couriersWithStats->reduce(fn(Money $c, $row) => $c->add(Money::of($row['pending_cod_amount'] ?? 0)), Money::zero())->getAmount();
+        $globalNetBalance = $couriersWithStats->reduce(fn(Money $c, $row) => $c->add(Money::of($row['balance'] ?? 0)), Money::zero())->getAmount();
 
         return [
-            'couriers' => $couriersWithStats,
-            'summary' => [
-                'total_couriers' => $couriers->count(),
-                'global_active_shipments' => $globalActiveShipments,
-                'global_pending_cod' => $globalPendingCod,
-                'global_net_balance' => $globalNetBalance,
-            ],
+            'total_couriers' => $totalCouriers,
+            'global_active_shipments' => (int) $couriersWithStats->sum('active_shipments_count'),
+            'global_pending_cod' => $globalPendingCod,
+            'global_net_balance' => $globalNetBalance,
         ];
     }
 

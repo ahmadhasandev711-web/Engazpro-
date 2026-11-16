@@ -66,98 +66,69 @@ class StockTransferService
     {
         return DB::transaction(function () use ($user, $data) {
             $accountId = $user->getAccountId();
-            $fromBranchId = (int) $data['from_branch_id'];
-            $toBranchId = (int) $data['to_branch_id'];
-
-            if ($fromBranchId === $toBranchId) {
-                throw new StockTransferDomainException('لا يمكن إجراء تحويل لنفس الفرع.', 'SAME_BRANCH_TRANSFER');
-            }
-
-            if ($user->isManager() && $user->branch_id && $fromBranchId !== (int) $user->branch_id) {
-                throw new StockTransferDomainException('عذراً، لا يمكنك تحويل بضاعة إلا من الفرع المسؤول عنه.', 'UNAUTHORIZED_BRANCH');
-            }
-
-            // التحقق من تبعية الفروع لنفس المتجر
-            $fromBranch = Branch::where('user_id', $accountId)->findOrFail($fromBranchId);
-            $toBranch = Branch::where('user_id', $accountId)->findOrFail($toBranchId);
-
-            if (!$fromBranch->is_active || !$toBranch->is_active) {
-                throw new StockTransferDomainException('أحد الفروع المحددة غير نشط حالياً.', 'BRANCH_INACTIVE');
-            }
-
-            // توليد رقم الإذن بتسلسل آمن ضد سباقات التزامن
+            [$fromBranch, $toBranch] = $this->resolveTransferBranches($user, $accountId, (int) $data['from_branch_id'], (int) $data['to_branch_id']);
             $seq = $this->sequenceService->next($accountId, DocumentType::TRANSFER);
             $transferNumber = $data['transfer_number'] ?? ('TRF-' . str_pad((string) $seq, 5, '0', STR_PAD_LEFT));
 
-            // إنشاء أمر التحويل بحالة في الطريق (IN_TRANSIT)
             $transfer = StockTransfer::create([
-                'user_id' => $accountId,
-                'transfer_number' => $transferNumber,
-                'from_branch_id' => $fromBranchId,
-                'to_branch_id' => $toBranchId,
-                'status' => StockTransferStatus::IN_TRANSIT,
-                'created_by' => $user->id,
-                'transferred_at' => now(),
-                'notes' => $data['notes'] ?? null,
+                'user_id' => $accountId, 'transfer_number' => $transferNumber, 'from_branch_id' => $fromBranch->id, 'to_branch_id' => $toBranch->id,
+                'status' => StockTransferStatus::IN_TRANSIT, 'created_by' => $user->id, 'transferred_at' => now(), 'notes' => $data['notes'] ?? null,
             ]);
 
             foreach ($data['items'] as $itemData) {
-                $productId = (int) $itemData['product_id'];
-                $variantId = !empty($itemData['product_variant_id']) ? (int) $itemData['product_variant_id'] : null;
-                $qty = Quantity::of($itemData['quantity_sent'])->toFloat();
-
-                if ($qty <= 0) {
-                    throw new StockTransferDomainException('كمية التحويل يجب أن تكون أكبر من صفر.', 'INVALID_QUANTITY');
-                }
-
-                $product = Product::where('user_id', $accountId)->findOrFail($productId);
-                $variant = $variantId ? ProductVariant::where('product_id', $productId)->findOrFail($variantId) : null;
-
-                // فحص الرصيد المتاح في فرع المصدر
-                $fromStock = BranchStock::where('branch_id', $fromBranchId)
-                    ->where('product_id', $productId)
-                    ->where('product_variant_id', $variantId)
-                    ->lockForUpdate()
-                    ->first();
-
-                $availableQty = Quantity::of($fromStock?->quantity ?? 0)->toFloat();
-                if ($availableQty < $qty) {
-                    $itemLabel = $variant ? "{$product->name} ({$variant->name})" : $product->name;
-                    throw new StockTransferDomainException("الرصيد غير كافٍ في {$fromBranch->name} للصنف {$itemLabel}. المتاح: {$availableQty}، المطلوب: {$qty}", 'INSUFFICIENT_TRANSFER_STOCK');
-                }
-
-                // خصم الرصيد من فرع المصدر
-                $fromStock->quantity -= $qty;
-                $fromStock->save();
-
-                // تسجيل حركة المخزون خروج (OUT) من فرع المصدر
-                StockMovement::create([
-                    'user_id' => $accountId,
-                    'branch_id' => $fromBranchId,
-                    'product_id' => $productId,
-                    'product_variant_id' => $variantId,
-                    'type' => StockMovementType::OUT->value,
-                    'source_type' => 'TRANSFER_OUT',
-                    'source_id' => $transfer->id,
-                    'quantity' => $qty,
-                    'balance_after' => $fromStock->quantity,
-                    'notes' => "تحويل بضاعة إلى {$toBranch->name} بموجب إذن {$transferNumber}",
-                ]);
-
-                // تسجيل بند التحويل
-                StockTransferItem::create([
-                    'stock_transfer_id' => $transfer->id,
-                    'product_id' => $productId,
-                    'product_variant_id' => $variantId,
-                    'quantity_sent' => $qty,
-                    'quantity_received' => null,
-                    'unit_name' => $itemData['unit_name'] ?? $product->unit,
-                    'notes' => $itemData['notes'] ?? null,
-                ]);
+                $this->processOutgoingTransferItem($accountId, $transfer, $fromBranch, $toBranch, $itemData);
             }
 
             return $transfer->load(['items.product', 'items.variant', 'fromBranch', 'toBranch']);
         });
+    }
+
+    private function resolveTransferBranches(User $user, int $accountId, int $fromBranchId, int $toBranchId): array
+    {
+        if ($fromBranchId === $toBranchId) {
+            throw new StockTransferDomainException('لا يمكن إجراء تحويل لنفس الفرع.', 'SAME_BRANCH_TRANSFER');
+        }
+        if ($user->isManager() && $user->branch_id && $fromBranchId !== (int) $user->branch_id) {
+            throw new StockTransferDomainException('عذراً، لا يمكنك تحويل بضاعة إلا من الفرع المسؤول عنه.', 'UNAUTHORIZED_BRANCH');
+        }
+
+        $fromBranch = Branch::where('user_id', $accountId)->findOrFail($fromBranchId);
+        $toBranch = Branch::where('user_id', $accountId)->findOrFail($toBranchId);
+        if (!$fromBranch->is_active || !$toBranch->is_active) {
+            throw new StockTransferDomainException('أحد الفروع المحددة غير نشط حالياً.', 'BRANCH_INACTIVE');
+        }
+
+        return [$fromBranch, $toBranch];
+    }
+
+    private function processOutgoingTransferItem(int $accountId, StockTransfer $transfer, Branch $fromBranch, Branch $toBranch, array $itemData): void
+    {
+        $productId = (int) $itemData['product_id'];
+        $variantId = !empty($itemData['product_variant_id']) ? (int) $itemData['product_variant_id'] : null;
+        $qty = Quantity::of($itemData['quantity_sent'])->toFloat();
+        if ($qty <= 0) {
+            throw new StockTransferDomainException('كمية التحويل يجب أن تكون أكبر من صفر.', 'INVALID_QUANTITY');
+        }
+
+        $product = Product::where('user_id', $accountId)->findOrFail($productId);
+        $variant = $variantId ? ProductVariant::where('product_id', $productId)->findOrFail($variantId) : null;
+        $fromStock = BranchStock::where('branch_id', $fromBranch->id)->where('product_id', $productId)->where('product_variant_id', $variantId)->lockForUpdate()->first();
+        $availableQty = Quantity::of($fromStock?->quantity ?? 0)->toFloat();
+        if ($availableQty < $qty) {
+            throw new StockTransferDomainException("الرصيد غير كافٍ في {$fromBranch->name} للصنف " . ($variant ? "{$product->name} ({$variant->name})" : $product->name) . ". المتاح: {$availableQty}، المطلوب: {$qty}", 'INSUFFICIENT_TRANSFER_STOCK');
+        }
+
+        $fromStock->quantity -= $qty;
+        $fromStock->save();
+        StockMovement::create([
+            'user_id' => $accountId, 'branch_id' => $fromBranch->id, 'product_id' => $productId, 'product_variant_id' => $variantId,
+            'type' => StockMovementType::OUT->value, 'source_type' => 'TRANSFER_OUT', 'source_id' => $transfer->id,
+            'quantity' => $qty, 'balance_after' => $fromStock->quantity, 'notes' => "تحويل بضاعة إلى {$toBranch->name} بموجب إذن {$transfer->transfer_number}",
+        ]);
+        StockTransferItem::create([
+            'stock_transfer_id' => $transfer->id, 'product_id' => $productId, 'product_variant_id' => $variantId,
+            'quantity_sent' => $qty, 'quantity_received' => null, 'unit_name' => $itemData['unit_name'] ?? $product->unit, 'notes' => $itemData['notes'] ?? null,
+        ]);
     }
 
     /**

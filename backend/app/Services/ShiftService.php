@@ -89,82 +89,29 @@ class ShiftService
     public function syncShiftFinancials(Shift $shift): void
     {
         $shiftId = $shift->id;
-
-        // مبيعات الكاش المباشرة + الأجزاء النقدية من الفواتير المجزأة
-        $cashSalesDirect = Invoice::withoutGlobalScopes()
-            ->where('shift_id', $shiftId)
-            ->where('type', InvoiceType::SALE)
-            ->where('payment_method', PaymentMethod::CASH->value)
-            ->sum('paid_amount');
-
-        $cashSalesSplit = Payment::withoutGlobalScopes()
-            ->where('shift_id', $shiftId)
-            ->where('type', PaymentType::RECEIPT->value)
-            ->where('method', PaymentMethod::CASH->value)
-            ->whereHas('invoice', fn($q) => $q->where('payment_method', PaymentMethod::SPLIT->value))
-            ->sum('amount');
-
-        $cashSales = Money::of($cashSalesDirect)->add(Money::of($cashSalesSplit));
-
-        // مبيعات البطاقة والتحويل وإنستاباي وفودافون كاش (المباشرة والمجزأة)
-        $electronicDirect = Invoice::withoutGlobalScopes()
-            ->where('shift_id', $shiftId)
-            ->where('type', InvoiceType::SALE)
-            ->whereIn('payment_method', [PaymentMethod::CARD->value, PaymentMethod::TRANSFER->value, PaymentMethod::INSTAPAY->value, PaymentMethod::VODAFONE_CASH->value])
-            ->sum('paid_amount');
-
-        $electronicSplit = Payment::withoutGlobalScopes()
-            ->where('shift_id', $shiftId)
-            ->where('type', PaymentType::RECEIPT->value)
-            ->whereIn('method', [PaymentMethod::CARD->value, PaymentMethod::TRANSFER->value, PaymentMethod::INSTAPAY->value, PaymentMethod::VODAFONE_CASH->value])
-            ->whereHas('invoice', fn($q) => $q->where('payment_method', PaymentMethod::SPLIT->value))
-            ->sum('amount');
-
-        $electronicSales = Money::of($electronicDirect)->add(Money::of($electronicSplit));
-
-        // مبيعات الآجل
-        $creditSales = Money::of(Invoice::withoutGlobalScopes()
-            ->where('shift_id', $shiftId)
-            ->where('type', InvoiceType::SALE)
-            ->sum('remaining_amount'));
-
-        // سندات القبض النقدية الحرة غير المرتبطة بفاتورة مبيعات مباشرة
-        $cashReceipts = Money::of(Payment::withoutGlobalScopes()
-            ->where('shift_id', $shiftId)
-            ->where('type', PaymentType::RECEIPT->value)
-            ->where('method', PaymentMethod::CASH->value)
-            ->whereNull('invoice_id')
-            ->sum('amount'));
-
-        // مرتجعات البيع المستردة نقداً
-        $cashReturns = Money::of(Invoice::withoutGlobalScopes()
-            ->where('shift_id', $shiftId)
-            ->where('type', InvoiceType::SALE_RETURN)
-            ->sum('paid_amount'));
-
-        // مصروفات الوردية
-        $expenses = Money::of(Expense::withoutGlobalScopes()
-            ->where('shift_id', $shiftId)
-            ->sum('amount'));
-
-        $opening = Money::of($shift->opening_balance);
-
-        // المعادلة المحاسبية الصافية للنقدية المتوقعة في الدرج/العهدة
-        $expectedCash = $opening
-            ->add($cashSales)
-            ->add($cashReceipts)
-            ->subtract($cashReturns)
-            ->subtract($expenses);
+        $cashSales = $this->sumShiftSalesByMethods($shiftId, [PaymentMethod::CASH->value]);
+        $electronicSales = $this->sumShiftSalesByMethods($shiftId, [PaymentMethod::CARD->value, PaymentMethod::TRANSFER->value, PaymentMethod::INSTAPAY->value, PaymentMethod::VODAFONE_CASH->value]);
+        $creditSales = Money::of(Invoice::withoutGlobalScopes()->where('shift_id', $shiftId)->where('type', InvoiceType::SALE)->sum('remaining_amount'));
+        $cashReceipts = Money::of(Payment::withoutGlobalScopes()->where('shift_id', $shiftId)->where('type', PaymentType::RECEIPT->value)->where('method', PaymentMethod::CASH->value)->whereNull('invoice_id')->sum('amount'));
+        $cashReturns = Money::of(Invoice::withoutGlobalScopes()->where('shift_id', $shiftId)->where('type', InvoiceType::SALE_RETURN)->sum('paid_amount'));
+        $expenses = Money::of(Expense::withoutGlobalScopes()->where('shift_id', $shiftId)->sum('amount'));
+        $expectedCash = Money::of($shift->opening_balance)->add($cashSales)->add($cashReceipts)->subtract($cashReturns)->subtract($expenses);
 
         $shift->update([
-            'cash_sales' => $cashSales->getAmount(),
-            'electronic_sales' => $electronicSales->getAmount(),
-            'credit_sales' => $creditSales->getAmount(),
-            'cash_receipts' => $cashReceipts->getAmount(),
-            'cash_returns' => $cashReturns->getAmount(),
-            'expenses' => $expenses->getAmount(),
+            'cash_sales' => $cashSales->getAmount(), 'electronic_sales' => $electronicSales->getAmount(),
+            'credit_sales' => $creditSales->getAmount(), 'cash_receipts' => $cashReceipts->getAmount(),
+            'cash_returns' => $cashReturns->getAmount(), 'expenses' => $expenses->getAmount(),
             'expected_cash' => $expectedCash->getAmount(),
         ]);
+    }
+
+    private function sumShiftSalesByMethods(int $shiftId, array $methods): Money
+    {
+        $direct = Invoice::withoutGlobalScopes()->where('shift_id', $shiftId)->where('type', InvoiceType::SALE)->whereIn('payment_method', $methods)->sum('paid_amount');
+        $split = Payment::withoutGlobalScopes()->where('shift_id', $shiftId)->where('type', PaymentType::RECEIPT->value)->whereIn('method', $methods)
+            ->whereHas('invoice', fn($q) => $q->where('payment_method', PaymentMethod::SPLIT->value))->sum('amount');
+
+        return Money::of($direct)->add(Money::of($split));
     }
 
     /**
