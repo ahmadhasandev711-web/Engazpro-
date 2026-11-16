@@ -8,6 +8,7 @@ use App\Http\Requests\SettleShiftRequest;
 use App\Http\Resources\ShiftResource;
 use App\Http\Resources\TreasuryTransactionResource;
 use App\Services\ShiftService;
+use App\Support\Money;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -53,7 +54,7 @@ class ShiftController extends Controller
 
         $shift = $this->shiftService->openShift(
             user: $user,
-            openingBalance: (float) ($validated['opening_balance'] ?? 0),
+            openingBalance: Money::of($validated['opening_balance'] ?? 0)->getAmount(),
             notes: $validated['notes'] ?? null
         );
 
@@ -80,7 +81,7 @@ class ShiftController extends Controller
         $validated = $request->validated();
         $shift = $this->shiftService->closeShift(
             shift: $activeShift,
-            actualCash: (float) $validated['actual_cash'],
+            actualCash: Money::of($validated['actual_cash'])->getAmount(),
             notes: $validated['notes'] ?? null
         );
 

@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests;
 
+use App\Support\Money;
+use App\Support\Quantity;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ProductRequest extends FormRequest
@@ -15,9 +17,9 @@ class ProductRequest extends FormRequest
     {
         $this->merge([
             'category_id' => ($this->category_id === '' || $this->category_id === 0 || $this->category_id === '0') ? null : $this->category_id,
-            'purchase_price' => (float) ($this->purchase_price ?? 0),
-            'sale_price' => (float) ($this->sale_price ?? 0),
-            'quantity' => (float) ($this->quantity ?? 0),
+            'purchase_price' => Money::of($this->purchase_price ?? 0)->getAmount(),
+            'sale_price' => Money::of($this->sale_price ?? 0)->getAmount(),
+            'quantity' => Quantity::of($this->quantity ?? 0)->toFloat(),
         ]);
     }
 

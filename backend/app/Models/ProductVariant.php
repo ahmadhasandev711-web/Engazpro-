@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToStore;
+use App\Support\Money;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -78,11 +79,11 @@ class ProductVariant extends Model
 
     public function getEffectiveSalePrice(): float
     {
-        return (float) ($this->sale_price ?? $this->product?->sale_price ?? 0);
+        return Money::of($this->sale_price ?? $this->product?->sale_price ?? 0)->getAmount();
     }
 
     public function getEffectivePurchasePrice(): ?float
     {
-        return $this->purchase_price !== null ? (float) $this->purchase_price : ($this->product?->purchase_price !== null ? (float) $this->product->purchase_price : null);
+        return $this->purchase_price !== null ? Money::of($this->purchase_price)->getAmount() : ($this->product?->purchase_price !== null ? Money::of($this->product->purchase_price)->getAmount() : null);
     }
 }

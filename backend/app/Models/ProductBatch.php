@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\BatchExpiryStatus;
 use App\Models\Concerns\BelongsToStore;
+use App\Support\Money;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -90,22 +91,22 @@ class ProductBatch extends Model
     public function getEffectiveSalePrice(): float
     {
         if ($this->sale_price !== null) {
-            return (float) $this->sale_price;
+            return Money::of($this->sale_price)->getAmount();
         }
         if ($this->variant) {
             return $this->variant->getEffectiveSalePrice();
         }
-        return (float) ($this->product?->sale_price ?? 0);
+        return Money::of($this->product?->sale_price ?? 0)->getAmount();
     }
 
     public function getEffectivePurchasePrice(): ?float
     {
         if ($this->purchase_price !== null) {
-            return (float) $this->purchase_price;
+            return Money::of($this->purchase_price)->getAmount();
         }
         if ($this->variant) {
             return $this->variant->getEffectivePurchasePrice();
         }
-        return $this->product?->purchase_price !== null ? (float) $this->product->purchase_price : null;
+        return $this->product?->purchase_price !== null ? Money::of($this->product->purchase_price)->getAmount() : null;
     }
 }
