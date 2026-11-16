@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Enums\SubscriptionStatus;
+use App\Support\Money;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -19,7 +20,7 @@ class SubscriptionResource extends JsonResource
             'end_date' => $this->end_date?->toDateString(),
             'status' => $this->status instanceof SubscriptionStatus ? $this->status->value : $this->status,
             'plan' => $this->plan,
-            'price' => (float) $this->price,
+            'price' => Money::of($this->price ?? 0)->getAmount(),
             'is_valid' => $this->isActive(),
             'days_remaining' => $this->days_remaining,
             'notes' => $this->notes,

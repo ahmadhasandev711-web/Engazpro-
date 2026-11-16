@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Support\Money;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -13,9 +14,9 @@ class TreasuryTransactionResource extends JsonResource
             'id' => $this->id,
             'type' => $this->type,
             'type_label' => $this->type?->label() ?? $this->type,
-            'amount' => (float) $this->amount,
-            'balance_before' => (float) $this->balance_before,
-            'balance_after' => (float) $this->balance_after,
+            'amount' => Money::of($this->amount ?? 0)->getAmount(),
+            'balance_before' => Money::of($this->balance_before ?? 0)->getAmount(),
+            'balance_after' => Money::of($this->balance_after ?? 0)->getAmount(),
             'source_type' => $this->source_type,
             'source_id' => $this->source_id,
             'treasury_id' => $this->treasury_id,

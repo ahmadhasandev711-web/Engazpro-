@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Support\Money;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -16,13 +17,13 @@ class InvoiceResource extends JsonResource
             'date' => $this->date ? \Carbon\Carbon::parse($this->date)->format('Y-m-d') : null,
             'party_id' => $this->party_id,
             'party_name' => $this->party?->name,
-            'subtotal' => (float) $this->subtotal,
-            'discount' => (float) $this->discount,
-            'shipping_amount' => (float) $this->shipping_amount,
-            'tax' => (float) $this->tax,
-            'total' => (float) $this->total,
-            'paid_amount' => (float) $this->paid_amount,
-            'due_amount' => (float) $this->remaining_amount,
+            'subtotal' => Money::of($this->subtotal ?? 0)->getAmount(),
+            'discount' => Money::of($this->discount ?? 0)->getAmount(),
+            'shipping_amount' => Money::of($this->shipping_amount ?? 0)->getAmount(),
+            'tax' => Money::of($this->tax ?? 0)->getAmount(),
+            'total' => Money::of($this->total ?? 0)->getAmount(),
+            'paid_amount' => Money::of($this->paid_amount ?? 0)->getAmount(),
+            'due_amount' => Money::of($this->remaining_amount ?? 0)->getAmount(),
             'payment_method' => $this->payment_method instanceof \BackedEnum ? $this->payment_method->value : $this->payment_method,
             'parent_invoice_id' => $this->parent_invoice_id,
             'created_by' => $this->created_by,

@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use App\Enums\InvoiceType;
 use App\Enums\PaymentType;
+use App\Support\Money;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -34,7 +35,7 @@ class CashFlowTransactionResource extends JsonResource
             'reference_number' => $this->source_type === PaymentType::PAYMENT->value ? ('سند #' . $this->reference_number) : (string) ($this->reference_number ?? ('#' . $this->id)),
             'date' => $this->date ? substr((string) $this->date, 0, 10) : null,
             'created_at' => $this->created_at ? (string) $this->created_at : null,
-            'amount' => (float) $this->amount,
+            'amount' => Money::of($this->amount ?? 0)->getAmount(),
             'flow_direction' => $this->flow_direction, // 'IN' or 'OUT'
             'party_id' => $this->party_id ? (int) $this->party_id : null,
             'party_name' => $this->party_name,

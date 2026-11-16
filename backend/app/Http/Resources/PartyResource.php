@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Support\Money;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -24,10 +25,10 @@ class PartyResource extends JsonResource
             'phone' => $this->phone,
             'phone2' => $this->phone2,
             'address' => $this->address,
-            'balance' => (float) $this->balance,
+            'balance' => Money::of($this->balance ?? 0)->getAmount(),
             'notes' => $this->notes,
             'invoices_count' => $this->whenCounted('invoices', $this->invoices_count),
-            'has_transactions' => (bool) ($hasInvoices || $hasPayments || ((float) $this->balance !== 0.0)),
+            'has_transactions' => (bool) ($hasInvoices || $hasPayments || !Money::of($this->balance ?? 0)->isZero()),
             'created_at' => $this->created_at?->toIso8601String(),
         ];
     }
