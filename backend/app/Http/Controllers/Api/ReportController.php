@@ -58,7 +58,8 @@ class ReportController extends Controller
         $data = $this->reportService->getStockReport(
             user: $request->user(),
             search: $request->input('search'),
-            perPage: (int) $request->input('per_page', 50)
+            perPage: (int) $request->input('per_page', 50),
+            page: (int) $request->input('page', 1)
         );
 
         return response()->json(['data' => $data]);

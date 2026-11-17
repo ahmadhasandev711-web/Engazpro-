@@ -25,11 +25,13 @@ class ProductController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $products = $this->productService->getProductsPaginated($request->user(), $request->all());
+        $filters = $request->all();
+        $products = $this->productService->getProductsPaginated($request->user(), $filters);
 
         return response()->json([
             'success' => true,
             'data' => ProductResource::collection($products),
+            'summary' => $this->productService->getProductsSummary($filters),
             'meta' => [
                 'current_page' => $products->currentPage(),
                 'last_page' => $products->lastPage(),

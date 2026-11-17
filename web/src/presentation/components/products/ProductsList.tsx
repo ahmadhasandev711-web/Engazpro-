@@ -22,6 +22,7 @@ export const ProductsList: React.FC<{ vm: ProductsViewModel }> = ({ vm }) => {
     canDeleteProduct,
     canViewPurchasePrice,
     isLoading,
+    isFetching,
     handlePushStock,
     products,
     meta,
@@ -302,6 +303,7 @@ export const ProductsList: React.FC<{ vm: ProductsViewModel }> = ({ vm }) => {
             lastPage={meta?.last_page || 1}
             total={meta?.total || products.length}
             perPage={meta?.per_page || 20}
+            isFetching={isFetching}
             onPageChange={(newPage) => setPage(newPage)}
             itemLabel="صنف"
           />

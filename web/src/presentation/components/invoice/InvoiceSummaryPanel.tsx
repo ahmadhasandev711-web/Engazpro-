@@ -2,13 +2,17 @@ import React from 'react';
 import { CheckCircle2 } from 'lucide-react';
 import { UseFormRegister, FieldErrors } from 'react-hook-form';
 import { Party, PaymentMethod, formatCurrency, InvoiceInput } from '@pos-mandob/shared';
-import { Button, Card, Select } from '../ui';
+import { fetchPartySelectOptions } from '../../../data/api/asyncOptionLoaders';
+import { AsyncSearchSelect, Button, Card, Select } from '../ui';
 
 interface InvoiceSummaryPanelProps {
   isReturn: boolean;
   isPurchase: boolean;
   isPurchaseReturn: boolean;
-  partiesData?: Party[];
+  partyType: string;
+  selectedPartyId?: number | null;
+  selectedPartyName?: string | null;
+  onPartyChange: (partyId: number | null) => void;
   couriersData?: Party[];
   branchesData?: any[];
   canChangeBranch?: boolean;
@@ -24,7 +28,10 @@ export const InvoiceSummaryPanel: React.FC<InvoiceSummaryPanelProps> = ({
   isReturn,
   isPurchase,
   isPurchaseReturn,
-  partiesData,
+  partyType,
+  selectedPartyId,
+  selectedPartyName,
+  onPartyChange,
   couriersData,
   branchesData,
   canChangeBranch = true,
@@ -60,20 +67,22 @@ export const InvoiceSummaryPanel: React.FC<InvoiceSummaryPanelProps> = ({
           </Select>
         )}
 
-        <Select
+        <AsyncSearchSelect
           label={`${isPurchase || isPurchaseReturn ? 'المورد' : 'العميل'} (اختياري للنقدي)`}
-          {...register('party_id', {
-            setValueAs: (v) => (v === '' ? null : Number(v)),
-          })}
+          placeholder="-- نقدي (بدون حساب) --"
+          clearLabel="-- نقدي (بدون حساب) --"
+          searchPlaceholder="ابحث بالاسم أو الهاتف..."
+          value={selectedPartyId}
+          selectedOption={
+            selectedPartyId && selectedPartyName
+              ? { value: selectedPartyId, label: selectedPartyName }
+              : null
+          }
           error={errors.party_id?.message}
-        >
-          <option value="">-- نقدي (بدون حساب) --</option>
-          {partiesData?.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </Select>
+          queryKeyPrefix={['invoice-parties', partyType]}
+          loadOptions={(term) => fetchPartySelectOptions(partyType, term, true)}
+          onChange={(opt) => onPartyChange(opt ? Number(opt.value) : null)}
+        />
 
         {!isPurchase && !isReturn && !isPurchaseReturn && couriersData && couriersData.length > 0 && (
           <Select

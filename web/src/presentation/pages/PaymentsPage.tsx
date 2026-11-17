@@ -3,8 +3,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Search, Trash2, ArrowDownLeft, ArrowUpRight, AlertCircle, X, CheckCircle2, Receipt, Printer } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { PaymentSchema, PaymentInput, PaymentMethod, Party, formatCurrency } from '@pos-mandob/shared';
+import { PaymentSchema, PaymentInput, PaymentMethod, formatCurrency } from '@pos-mandob/shared';
 import { apiClient } from '../../data/api/client';
+import { fetchPartySelectOptions } from '../../data/api/asyncOptionLoaders';
 import { REFERENCE_QUERY_OPTIONS } from '../../data/api/queryPresets';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -14,7 +15,7 @@ import { PaymentMobileCard } from '../components/mobile/PaymentMobileCard';
 import { PaymentReceiptModal, PaymentReceiptData } from '../components/payments/PaymentReceiptModal';
 import { nativeBackButton } from '../../platform/nativeBackButton';
 import { useConfirm } from '../context/ConfirmContext';
-import { Badge, Button, Card, DataTable, EmptyState, Input, PageHeader, Select, Tabs, Textarea, TabItem } from '../components/ui';
+import { AsyncSearchSelect, Badge, Button, Card, DataTable, EmptyState, Input, PageHeader, Select, Tabs, Textarea, TabItem } from '../components/ui';
 
 export const PaymentsPage: React.FC = () => {
   const { confirm } = useConfirm();
@@ -96,19 +97,8 @@ export const PaymentsPage: React.FC = () => {
   });
 
   const targetPartyType = selectedType === 'RECEIPT' ? 'CUSTOMER' : 'SUPPLIER';
+  const selectedPartyId = watch('party_id');
 
-  const { data: partiesData } = useQuery({
-    queryKey: ['parties', targetPartyType],
-    queryFn: async () => {
-      const res = await apiClient.get('/parties', {
-        params: { type: targetPartyType, per_page: 500 },
-      });
-      return (res.data?.data?.data || res.data?.data || []) as Party[];
-    },
-    ...REFERENCE_QUERY_OPTIONS,
-  });
-
-  const availableParties = partiesData || [];
   const payments = paymentsData?.data || [];
   const meta = paymentsData?.meta;
   const summary = paymentsData?.summary;
@@ -526,18 +516,22 @@ export const PaymentsPage: React.FC = () => {
               </div>
 
               {/* Party Select */}
-              <Select
+              <AsyncSearchSelect
+                required
+                allowClear={false}
                 label={selectedType === 'RECEIPT' ? 'العميل المستلم منه *' : 'المورد المدفوع له *'}
+                placeholder="-- اختر الطرف --"
+                searchPlaceholder="ابحث بالاسم أو رقم الهاتف..."
+                value={selectedPartyId}
                 error={errors.party_id?.message}
-                {...register('party_id', { valueAsNumber: true })}
-              >
-                <option value="">-- اختر الطرف --</option>
-                {availableParties.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} ({p.balance > 0 ? (selectedType === 'RECEIPT' ? `مديونية: ${formatCurrency(p.balance)}` : `مستحق: ${formatCurrency(p.balance)}`) : 'رصيد خالص'})
-                  </option>
-                ))}
-              </Select>
+                queryKeyPrefix={['payment-parties', targetPartyType]}
+                loadOptions={(term) => fetchPartySelectOptions(targetPartyType, term, true)}
+                onChange={(opt) =>
+                  setValue('party_id', (opt ? Number(opt.value) : undefined) as any, {
+                    shouldValidate: true,
+                  })
+                }
+              />
 
               {/* Amount & Method */}
               <div className="grid grid-cols-2 gap-3">

@@ -19,11 +19,13 @@ class StockTransferController extends Controller
     public function index(Request $request): JsonResponse
     {
         Gate::authorize('viewAny', StockTransfer::class);
-        $transfers = $this->transferService->getTransfers($request->user(), $request->all());
+        $filters = $request->all();
+        $transfers = $this->transferService->getTransfers($request->user(), $filters);
 
         return response()->json([
             'success' => true,
             'data' => $transfers->items(),
+            'summary' => $this->transferService->getStatusSummary($request->user(), $filters),
             'meta' => [
                 'current_page' => $transfers->currentPage(),
                 'last_page' => $transfers->lastPage(),

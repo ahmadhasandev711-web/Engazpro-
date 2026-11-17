@@ -14,10 +14,13 @@ import {
 import { apiClient } from '../../data/api/client';
 import { formatCurrency, LowStockAlertItem, StockAdjustmentMode } from '@pos-mandob/shared';
 import { usePermissions } from '../../hooks/usePermissions';
+import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { useAuthStore } from '../../data/store/useAuthStore';
+import { fetchProductSelectOptions } from '../../data/api/asyncOptionLoaders';
 import { useStockAlerts, useStockMovements, useAdjustStockMutation } from '../../hooks/useStockOperations';
-import { Badge, Button, Card, EmptyState, Input, PageHeader, Select, StatCard, Tabs } from '../components/ui';
+import { AsyncSearchSelect, Badge, Button, Card, EmptyState, Input, PageHeader, Select, StatCard, Tabs } from '../components/ui';
 import { PaginationBar } from '../components/common/PaginationBar';
+import { DateRangeFilter } from '../components/common/DateRangeFilter';
 
 type TabKey = 'alerts' | 'adjust' | 'movements';
 
@@ -39,7 +42,7 @@ export const StockOperationsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('alerts');
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  // Shared branches & products for dropdowns
+  // Shared branches for dropdowns
   const { data: branches = [] } = useQuery<any[]>({
     queryKey: ['branches'],
     queryFn: async () => {
@@ -49,23 +52,16 @@ export const StockOperationsPage: React.FC = () => {
     },
   });
 
-  const { data: products = [] } = useQuery<any[]>({
-    queryKey: ['products-compact'],
-    queryFn: async () => {
-      const res = await apiClient.get('/products', { params: { per_page: 100 } });
-      const d = res.data?.data;
-      return Array.isArray(d) ? d : (d?.data || []);
-    },
-  });
-
   // Tab 1: Alerts state
   const [alertBranchId, setAlertBranchId] = useState<number | ''>('');
   const [alertStatus, setAlertStatus] = useState('ALL');
   const [alertSearch, setAlertSearch] = useState('');
+  const debouncedAlertSearch = useDebouncedValue(alertSearch.trim(), 250);
+  const [alertPage, setAlertPage] = useState(1);
   const [selectedAlerts, setSelectedAlerts] = useState<Record<number, number>>({});
 
-  const { data: alertsData, isLoading: isAlertsLoading } = useStockAlerts(
-    { branch_id: alertBranchId, status: alertStatus, search: alertSearch },
+  const { data: alertsData, isLoading: isAlertsLoading, isFetching: isAlertsFetching } = useStockAlerts(
+    { branch_id: alertBranchId, status: alertStatus, search: debouncedAlertSearch, page: alertPage, per_page: 25 },
     activeTab === 'alerts'
   );
 
@@ -73,6 +69,7 @@ export const StockOperationsPage: React.FC = () => {
   const defaultBranch = useMemo(() => (isManager && user?.branch_id ? user.branch_id : branches[0]?.id || ''), [isManager, user?.branch_id, branches]);
   const [adjBranchId, setAdjBranchId] = useState<number | ''>('');
   const [adjProductId, setAdjProductId] = useState<number | ''>('');
+  const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
   const [adjVariantId, setAdjVariantId] = useState<number | ''>('');
   const [adjMode, setAdjMode] = useState<StockAdjustmentMode>(StockAdjustmentMode.SET_ACTUAL);
   const [adjQty, setAdjQty] = useState<string>('0');
@@ -80,16 +77,26 @@ export const StockOperationsPage: React.FC = () => {
   const [adjNotes, setAdjNotes] = useState<string>('');
   const adjustMutation = useAdjustStockMutation();
 
-  const selectedProduct = useMemo(() => products.find((p: any) => p.id === Number(adjProductId)), [products, adjProductId]);
-
   // Tab 3: Movements filter state
   const [movBranchId, setMovBranchId] = useState<number | ''>('');
+  const [movType, setMovType] = useState('');
   const [movSourceType, setMovSourceType] = useState('');
   const [movSearch, setMovSearch] = useState('');
+  const debouncedMovSearch = useDebouncedValue(movSearch.trim(), 250);
+  const [movFromDate, setMovFromDate] = useState('');
+  const [movToDate, setMovToDate] = useState('');
   const [movPage, setMovPage] = useState(1);
 
-  const { data: movRes, isLoading: isMovLoading } = useStockMovements(
-    { branch_id: movBranchId, source_type: movSourceType, search: movSearch, page: movPage },
+  const { data: movRes, isLoading: isMovLoading, isFetching: isMovFetching } = useStockMovements(
+    {
+      branch_id: movBranchId,
+      type: movType,
+      source_type: movSourceType,
+      search: debouncedMovSearch,
+      date_from: movFromDate,
+      date_to: movToDate,
+      page: movPage,
+    },
     activeTab === 'movements'
   );
 
@@ -202,11 +209,22 @@ export const StockOperationsPage: React.FC = () => {
 
           <Card className="p-4 flex flex-col sm:flex-row gap-3 items-end justify-between">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 flex-1 w-full">
-              <Input label="بحث بالصنف أو الكود" value={alertSearch} onChange={(e) => setAlertSearch(e.target.value)} placeholder="اسم الصنف..." />
+              <Input
+                label="بحث بالصنف أو الكود"
+                value={alertSearch}
+                onChange={(e) => {
+                  setAlertSearch(e.target.value);
+                  setAlertPage(1);
+                }}
+                placeholder="اسم الصنف..."
+              />
               <Select
                 label="الحالة"
                 value={alertStatus}
-                onChange={(e) => setAlertStatus(e.target.value)}
+                onChange={(e) => {
+                  setAlertStatus(e.target.value);
+                  setAlertPage(1);
+                }}
                 options={[
                   { value: 'ALL', label: 'كل التنبيهات' },
                   { value: 'OUT_OF_STOCK', label: 'نفد بالكامل (صفر)' },
@@ -217,7 +235,10 @@ export const StockOperationsPage: React.FC = () => {
                 <Select
                   label="الفرع"
                   value={alertBranchId}
-                  onChange={(e) => setAlertBranchId(e.target.value ? Number(e.target.value) : '')}
+                  onChange={(e) => {
+                    setAlertBranchId(e.target.value ? Number(e.target.value) : '');
+                    setAlertPage(1);
+                  }}
                   options={[{ value: '', label: 'كافة الفروع' }, ...branches.map((b: any) => ({ value: b.id, label: b.name }))]}
                 />
               )}
@@ -239,6 +260,7 @@ export const StockOperationsPage: React.FC = () => {
             ) : lowItems.length === 0 ? (
               <EmptyState icon={<Package className="w-6 h-6 text-ok" />} title="ممتاز! لا توجد نواقص مخزون حالياً" />
             ) : (
+              <>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs text-right">
                   <thead>
@@ -290,6 +312,18 @@ export const StockOperationsPage: React.FC = () => {
                   </tbody>
                 </table>
               </div>
+              {alertsData?.low_stock_meta && (
+                <PaginationBar
+                  currentPage={alertsData.low_stock_meta.current_page}
+                  lastPage={alertsData.low_stock_meta.last_page}
+                  total={alertsData.low_stock_meta.total}
+                  perPage={alertsData.low_stock_meta.per_page}
+                  isFetching={isAlertsFetching}
+                  onPageChange={setAlertPage}
+                  itemLabel="تنبيه"
+                />
+              )}
+              </>
             )}
           </Card>
 
@@ -338,17 +372,23 @@ export const StockOperationsPage: React.FC = () => {
                 label="الفرع / المخزن"
                 value={adjBranchId || defaultBranch}
                 disabled={isManager && Boolean(user?.branch_id)}
-                onChange={(e) => setAdjBranchId(e.target.value ? Number(e.target.value) : '')}
+                onChange={(e) => {
+                  setAdjBranchId(e.target.value ? Number(e.target.value) : '');
+                }}
                 options={branches.map((b: any) => ({ value: b.id, label: b.name }))}
               />
-              <Select
+              <AsyncSearchSelect
                 label="الصنف"
+                placeholder="اختر الصنف..."
+                searchPlaceholder="ابحث باسم الصنف أو الكود أو الباركود..."
                 value={adjProductId}
-                onChange={(e) => {
-                  setAdjProductId(e.target.value ? Number(e.target.value) : '');
+                queryKeyPrefix={['products-select', adjBranchId || defaultBranch || 'all']}
+                loadOptions={(term) => fetchProductSelectOptions(term, adjBranchId || defaultBranch || null)}
+                onChange={(opt) => {
+                  setAdjProductId(opt ? Number(opt.value) : '');
+                  setSelectedProduct(opt?.raw || null);
                   setAdjVariantId('');
                 }}
-                options={[{ value: '', label: 'اختر الصنف...' }, ...products.map((p: any) => ({ value: p.id, label: `${p.name} (رصيد: ${p.quantity})` }))]}
               />
             </div>
 
@@ -390,30 +430,69 @@ export const StockOperationsPage: React.FC = () => {
 
       {activeTab === 'movements' && (
         <div className="space-y-4">
-          <Card className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Input label="بحث بالصنف أو الملاحظات" value={movSearch} onChange={(e) => { setMovSearch(e.target.value); setMovPage(1); }} placeholder="اسم الصنف أو السبب..." />
-            <Select
-              label="مصدر الحركة"
-              value={movSourceType}
-              onChange={(e) => { setMovSourceType(e.target.value); setMovPage(1); }}
-              options={[
-                { value: '', label: 'كافة المصادر' },
-                { value: 'SALE', label: 'بيع' },
-                { value: 'PURCHASE', label: 'شراء' },
-                { value: 'ADJUSTMENT', label: 'تسوية جرد / تالف' },
-                { value: 'TRANSFER_IN', label: 'تحويل وارد' },
-                { value: 'TRANSFER_OUT', label: 'تحويل صادر' },
-                { value: 'INITIAL', label: 'رصيد افتتاحي' },
-              ]}
-            />
-            {!isManager && (
-              <Select
-                label="الفرع"
-                value={movBranchId}
-                onChange={(e) => { setMovBranchId(e.target.value ? Number(e.target.value) : ''); setMovPage(1); }}
-                options={[{ value: '', label: 'كافة الفروع' }, ...branches.map((b: any) => ({ value: b.id, label: b.name }))]}
+          <Card className="p-4 space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <Input
+                label="بحث بالصنف أو الملاحظات"
+                value={movSearch}
+                onChange={(e) => {
+                  setMovSearch(e.target.value);
+                  setMovPage(1);
+                }}
+                placeholder="اسم الصنف أو السبب..."
               />
-            )}
+              <Select
+                label="نوع الحركة"
+                value={movType}
+                onChange={(e) => {
+                  setMovType(e.target.value);
+                  setMovPage(1);
+                }}
+                options={[
+                  { value: '', label: 'الكل (وارد ومنصرف)' },
+                  { value: 'IN', label: 'وارد (+)' },
+                  { value: 'OUT', label: 'منصرف (−)' },
+                ]}
+              />
+              <Select
+                label="مصدر الحركة"
+                value={movSourceType}
+                onChange={(e) => {
+                  setMovSourceType(e.target.value);
+                  setMovPage(1);
+                }}
+                options={[
+                  { value: '', label: 'كافة المصادر' },
+                  { value: 'SALE', label: 'بيع' },
+                  { value: 'PURCHASE', label: 'شراء' },
+                  { value: 'ADJUSTMENT', label: 'تسوية جرد / تالف' },
+                  { value: 'TRANSFER_IN', label: 'تحويل وارد' },
+                  { value: 'TRANSFER_OUT', label: 'تحويل صادر' },
+                  { value: 'INITIAL', label: 'رصيد افتتاحي' },
+                ]}
+              />
+              {!isManager && (
+                <Select
+                  label="الفرع"
+                  value={movBranchId}
+                  onChange={(e) => {
+                    setMovBranchId(e.target.value ? Number(e.target.value) : '');
+                    setMovPage(1);
+                  }}
+                  options={[{ value: '', label: 'كافة الفروع' }, ...branches.map((b: any) => ({ value: b.id, label: b.name }))]}
+                />
+              )}
+            </div>
+            <DateRangeFilter
+              fromDate={movFromDate}
+              toDate={movToDate}
+              defaultPreset="all"
+              onChange={(from, to) => {
+                setMovFromDate(from);
+                setMovToDate(to);
+                setMovPage(1);
+              }}
+            />
           </Card>
 
           <Card className="p-5 space-y-4">
@@ -460,7 +539,9 @@ export const StockOperationsPage: React.FC = () => {
                     lastPage={movRes.meta.last_page}
                     total={movRes.meta.total}
                     perPage={movRes.meta.per_page}
+                    isFetching={isMovFetching}
                     onPageChange={setMovPage}
+                    itemLabel="حركة"
                   />
                 )}
               </>

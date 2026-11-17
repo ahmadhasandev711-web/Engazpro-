@@ -3,6 +3,7 @@ export * from './Card';
 export * from './Badge';
 export * from './Input';
 export * from './Select';
+export * from './AsyncSearchSelect';
 export * from './Textarea';
 export * from './Tabs';
 export * from './DataTable';

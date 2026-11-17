@@ -103,12 +103,12 @@ class ReportService
     /**
      * تقرير تقييم المخزون والنواقص
      */
-    public function getStockReport(User $user, ?string $search = null, int $perPage = 50): array
+    public function getStockReport(User $user, ?string $search = null, int $perPage = 50, ?int $page = null): array
     {
         $baseQuery = Product::query();
         $rawSummary = $this->fetchStockReportRawSummary(clone $baseQuery);
         $actualPerPage = min(max(1, $perPage), (int) config('pos.pagination.max', 100));
-        $paginator = $this->buildStockListQuery(clone $baseQuery, $search)->paginate($actualPerPage);
+        $paginator = $this->buildStockListQuery(clone $baseQuery, $search)->paginate($actualPerPage, ['*'], 'page', $page);
         $stockList = array_map(fn ($product) => $this->formatStockReportRow($product, $user), $paginator->items());
         $pageMeta = ['current_page' => $paginator->currentPage(), 'last_page' => $paginator->lastPage(), 'per_page' => $paginator->perPage(), 'total' => $paginator->total()];
 

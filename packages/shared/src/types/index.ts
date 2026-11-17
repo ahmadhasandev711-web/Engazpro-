@@ -710,6 +710,12 @@ export interface ExpiringBatchAlertItem {
 export interface StockAlertsResponse {
   summary: StockAlertsSummary;
   low_stock_items: LowStockAlertItem[];
+  low_stock_meta?: {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+  };
   expiring_batches: ExpiringBatchAlertItem[];
 }
 

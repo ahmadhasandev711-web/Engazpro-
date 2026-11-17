@@ -20,7 +20,9 @@ import {
 import { BranchType } from '@pos-mandob/shared';
 import { apiClient } from '../../data/api/client';
 import { usePermissions } from '../../hooks/usePermissions';
+import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { BranchMobileCard } from '../components/mobile/BranchMobileCard';
+import { PaginationBar } from '../components/common/PaginationBar';
 import { nativeBackButton } from '../../platform/nativeBackButton';
 import { useConfirm } from '../context/ConfirmContext';
 import { PageHeader } from '../components/ui/PageHeader';
@@ -41,6 +43,8 @@ export const BranchesPage: React.FC = () => {
   const [editingBranch, setEditingBranch] = useState<any | null>(null);
   const [inventoryBranch, setInventoryBranch] = useState<any | null>(null);
   const [inventorySearch, setInventorySearch] = useState('');
+  const debouncedInventorySearch = useDebouncedValue(inventorySearch.trim(), 250);
+  const [inventoryPage, setInventoryPage] = useState(1);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -93,19 +97,21 @@ export const BranchesPage: React.FC = () => {
   }, [rawBranches]);
 
   // 2. Fetch Branch Inventory
-  const { data: inventoryData, isLoading: isInventoryLoading } = useQuery({
-    queryKey: ['branch-inventory', inventoryBranch?.id, inventorySearch],
+  const { data: inventoryData, isLoading: isInventoryLoading, isFetching: isInventoryFetching } = useQuery({
+    queryKey: ['branch-inventory', inventoryBranch?.id, debouncedInventorySearch, inventoryPage],
     queryFn: async () => {
-      if (!inventoryBranch?.id) return { items: [], total: 0 };
+      if (!inventoryBranch?.id) return { items: [], meta: null, total: 0 };
       const res = await apiClient.get(`/branches/${inventoryBranch.id}/inventory`, {
-        params: { search: inventorySearch },
+        params: { search: debouncedInventorySearch || undefined, page: inventoryPage, per_page: 30 },
       });
       return {
         items: res.data?.data || [],
+        meta: res.data?.meta || null,
         total: res.data?.meta?.total || 0,
       };
     },
     enabled: !!inventoryBranch?.id,
+    placeholderData: (prev) => prev,
   });
 
   // 3. Create Branch Mutation
@@ -375,7 +381,11 @@ export const BranchesPage: React.FC = () => {
                   key={branch.id}
                   branch={branch}
                   isOwnerOrManager={isOwner || isManager}
-                  onOpenInventory={(b) => setInventoryBranch(b)}
+                  onOpenInventory={(b) => {
+                    setInventoryPage(1);
+                    setInventorySearch('');
+                    setInventoryBranch(b);
+                  }}
                   onEdit={(b) => handleOpenEdit(b)}
                   onDelete={async (id, name) => {
                     const ok = await confirm({
@@ -447,7 +457,11 @@ export const BranchesPage: React.FC = () => {
                     <Button
                       variant="secondary"
                       size="md"
-                      onClick={() => setInventoryBranch(branch)}
+                      onClick={() => {
+                        setInventoryPage(1);
+                        setInventorySearch('');
+                        setInventoryBranch(branch);
+                      }}
                       leftIcon={<Package className="w-3.5 h-3.5" />}
                       className="flex-1 bg-ok-soft hover:bg-ok-soft/80 text-ok border-ok/25 text-xs font-semibold"
                     >
@@ -642,7 +656,10 @@ export const BranchesPage: React.FC = () => {
                 type="text"
                 placeholder="بحث باسم الصنف أو الباركود..."
                 value={inventorySearch}
-                onChange={(e) => setInventorySearch(e.target.value)}
+                onChange={(e) => {
+                  setInventorySearch(e.target.value);
+                  setInventoryPage(1);
+                }}
                 leftIcon={<Search className="w-4 h-4 text-muted" />}
                 className="bg-surface-2/50"
               />
@@ -661,6 +678,7 @@ export const BranchesPage: React.FC = () => {
                   title="لا توجد أصناف مطابقة في هذا الفرع"
                 />
               ) : (
+                <>
                 <DataTable>
                   <thead className="bg-surface-2 text-muted text-xs font-semibold border-b border-line">
                     <tr>
@@ -713,6 +731,18 @@ export const BranchesPage: React.FC = () => {
                     })}
                   </tbody>
                 </DataTable>
+                {inventoryData?.meta && (
+                  <PaginationBar
+                    currentPage={inventoryData.meta.current_page}
+                    lastPage={inventoryData.meta.last_page}
+                    total={inventoryData.meta.total}
+                    perPage={inventoryData.meta.per_page}
+                    isFetching={isInventoryFetching}
+                    onPageChange={setInventoryPage}
+                    itemLabel="صنف"
+                  />
+                )}
+              </>
               )}
             </div>
 

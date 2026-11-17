@@ -37,13 +37,16 @@ class StockAlertsService
         $days = max(1, min(180, (int) ($filters['expiry_days'] ?? 30)));
         $statusFilter = (string) ($filters['status'] ?? 'ALL');
         $search = trim((string) ($filters['search'] ?? ''));
+        $page = max(1, (int) ($filters['page'] ?? 1));
+        $perPage = min(max(1, (int) ($filters['per_page'] ?? 25)), 100);
 
-        $lowStockItems = $this->fetchLowStockBranchItems($accountId, $branchId, $statusFilter, $search);
+        $lowStock = $this->fetchLowStockBranchItems($accountId, $branchId, $statusFilter, $search, $page, $perPage);
         $expiringBatches = $this->fetchExpiringBatches($accountId, $days, $search);
 
         return [
             'summary' => $this->computeSummary($accountId, ($user->isManager() && $user->branch_id) ? (int) $user->branch_id : null),
-            'low_stock_items' => $lowStockItems,
+            'low_stock_items' => $lowStock['items'],
+            'low_stock_meta' => $lowStock['meta'],
             'expiring_batches' => $expiringBatches,
         ];
     }
@@ -72,20 +75,33 @@ class StockAlertsService
         ];
     }
 
-    private function fetchLowStockBranchItems(int $accountId, ?int $branchId, string $statusFilter, string $search): array
+    /**
+     * @return array{items: array<int, array<string, mixed>>, meta: array<string, int>}
+     */
+    private function fetchLowStockBranchItems(int $accountId, ?int $branchId, string $statusFilter, string $search, int $page, int $perPage): array
     {
-        $rows = BranchStock::withoutGlobalScopes()->with(['branch:id,name', 'product:id,name,code,barcode,unit,purchase_price', 'variant:id,name,code,barcode,purchase_price'])
+        $paginator = BranchStock::withoutGlobalScopes()->with(['branch:id,name', 'product:id,name,code,barcode,unit,purchase_price', 'variant:id,name,code,barcode,purchase_price'])
             ->join('branches', 'branches.id', '=', 'branch_stocks.branch_id')
             ->join('products', 'products.id', '=', 'branch_stocks.product_id')
             ->where('branches.user_id', $accountId)->where('branches.is_active', true)->whereNull('products.deleted_at')
             ->when($branchId, fn ($q) => $q->where('branch_stocks.branch_id', $branchId))
             ->when($search !== '', fn ($q) => $q->where(fn ($sq) => $sq->where('products.name', 'like', "%{$search}%")->orWhere('products.code', 'like', "%{$search}%")))
             ->where(fn ($q) => $this->applyAlertCondition($q, $statusFilter))
-            ->select('branch_stocks.*')->orderBy('branch_stocks.quantity', 'asc')->limit(150)->get();
+            ->select('branch_stocks.*')->orderBy('branch_stocks.quantity', 'asc')
+            ->paginate($perPage, ['branch_stocks.*'], 'page', $page);
 
+        $rows = collect($paginator->items());
         $lastPurchases = $this->fetchLastPurchasesByProduct($accountId, $rows->pluck('product_id')->unique()->values()->all());
 
-        return $rows->map(fn ($bs) => $this->formatLowStockRow($bs, $lastPurchases->get($bs->product_id)))->values()->all();
+        return [
+            'items' => $rows->map(fn ($bs) => $this->formatLowStockRow($bs, $lastPurchases->get($bs->product_id)))->values()->all(),
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+            ],
+        ];
     }
 
     private function applyAlertCondition($query, string $statusFilter): void

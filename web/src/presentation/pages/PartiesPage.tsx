@@ -58,6 +58,7 @@ export const PartiesPage: React.FC = () => {
 
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebouncedValue(search.trim(), 250);
+  const [balanceFilter, setBalanceFilter] = useState<'ALL' | 'WITH_BALANCE' | 'ZERO_BALANCE'>('ALL');
   const [page, setPage] = useState<number>(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingParty, setEditingParty] = useState<Party | null>(null);
@@ -66,16 +67,18 @@ export const PartiesPage: React.FC = () => {
 
   useEffect(() => {
     setPage(1);
+    setBalanceFilter('ALL');
   }, [type]);
 
   // Fetch Parties
-  const { data, isLoading } = useQuery({
-    queryKey: ['parties', type, debouncedSearch, page],
+  const { data, isLoading, isFetching } = useQuery({
+    queryKey: ['parties', type, debouncedSearch, balanceFilter, page],
     queryFn: async () => {
       const res = await apiClient.get('/parties', {
         params: {
           type,
           search: debouncedSearch || undefined,
+          balance_status: balanceFilter === 'ALL' ? undefined : balanceFilter,
           page,
         },
       });
@@ -86,6 +89,7 @@ export const PartiesPage: React.FC = () => {
 
   const parties: Party[] = data?.data || [];
   const meta = data?.meta;
+  const summary = data?.summary;
 
   // Form handling
   const {
@@ -181,8 +185,6 @@ export const PartiesPage: React.FC = () => {
     }
   };
 
-  const [balanceFilter, setBalanceFilter] = useState<'ALL' | 'WITH_BALANCE' | 'ZERO_BALANCE'>('ALL');
-
   // Hardware Back Button integration
   useEffect(() => {
     if (isModalOpen) {
@@ -193,14 +195,14 @@ export const PartiesPage: React.FC = () => {
     }
   }, [isModalOpen]);
 
-  const totalParties = parties.length;
-  const totalBalance = parties.reduce((acc, p) => acc + (Number(p.balance) || 0), 0);
-  const partiesWithBalance = parties.filter((p) => Number(p.balance) !== 0).length;
-  const zeroBalanceCount = parties.filter((p) => Number(p.balance) === 0).length;
+  const totalParties = summary?.total_count ?? meta?.total ?? parties.length;
+  const totalBalance = summary?.total_balance ?? parties.reduce((acc, p) => acc + (Number(p.balance) || 0), 0);
+  const partiesWithBalance = summary?.with_balance_count ?? parties.filter((p) => Number(p.balance) !== 0).length;
+  const zeroBalanceCount = summary?.zero_balance_count ?? parties.filter((p) => Number(p.balance) === 0).length;
 
   const balanceFilterOptions: FilterChipOption<string>[] = useMemo(
     () => [
-      { id: 'ALL', label: 'الكل', count: parties.length },
+      { id: 'ALL', label: 'الكل', count: totalParties },
       {
         id: 'WITH_BALANCE',
         label: isSupplier ? 'لهم مستحقات' : 'عليهم مديونية',
@@ -208,18 +210,10 @@ export const PartiesPage: React.FC = () => {
       },
       { id: 'ZERO_BALANCE', label: 'بدون رصيد (خالص)', count: zeroBalanceCount },
     ],
-    [parties.length, partiesWithBalance, zeroBalanceCount, isSupplier]
+    [totalParties, partiesWithBalance, zeroBalanceCount, isSupplier]
   );
 
-  const displayedParties = useMemo(() => {
-    if (balanceFilter === 'WITH_BALANCE') {
-      return parties.filter((p) => Number(p.balance) !== 0);
-    }
-    if (balanceFilter === 'ZERO_BALANCE') {
-      return parties.filter((p) => Number(p.balance) === 0);
-    }
-    return parties;
-  }, [parties, balanceFilter]);
+  const displayedParties = parties;
 
   return (
     <div className="space-y-3 sm:space-y-6" dir="rtl">
@@ -236,8 +230,17 @@ export const PartiesPage: React.FC = () => {
               size="md"
               onClick={async () => {
                 try {
+                  const res = await apiClient.get('/parties', {
+                    params: {
+                      type,
+                      search: debouncedSearch || undefined,
+                      balance_status: balanceFilter === 'ALL' ? undefined : balanceFilter,
+                      per_page: 500,
+                    },
+                  });
+                  const exportRows: Party[] = res.data?.data || parties;
                   const { exportPartiesToExcel } = await import('../utils/excelExport');
-                  exportPartiesToExcel(parties, pageTitle);
+                  exportPartiesToExcel(exportRows, pageTitle);
                 } catch (err) {
                   console.error('Excel load failed:', err);
                   toast.error('تعذر تحميل أداة Excel، تأكد من الاتصال وحاول مرة أخرى');
@@ -347,7 +350,10 @@ export const PartiesPage: React.FC = () => {
       <MobileFilterChips
         options={balanceFilterOptions}
         selectedId={balanceFilter}
-        onSelect={(id) => setBalanceFilter(id as any)}
+        onSelect={(id) => {
+          setBalanceFilter(id as any);
+          setPage(1);
+        }}
       />
 
       {/* Table */}
@@ -492,7 +498,8 @@ export const PartiesPage: React.FC = () => {
               currentPage={meta?.current_page || page}
               lastPage={meta?.last_page || 1}
               total={meta?.total || displayedParties.length}
-              perPage={meta?.per_page || 20}
+              perPage={meta?.per_page || 50}
+              isFetching={isFetching}
               onPageChange={(newPage) => setPage(newPage)}
               itemLabel={isSupplier ? 'مورد' : 'عميل'}
             />

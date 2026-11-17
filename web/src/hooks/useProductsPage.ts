@@ -1,4 +1,5 @@
 import { apiClient } from '../data/api/client';
+import { REFERENCE_QUERY_OPTIONS } from '../data/api/queryPresets';
 import { nativeBackButton } from '../platform/nativeBackButton';
 import { FilterChipOption } from '../presentation/components/mobile/MobileFilterChips';
 import { useDebouncedValue } from './useDebouncedValue';
@@ -28,6 +29,8 @@ export const useProductsPage = () => {
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebouncedValue(search.trim(), 250);
   const [filterTab, setFilterTab] = useState<'ALL' | 'VARIABLE' | 'EXPIRY' | 'NEAR_EXPIRY' | 'LOW_STOCK'>('ALL');
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
+  const [selectedBranchId, setSelectedBranchId] = useState<string>('');
   const [page, setPage] = useState<number>(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -82,12 +85,35 @@ export const useProductsPage = () => {
     quantity: 0,
   });
 
+  const { data: categories = [] } = useQuery<any[]>({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const res = await apiClient.get('/categories');
+      const d = res.data?.data;
+      return Array.isArray(d) ? d : (d?.data || []);
+    },
+    ...REFERENCE_QUERY_OPTIONS,
+  });
+
+  const { data: branches = [] } = useQuery<any[]>({
+    queryKey: ['branches'],
+    queryFn: async () => {
+      const res = await apiClient.get('/branches');
+      const d = res.data?.data;
+      return Array.isArray(d) ? d : (d?.data || []);
+    },
+    enabled: !isMandob,
+    ...REFERENCE_QUERY_OPTIONS,
+  });
+
   // Fetch Products
-  const { data, isLoading } = useQuery({
-    queryKey: ['products', debouncedSearch, filterTab, page],
+  const { data, isLoading, isFetching } = useQuery({
+    queryKey: ['products', debouncedSearch, filterTab, selectedCategoryId, selectedBranchId, page],
     queryFn: async () => {
       const params: any = {
         search: debouncedSearch || undefined,
+        category_id: selectedCategoryId || undefined,
+        branch_id: selectedBranchId || undefined,
         page,
       };
       if (filterTab === 'VARIABLE') params.type = 'VARIABLE';
@@ -103,6 +129,7 @@ export const useProductsPage = () => {
 
   const products: Product[] = data?.data || [];
   const meta = data?.meta;
+  const summary = data?.summary;
 
   // Form handling
   const {
@@ -295,29 +322,35 @@ export const useProductsPage = () => {
     }
   }, [isOpeningStockOpen]);
 
-  const totalProducts = products.length;
+  const totalProducts = summary?.all_count ?? meta?.total ?? products.length;
   const totalStock = products.reduce((acc, p) => acc + (Number(p.quantity) || 0), 0);
-  const lowStockCount = products.filter((p) => p.is_low_stock).length;
+  const lowStockCount = summary?.low_stock_count ?? products.filter((p) => p.is_low_stock).length;
 
   const filterOptions: FilterChipOption<typeof filterTab>[] = useMemo(
     () => [
       { id: 'ALL', label: 'الكل', count: totalProducts },
-      { id: 'VARIABLE', label: 'متغيرات', icon: Layers },
-      { id: 'EXPIRY', label: 'صلاحيات', icon: Calendar },
-      { id: 'NEAR_EXPIRY', label: 'قرب الانتهاء', icon: Clock },
+      { id: 'VARIABLE', label: 'متغيرات', count: summary?.variable_count, icon: Layers },
+      { id: 'EXPIRY', label: 'صلاحيات', count: summary?.expiry_count, icon: Calendar },
+      { id: 'NEAR_EXPIRY', label: 'قرب الانتهاء', count: summary?.near_expiry_count, icon: Clock },
       { id: 'LOW_STOCK', label: 'نواقص', count: lowStockCount, icon: AlertTriangle, variant: 'warning' },
     ],
-    [totalProducts, lowStockCount]
+    [totalProducts, lowStockCount, summary]
   );
-
 
   return {
     search,
     setSearch,
     filterTab,
     setFilterTab,
+    selectedCategoryId,
+    setSelectedCategoryId,
+    selectedBranchId,
+    setSelectedBranchId,
+    categories,
+    branches,
     page,
     setPage,
+    isFetching,
     isModalOpen,
     setIsModalOpen,
     editingProduct,

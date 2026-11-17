@@ -8,6 +8,7 @@ use App\Exceptions\PosDomainException;
 use App\Models\Party;
 use App\Models\User;
 use App\Support\Money;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 
 class PartyService
@@ -101,26 +102,61 @@ class PartyService
      */
     public function getPartiesPaginated(User $user, array $filters = []): \Illuminate\Contracts\Pagination\LengthAwarePaginator
     {
-        $type = $filters['type'] ?? null;
-
-        $query = Party::withCount('invoices')
+        $query = $this->buildFilteredQuery($filters, includeBalanceFilter: true)
+            ->withCount('invoices')
             ->withExists(['invoices', 'payments']);
+
+        $perPage = min(max(1, (int) ($filters['per_page'] ?? 50)), 500);
+
+        return $query->orderBy('name')->paginate($perPage);
+    }
+
+    /**
+     * @return array<string, int|float>
+     */
+    public function getPartiesSummary(array $filters = []): array
+    {
+        $row = $this->buildFilteredQuery($filters, includeBalanceFilter: false)
+            ->selectRaw('
+                COUNT(*) as total_count,
+                COALESCE(SUM(CASE WHEN balance != 0 THEN 1 ELSE 0 END), 0) as with_balance_count,
+                COALESCE(SUM(CASE WHEN balance = 0 THEN 1 ELSE 0 END), 0) as zero_balance_count,
+                COALESCE(SUM(balance), 0) as total_balance
+            ')
+            ->first();
+
+        return [
+            'total_count' => (int) ($row?->total_count ?? 0),
+            'with_balance_count' => (int) ($row?->with_balance_count ?? 0),
+            'zero_balance_count' => (int) ($row?->zero_balance_count ?? 0),
+            'total_balance' => Money::of($row?->total_balance ?? 0)->getAmount(),
+        ];
+    }
+
+    private function buildFilteredQuery(array $filters, bool $includeBalanceFilter): Builder
+    {
+        $type = $filters['type'] ?? null;
+        $query = Party::query();
 
         if ($type && in_array($type, array_column(PartyType::cases(), 'value'))) {
             $query->where('type', $type);
         }
 
         if (!empty($filters['search'])) {
-            $search = $filters['search'];
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('phone', 'like', "%{$search}%")
-                  ->orWhere('phone2', 'like', "%{$search}%");
-            });
+            $search = trim((string) $filters['search']);
+            $query->where(fn ($q) => $q->where('name', 'like', "%{$search}%")->orWhere('phone', 'like', "%{$search}%")->orWhere('phone2', 'like', "%{$search}%"));
         }
 
-        $perPage = min((int) ($filters['per_page'] ?? 50), 500);
-        return $query->orderBy('name')->paginate($perPage);
+        if ($includeBalanceFilter && !empty($filters['balance_status'])) {
+            $status = (string) $filters['balance_status'];
+            if ($status === 'WITH_BALANCE') {
+                $query->where('balance', '!=', 0);
+            } elseif ($status === 'ZERO_BALANCE') {
+                $query->where('balance', '=', 0);
+            }
+        }
+
+        return $query;
     }
 
     public function findForShowOrFail(int $id): Party

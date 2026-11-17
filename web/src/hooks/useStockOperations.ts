@@ -16,7 +16,10 @@ export const useStockAlertsSummary = (enabled: boolean = true) => {
   });
 };
 
-export const useStockAlerts = (filters: { branch_id?: number | ''; status?: string; search?: string; expiry_days?: number } = {}, enabled: boolean = true) => {
+export const useStockAlerts = (
+  filters: { branch_id?: number | ''; status?: string; search?: string; expiry_days?: number; page?: number; per_page?: number } = {},
+  enabled: boolean = true
+) => {
   return useQuery<StockAlertsResponse>({
     queryKey: ['stock-alerts', filters],
     queryFn: async () =>
@@ -26,9 +29,12 @@ export const useStockAlerts = (filters: { branch_id?: number | ''; status?: stri
           status: filters.status && filters.status !== 'ALL' ? filters.status : undefined,
           search: filters.search || undefined,
           expiry_days: filters.expiry_days || 30,
+          page: filters.page || 1,
+          per_page: filters.per_page || 25,
         },
       })).data?.data,
     enabled,
+    placeholderData: (prev) => prev,
   });
 };
 
@@ -60,6 +66,7 @@ export const useStockMovements = (filters: StockMovementsFilter, enabled: boolea
         },
       })).data,
     enabled,
+    placeholderData: (prev) => prev,
   });
 };
 

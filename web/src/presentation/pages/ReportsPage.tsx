@@ -19,6 +19,7 @@ import {
 } from '../../hooks/useReports';
 import { useAuthStore } from '../../data/store/useAuthStore';
 import { formatCurrency } from '@pos-mandob/shared';
+import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { usePermissions } from '../../hooks/usePermissions';
 import { ProfitReportTab } from '../components/reports/ProfitReportTab';
 import { SalesReportTab } from '../components/reports/SalesReportTab';
@@ -89,6 +90,7 @@ export const ReportsPage: React.FC = () => {
   // Dedicated custom hooks
   const [stockPage, setStockPage] = useState(1);
   const [stockSearch, setStockSearch] = useState('');
+  const debouncedStockSearch = useDebouncedValue(stockSearch.trim(), 250);
   const { data: profitData, isLoading: isProfitLoading } = useProfitReport(fromDate, toDate, canViewProfitReport && activeTab === 'profit');
   const { data: salesData, isLoading: isSalesLoading } = useSalesReport(fromDate, toDate, activeTab === 'sales');
   const { data: purchaseData, isLoading: isPurchaseLoading } = usePurchaseReport(
@@ -97,7 +99,7 @@ export const ReportsPage: React.FC = () => {
     canViewPurchaseReport && activeTab === 'purchases'
   );
   const { data: stockData, isLoading: isStockLoading, isFetching: isStockFetching } = useStockReport(
-    { page: stockPage, search: stockSearch },
+    { page: stockPage, search: debouncedStockSearch },
     activeTab === 'stock'
   );
   const { data: cashFlowData, isLoading: isCashFlowLoading } = useCashFlowReport(fromDate, toDate, activeTab === 'cash-flow');

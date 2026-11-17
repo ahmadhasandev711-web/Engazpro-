@@ -21,6 +21,7 @@ import { InvoiceItemsTable } from '../components/invoice/InvoiceItemsTable';
 import { InvoiceSummaryPanel } from '../components/invoice/InvoiceSummaryPanel';
 import { ProductVariantModal, VariantSelectionPayload } from '../components/products/ProductVariantModal';
 import { usePermissions } from '../../hooks/usePermissions';
+import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { nativeBackButton } from '../../platform/nativeBackButton';
 import { Badge, Button, Card, Input, PageHeader } from '../components/ui';
 
@@ -54,6 +55,7 @@ export const InvoiceFormPage: React.FC = () => {
 
   const { isCashier, isMandob } = usePermissions();
   const [searchProduct, setSearchProduct] = useState('');
+  const debouncedSearchProduct = useDebouncedValue(searchProduct.trim(), 250);
   const [invoiceLookupNumber, setInvoiceLookupNumber] = useState('');
   const [parentInvoice, setParentInvoice] = useState<Invoice | null>(null);
   const [isSearchingInvoice, setIsSearchingInvoice] = useState(false);
@@ -185,27 +187,20 @@ export const InvoiceFormPage: React.FC = () => {
 
   // Queries
   const { data: productsData } = useQuery({
-    queryKey: ['products', searchProduct],
+    queryKey: ['products', debouncedSearchProduct],
     queryFn: async () => {
       const res = await apiClient.get('/products', {
-        params: { search: searchProduct || undefined },
+        params: { search: debouncedSearchProduct || undefined, per_page: 24 },
       });
       return (res.data?.data?.data || res.data?.data) as Product[];
     },
-  });
-
-  const { data: partiesData } = useQuery({
-    queryKey: ['parties', partyType],
-    queryFn: async () => {
-      const res = await apiClient.get('/parties', { params: { type: partyType } });
-      return (res.data?.data?.data || res.data?.data) as Party[];
-    },
+    placeholderData: (prev) => prev,
   });
 
   const { data: couriersData } = useQuery({
     queryKey: ['parties', 'COURIER'],
     queryFn: async () => {
-      const res = await apiClient.get('/parties', { params: { type: 'COURIER' } });
+      const res = await apiClient.get('/parties', { params: { type: 'COURIER', per_page: 100 } });
       return (res.data?.data?.data || res.data?.data || []) as Party[];
     },
     enabled: isSale,
@@ -466,7 +461,10 @@ export const InvoiceFormPage: React.FC = () => {
           isReturn={isReturn}
           isPurchase={isPurchase}
           isPurchaseReturn={isPurchaseReturn}
-          partiesData={partiesData}
+          partyType={partyType}
+          selectedPartyId={watch('party_id')}
+          selectedPartyName={parentInvoice?.party?.name || null}
+          onPartyChange={(partyId) => setValue('party_id', partyId, { shouldValidate: true })}
           couriersData={couriersData}
           branchesData={branchesData}
           canChangeBranch={!isCashier && !isMandob}

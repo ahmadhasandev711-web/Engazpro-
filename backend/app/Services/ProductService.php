@@ -227,18 +227,54 @@ class ProductService
         return $query->orderBy('name')->paginate(min((int) ($filters['per_page'] ?? 20), 500));
     }
 
-    private function applyProductFilters(Builder $query, array $filters): void
+    /**
+     * @return array<string, int>
+     */
+    public function getProductsSummary(array $filters = []): array
+    {
+        $baseQuery = Product::query();
+        $this->applySearchAndCategoryFilters($baseQuery, $filters);
+
+        $variableType = ProductType::VARIABLE->value;
+        $expiryType = ProductType::EXPIRY->value;
+        $row = (clone $baseQuery)->selectRaw(
+            'COUNT(*) as all_count,
+            COALESCE(SUM(CASE WHEN type = ? THEN 1 ELSE 0 END), 0) as variable_count,
+            COALESCE(SUM(CASE WHEN type = ? THEN 1 ELSE 0 END), 0) as expiry_count,
+            COALESCE(SUM(CASE WHEN min_quantity IS NOT NULL AND quantity <= min_quantity THEN 1 ELSE 0 END), 0) as low_stock_count',
+            [$variableType, $expiryType]
+        )->first();
+
+        $nearExpiryCount = (clone $baseQuery)
+            ->whereHas('batches', fn ($bq) => $bq->where('quantity', '>', 0)->where('expiry_date', '<=', now()->addDays(60))->where('expiry_date', '>=', now()->startOfDay()))
+            ->count();
+
+        return [
+            'all_count' => (int) ($row?->all_count ?? 0),
+            'variable_count' => (int) ($row?->variable_count ?? 0),
+            'expiry_count' => (int) ($row?->expiry_count ?? 0),
+            'near_expiry_count' => $nearExpiryCount,
+            'low_stock_count' => (int) ($row?->low_stock_count ?? 0),
+        ];
+    }
+
+    private function applySearchAndCategoryFilters(Builder $query, array $filters): void
     {
         if (!empty($filters['search'])) {
             $search = $filters['search'];
             $query->where(fn($q) => $q->where('name', 'like', "%{$search}%")->orWhere('barcode', 'like', "%{$search}%")->orWhere('code', 'like', "%{$search}%")
                 ->orWhereHas('variants', fn($vq) => $vq->where('barcode', 'like', "%{$search}%")->orWhere('code', 'like', "%{$search}%")->orWhere('name', 'like', "%{$search}%")));
         }
+        if (!empty($filters['category_id'])) {
+            $query->where('category_id', (int) $filters['category_id']);
+        }
+    }
+
+    private function applyProductFilters(Builder $query, array $filters): void
+    {
+        $this->applySearchAndCategoryFilters($query, $filters);
         if (!empty($filters['type'])) {
             $query->where('type', $filters['type']);
-        }
-        if (!empty($filters['category_id'])) {
-            $query->where('category_id', $filters['category_id']);
         }
         if (!empty($filters['low_stock']) && filter_var($filters['low_stock'], FILTER_VALIDATE_BOOLEAN)) {
             $query->whereNotNull('min_quantity')->whereColumn('quantity', '<=', 'min_quantity');

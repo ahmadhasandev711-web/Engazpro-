@@ -17,6 +17,7 @@ use App\Models\StockTransferItem;
 use App\Models\User;
 use App\Services\DocumentSequenceService;
 use App\Support\Quantity;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 
@@ -32,31 +33,70 @@ class StockTransferService
      */
     public function getTransfers(User $user, array $filters = []): LengthAwarePaginator
     {
-        $query = StockTransfer::where('user_id', $user->getAccountId())
+        $query = $this->buildFilteredTransferQuery($user, $filters, includeStatusFilter: true)
             ->with(['fromBranch', 'toBranch', 'creator', 'receiver', 'items.product', 'items.variant']);
-
-        if ($user->isManager() && $user->branch_id) {
-            $query->where(function ($q) use ($user) {
-                $q->where('from_branch_id', $user->branch_id)
-                  ->orWhere('to_branch_id', $user->branch_id);
-            });
-        }
-
-        if (!empty($filters['status'])) {
-            $query->where('status', $filters['status']);
-        }
-
-        if (!empty($filters['from_branch_id'])) {
-            $query->where('from_branch_id', $filters['from_branch_id']);
-        }
-
-        if (!empty($filters['to_branch_id'])) {
-            $query->where('to_branch_id', $filters['to_branch_id']);
-        }
 
         $perPage = min(max(1, (int) ($filters['per_page'] ?? config('pos.pagination.default', 20))), (int) config('pos.pagination.max', 100));
 
         return $query->orderByDesc('id')->paginate($perPage);
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    public function getStatusSummary(User $user, array $filters = []): array
+    {
+        $counts = $this->buildFilteredTransferQuery($user, $filters, includeStatusFilter: false)
+            ->selectRaw('status, COUNT(*) as cnt')
+            ->groupBy('status')
+            ->pluck('cnt', 'status');
+
+        $inTransit = (int) ($counts[StockTransferStatus::IN_TRANSIT->value] ?? 0);
+        $received = (int) ($counts[StockTransferStatus::RECEIVED->value] ?? 0);
+        $cancelled = (int) ($counts[StockTransferStatus::CANCELLED->value] ?? 0);
+
+        return [
+            'total' => $inTransit + $received + $cancelled,
+            'in_transit_count' => $inTransit,
+            'received_count' => $received,
+            'cancelled_count' => $cancelled,
+        ];
+    }
+
+    private function buildFilteredTransferQuery(User $user, array $filters, bool $includeStatusFilter): Builder
+    {
+        $query = StockTransfer::where('user_id', $user->getAccountId());
+
+        if ($user->isManager() && $user->branch_id) {
+            $query->where(fn ($q) => $q->where('from_branch_id', $user->branch_id)->orWhere('to_branch_id', $user->branch_id));
+        }
+        if ($includeStatusFilter && !empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+        if (!empty($filters['from_branch_id'])) {
+            $query->where('from_branch_id', (int) $filters['from_branch_id']);
+        }
+        if (!empty($filters['to_branch_id'])) {
+            $query->where('to_branch_id', (int) $filters['to_branch_id']);
+        }
+
+        return $this->applyTransferSearchAndDateFilters($query, $filters);
+    }
+
+    private function applyTransferSearchAndDateFilters(Builder $query, array $filters): Builder
+    {
+        if (!empty($filters['date_from'])) {
+            $query->whereDate('transferred_at', '>=', (string) $filters['date_from']);
+        }
+        if (!empty($filters['date_to'])) {
+            $query->whereDate('transferred_at', '<=', (string) $filters['date_to']);
+        }
+        if (!empty($filters['search'])) {
+            $search = trim((string) $filters['search']);
+            $query->where(fn ($q) => $q->where('transfer_number', 'like', "%{$search}%")->orWhere('notes', 'like', "%{$search}%"));
+        }
+
+        return $query;
     }
 
     /**

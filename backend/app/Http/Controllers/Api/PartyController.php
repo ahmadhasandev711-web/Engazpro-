@@ -23,11 +23,13 @@ class PartyController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $parties = $this->partyService->getPartiesPaginated($request->user(), $request->all());
+        $filters = $request->all();
+        $parties = $this->partyService->getPartiesPaginated($request->user(), $filters);
 
         return response()->json([
             'success' => true,
             'data' => PartyResource::collection($parties),
+            'summary' => $this->partyService->getPartiesSummary($filters),
             'meta' => [
                 'current_page' => $parties->currentPage(),
                 'last_page' => $parties->lastPage(),

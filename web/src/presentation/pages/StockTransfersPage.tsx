@@ -15,17 +15,22 @@ import {
   Eye,
   Send,
   Check,
+  Search,
 } from 'lucide-react';
 import { apiClient } from '../../data/api/client';
+import { fetchProductSelectOptions } from '../../data/api/asyncOptionLoaders';
 import { REFERENCE_QUERY_OPTIONS } from '../../data/api/queryPresets';
 import { usePermissions } from '../../hooks/usePermissions';
+import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { StockTransferStatus, StockTransfer } from '@pos-mandob/shared';
 import { StockTransferMobileCard } from '../components/mobile/StockTransferMobileCard';
 import { PaginationBar } from '../components/common/PaginationBar';
+import { DateRangeFilter } from '../components/common/DateRangeFilter';
 import { nativeBackButton } from '../../platform/nativeBackButton';
 import { useToast } from '../context/ToastContext';
 import { useConfirm } from '../context/ConfirmContext';
 import {
+  AsyncSearchSelect,
   Badge,
   Button,
   Card,
@@ -48,6 +53,12 @@ export const StockTransfersPage: React.FC = () => {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [selectedTransfer, setSelectedTransfer] = useState<any | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [search, setSearch] = useState('');
+  const debouncedSearch = useDebouncedValue(search.trim(), 250);
+  const [fromBranchFilter, setFromBranchFilter] = useState<string>('');
+  const [toBranchFilter, setToBranchFilter] = useState<string>('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
   const [page, setPage] = useState(1);
 
   const [formData, setFormData] = useState<{
@@ -58,12 +69,13 @@ export const StockTransfersPage: React.FC = () => {
       product_id: string;
       product_variant_id: string;
       quantity_sent: number;
+      selected_product?: any;
     }>;
   }>({
     from_branch_id: '',
     to_branch_id: '',
     notes: '',
-    items: [{ product_id: '', product_variant_id: '', quantity_sent: 1 }],
+    items: [{ product_id: '', product_variant_id: '', quantity_sent: 1, selected_product: null }],
   });
 
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -79,28 +91,35 @@ export const StockTransfersPage: React.FC = () => {
   });
   const branches: any[] = Array.isArray(rawBranches) ? rawBranches : ((rawBranches as any)?.data || []);
 
-  // 2. Fetch Products for transfer items
-  const { data: products = [] } = useQuery({
-    queryKey: ['products-all'],
-    queryFn: async () => {
-      const res = await apiClient.get('/products', { params: { per_page: 200 } });
-      return res.data?.data || [];
-    },
-  });
-
-  // 3. Fetch Stock Transfers
+  // 2. Fetch Stock Transfers
   const { data: transfersData, isLoading, isFetching } = useQuery({
-    queryKey: ['stock-transfers', statusFilter, page],
+    queryKey: [
+      'stock-transfers',
+      statusFilter,
+      debouncedSearch,
+      fromBranchFilter,
+      toBranchFilter,
+      fromDate,
+      toDate,
+      page,
+    ],
     queryFn: async () => {
       const params: any = { page, per_page: 25 };
       if (statusFilter !== 'ALL') {
         params.status = statusFilter;
       }
+      if (debouncedSearch) params.search = debouncedSearch;
+      if (fromBranchFilter) params.from_branch_id = fromBranchFilter;
+      if (toBranchFilter) params.to_branch_id = toBranchFilter;
+      if (fromDate) params.date_from = fromDate;
+      if (toDate) params.date_to = toDate;
+
       const res = await apiClient.get('/stock-transfers', { params });
       return {
         items: res.data?.data || [],
+        summary: res.data?.summary || null,
         meta: res.data?.meta || null,
-        total: res.data?.meta?.total || 0,
+        total: res.data?.summary?.total ?? res.data?.meta?.total ?? 0,
       };
     },
     placeholderData: (previousData) => previousData,
@@ -163,14 +182,14 @@ export const StockTransfersPage: React.FC = () => {
       from_branch_id: '',
       to_branch_id: '',
       notes: '',
-      items: [{ product_id: '', product_variant_id: '', quantity_sent: 1 }],
+      items: [{ product_id: '', product_variant_id: '', quantity_sent: 1, selected_product: null }],
     });
   };
 
   const handleAddItem = () => {
     setFormData({
       ...formData,
-      items: [...formData.items, { product_id: '', product_variant_id: '', quantity_sent: 1 }],
+      items: [...formData.items, { product_id: '', product_variant_id: '', quantity_sent: 1, selected_product: null }],
     });
   };
 
@@ -252,9 +271,11 @@ export const StockTransfersPage: React.FC = () => {
   };
 
   const transfers: StockTransfer[] = transfersData?.items || [];
-  const inTransitCount = transfers.filter((t: StockTransfer) => t.status === StockTransferStatus.IN_TRANSIT).length;
-  const receivedCount = transfers.filter((t: StockTransfer) => t.status === StockTransferStatus.RECEIVED).length;
-  const cancelledCount = transfers.filter((t: StockTransfer) => t.status === StockTransferStatus.CANCELLED).length;
+  const summary = transfersData?.summary;
+  const totalSummaryCount = summary?.total ?? transfersData?.total ?? 0;
+  const inTransitCount = summary?.in_transit_count ?? 0;
+  const receivedCount = summary?.received_count ?? 0;
+  const cancelledCount = summary?.cancelled_count ?? 0;
 
   // Hardware Back Button integration
   useEffect(() => {
@@ -277,12 +298,12 @@ export const StockTransfersPage: React.FC = () => {
 
   const statusFilterOptions: TabItem[] = useMemo(
     () => [
-      { id: 'ALL', label: 'جميع التحويلات', count: transfersData?.total || 0 },
+      { id: 'ALL', label: 'جميع التحويلات', count: totalSummaryCount },
       { id: StockTransferStatus.IN_TRANSIT, label: 'في الطريق', count: inTransitCount },
       { id: StockTransferStatus.RECEIVED, label: 'مستلم', count: receivedCount },
       { id: StockTransferStatus.CANCELLED, label: 'ملغي', count: cancelledCount },
     ],
-    [transfersData?.total, inTransitCount, receivedCount, cancelledCount]
+    [totalSummaryCount, inTransitCount, receivedCount, cancelledCount]
   );
 
   return (
@@ -324,7 +345,7 @@ export const StockTransfersPage: React.FC = () => {
             <div className="flex items-center gap-1.5">
               <h2 className="text-sm font-black text-ink truncate">تحويلات المخزون</h2>
               <Badge tone="neutral" className="tabular-nums shrink-0">
-                {transfersData?.total || 0}
+                {totalSummaryCount}
               </Badge>
             </div>
             <p className="text-2xs text-muted font-medium truncate">
@@ -388,7 +409,7 @@ export const StockTransfersPage: React.FC = () => {
           </div>
           <div>
             <div className="text-xs text-muted font-medium">إجمالي التحويلات</div>
-            <div className="text-xl font-bold text-ink mt-0.5 tabular-nums">{transfersData?.total || 0}</div>
+            <div className="text-xl font-bold text-ink mt-0.5 tabular-nums">{totalSummaryCount}</div>
           </div>
         </Card>
 
@@ -422,6 +443,62 @@ export const StockTransfersPage: React.FC = () => {
           </div>
         </Card>
       </div>
+
+      {/* Search & Branch / Date Filters */}
+      <Card className="p-3 sm:p-4 space-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Input
+            label="بحث برقم الإذن أو الملاحظات"
+            placeholder="مثال: TRF-0001..."
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+            leftIcon={<Search className="w-4 h-4" />}
+          />
+          <Select
+            label="من فرع"
+            value={fromBranchFilter}
+            onChange={(e) => {
+              setFromBranchFilter(e.target.value);
+              setPage(1);
+            }}
+          >
+            <option value="">كافة الفروع (المصدر)</option>
+            {branches.map((b: any) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </Select>
+          <Select
+            label="إلى فرع"
+            value={toBranchFilter}
+            onChange={(e) => {
+              setToBranchFilter(e.target.value);
+              setPage(1);
+            }}
+          >
+            <option value="">كافة الفروع (الوجهة)</option>
+            {branches.map((b: any) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <DateRangeFilter
+          fromDate={fromDate}
+          toDate={toDate}
+          defaultPreset="all"
+          onChange={(from, to) => {
+            setFromDate(from);
+            setToDate(to);
+            setPage(1);
+          }}
+        />
+      </Card>
 
       {/* Filter Tabs */}
       <Tabs
@@ -582,7 +659,7 @@ export const StockTransfersPage: React.FC = () => {
             <PaginationBar
               currentPage={transfersData?.meta?.current_page || page}
               lastPage={transfersData?.meta?.last_page || 1}
-              total={transfersData?.total || transfers.length}
+              total={transfersData?.meta?.total ?? transfers.length}
               perPage={transfersData?.meta?.per_page || 25}
               isFetching={isFetching}
               onPageChange={setPage}
@@ -665,24 +742,43 @@ export const StockTransfersPage: React.FC = () => {
 
                 <div className="space-y-3">
                   {formData.items.map((item, idx) => {
-                    const selectedProd = products.find((p: any) => String(p.id) === item.product_id);
+                    const selectedProd = item.selected_product;
                     const hasVariants = selectedProd?.variants && selectedProd.variants.length > 0;
 
                     return (
                       <div key={idx} className="p-3 bg-surface-2 border border-line rounded-xl flex flex-col sm:flex-row items-center gap-2">
                         <div className="flex-1 w-full">
-                          <Select
+                          <AsyncSearchSelect
                             required
+                            placeholder="-- اختر الصنف --"
+                            searchPlaceholder="ابحث باسم الصنف أو الكود..."
                             value={item.product_id}
-                            onChange={(e) => handleItemChange(idx, 'product_id', e.target.value)}
-                          >
-                            <option value="">-- اختر الصنف --</option>
-                            {products.map((p: any) => (
-                              <option key={p.id} value={p.id}>
-                                {p.name} {p.code ? `(${p.code})` : ''}
-                              </option>
-                            ))}
-                          </Select>
+                            selectedOption={
+                              selectedProd
+                                ? {
+                                    value: String(selectedProd.id),
+                                    label: selectedProd.code
+                                      ? `${selectedProd.name} (${selectedProd.code})`
+                                      : selectedProd.name,
+                                    raw: selectedProd,
+                                  }
+                                : null
+                            }
+                            queryKeyPrefix={['transfer-products', formData.from_branch_id || 'all']}
+                            loadOptions={(term) =>
+                              fetchProductSelectOptions(term, formData.from_branch_id || null)
+                            }
+                            onChange={(opt) => {
+                              const newItems = [...formData.items];
+                              newItems[idx] = {
+                                ...newItems[idx],
+                                product_id: opt ? String(opt.value) : '',
+                                product_variant_id: '',
+                                selected_product: opt?.raw || null,
+                              };
+                              setFormData({ ...formData, items: newItems });
+                            }}
+                          />
                         </div>
 
                         {hasVariants && (
