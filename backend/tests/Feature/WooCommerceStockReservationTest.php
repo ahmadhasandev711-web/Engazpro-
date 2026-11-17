@@ -2,15 +2,16 @@
 
 namespace Tests\Feature;
 
+use App\Enums\EcommercePlatform;
 use App\Models\Branch;
 use App\Models\BranchStock;
+use App\Models\OnlineOrder;
+use App\Models\OnlineOrderItem;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\User;
-use App\Models\WcOrder;
-use App\Models\WcOrderItem;
 use App\Models\WooCommerceIntegration;
-use App\Services\WooCommerce\WooCommerceOrderSyncService;
+use App\Services\OnlineOrders\OnlineOrderSyncService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -20,7 +21,7 @@ class WooCommerceStockReservationTest extends TestCase
 
     protected User $owner;
     protected Branch $mainBranch;
-    protected WooCommerceOrderSyncService $syncService;
+    protected OnlineOrderSyncService $syncService;
 
     protected function setUp(): void
     {
@@ -46,7 +47,7 @@ class WooCommerceStockReservationTest extends TestCase
             'online_branch_id' => $this->mainBranch->id,
         ]);
 
-        $this->syncService = app(WooCommerceOrderSyncService::class);
+        $this->syncService = app(OnlineOrderSyncService::class);
     }
 
     /**
@@ -135,47 +136,47 @@ class WooCommerceStockReservationTest extends TestCase
             ],
         ];
 
-        $order = app(\App\Services\WooCommerce\WcOrderIngestionService::class)->ingest($this->owner, $orderPayload);
+        $order = app(\App\Services\OnlineOrders\OnlineOrderIngestionService::class)->ingest($this->owner, EcommercePlatform::WOOCOMMERCE, $orderPayload);
 
-        $this->assertDatabaseCount('wc_order_items', 4);
+        $this->assertDatabaseCount('online_order_items', 4);
 
-        $this->assertDatabaseHas('wc_order_items', [
-            'wc_order_id' => $order->id,
+        $this->assertDatabaseHas('online_order_items', [
+            'online_order_id' => $order->id,
             'user_id' => $this->owner->id,
             'product_id' => $simpleProduct->id,
             'product_variant_id' => null,
-            'wc_product_id' => 101,
-            'wc_variation_id' => null,
+            'external_product_id' => '101',
+            'external_variant_id' => null,
             'quantity' => '3.00',
         ]);
 
-        $this->assertDatabaseHas('wc_order_items', [
-            'wc_order_id' => $order->id,
+        $this->assertDatabaseHas('online_order_items', [
+            'online_order_id' => $order->id,
             'user_id' => $this->owner->id,
             'product_id' => $variableProduct->id,
             'product_variant_id' => $variant->id,
-            'wc_product_id' => 102,
-            'wc_variation_id' => 202,
+            'external_product_id' => '102',
+            'external_variant_id' => '202',
             'quantity' => '2.00',
         ]);
 
-        $this->assertDatabaseHas('wc_order_items', [
-            'wc_order_id' => $order->id,
+        $this->assertDatabaseHas('online_order_items', [
+            'online_order_id' => $order->id,
             'user_id' => $this->owner->id,
             'product_id' => null,
             'product_variant_id' => null,
-            'wc_product_id' => 999,
-            'wc_variation_id' => null,
+            'external_product_id' => '999',
+            'external_variant_id' => null,
             'quantity' => '1.00',
         ]);
 
-        $this->assertDatabaseHas('wc_order_items', [
-            'wc_order_id' => $order->id,
+        $this->assertDatabaseHas('online_order_items', [
+            'online_order_id' => $order->id,
             'user_id' => $this->owner->id,
             'product_id' => null,
             'product_variant_id' => null,
-            'wc_product_id' => 102,
-            'wc_variation_id' => 9999,
+            'external_product_id' => '102',
+            'external_variant_id' => '9999',
             'quantity' => '1.00',
         ]);
 
@@ -196,41 +197,43 @@ class WooCommerceStockReservationTest extends TestCase
             'quantity' => 20,
         ]);
 
-        $orderCourier = WcOrder::create([
+        $orderCourier = OnlineOrder::create([
             'user_id' => $this->owner->id,
-            'wc_order_id' => 8001,
+            'platform' => EcommercePlatform::WOOCOMMERCE,
+            'external_order_id' => '8001',
             'branch_id' => $this->mainBranch->id,
             'status' => \App\Enums\WcOrderStatus::SHIPPED_VIA_COURIER,
             'payment_status' => \App\Enums\WcPaymentStatus::PENDING_COD,
             'total' => 300,
         ]);
 
-        WcOrderItem::create([
+        OnlineOrderItem::create([
             'user_id' => $this->owner->id,
-            'wc_order_id' => $orderCourier->id,
+            'online_order_id' => $orderCourier->id,
             'product_id' => $product->id,
-            'wc_product_id' => 501,
+            'external_product_id' => '501',
             'quantity' => '3.00',
         ]);
 
-        $orderMandob = WcOrder::create([
+        $orderMandob = OnlineOrder::create([
             'user_id' => $this->owner->id,
-            'wc_order_id' => 8002,
+            'platform' => EcommercePlatform::WOOCOMMERCE,
+            'external_order_id' => '8002',
             'branch_id' => $this->mainBranch->id,
             'status' => \App\Enums\WcOrderStatus::DISPATCHED,
             'payment_status' => \App\Enums\WcPaymentStatus::PENDING_COD,
             'total' => 400,
         ]);
 
-        WcOrderItem::create([
+        OnlineOrderItem::create([
             'user_id' => $this->owner->id,
-            'wc_order_id' => $orderMandob->id,
+            'online_order_id' => $orderMandob->id,
             'product_id' => $product->id,
-            'wc_product_id' => 501,
+            'external_product_id' => '501',
             'quantity' => '4.00',
         ]);
 
-        $service = app(\App\Services\WooCommerce\StockReservationService::class);
+        $service = app(\App\Services\OnlineOrders\OnlineOrderStockReservationService::class);
         $reserved = $service->reservedQuantity($this->owner->id, $product->id, null, [$this->mainBranch->id]);
 
         $this->assertInstanceOf(\App\Support\Quantity::class, $reserved);
@@ -260,24 +263,25 @@ class WooCommerceStockReservationTest extends TestCase
             'quantity' => 20,
         ]);
 
-        $orderBranch2 = WcOrder::create([
+        $orderBranch2 = OnlineOrder::create([
             'user_id' => $this->owner->id,
-            'wc_order_id' => 8003,
+            'platform' => EcommercePlatform::WOOCOMMERCE,
+            'external_order_id' => '8003',
             'branch_id' => $branch2->id,
             'status' => \App\Enums\WcOrderStatus::CONFIRMED,
             'payment_status' => \App\Enums\WcPaymentStatus::PENDING_COD,
             'total' => 500,
         ]);
 
-        WcOrderItem::create([
+        OnlineOrderItem::create([
             'user_id' => $this->owner->id,
-            'wc_order_id' => $orderBranch2->id,
+            'online_order_id' => $orderBranch2->id,
             'product_id' => $product->id,
-            'wc_product_id' => 502,
+            'external_product_id' => '502',
             'quantity' => '5.00',
         ]);
 
-        $service = app(\App\Services\WooCommerce\StockReservationService::class);
+        $service = app(\App\Services\OnlineOrders\OnlineOrderStockReservationService::class);
 
         // Targeted only main branch -> should be 0.00
         $reservedMain = $service->reservedQuantity($this->owner->id, $product->id, null, [$this->mainBranch->id]);
@@ -360,22 +364,23 @@ class WooCommerceStockReservationTest extends TestCase
             'quantity' => 10,
         ]);
 
-        $order = WcOrder::create([
+        $order = OnlineOrder::create([
             'user_id' => $this->owner->id,
-            'wc_order_id' => 8005,
+            'platform' => EcommercePlatform::WOOCOMMERCE,
+            'external_order_id' => '8005',
             'branch_id' => $this->mainBranch->id,
             'status' => \App\Enums\WcOrderStatus::CONFIRMED,
             'payment_status' => \App\Enums\WcPaymentStatus::PENDING_COD,
             'total' => 150,
         ]);
 
-        WcOrderItem::create([
+        OnlineOrderItem::create([
             'user_id' => $this->owner->id,
-            'wc_order_id' => $order->id,
+            'online_order_id' => $order->id,
             'product_id' => $product->id,
             'product_variant_id' => $variant->id,
-            'wc_product_id' => 9993,
-            'wc_variation_id' => 8881,
+            'external_product_id' => '9993',
+            'external_variant_id' => '8881',
             'quantity' => '3.00',
         ]);
 
@@ -420,20 +425,21 @@ class WooCommerceStockReservationTest extends TestCase
         ]);
 
         // Create pending order with reserved quantity 2.00
-        $order = WcOrder::create([
+        $order = OnlineOrder::create([
             'user_id' => $this->owner->id,
-            'wc_order_id' => 8004,
+            'platform' => EcommercePlatform::WOOCOMMERCE,
+            'external_order_id' => '8004',
             'branch_id' => $this->mainBranch->id,
             'status' => \App\Enums\WcOrderStatus::PENDING_CONFIRMATION,
             'payment_status' => \App\Enums\WcPaymentStatus::PENDING_COD,
             'total' => 100,
         ]);
 
-        WcOrderItem::create([
+        OnlineOrderItem::create([
             'user_id' => $this->owner->id,
-            'wc_order_id' => $order->id,
+            'online_order_id' => $order->id,
             'product_id' => $product->id,
-            'wc_product_id' => 9992,
+            'external_product_id' => '9992',
             'quantity' => '2.00',
         ]);
 
@@ -477,38 +483,40 @@ class WooCommerceStockReservationTest extends TestCase
         ]);
 
         // Order A: already confirmed with 6.00 units (reserves 6.00 in branch)
-        $orderA = WcOrder::create([
+        $orderA = OnlineOrder::create([
             'user_id' => $this->owner->id,
-            'wc_order_id' => 9001,
+            'platform' => EcommercePlatform::WOOCOMMERCE,
+            'external_order_id' => '9001',
             'branch_id' => $this->mainBranch->id,
             'status' => \App\Enums\WcOrderStatus::CONFIRMED,
             'payment_status' => \App\Enums\WcPaymentStatus::PENDING_COD,
             'total' => 600,
         ]);
 
-        WcOrderItem::create([
+        OnlineOrderItem::create([
             'user_id' => $this->owner->id,
-            'wc_order_id' => $orderA->id,
+            'online_order_id' => $orderA->id,
             'product_id' => $product->id,
-            'wc_product_id' => 7701,
+            'external_product_id' => '7701',
             'quantity' => '6.00',
         ]);
 
         // Order B: pending confirmation with 6.00 units
-        $orderB = WcOrder::create([
+        $orderB = OnlineOrder::create([
             'user_id' => $this->owner->id,
-            'wc_order_id' => 9002,
+            'platform' => EcommercePlatform::WOOCOMMERCE,
+            'external_order_id' => '9002',
             'branch_id' => $this->mainBranch->id,
             'status' => \App\Enums\WcOrderStatus::PENDING_CONFIRMATION,
             'payment_status' => \App\Enums\WcPaymentStatus::PENDING_COD,
             'total' => 600,
         ]);
 
-        WcOrderItem::create([
+        OnlineOrderItem::create([
             'user_id' => $this->owner->id,
-            'wc_order_id' => $orderB->id,
+            'online_order_id' => $orderB->id,
             'product_id' => $product->id,
-            'wc_product_id' => 7701,
+            'external_product_id' => '7701',
             'quantity' => '6.00',
         ]);
 
@@ -561,20 +569,21 @@ class WooCommerceStockReservationTest extends TestCase
         ]);
 
         // Pending online order of 2 units
-        $order = WcOrder::create([
+        $order = OnlineOrder::create([
             'user_id' => $this->owner->id,
-            'wc_order_id' => 9003,
+            'platform' => EcommercePlatform::WOOCOMMERCE,
+            'external_order_id' => '9003',
             'branch_id' => $this->mainBranch->id,
             'status' => \App\Enums\WcOrderStatus::PENDING_CONFIRMATION,
             'payment_status' => \App\Enums\WcPaymentStatus::PENDING_COD,
             'total' => 200,
         ]);
 
-        WcOrderItem::create([
+        OnlineOrderItem::create([
             'user_id' => $this->owner->id,
-            'wc_order_id' => $order->id,
+            'online_order_id' => $order->id,
             'product_id' => $product->id,
-            'wc_product_id' => 7702,
+            'external_product_id' => '7702',
             'quantity' => '2.00',
         ]);
 
@@ -616,20 +625,21 @@ class WooCommerceStockReservationTest extends TestCase
             'quantity' => 10,
         ]);
 
-        $order = WcOrder::create([
+        $order = OnlineOrder::create([
             'user_id' => $this->owner->id,
-            'wc_order_id' => 9004,
+            'platform' => EcommercePlatform::WOOCOMMERCE,
+            'external_order_id' => '9004',
             'branch_id' => $this->mainBranch->id,
             'status' => \App\Enums\WcOrderStatus::PENDING_CONFIRMATION,
             'payment_status' => \App\Enums\WcPaymentStatus::PENDING_COD,
             'total' => 200,
         ]);
 
-        WcOrderItem::create([
+        OnlineOrderItem::create([
             'user_id' => $this->owner->id,
-            'wc_order_id' => $order->id,
+            'online_order_id' => $order->id,
             'product_id' => $product->id,
-            'wc_product_id' => 7703,
+            'external_product_id' => '7703',
             'quantity' => '2.00',
         ]);
 

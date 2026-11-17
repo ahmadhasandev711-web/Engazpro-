@@ -66,6 +66,19 @@ interface ShopifyGraphqlClientInterface
     public function createFulfillment(ShopifyIntegration $integration, array $fulfillmentInput): array;
 
     /**
+     * Cancel a Shopify order via GraphQL orderCancel mutation.
+     *
+     * @return array<string, mixed>
+     */
+    public function cancelOrder(
+        ShopifyIntegration $integration,
+        string $orderGid,
+        string $reason,
+        bool $restock,
+        ?string $staffNote = null
+    ): array;
+
+    /**
      * Register webhook subscriptions via GraphQL webhookSubscriptionCreate.
      *
      * @param  list<string>  $topics

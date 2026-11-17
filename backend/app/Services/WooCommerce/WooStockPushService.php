@@ -12,6 +12,7 @@ use App\Models\BranchStock;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\WooCommerceIntegration;
+use App\Services\OnlineOrders\OnlineOrderStockReservationService;
 use App\Support\Quantity;
 use Illuminate\Support\Collection;
 
@@ -19,7 +20,7 @@ class WooStockPushService
 {
     public function __construct(
         protected WooCommerceApiClientInterface $apiClient,
-        protected StockReservationService $reservationService
+        protected OnlineOrderStockReservationService $reservationService
     ) {}
 
     /**

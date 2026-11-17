@@ -14,11 +14,9 @@ final class TenantContext
     public static function runAs(int $accountId, Closure $callback): mixed
     {
         $previous = Auth::user();
-        $user = User::withoutGlobalScopes()->find($accountId);
+        $user = User::withoutGlobalScopes()->findOrFail($accountId);
 
-        if ($user) {
-            Auth::setUser($user);
-        }
+        Auth::setUser($user);
 
         try {
             return $callback();

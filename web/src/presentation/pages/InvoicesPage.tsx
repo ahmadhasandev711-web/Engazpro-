@@ -22,6 +22,8 @@ import {
 } from 'lucide-react';
 import { InvoiceType, formatCurrency } from '@pos-mandob/shared';
 import { apiClient } from '../../data/api/client';
+import { REFERENCE_QUERY_OPTIONS } from '../../data/api/queryPresets';
+import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { usePermissions } from '../../hooks/usePermissions';
 import { DateRangeFilter, calculatePresetDates } from '../components/common/DateRangeFilter';
 import { PaginationBar } from '../components/common/PaginationBar';
@@ -83,6 +85,7 @@ export const InvoicesPage: React.FC = () => {
   const { canDeleteInvoice, isOwnerOrAdmin, isManager, canEditInvoiceSalesperson } = usePermissions();
   const initialDates = calculatePresetDates('today');
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebouncedValue(search.trim(), 250);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
   const [fromDate, setFromDate] = useState<string>(initialDates.from);
   const [toDate, setToDate] = useState<string>(initialDates.to);
@@ -105,15 +108,16 @@ export const InvoicesPage: React.FC = () => {
       return res.data?.data || [];
     },
     enabled: isOwnerOrAdmin || isManager,
+    ...REFERENCE_QUERY_OPTIONS,
   });
 
   const { data, isLoading } = useQuery({
-    queryKey: ['invoices', invoiceType, search, selectedEmployeeId, fromDate, toDate, page],
+    queryKey: ['invoices', invoiceType, debouncedSearch, selectedEmployeeId, fromDate, toDate, page],
     queryFn: async () => {
       const res = await apiClient.get('/invoices', {
         params: {
           type: invoiceType,
-          search: search || undefined,
+          search: debouncedSearch || undefined,
           created_by: selectedEmployeeId || undefined,
           date_from: fromDate || undefined,
           date_to: toDate || undefined,
@@ -674,7 +678,12 @@ export const InvoicesPage: React.FC = () => {
                   </div>
                   <div className="text-left font-mono text-xs text-paper-muted">
                     <div>التاريخ: {invoiceDetails?.date}</div>
-                    {invoiceDetails?.wc_order_id && <div>طلب ووكومرس: #{invoiceDetails.wc_order_id}</div>}
+                    {(invoiceDetails?.wc_order_id || invoiceDetails?.shopify_order_id) && (
+                      <div>
+                        طلب المتجر: #
+                        {invoiceDetails.wc_order_id || invoiceDetails.shopify_order_id}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

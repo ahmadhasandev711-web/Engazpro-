@@ -62,6 +62,7 @@ export const usePermissions = () => {
     hasEcommerceAddon,
     activeEcommercePlatform,
     canManageEcommerceSettings: isOwnerOrAdmin && hasEcommerceAddon,
+    canViewStoreOrders: hasEcommerceAddon && activeEcommercePlatform !== null,
     canViewWooOrders: hasEcommerceAddon && activeEcommercePlatform === EcommercePlatform.WOOCOMMERCE,
     canViewShopifyOrders: hasEcommerceAddon && activeEcommercePlatform === EcommercePlatform.SHOPIFY,
     canManageSettings: isOwnerOrAdmin,

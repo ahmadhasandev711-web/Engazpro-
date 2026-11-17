@@ -14,7 +14,6 @@ import {
 } from 'lucide-react';
 import { formatCurrency } from '@pos-mandob/shared';
 import { DashboardData } from './OwnerDashboard';
-import { PWAInstallBanner } from '../pwa/PWAInstallBanner';
 import { RecentActivityMobileCard } from '../mobile/RecentActivityMobileCard';
 import {
   Badge,
@@ -57,16 +56,13 @@ export const CashierDashboard: React.FC<CashierDashboardProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* PWA Install Banner */}
-      <PWAInstallBanner />
-
       {/* Header & Quick Action Buttons */}
       <PageHeader
         title="وردية الكاشير (POS)"
         description="متابعة فورية لمبيعات الوردية، نقدية الدرج، ومصروفات النثريات اليومية"
         badge={
           <div className="flex items-center gap-1.5 flex-wrap">
-            <Badge tone="ok">{userName || 'كاشير المتجر'}</Badge>
+            <Badge tone="neutral">{userName || 'كاشير المتجر'}</Badge>
             <Badge tone="neutral" className="tabular-nums">
               {data?.today || new Date().toISOString().split('T')[0]}
             </Badge>
@@ -96,10 +92,10 @@ export const CashierDashboard: React.FC<CashierDashboardProps> = ({
               ⚡ فتح شاشة البيع السريعة (POS)
             </Button>
             <Button
-              variant="danger"
+              variant="secondary"
               size="md"
               onClick={() => navigate('/expenses')}
-              leftIcon={<Receipt className="w-4 h-4" />}
+              leftIcon={<Receipt className="w-4 h-4 text-muted" />}
               className="hidden sm:inline-flex"
             >
               تسجيل مصروف درج
@@ -120,10 +116,10 @@ export const CashierDashboard: React.FC<CashierDashboardProps> = ({
           ⚡ شاشة POS
         </Button>
         <Button
-          variant="danger"
+          variant="secondary"
           size="md"
           onClick={() => navigate('/expenses')}
-          leftIcon={<Receipt className="w-4 h-4" />}
+          leftIcon={<Receipt className="w-4 h-4 text-muted" />}
           className="w-full text-xs font-bold"
         >
           تسجيل مصروف
@@ -186,13 +182,13 @@ export const CashierDashboard: React.FC<CashierDashboardProps> = ({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* الداخل للدرج (+) */}
-            <div className="p-4 rounded-xl bg-ok-soft/50 border border-ok/20 space-y-2.5">
-              <div className="flex items-center justify-between text-xs font-black text-ok border-b border-ok/20 pb-2">
-                <span className="flex items-center gap-1">
+            <div className="p-4 rounded-xl bg-panel border border-line space-y-2.5">
+              <div className="flex items-center justify-between text-xs font-black text-ink border-b border-line pb-2">
+                <span className="flex items-center gap-1.5">
                   <ArrowDownLeft className="w-4 h-4 text-ok" />
                   نقدية دخلت الدرج (+)
                 </span>
-                <span className="tabular-nums">{formatCurrency(cashFlow?.inflow.total ?? 0)}</span>
+                <span className="tabular-nums text-ok">{formatCurrency(cashFlow?.inflow.total ?? 0)}</span>
               </div>
               <div className="space-y-1.5 text-xs text-muted">
                 <div className="flex justify-between">
@@ -211,13 +207,13 @@ export const CashierDashboard: React.FC<CashierDashboardProps> = ({
             </div>
 
             {/* الخارج من الدرج (-) */}
-            <div className="p-4 rounded-xl bg-bad-soft/50 border border-bad/20 space-y-2.5">
-              <div className="flex items-center justify-between text-xs font-black text-bad border-b border-bad/20 pb-2">
-                <span className="flex items-center gap-1">
+            <div className="p-4 rounded-xl bg-panel border border-line space-y-2.5">
+              <div className="flex items-center justify-between text-xs font-black text-ink border-b border-line pb-2">
+                <span className="flex items-center gap-1.5">
                   <ArrowUpRight className="w-4 h-4 text-bad" />
                   نقدية خرجت من الدرج (-)
                 </span>
-                <span className="tabular-nums">{formatCurrency(cashFlow?.outflow.total ?? 0)}</span>
+                <span className="tabular-nums text-bad">{formatCurrency(cashFlow?.outflow.total ?? 0)}</span>
               </div>
               <div className="space-y-1.5 text-xs text-muted">
                 <div className="flex justify-between">
@@ -237,9 +233,9 @@ export const CashierDashboard: React.FC<CashierDashboardProps> = ({
           </div>
 
           {/* خلاصة جرد الدرج */}
-          <div className="p-4 bg-warn-soft border border-warn/30 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="p-4 bg-surface-2 border border-line rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5 text-warn shrink-0" />
+              <CheckCircle2 className="w-5 h-5 text-brand shrink-0" />
               <div>
                 <div className="text-xs font-bold text-ink">
                   صافي النقدية الواجب توفرها في الدرج عند التسليم:
@@ -249,7 +245,7 @@ export const CashierDashboard: React.FC<CashierDashboardProps> = ({
                 </div>
               </div>
             </div>
-            <span className="text-2xl font-black text-warn tracking-tight tabular-nums">
+            <span className="text-2xl font-black text-ink tracking-tight tabular-nums">
               {formatCurrency(cashFlow?.net_cash_flow ?? 0)}
             </span>
           </div>

@@ -122,13 +122,15 @@ class WooCommerceWebhookQueueTest extends TestCase
 
     public function test_process_webhook_job_executes_incoming_order_sync(): void
     {
-        $mockIngestionService = \Mockery::mock(\App\Services\WooCommerce\WcOrderIngestionService::class);
+        $mockIngestionService = \Mockery::mock(\App\Services\OnlineOrders\OnlineOrderIngestionService::class);
         $mockIngestionService->shouldReceive('ingest')
             ->once()
-            ->withArgs(function ($user, $payload) {
-                return $user->id === $this->owner->id && $payload['id'] === 9002;
+            ->withArgs(function ($user, $platform, $payload) {
+                return $user->id === $this->owner->id
+                    && $platform === \App\Enums\EcommercePlatform::WOOCOMMERCE
+                    && $payload['id'] === 9002;
             })
-            ->andReturn(new \App\Models\WcOrder(['id' => 1, 'wc_order_id' => 9002]));
+            ->andReturn(new \App\Models\OnlineOrder(['id' => 1, 'external_order_id' => '9002']));
 
         $job = new ProcessWooCommerceWebhookJob(
             $this->owner->id,

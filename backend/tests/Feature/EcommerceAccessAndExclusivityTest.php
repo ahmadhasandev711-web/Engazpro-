@@ -52,15 +52,11 @@ class EcommerceAccessAndExclusivityTest extends TestCase
             ->assertStatus(403)
             ->assertJsonPath('error_code', 'ECOMMERCE_ADDON_DISABLED');
 
-        $this->actingAs($owner)->getJson('/api/wc-orders')
+        $this->actingAs($owner)->getJson('/api/online-orders')
             ->assertStatus(403)
             ->assertJsonPath('error_code', 'ECOMMERCE_ADDON_DISABLED');
 
         $this->actingAs($owner)->getJson('/api/shopify/settings')
-            ->assertStatus(403)
-            ->assertJsonPath('error_code', 'ECOMMERCE_ADDON_DISABLED');
-
-        $this->actingAs($owner)->getJson('/api/shopify-orders')
             ->assertStatus(403)
             ->assertJsonPath('error_code', 'ECOMMERCE_ADDON_DISABLED');
     }
@@ -100,7 +96,7 @@ class EcommerceAccessAndExclusivityTest extends TestCase
         $this->assertFalse($disableRes->json('data.ecommerce_enabled'));
         $this->assertFalse(WooStockSyncGate::isActive($owner->id));
 
-        $this->actingAs($owner->fresh())->getJson('/api/wc-orders')->assertStatus(403);
+        $this->actingAs($owner->fresh())->getJson('/api/online-orders')->assertStatus(403);
 
         $payload = json_encode(['webhook_id' => 1]);
         $sig = base64_encode(hash_hmac('sha256', $payload, 'wh_secret_123', true));

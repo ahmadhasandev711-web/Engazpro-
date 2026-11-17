@@ -38,8 +38,7 @@ const PosPage = lazy(() => import('./presentation/pages/PosPage').then((m) => ({
 const AdminDashboardPage = lazy(() => import('./presentation/pages/AdminDashboardPage').then((m) => ({ default: m.AdminDashboardPage })));
 const WooCommerceSettingsPage = lazy(() => import('./presentation/pages/WooCommerceSettingsPage').then((m) => ({ default: m.WooCommerceSettingsPage })));
 const ShopifySettingsPage = lazy(() => import('./presentation/pages/ShopifySettingsPage').then((m) => ({ default: m.ShopifySettingsPage })));
-const WcOrdersPage = lazy(() => import('./presentation/pages/WcOrdersPage').then((m) => ({ default: m.WcOrdersPage })));
-const ShopifyOrdersPage = lazy(() => import('./presentation/pages/ShopifyOrdersPage').then((m) => ({ default: m.ShopifyOrdersPage })));
+const StoreOrdersPage = lazy(() => import('./presentation/pages/StoreOrdersPage').then((m) => ({ default: m.StoreOrdersPage })));
 const CouriersPage = lazy(() => import('./presentation/pages/CouriersPage').then((m) => ({ default: m.CouriersPage })));
 
 const queryClient = new QueryClient({
@@ -56,18 +55,19 @@ const queryClient = new QueryClient({
 if (typeof window !== 'undefined') {
   const prefetchCorePages = () => {
     import('./presentation/pages/DashboardPage');
-    import('./presentation/pages/ProductsPage');
-    import('./presentation/pages/InvoicesPage');
     import('./presentation/pages/PosPage');
-    import('./presentation/pages/SettingsPage');
-    import('./presentation/pages/PartiesPage');
-    import('./presentation/pages/WcOrdersPage');
+    window.setTimeout(() => {
+      import('./presentation/pages/ProductsPage');
+      import('./presentation/pages/InvoicesPage');
+      import('./presentation/pages/PartiesPage');
+      import('./presentation/pages/StoreOrdersPage');
+    }, 1500);
   };
 
   if ('requestIdleCallback' in window) {
-    (window as any).requestIdleCallback(prefetchCorePages, { timeout: 4000 });
+    setTimeout(() => (window as any).requestIdleCallback(prefetchCorePages, { timeout: 5000 }), 2500);
   } else {
-    setTimeout(prefetchCorePages, 2000);
+    setTimeout(prefetchCorePages, 4000);
   }
 }
 
@@ -126,10 +126,11 @@ export const App: React.FC = () => {
                   <Route path="/expenses" element={<ExpensesPage />} />
                   <Route path="/ledger/:partyId" element={<LedgerPage />} />
                   
-                  {/* WooCommerce & Shopify Orders (Only when e-commerce addon is enabled) */}
+                  {/* Unified Store Orders (Only when e-commerce addon is enabled) */}
                   <Route element={<EcommerceRoute />}>
-                    <Route path="/wc-orders" element={<WcOrdersPage />} />
-                    <Route path="/shopify-orders" element={<ShopifyOrdersPage />} />
+                    <Route path="/store-orders" element={<StoreOrdersPage />} />
+                    <Route path="/wc-orders" element={<Navigate to="/store-orders" replace />} />
+                    <Route path="/shopify-orders" element={<Navigate to="/store-orders" replace />} />
                   </Route>
 
                   {/* Treasuries & Shifts Management (Owner, Admin, Manager, Supervisor) */}

@@ -39,6 +39,8 @@ __export(index_exports, {
   LedgerSource: () => LedgerSource,
   LoginSchema: () => LoginSchema,
   Money: () => Money,
+  OnlineOrderCallStatus: () => OnlineOrderCallStatus,
+  OrderCancelReason: () => OrderCancelReason,
   PartySchema: () => PartySchema,
   PartyType: () => PartyType,
   PaymentMethod: () => PaymentMethod,
@@ -266,6 +268,20 @@ var WcPaymentStatus = /* @__PURE__ */ ((WcPaymentStatus2) => {
   WcPaymentStatus2["COLLECTED"] = "COLLECTED";
   return WcPaymentStatus2;
 })(WcPaymentStatus || {});
+var OnlineOrderCallStatus = /* @__PURE__ */ ((OnlineOrderCallStatus2) => {
+  OnlineOrderCallStatus2["NO_ANSWER"] = "NO_ANSWER";
+  OnlineOrderCallStatus2["CALLBACK_SCHEDULED"] = "CALLBACK_SCHEDULED";
+  OnlineOrderCallStatus2["CONFIRMED"] = "CONFIRMED";
+  return OnlineOrderCallStatus2;
+})(OnlineOrderCallStatus || {});
+var OrderCancelReason = /* @__PURE__ */ ((OrderCancelReason2) => {
+  OrderCancelReason2["CUSTOMER_REJECTED"] = "CUSTOMER_REJECTED";
+  OrderCancelReason2["WRONG_NUMBER"] = "WRONG_NUMBER";
+  OrderCancelReason2["DUPLICATE_ORDER"] = "DUPLICATE_ORDER";
+  OrderCancelReason2["NO_ANSWER"] = "NO_ANSWER";
+  OrderCancelReason2["OTHER"] = "OTHER";
+  return OrderCancelReason2;
+})(OrderCancelReason || {});
 
 // src/schemas/index.ts
 var import_zod = require("zod");
@@ -664,6 +680,8 @@ function formatDateTime(dateString) {
   LedgerSource,
   LoginSchema,
   Money,
+  OnlineOrderCallStatus,
+  OrderCancelReason,
   PartySchema,
   PartyType,
   PaymentMethod,

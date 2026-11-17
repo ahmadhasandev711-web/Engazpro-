@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+use App\Enums\EcommercePlatform;
+use App\Enums\OnlineOrderCallStatus;
+use App\Enums\OrderCancelReason;
 use App\Enums\WcOrderStatus;
 use App\Enums\WcPaymentStatus;
 use App\Models\Concerns\BelongsToStore;
@@ -10,15 +13,17 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class WcOrder extends Model
+class OnlineOrder extends Model
 {
     use HasFactory, BelongsToStore;
 
-    protected $table = 'wc_orders';
+    protected $table = 'online_orders';
 
     protected $fillable = [
         'user_id',
-        'wc_order_id',
+        'platform',
+        'external_order_id',
+        'external_order_number',
         'order_date',
         'party_id',
         'branch_id',
@@ -32,10 +37,16 @@ class WcOrder extends Model
         'status',
         'call_confirmed_at',
         'call_confirmed_by',
-        'anoofy_order_version',
-        'anoofy_outbound_version',
+        'call_confirmed_by_user_id',
+        'call_status',
+        'call_attempts_count',
+        'last_call_attempt_at',
+        'last_call_attempt_by',
+        'last_call_attempt_by_user_id',
+        'call_scheduled_at',
+        'call_notes',
         'payment_status',
-        'wc_payment_method',
+        'payment_method_label',
         'shipping_cost',
         'subtotal',
         'discount_total',
@@ -47,26 +58,48 @@ class WcOrder extends Model
         'governorate',
         'city',
         'notes',
-        'wc_coupon_codes',
+        'cancel_reason',
+        'cancel_notes',
+        'cancelled_at',
+        'cancelled_by_user_id',
+        'coupon_codes',
+        'discount_breakdown',
         'items_snapshot',
+        'platform_meta',
     ];
 
     protected $casts = [
-        'wc_order_id' => 'integer',
+        'platform' => EcommercePlatform::class,
         'order_date' => 'datetime',
         'status' => WcOrderStatus::class,
         'call_confirmed_at' => 'datetime',
-        'anoofy_order_version' => 'integer',
-        'anoofy_outbound_version' => 'integer',
+        'call_status' => OnlineOrderCallStatus::class,
+        'call_attempts_count' => 'integer',
+        'last_call_attempt_at' => 'datetime',
+        'call_scheduled_at' => 'datetime',
+        'cancel_reason' => OrderCancelReason::class,
+        'cancelled_at' => 'datetime',
         'payment_status' => WcPaymentStatus::class,
         'shipping_cost' => 'decimal:2',
         'subtotal' => 'decimal:2',
         'discount_total' => 'decimal:2',
         'total' => 'decimal:2',
         'shipped_at' => 'datetime',
-        'wc_coupon_codes' => 'array',
+        'coupon_codes' => 'array',
+        'discount_breakdown' => 'array',
         'items_snapshot' => 'array',
+        'platform_meta' => 'array',
     ];
+
+    public function displayReference(): string
+    {
+        return $this->external_order_number ?: "#{$this->external_order_id}";
+    }
+
+    public function meta(string $key, mixed $default = null): mixed
+    {
+        return ($this->platform_meta ?? [])[$key] ?? $default;
+    }
 
     public function user(): BelongsTo
     {
@@ -93,6 +126,21 @@ class WcOrder extends Model
         return $this->belongsTo(User::class, 'mandob_id');
     }
 
+    public function callConfirmedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'call_confirmed_by_user_id');
+    }
+
+    public function lastCallAttemptByUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'last_call_attempt_by_user_id');
+    }
+
+    public function cancelledByUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cancelled_by_user_id');
+    }
+
     public function invoice(): BelongsTo
     {
         return $this->belongsTo(Invoice::class);
@@ -100,6 +148,6 @@ class WcOrder extends Model
 
     public function items(): HasMany
     {
-        return $this->hasMany(WcOrderItem::class, 'wc_order_id');
+        return $this->hasMany(OnlineOrderItem::class, 'online_order_id');
     }
 }

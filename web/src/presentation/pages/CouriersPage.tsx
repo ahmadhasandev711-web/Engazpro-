@@ -18,6 +18,7 @@ import {
   Wallet,
 } from 'lucide-react';
 import { apiClient } from '../../data/api/client';
+import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { formatCurrency, PartyType } from '@pos-mandob/shared';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useAuthStore } from '../../data/store/useAuthStore';
@@ -112,14 +113,16 @@ export const CouriersPage: React.FC = () => {
   };
 
   // 1. Fetch Couriers List & Summary
+  const debouncedSearch = useDebouncedValue(search.trim(), 250);
   const { data: couriersData, isLoading } = useQuery({
-    queryKey: ['couriers', search],
+    queryKey: ['couriers', debouncedSearch],
     queryFn: async () => {
       const res = await apiClient.get('/couriers', {
-        params: { search: search || undefined },
+        params: { search: debouncedSearch || undefined },
       });
       return res.data;
     },
+    placeholderData: (previousData) => previousData,
   });
 
   const couriers: any[] = couriersData?.data || [];

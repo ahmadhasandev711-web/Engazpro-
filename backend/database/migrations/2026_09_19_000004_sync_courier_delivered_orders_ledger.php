@@ -6,9 +6,10 @@ use App\Models\Invoice;
 use App\Models\LedgerEntry;
 use App\Models\Party;
 use App\Models\User;
-use App\Models\WcOrder;
 use App\Services\LedgerService;
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -17,10 +18,15 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (!Schema::hasTable('wc_orders')) {
+            return;
+        }
+
         $ledgerService = app(LedgerService::class);
 
-        $courierOrders = WcOrder::whereNotNull('courier_party_id')
-            ->where('status', WcOrderStatus::DELIVERED)
+        $courierOrders = DB::table('wc_orders')
+            ->whereNotNull('courier_party_id')
+            ->where('status', WcOrderStatus::DELIVERED->value)
             ->whereNotNull('invoice_id')
             ->get();
 

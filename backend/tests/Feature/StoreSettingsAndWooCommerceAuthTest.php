@@ -222,13 +222,14 @@ class StoreSettingsAndWooCommerceAuthTest extends TestCase
         $this->app->instance(WooCommerceApiClientInterface::class, $mockClient);
 
         // Manager pulls orders
-        $pullResp = $this->actingAs($manager)->postJson('/api/wc-orders/pull');
+        $pullResp = $this->actingAs($manager)->postJson('/api/online-orders/pull');
         $pullResp->assertStatus(202)
             ->assertJsonPath('success', true);
 
-        $this->assertDatabaseHas('wc_orders', [
+        $this->assertDatabaseHas('online_orders', [
             'user_id' => $owner->id,
-            'wc_order_id' => 901,
+            'platform' => \App\Enums\EcommercePlatform::WOOCOMMERCE->value,
+            'external_order_id' => '901',
         ]);
     }
 
@@ -238,10 +239,10 @@ class StoreSettingsAndWooCommerceAuthTest extends TestCase
         $cashier = $this->createEmployee($owner, 'CASHIER', '01066666666');
         $mandob = $this->createEmployee($owner, 'MANDOB', '01077777777');
 
-        $cashierResp = $this->actingAs($cashier)->postJson('/api/wc-orders/pull');
+        $cashierResp = $this->actingAs($cashier)->postJson('/api/online-orders/pull');
         $cashierResp->assertStatus(403);
 
-        $mandobResp = $this->actingAs($mandob)->postJson('/api/wc-orders/pull');
+        $mandobResp = $this->actingAs($mandob)->postJson('/api/online-orders/pull');
         $mandobResp->assertStatus(403);
     }
 }

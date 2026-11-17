@@ -57,12 +57,11 @@ class WooCommercePullOrdersJobTest extends TestCase
 
         $this->actingAs($this->owner);
 
-        $response = $this->postJson('/api/wc-orders/pull');
+        $response = $this->postJson('/api/online-orders/pull');
 
         $response->assertStatus(202)
             ->assertJson([
                 'success' => true,
-                'message' => 'جاري سحب الطلبات في الخلفية.',
             ]);
 
         Queue::assertPushed(PullWooCommerceOrdersJob::class, function ($job) {

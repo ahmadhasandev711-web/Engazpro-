@@ -3,5 +3,8 @@
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return redirect()->away('https://engazpro.com');
+    return response()->json([
+        'service' => config('app.name'),
+        'status' => 'ok',
+    ]);
 });

@@ -1,32 +1,32 @@
 :root {
-  /* Surface & Base */
-  --c-canvas: 245 244 249;
+  /* Surface & Base (Calm Neutral Slate) */
+  --c-canvas: 248 250 252;
   --c-panel: 255 255 255;
-  --c-surface-2: 238 235 246;
+  --c-surface-2: 241 245 249;
 
   /* Borders & Dividers */
-  --c-line: 228 225 238;
-  --c-line-2: 201 196 217;
+  --c-line: 226 232 240;
+  --c-line-2: 203 213 225;
 
   /* Typography */
-  --c-ink: 23 20 31;
-  --c-muted: 94 89 112;
+  --c-ink: 15 23 42;
+  --c-muted: 100 116 139;
 
-  /* Brand (Purple #5B3CC4) */
+  /* Brand (Odoo / WooCommerce Purple #5B3CC4) */
   --c-brand: 91 60 196;
   --c-brand-ink: 74 47 168;
-  --c-brand-soft: 239 234 251;
+  --c-brand-soft: 245 243 255;
   --c-on-brand: 255 255 255;
 
-  /* Feedback Tones */
-  --c-ok: 30 122 70;
-  --c-ok-soft: 229 243 234;
-  --c-warn: 138 82 0;
-  --c-warn-soft: 251 240 220;
-  --c-bad: 180 35 24;
-  --c-bad-soft: 251 233 231;
-  --c-info: 29 95 184;
-  --c-info-soft: 230 240 251;
+  /* Feedback Tones (Restrained Ergonomic Tints) */
+  --c-ok: 21 128 61;
+  --c-ok-soft: 240 253 244;
+  --c-warn: 161 98 7;
+  --c-warn-soft: 254 252 232;
+  --c-bad: 185 28 28;
+  --c-bad-soft: 254 242 242;
+  --c-info: 29 78 216;
+  --c-info-soft: 239 246 255;
 
   /* Primary Scale (50..950 mapped around #5B3CC4) */
   --c-primary-50: 245 243 255;

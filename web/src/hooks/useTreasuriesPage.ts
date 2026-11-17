@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Clock, Wallet, RefreshCw } from 'lucide-react';
 import { TreasuryType, Money } from '@pos-mandob/shared';
 import { apiClient } from '../data/api/client';
+import { REFERENCE_QUERY_OPTIONS } from '../data/api/queryPresets';
 import { usePermissions } from './usePermissions';
 import { FilterChipOption } from '../presentation/components/mobile/MobileFilterChips';
 import { ShiftZReportData } from '../presentation/components/shifts/ShiftZReportModal';
@@ -66,6 +67,7 @@ export function useTreasuriesPage() {
       return res.data?.data || [];
     },
     enabled: canViewAllTreasuries,
+    ...REFERENCE_QUERY_OPTIONS,
   });
   const branches: any[] = Array.isArray(branchesData) ? branchesData : ((branchesData as any)?.data || []);
 
@@ -100,7 +102,8 @@ export function useTreasuriesPage() {
       const res = await apiClient.get('/shifts', { params });
       return res.data?.data || [];
     },
-    refetchInterval: 15000,
+    refetchInterval: 60000,
+    refetchIntervalInBackground: false,
   });
 
   // Fetch All Shifts History with date range and pagination

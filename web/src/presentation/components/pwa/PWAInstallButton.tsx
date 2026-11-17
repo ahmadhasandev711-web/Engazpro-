@@ -43,7 +43,7 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
           onClick={handleClick}
           disabled={loading}
           title="تثبيت تطبيق إنجاز برو على جهازك"
-          className={`inline-flex items-center gap-1.5 min-h-[44px] bg-ok-soft hover:bg-ok/20 text-ok border border-ok/30 px-3 py-2 rounded-full text-xs font-bold transition-all shadow-xs cursor-pointer ${className}`}
+          className={`inline-flex items-center gap-1.5 min-h-[44px] bg-panel hover:bg-surface-2 text-muted hover:text-ink border border-line px-3 py-2 rounded-full text-xs font-bold transition-all shadow-xs cursor-pointer ${className}`}
         >
           <Download className="w-3.5 h-3.5" />
           <span className="hidden sm:inline">تثبيت التطبيق</span>
@@ -53,13 +53,13 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
           type="button"
           onClick={handleClick}
           disabled={loading}
-          className={`w-full min-h-[44px] flex items-center justify-between px-3 py-2.5 bg-ok-soft hover:bg-ok/20 border border-ok/30 rounded-xl text-ok text-xs font-bold transition-all cursor-pointer ${className}`}
+          className={`w-full min-h-[44px] flex items-center justify-between px-3 py-2.5 bg-panel hover:bg-surface-2 border border-line rounded-xl text-muted hover:text-ink text-xs font-bold transition-all cursor-pointer ${className}`}
         >
           <div className="flex items-center gap-2">
-            <Smartphone className="w-4 h-4 text-ok" />
+            <Smartphone className="w-4 h-4 text-muted" />
             <span>تثبيت إنجاز برو على جهازك</span>
           </div>
-          <Download className="w-4 h-4 text-ok" />
+          <Download className="w-4 h-4 text-muted" />
         </button>
       )}
 

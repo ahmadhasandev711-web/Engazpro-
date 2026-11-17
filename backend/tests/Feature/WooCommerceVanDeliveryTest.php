@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Contracts\WooCommerceApiClientInterface;
 use App\Enums\BranchType;
+use App\Enums\EcommercePlatform;
 use App\Enums\StockTransferStatus;
 use App\Enums\WcOrderStatus;
 use App\Enums\WcPaymentStatus;
@@ -11,16 +12,16 @@ use App\Exceptions\PosDomainException;
 use App\Models\Branch;
 use App\Models\BranchStock;
 use App\Models\Invoice;
+use App\Models\OnlineOrder;
 use App\Models\Product;
 use App\Models\StockMovement;
 use App\Models\StockTransfer;
 use App\Models\Subscription;
 use App\Models\User;
-use App\Models\WcOrder;
 use App\Models\WooCommerceIntegration;
+use App\Services\OnlineOrders\OnlineOrderSyncService;
+use App\Services\OnlineOrders\OnlineOrderVanTransferService;
 use App\Services\StockTransferService;
-use App\Services\WooCommerce\WcOrderVanTransferService;
-use App\Services\WooCommerce\WooCommerceOrderSyncService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery;
 use Tests\TestCase;
@@ -97,15 +98,17 @@ class WooCommerceVanDeliveryTest extends TestCase
         return $product;
     }
 
-    protected function createOrder(array $attributes = []): WcOrder
+    protected function createOrder(array $attributes = []): OnlineOrder
     {
-        return WcOrder::create(array_merge([
+        return OnlineOrder::create(array_merge([
             'user_id' => $this->owner->id,
-            'wc_order_id' => 9001,
+            'platform' => EcommercePlatform::WOOCOMMERCE,
+            'external_order_id' => '9001',
+            'external_order_number' => '#9001',
             'branch_id' => $this->mainBranch->id,
             'status' => WcOrderStatus::CONFIRMED,
             'payment_status' => WcPaymentStatus::PENDING_COD,
-            'wc_payment_method' => 'cod',
+            'payment_method_label' => 'cod',
             'shipping_cost' => 20,
             'subtotal' => 200,
             'discount_total' => 0,
@@ -149,10 +152,10 @@ class WooCommerceVanDeliveryTest extends TestCase
 
         $order = $this->createOrder();
 
-        $syncService = app(WooCommerceOrderSyncService::class);
+        $syncService = app(OnlineOrderSyncService::class);
         $syncService->dispatchToMandob($this->owner, $order, $mandob->id);
 
-        $vanTransferService = app(WcOrderVanTransferService::class);
+        $vanTransferService = app(OnlineOrderVanTransferService::class);
         $transfer = $vanTransferService->findForOrder($this->owner->id, $order);
 
         $this->assertNotNull($transfer);
@@ -196,12 +199,12 @@ class WooCommerceVanDeliveryTest extends TestCase
             'branch_id' => $vanBranch->id,
         ]);
 
-        $order = $this->createOrder(['wc_order_id' => 9002]);
+        $order = $this->createOrder(['external_order_id' => '9002']);
 
-        $syncService = app(WooCommerceOrderSyncService::class);
+        $syncService = app(OnlineOrderSyncService::class);
         $syncService->dispatchToMandob($this->owner, $order, $mandob->id);
 
-        $vanTransferService = app(WcOrderVanTransferService::class);
+        $vanTransferService = app(OnlineOrderVanTransferService::class);
         $transfer = $vanTransferService->findForOrder($this->owner->id, $order);
         $this->assertNotNull($transfer);
 
@@ -247,9 +250,9 @@ class WooCommerceVanDeliveryTest extends TestCase
             'branch_id' => $this->mainBranch->id,
         ]);
 
-        $order = $this->createOrder(['wc_order_id' => 9003]);
+        $order = $this->createOrder(['external_order_id' => '9003', 'external_order_number' => '#9003']);
 
-        $syncService = app(WooCommerceOrderSyncService::class);
+        $syncService = app(OnlineOrderSyncService::class);
         $syncService->dispatchToMandob($this->owner, $order, $mandob->id);
 
         $storeStockAfterDispatch = (float) BranchStock::where('branch_id', $this->mainBranch->id)
@@ -298,12 +301,12 @@ class WooCommerceVanDeliveryTest extends TestCase
             'branch_id' => $vanBranch->id,
         ]);
 
-        $order = $this->createOrder(['wc_order_id' => 9004]);
+        $order = $this->createOrder(['external_order_id' => '9004']);
 
-        $syncService = app(WooCommerceOrderSyncService::class);
+        $syncService = app(OnlineOrderSyncService::class);
         $syncService->dispatchToMandob($this->owner, $order, $mandob->id);
 
-        $vanTransferService = app(WcOrderVanTransferService::class);
+        $vanTransferService = app(OnlineOrderVanTransferService::class);
         $transfer = $vanTransferService->findForOrder($this->owner->id, $order);
         $this->assertNotNull($transfer);
 

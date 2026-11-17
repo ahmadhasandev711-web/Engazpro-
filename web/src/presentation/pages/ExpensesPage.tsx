@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ExpenseSchema, ExpenseInput, Expense, formatCurrency } from '@pos-mandob/shared';
 import { apiClient } from '../../data/api/client';
+import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { usePermissions } from '../../hooks/usePermissions';
 import { DateRangeFilter, calculatePresetDates } from '../components/common/DateRangeFilter';
 import { PaginationBar } from '../components/common/PaginationBar';
@@ -21,6 +22,7 @@ export const ExpensesPage: React.FC = () => {
   const { canDeleteExpense, isOwnerOrAdmin, isCashier, isMandob } = usePermissions();
   const initialDates = calculatePresetDates('today');
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebouncedValue(search.trim(), 250);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [fromDate, setFromDate] = useState<string>(initialDates.from);
   const [toDate, setToDate] = useState<string>(initialDates.to);
@@ -111,12 +113,12 @@ export const ExpensesPage: React.FC = () => {
 
   // Query
   const { data: expensesData, isLoading } = useQuery({
-    queryKey: ['expenses', selectedCategory, search, fromDate, toDate, page],
+    queryKey: ['expenses', selectedCategory, debouncedSearch, fromDate, toDate, page],
     queryFn: async () => {
       const res = await apiClient.get('/expenses', {
         params: {
           category: selectedCategory || undefined,
-          search: search || undefined,
+          search: debouncedSearch || undefined,
           date_from: fromDate || undefined,
           date_to: toDate || undefined,
           page,

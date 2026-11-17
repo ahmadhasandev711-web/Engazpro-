@@ -164,6 +164,18 @@ declare enum WcPaymentStatus {
     PAID_ONLINE = "PAID_ONLINE",
     COLLECTED = "COLLECTED"
 }
+declare enum OnlineOrderCallStatus {
+    NO_ANSWER = "NO_ANSWER",
+    CALLBACK_SCHEDULED = "CALLBACK_SCHEDULED",
+    CONFIRMED = "CONFIRMED"
+}
+declare enum OrderCancelReason {
+    CUSTOMER_REJECTED = "CUSTOMER_REJECTED",
+    WRONG_NUMBER = "WRONG_NUMBER",
+    DUPLICATE_ORDER = "DUPLICATE_ORDER",
+    NO_ANSWER = "NO_ANSWER",
+    OTHER = "OTHER"
+}
 
 interface BaseEntity {
     id: number;
@@ -328,6 +340,9 @@ interface Invoice extends BaseEntity {
     branch_id?: number | null;
     branch?: Branch | null;
     parent_invoice_id?: number | null;
+    online_order_id?: number | null;
+    wc_order_id?: number | null;
+    shopify_order_id?: number | null;
     created_by?: number | null;
     creator?: User | null;
 }
@@ -714,18 +729,21 @@ interface StockTransfer extends BaseEntity {
     notes?: string | null;
     items: StockTransferItem[];
 }
-interface WcOrderItem {
+interface OnlineOrderItem {
     id?: number;
-    wc_order_id: number;
+    online_order_id: number;
     product_id?: number | null;
     product_variant_id?: number | null;
-    wc_product_id?: number | null;
-    wc_variation_id?: number | null;
+    external_product_id?: string | null;
+    external_variant_id?: string | null;
     quantity: number;
 }
-interface WcOrder extends BaseEntity {
+interface OnlineOrder extends BaseEntity {
     user_id: number;
-    wc_order_id: number;
+    platform: EcommercePlatform | string;
+    external_order_id: string;
+    external_order_number?: string | null;
+    display_reference?: string;
     order_date?: string | null;
     party_id?: number | null;
     party?: Party | null;
@@ -741,9 +759,17 @@ interface WcOrder extends BaseEntity {
     status: string;
     call_confirmed_at?: string | null;
     call_confirmed_by?: string | null;
-    anoofy_order_version?: number | null;
+    call_status?: string | null;
+    call_attempts_count?: number;
+    last_call_attempt_at?: string | null;
+    last_call_attempt_by?: string | null;
+    call_scheduled_at?: string | null;
+    call_notes?: string | null;
+    cancel_reason?: string | null;
+    cancel_notes?: string | null;
+    cancelled_at?: string | null;
     payment_status?: string | null;
-    wc_payment_method?: string | null;
+    payment_method_label?: string | null;
     shipping_cost: number;
     subtotal: number;
     discount_total: number;
@@ -755,10 +781,14 @@ interface WcOrder extends BaseEntity {
     governorate?: string | null;
     city?: string | null;
     notes?: string | null;
-    wc_coupon_codes?: string[];
+    coupon_codes?: string[];
+    discount_breakdown?: any[];
     items_snapshot?: any[];
-    items?: WcOrderItem[];
+    platform_meta?: Record<string, any>;
+    items?: OnlineOrderItem[];
 }
+type WcOrderItem = OnlineOrderItem;
+type WcOrder = OnlineOrder;
 interface StockAlertsSummary {
     out_of_stock_count: number;
     low_stock_count: number;
@@ -1668,4 +1698,4 @@ declare class Money {
     toString(): string;
 }
 
-export { type AdminAuditLogItem, type AdminStatsData, type ApiResponse, BarcodeFormat, BarcodeLabelSize, type BarcodePrintItemInput, BarcodePrintItemSchema, type BarcodePrintRequestInput, BarcodePrintRequestSchema, type BaseEntity, type Branch, type BranchInput, BranchSchema, type BranchStock, BranchType, type CalculationItem, type CashFlowReportData, type CashFlowTransaction, type CashFlowTransactionsResponse, type Category, CategorySchema, CommissionType, type DashboardSummary, EcommercePlatform, EmployeeAdjustmentType, type EmployeeInput, EmployeeSchema, type Expense, type ExpenseInput, ExpenseSchema, type ExpiringBatchAlertItem, ExpiryStatus, type Invoice, type InvoiceCalculations, type InvoiceInput, type InvoiceItem, type InvoiceItemInput, InvoiceItemSchema, InvoiceSchema, InvoiceType, type LedgerEntry, LedgerSource, type LicenseKey, type LoginInput, LoginSchema, type LowStockAlertItem, Money, type PaginatedResponse, type Party, type PartyInput, PartySchema, PartyType, type Payment, type PaymentInput, PaymentMethod, PaymentSchema, type Product, type ProductBatch, type ProductInput, ProductSchema, ProductType, type ProductVariant, type ProductVariantInput, ProductVariantSchema, type ProfitReportData, type PurchaseReportData, type RegisterInput, RegisterSchema, type SalesReportData, ShiftStatus, ShopifyAuthMode, type SplitPaymentItem, StockAdjustmentMode, type StockAlertsResponse, type StockAlertsSummary, type StockMovement, type StockMovementRecord, StockMovementSource, StockMovementType, type StockReportData, type StockReportItem, type StockTransfer, type StockTransferInput, type StockTransferItem, type StockTransferItemInput, StockTransferItemSchema, StockTransferSchema, StockTransferStatus, type StoreIdentity, type Subscription, SubscriptionPlan, SubscriptionStatus, type Treasury, type TreasuryBreakdown, TreasuryTransactionSource, TreasuryTransactionType, TreasuryType, type Unit, type User, UserRole, UserStatus, type WcOrder, type WcOrderItem, WcOrderStatus, WcPaymentStatus, calculateInvoiceTotals, calculateNetProfit, calculatePartyBalanceImpact, formatCurrency, formatDate, formatDateTime, formatNumber };
+export { type AdminAuditLogItem, type AdminStatsData, type ApiResponse, BarcodeFormat, BarcodeLabelSize, type BarcodePrintItemInput, BarcodePrintItemSchema, type BarcodePrintRequestInput, BarcodePrintRequestSchema, type BaseEntity, type Branch, type BranchInput, BranchSchema, type BranchStock, BranchType, type CalculationItem, type CashFlowReportData, type CashFlowTransaction, type CashFlowTransactionsResponse, type Category, CategorySchema, CommissionType, type DashboardSummary, EcommercePlatform, EmployeeAdjustmentType, type EmployeeInput, EmployeeSchema, type Expense, type ExpenseInput, ExpenseSchema, type ExpiringBatchAlertItem, ExpiryStatus, type Invoice, type InvoiceCalculations, type InvoiceInput, type InvoiceItem, type InvoiceItemInput, InvoiceItemSchema, InvoiceSchema, InvoiceType, type LedgerEntry, LedgerSource, type LicenseKey, type LoginInput, LoginSchema, type LowStockAlertItem, Money, type OnlineOrder, OnlineOrderCallStatus, type OnlineOrderItem, OrderCancelReason, type PaginatedResponse, type Party, type PartyInput, PartySchema, PartyType, type Payment, type PaymentInput, PaymentMethod, PaymentSchema, type Product, type ProductBatch, type ProductInput, ProductSchema, ProductType, type ProductVariant, type ProductVariantInput, ProductVariantSchema, type ProfitReportData, type PurchaseReportData, type RegisterInput, RegisterSchema, type SalesReportData, ShiftStatus, ShopifyAuthMode, type SplitPaymentItem, StockAdjustmentMode, type StockAlertsResponse, type StockAlertsSummary, type StockMovement, type StockMovementRecord, StockMovementSource, StockMovementType, type StockReportData, type StockReportItem, type StockTransfer, type StockTransferInput, type StockTransferItem, type StockTransferItemInput, StockTransferItemSchema, StockTransferSchema, StockTransferStatus, type StoreIdentity, type Subscription, SubscriptionPlan, SubscriptionStatus, type Treasury, type TreasuryBreakdown, TreasuryTransactionSource, TreasuryTransactionType, TreasuryType, type Unit, type User, UserRole, UserStatus, type WcOrder, type WcOrderItem, WcOrderStatus, WcPaymentStatus, calculateInvoiceTotals, calculateNetProfit, calculatePartyBalanceImpact, formatCurrency, formatDate, formatDateTime, formatNumber };

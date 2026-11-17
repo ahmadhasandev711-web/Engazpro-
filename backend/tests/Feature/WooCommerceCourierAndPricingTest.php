@@ -2,20 +2,21 @@
 
 namespace Tests\Feature;
 
+use App\Enums\EcommercePlatform;
 use App\Enums\PartyType;
 use App\Enums\WcOrderStatus;
 use App\Enums\WcPaymentStatus;
 use App\Models\Branch;
 use App\Models\BranchStock;
 use App\Models\Invoice;
+use App\Models\OnlineOrder;
 use App\Models\Party;
 use App\Models\Product;
 use App\Models\Subscription;
 use App\Models\User;
-use App\Models\WcOrder;
 use App\Services\InvoiceService;
+use App\Services\OnlineOrders\OnlineOrderSyncService;
 use App\Services\ReportService;
-use App\Services\WooCommerce\WooCommerceOrderSyncService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -179,9 +180,11 @@ class WooCommerceCourierAndPricingTest extends TestCase
             'quantity' => 5,
         ]);
 
-        $order = WcOrder::create([
+        $order = OnlineOrder::create([
             'user_id' => $this->user->id,
-            'wc_order_id' => 8881,
+            'platform' => EcommercePlatform::WOOCOMMERCE,
+            'external_order_id' => '8881',
+            'external_order_number' => '#8881',
             'branch_id' => $this->branch->id,
             'customer_name' => 'أحمد إبراهيم',
             'customer_phone' => '01012345678',
@@ -211,7 +214,7 @@ class WooCommerceCourierAndPricingTest extends TestCase
         ]);
 
         // Dispatch to courier via API endpoint
-        $response = $this->actingAs($this->user)->postJson("/api/wc-orders/{$order->id}/dispatch-courier", [
+        $response = $this->actingAs($this->user)->postJson("/api/online-orders/{$order->id}/dispatch-courier", [
             'courier_name' => 'بوسطة',
             'courier_party_id' => $courier->id,
             'tracking_number' => 'BST-12345678',
@@ -227,7 +230,7 @@ class WooCommerceCourierAndPricingTest extends TestCase
         $this->assertNotNull($order->shipped_at);
 
         // Deliver and collect COD from courier
-        $deliverResponse = $this->actingAs($this->user)->postJson("/api/wc-orders/{$order->id}/deliver", [
+        $deliverResponse = $this->actingAs($this->user)->postJson("/api/online-orders/{$order->id}/deliver", [
             'collected_amount' => 500.00,
             'payment_method' => 'CASH',
         ]);
@@ -271,10 +274,12 @@ class WooCommerceCourierAndPricingTest extends TestCase
             'quantity' => 10,
         ]);
 
-        $order = WcOrder::create([
+        $order = OnlineOrder::create([
             'user_id' => $this->user->id,
+            'platform' => EcommercePlatform::WOOCOMMERCE,
             'branch_id' => $this->branch->id,
-            'wc_order_id' => 1536,
+            'external_order_id' => '1536',
+            'external_order_number' => '#1536',
             'customer_name' => 'محمد أحمد',
             'customer_phone' => '01011223344',
             'status' => WcOrderStatus::DISPATCHED,
@@ -293,7 +298,7 @@ class WooCommerceCourierAndPricingTest extends TestCase
             ],
         ]);
 
-        $deliverResponse = $this->actingAs($this->user)->postJson("/api/wc-orders/{$order->id}/deliver", [
+        $deliverResponse = $this->actingAs($this->user)->postJson("/api/online-orders/{$order->id}/deliver", [
             'collected_amount' => 350.00,
             'payment_method' => 'INSTAPAY',
         ]);
@@ -320,11 +325,13 @@ class WooCommerceCourierAndPricingTest extends TestCase
             'balance' => 0.00,
         ]);
 
-        $order1 = WcOrder::create([
+        $order1 = OnlineOrder::create([
             'user_id' => $this->user->id,
+            'platform' => EcommercePlatform::WOOCOMMERCE,
             'branch_id' => $this->branch->id,
             'courier_party_id' => $courier->id,
-            'wc_order_id' => 9001,
+            'external_order_id' => '9001',
+            'external_order_number' => '#9001',
             'customer_name' => 'سامي علي',
             'customer_phone' => '01012345678',
             'status' => WcOrderStatus::SHIPPED_VIA_COURIER,
@@ -335,11 +342,13 @@ class WooCommerceCourierAndPricingTest extends TestCase
             'tracking_number' => 'ARX-9001',
         ]);
 
-        $order2 = WcOrder::create([
+        $order2 = OnlineOrder::create([
             'user_id' => $this->user->id,
+            'platform' => EcommercePlatform::WOOCOMMERCE,
             'branch_id' => $this->branch->id,
             'courier_party_id' => $courier->id,
-            'wc_order_id' => 9002,
+            'external_order_id' => '9002',
+            'external_order_number' => '#9002',
             'customer_name' => 'هدى محمود',
             'customer_phone' => '01234567890',
             'status' => WcOrderStatus::DELIVERED,
@@ -467,11 +476,13 @@ class WooCommerceCourierAndPricingTest extends TestCase
         ]);
 
         // Create prepaid online order
-        $order = WcOrder::create([
+        $order = OnlineOrder::create([
             'user_id' => $this->user->id,
+            'platform' => EcommercePlatform::WOOCOMMERCE,
             'branch_id' => $this->branch->id,
             'courier_party_id' => $courier->id,
-            'wc_order_id' => 9912,
+            'external_order_id' => '9912',
+            'external_order_number' => '#9912',
             'customer_name' => 'خالد عبد الله',
             'status' => WcOrderStatus::SHIPPED_VIA_COURIER,
             'payment_status' => WcPaymentStatus::PAID_ONLINE,
@@ -489,7 +500,7 @@ class WooCommerceCourierAndPricingTest extends TestCase
         ]);
 
         // Deliver prepaid order: collected_amount is 0.00
-        $deliverResponse = $this->actingAs($this->user)->postJson("/api/wc-orders/{$order->id}/deliver", [
+        $deliverResponse = $this->actingAs($this->user)->postJson("/api/online-orders/{$order->id}/deliver", [
             'collected_amount' => 0.00,
             'payment_method' => 'TRANSFER',
         ]);

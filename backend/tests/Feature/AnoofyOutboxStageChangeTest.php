@@ -4,16 +4,17 @@ namespace Tests\Feature;
 
 use App\Enums\AnoofyEventType;
 use App\Enums\AnoofyOutboxStatus;
+use App\Enums\EcommercePlatform;
 use App\Enums\PartyType;
 use App\Enums\UserRole;
 use App\Enums\WcOrderStatus;
 use App\Jobs\SendAnoofyEventJob;
 use App\Models\AnoofyOutboxEvent;
 use App\Models\Branch;
+use App\Models\OnlineOrder;
 use App\Models\Party;
 use App\Models\Subscription;
 use App\Models\User;
-use App\Models\WcOrder;
 use App\Models\WooCommerceIntegration;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -66,11 +67,13 @@ class AnoofyOutboxStageChangeTest extends TestCase
         ]);
     }
 
-    private function createPendingOrder(int $wcOrderId = 9001): WcOrder
+    private function createPendingOrder(int $wcOrderId = 9001): OnlineOrder
     {
-        return WcOrder::create([
+        return OnlineOrder::create([
             'user_id' => $this->owner->id,
-            'wc_order_id' => $wcOrderId,
+            'platform' => EcommercePlatform::WOOCOMMERCE,
+            'external_order_id' => (string) $wcOrderId,
+            'external_order_number' => '#' . $wcOrderId,
             'order_date' => now(),
             'status' => WcOrderStatus::PENDING_CONFIRMATION,
             'subtotal' => 300,
@@ -90,7 +93,7 @@ class AnoofyOutboxStageChangeTest extends TestCase
         $order = $this->createPendingOrder(9001);
 
         // 1. Confirm order via API -> version 1
-        $response = $this->actingAs($this->owner)->postJson("/api/wc-orders/{$order->id}/confirm", [
+        $response = $this->actingAs($this->owner)->postJson("/api/online-orders/{$order->id}/confirm", [
             'branch_id' => $this->branch->id,
             'force' => true,
         ]);
@@ -119,7 +122,7 @@ class AnoofyOutboxStageChangeTest extends TestCase
             'type' => PartyType::COURIER->value,
         ]);
 
-        $dispatchResponse = $this->actingAs($this->owner)->postJson("/api/wc-orders/{$order->id}/dispatch-courier", [
+        $dispatchResponse = $this->actingAs($this->owner)->postJson("/api/online-orders/{$order->id}/dispatch-courier", [
             'courier_party_id' => $courier->id,
             'courier_name' => 'شركة أرامكس',
             'tracking_number' => 'ARAMEX-123456',
@@ -150,7 +153,7 @@ class AnoofyOutboxStageChangeTest extends TestCase
 
         $order = $this->createPendingOrder(9002);
 
-        $this->actingAs($this->owner)->postJson("/api/wc-orders/{$order->id}/confirm", [
+        $this->actingAs($this->owner)->postJson("/api/online-orders/{$order->id}/confirm", [
             'branch_id' => $this->branch->id,
             'force' => true,
         ])->assertStatus(200);
@@ -269,7 +272,7 @@ class AnoofyOutboxStageChangeTest extends TestCase
             ->where('order_version', 1)
             ->first();
         $this->assertNotNull($outbox1);
-        $this->assertSame(1, (int) $order->fresh()->anoofy_outbound_version);
+        $this->assertSame(1, (int) $order->fresh()->meta('anoofy_outbound_version'));
 
         // 2. Transition to PREPARING
         $order->update(['status' => WcOrderStatus::PREPARING]);
@@ -279,14 +282,14 @@ class AnoofyOutboxStageChangeTest extends TestCase
             ->where('order_version', 2)
             ->first();
         $this->assertNotNull($outbox2);
-        $this->assertSame(2, (int) $order->fresh()->anoofy_outbound_version);
+        $this->assertSame(2, (int) $order->fresh()->meta('anoofy_outbound_version'));
 
         $after = $order->fresh()->getAttributes();
 
         $allowedChanges = [
             'status',
             'branch_id',
-            'anoofy_outbound_version',
+            'platform_meta',
             'updated_at',
         ];
 

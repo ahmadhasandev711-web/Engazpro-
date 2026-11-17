@@ -1,7 +1,74 @@
 import React from 'react';
-import { Truck, Package, CheckCircle2, Headphones } from 'lucide-react';
-import { WcOrderStatus } from '@pos-mandob/shared';
+import { Truck, Package, CheckCircle2, Headphones, Clock } from 'lucide-react';
+import {
+  EcommercePlatform,
+  OnlineOrderCallStatus,
+  OrderCancelReason,
+  WcOrderStatus,
+  WcPaymentStatus,
+} from '@pos-mandob/shared';
 import { Badge } from '../ui/Badge';
+
+export const CANCEL_REASON_OPTIONS: Array<{ value: OrderCancelReason; label: string }> = [
+  { value: OrderCancelReason.CUSTOMER_REJECTED, label: 'الزبون رفض / ألغى الطلب' },
+  { value: OrderCancelReason.WRONG_NUMBER, label: 'رقم غلط / تعذر الوصول' },
+  { value: OrderCancelReason.DUPLICATE_ORDER, label: 'طلب مكرر' },
+  { value: OrderCancelReason.NO_ANSWER, label: 'لم يرد بعد عدة محاولات' },
+  { value: OrderCancelReason.OTHER, label: 'سبب آخر' },
+];
+
+export const getCancelReasonLabel = (reason?: string | null): string => {
+  const matched = CANCEL_REASON_OPTIONS.find((opt) => opt.value === reason);
+  return matched ? matched.label : reason ? String(reason) : 'ملغي من الكول سنتر';
+};
+
+export const normalizePhoneDigits = (phone?: string | null): string => {
+  if (!phone) return '';
+  let digits = phone.replace(/\D/g, '');
+  if (!digits) return '';
+  if (digits.startsWith('00')) {
+    digits = digits.slice(2);
+  }
+  if (digits.startsWith('01') && digits.length === 11) {
+    digits = `2${digits}`;
+  }
+  return digits;
+};
+
+export const buildTelUrl = (phone?: string | null): string | null => {
+  if (!phone) return null;
+  const cleaned = phone.trim().replace(/[^\d+]/g, '');
+  return cleaned ? `tel:${cleaned}` : null;
+};
+
+export const buildWhatsAppUrl = (phone?: string | null, message?: string): string | null => {
+  const digits = normalizePhoneDigits(phone);
+  if (!digits) return null;
+  return message ? `https://wa.me/${digits}?text=${encodeURIComponent(message)}` : `https://wa.me/${digits}`;
+};
+
+export const buildDefaultOrderWhatsAppMessage = (order: any): string =>
+  `مرحباً ${order?.customer_name || 'عميلنا العزيز'}، نود تأكيد طلبك رقم ${getOrderDisplayRef(order)} من متجرنا.`;
+
+export const getOrderDisplayRef = (order: any): string => {
+  if (!order) return '';
+  if (order.display_reference) return String(order.display_reference);
+  if (order.external_order_number) return String(order.external_order_number);
+  if (order.external_order_id) return `#${order.external_order_id}`;
+  return order.wc_order_id ? `#${order.wc_order_id}` : `#${order.id ?? ''}`;
+};
+
+export const getOrderPlatformLabel = (order: any): string => {
+  if (order?.platform === EcommercePlatform.SHOPIFY) return 'شوبيفاي';
+  if (order?.platform === EcommercePlatform.WOOCOMMERCE) return 'ووكومرس';
+  return 'المتجر';
+};
+
+export const isOrderPrepaid = (order: any): boolean => {
+  if (!order) return false;
+  const method = order.payment_method_label ?? order.wc_payment_method;
+  return order.payment_status === WcPaymentStatus.PAID_ONLINE || (Boolean(method) && method !== 'cod');
+};
 
 export const cleanItemName = (name?: string): string => {
   if (!name) return '';
@@ -9,7 +76,10 @@ export const cleanItemName = (name?: string): string => {
 };
 
 export const formatOrderDate = (order: any): string => {
-  const dateStr = order?.order_date || order?.created_at;
+  return formatShortDateTime(order?.order_date || order?.created_at);
+};
+
+export const formatShortDateTime = (dateStr?: string | null): string => {
   if (!dateStr) return '';
   try {
     const d = new Date(dateStr);
@@ -31,17 +101,29 @@ export const getCallConfirmedBadge = (order: any): React.ReactNode => {
     return (
       <Badge tone="brand" className="font-bold">
         <Headphones className="w-3 h-3" />
-        <span>تم التأكيد من الكول سنتر{by}</span>
+        <span>تم التأكيد{by}</span>
       </Badge>
     );
   }
 
-  // Check if call was attempted with no answer
-  if (order?.call_status === 'NO_ANSWER' || order?.call_result === 'no_answer') {
+  const attempts = Number(order?.call_attempts_count || 0);
+  const attemptsSuffix = attempts > 0 ? ` (${attempts})` : '';
+
+  if (order?.call_status === OnlineOrderCallStatus.CALLBACK_SCHEDULED) {
+    const scheduled = order.call_scheduled_at ? ` · ${formatShortDateTime(order.call_scheduled_at)}` : '';
+    return (
+      <Badge tone="info" className="font-bold">
+        <Clock className="w-3 h-3" />
+        <span>مؤجل{attemptsSuffix}{scheduled}</span>
+      </Badge>
+    );
+  }
+
+  if (order?.call_status === OnlineOrderCallStatus.NO_ANSWER || order?.call_result === 'no_answer') {
     return (
       <Badge tone="warn" className="font-bold">
         <Headphones className="w-3 h-3" />
-        <span>ما ردّش</span>
+        <span>ما ردّش{attemptsSuffix}</span>
       </Badge>
     );
   }
@@ -178,8 +260,8 @@ export function calculateOrderStages(order: any): OrderStage[] {
   } else if (isCancelled && !isConfirmed) {
     stageCall = {
       id: 'call',
-      label: 'مكالمة التأكيد',
-      sublabel: 'اتلغى قبل التأكيد',
+      label: 'ملغي من الكول سنتر',
+      sublabel: order.cancel_reason ? getCancelReasonLabel(order.cancel_reason) : 'اتلغى قبل التأكيد',
       status: 'bad',
     };
   } else if (isConfirmed) {
@@ -189,6 +271,24 @@ export function calculateOrderStages(order: any): OrderStage[] {
       label: 'الكول سنتر',
       sublabel: 'تأكيد مباشر',
       status: 'done',
+    };
+  } else if (order.call_status === OnlineOrderCallStatus.CALLBACK_SCHEDULED) {
+    const at = order.call_scheduled_at ? formatShortDateTime(order.call_scheduled_at) : '';
+    const attempts = Number(order.call_attempts_count || 0);
+    stageCall = {
+      id: 'call',
+      label: 'مؤجل للمتابعة',
+      sublabel: `${attempts ? `محاولة ${attempts}` : 'متابعة'}${at ? ` · ${at}` : ''}`,
+      status: 'warn',
+    };
+  } else if (order.call_status === OnlineOrderCallStatus.NO_ANSWER) {
+    const attempts = Number(order.call_attempts_count || 0);
+    const agent = order.last_call_attempt_by ? ` · ${order.last_call_attempt_by}` : '';
+    stageCall = {
+      id: 'call',
+      label: 'ما ردّش',
+      sublabel: `${attempts} محاولات${agent}`,
+      status: 'warn',
     };
   } else {
     stageCall = {

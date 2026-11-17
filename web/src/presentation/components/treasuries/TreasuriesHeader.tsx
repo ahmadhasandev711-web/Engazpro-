@@ -162,13 +162,13 @@ export const TreasuriesHeader: React.FC<{ vm: TreasuriesViewModel }> = ({ vm }) 
       <Card className="md:hidden grid grid-cols-2 gap-2 p-2.5 text-center">
         <div className="bg-surface-2 border border-line p-2.5 rounded-xl">
           <span className="text-[11px] text-muted font-bold block">الخزائن النقدية</span>
-          <span className="text-sm font-black text-ok tabular-nums block mt-0.5" dir="ltr">
+          <span className="text-sm font-black text-ink tabular-nums block mt-0.5" dir="ltr">
             {formatCurrency(safesTotal)}
           </span>
         </div>
-        <div className="bg-info-soft border border-info/20 p-2.5 rounded-xl">
-          <span className="text-[11px] text-info font-bold block">البنوك والمحافظ</span>
-          <span className="text-sm font-black text-info tabular-nums block mt-0.5" dir="ltr">
+        <div className="bg-surface-2 border border-line p-2.5 rounded-xl">
+          <span className="text-[11px] text-muted font-bold block">البنوك والمحافظ</span>
+          <span className="text-sm font-black text-ink tabular-nums block mt-0.5" dir="ltr">
             {formatCurrency(banksAndWalletsTotal)}
           </span>
         </div>
@@ -177,10 +177,13 @@ export const TreasuriesHeader: React.FC<{ vm: TreasuriesViewModel }> = ({ vm }) 
       {/* Desktop Overview Stat Cards */}
       <div className={`hidden md:grid grid-cols-1 ${canManageBanks ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-2'} gap-4`}>
         {/* 1. الخزائن النقدية */}
-        <Card className="rounded-3xl p-5 border-brand/30 bg-brand-soft/40">
+        <Card className="rounded-3xl p-5 border-brand/40 bg-panel shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-ink">الخزائن النقدية (Safes)</span>
-            <div className="p-2 bg-ok-soft text-ok rounded-xl border border-ok/20">
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-ink">
+              <span className="w-2 h-2 rounded-full bg-ok shrink-0" aria-hidden="true" />
+              الخزائن النقدية (Safes)
+            </span>
+            <div className="p-2 bg-surface-2 text-muted rounded-xl border border-line/60">
               <Wallet className="w-4 h-4" />
             </div>
           </div>
@@ -191,7 +194,7 @@ export const TreasuriesHeader: React.FC<{ vm: TreasuriesViewModel }> = ({ vm }) 
           </div>
           <div className="mt-3 pt-3 border-t border-line flex items-center justify-between text-[11px] text-muted">
             <span>المركزية: <strong className="text-ink tabular-nums">{formatCurrency(mainTotal)}</strong></span>
-            <span>الفروع: <strong className="text-ok tabular-nums">{formatCurrency(branchSafesTotal)}</strong></span>
+            <span>الفروع: <strong className="text-ink tabular-nums">{formatCurrency(branchSafesTotal)}</strong></span>
           </div>
         </Card>
 
@@ -199,8 +202,11 @@ export const TreasuriesHeader: React.FC<{ vm: TreasuriesViewModel }> = ({ vm }) 
         {canManageBanks && (
           <Card className="rounded-3xl p-5">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-muted">البنوك والمحافظ الإلكترونية</span>
-              <div className="p-2 bg-info-soft text-info rounded-xl border border-info/20">
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-muted">
+                <span className="w-2 h-2 rounded-full bg-info shrink-0" aria-hidden="true" />
+                البنوك والمحافظ الإلكترونية
+              </span>
+              <div className="p-2 bg-surface-2 text-muted rounded-xl border border-line/60">
                 <Landmark className="w-4 h-4" />
               </div>
             </div>
@@ -211,7 +217,7 @@ export const TreasuriesHeader: React.FC<{ vm: TreasuriesViewModel }> = ({ vm }) 
             </div>
             <div className="mt-3 pt-3 border-t border-line flex items-center justify-between text-[11px] text-muted">
               <span>فودافون كاش، إنستاباي، وبنوك</span>
-              <span className="font-bold text-info">{banksAndWallets.length} حسابات</span>
+              <span className="font-bold text-ink">{banksAndWallets.length} حسابات</span>
             </div>
           </Card>
         )}
@@ -219,8 +225,11 @@ export const TreasuriesHeader: React.FC<{ vm: TreasuriesViewModel }> = ({ vm }) 
         {/* 3. أدراج الكاشير وعهد المناديب */}
         <Card className="rounded-3xl p-5">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-muted">أدراج POS وعهد المناديب</span>
-            <div className="p-2 bg-warn-soft text-warn rounded-xl border border-warn/20">
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-muted">
+              <span className="w-2 h-2 rounded-full bg-warn shrink-0" aria-hidden="true" />
+              أدراج POS وعهد المناديب
+            </span>
+            <div className="p-2 bg-surface-2 text-muted rounded-xl border border-line/60">
               <Coins className="w-4 h-4" />
             </div>
           </div>
@@ -231,7 +240,7 @@ export const TreasuriesHeader: React.FC<{ vm: TreasuriesViewModel }> = ({ vm }) 
           </div>
           <div className="mt-3 pt-3 border-t border-line flex items-center justify-between text-[11px] text-muted">
             <span>سيولة لدى الكاشيرات والمناديب</span>
-            <span className="font-bold text-warn">{drawersAndCustodies.length} أفراد</span>
+            <span className="font-bold text-ink">{drawersAndCustodies.length} أفراد</span>
           </div>
         </Card>
 
@@ -239,8 +248,11 @@ export const TreasuriesHeader: React.FC<{ vm: TreasuriesViewModel }> = ({ vm }) 
         {canManageBanks && (
           <Card className="rounded-3xl p-5">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-muted">جاري الشركاء والمسحوبات</span>
-              <div className="p-2 bg-brand-soft text-brand rounded-xl border border-brand/20">
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-muted">
+                <span className="w-2 h-2 rounded-full bg-brand shrink-0" aria-hidden="true" />
+                جاري الشركاء والمسحوبات
+              </span>
+              <div className="p-2 bg-surface-2 text-muted rounded-xl border border-line/60">
                 <UserCheck className="w-4 h-4" />
               </div>
             </div>
@@ -251,7 +263,7 @@ export const TreasuriesHeader: React.FC<{ vm: TreasuriesViewModel }> = ({ vm }) 
             </div>
             <div className="mt-3 pt-3 border-t border-line flex items-center justify-between text-[11px] text-muted">
               <span>مسحوبات الشركاء المحولة</span>
-              <span className="font-bold text-brand">{ownerDrawings.length} حسابات</span>
+              <span className="font-bold text-ink">{ownerDrawings.length} حسابات</span>
             </div>
           </Card>
         )}

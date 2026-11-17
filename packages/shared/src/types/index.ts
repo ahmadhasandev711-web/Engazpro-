@@ -192,6 +192,9 @@ export interface Invoice extends BaseEntity {
   branch_id?: number | null;
   branch?: Branch | null;
   parent_invoice_id?: number | null; // For returns
+  online_order_id?: number | null;
+  wc_order_id?: number | null;
+  shopify_order_id?: number | null;
   created_by?: number | null;
   creator?: User | null;
 }
@@ -604,19 +607,22 @@ export interface StockTransfer extends BaseEntity {
 
 
 
-export interface WcOrderItem {
+export interface OnlineOrderItem {
   id?: number;
-  wc_order_id: number;
+  online_order_id: number;
   product_id?: number | null;
   product_variant_id?: number | null;
-  wc_product_id?: number | null;
-  wc_variation_id?: number | null;
+  external_product_id?: string | null;
+  external_variant_id?: string | null;
   quantity: number;
 }
 
-export interface WcOrder extends BaseEntity {
+export interface OnlineOrder extends BaseEntity {
   user_id: number;
-  wc_order_id: number;
+  platform: EcommercePlatform | string;
+  external_order_id: string;
+  external_order_number?: string | null;
+  display_reference?: string;
   order_date?: string | null;
   party_id?: number | null;
   party?: Party | null;
@@ -632,9 +638,17 @@ export interface WcOrder extends BaseEntity {
   status: string;
   call_confirmed_at?: string | null;
   call_confirmed_by?: string | null;
-  anoofy_order_version?: number | null;
+  call_status?: string | null;
+  call_attempts_count?: number;
+  last_call_attempt_at?: string | null;
+  last_call_attempt_by?: string | null;
+  call_scheduled_at?: string | null;
+  call_notes?: string | null;
+  cancel_reason?: string | null;
+  cancel_notes?: string | null;
+  cancelled_at?: string | null;
   payment_status?: string | null;
-  wc_payment_method?: string | null;
+  payment_method_label?: string | null;
   shipping_cost: number;
   subtotal: number;
   discount_total: number;
@@ -646,10 +660,15 @@ export interface WcOrder extends BaseEntity {
   governorate?: string | null;
   city?: string | null;
   notes?: string | null;
-  wc_coupon_codes?: string[];
+  coupon_codes?: string[];
+  discount_breakdown?: any[];
   items_snapshot?: any[];
-  items?: WcOrderItem[];
+  platform_meta?: Record<string, any>;
+  items?: OnlineOrderItem[];
 }
+
+export type WcOrderItem = OnlineOrderItem;
+export type WcOrder = OnlineOrder;
 
 export interface StockAlertsSummary {
   out_of_stock_count: number;

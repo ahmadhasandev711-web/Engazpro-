@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Contracts\WooCommerceApiClientInterface;
 use App\Enums\BranchType;
+use App\Enums\EcommercePlatform;
 use App\Enums\StockTransferStatus;
 use App\Enums\WcOrderStatus;
 use App\Enums\WcPaymentStatus;
@@ -13,15 +14,16 @@ use App\Jobs\SyncOrderStatusToWooCommerceJob;
 use App\Models\Branch;
 use App\Models\BranchStock;
 use App\Models\Invoice;
+use App\Models\OnlineOrder;
 use App\Models\Party;
 use App\Models\Product;
 use App\Models\StockTransfer;
 use App\Models\Subscription;
 use App\Models\User;
-use App\Models\WcOrder;
 use App\Models\WooCommerceIntegration;
-use App\Services\WooCommerce\WcOrderVanTransferService;
-use App\Services\WooCommerce\WooCommerceOrderSyncService;
+use App\Services\OnlineOrders\OnlineOrderIngestionService;
+use App\Services\OnlineOrders\OnlineOrderSyncService;
+use App\Services\OnlineOrders\OnlineOrderVanTransferService;
 use Exception;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -79,7 +81,7 @@ class WooCommercePipelineFixesTest extends TestCase
         ]);
     }
 
-    protected function createTestOrder(array $attributes = []): WcOrder
+    protected function createTestOrder(array $attributes = []): OnlineOrder
     {
         $product = Product::create([
             'user_id' => $this->owner->id,
@@ -96,13 +98,15 @@ class WooCommercePipelineFixesTest extends TestCase
             'quantity' => 10,
         ]);
 
-        return WcOrder::create(array_merge([
+        return OnlineOrder::create(array_merge([
             'user_id' => $this->owner->id,
-            'wc_order_id' => 5001,
+            'platform' => EcommercePlatform::WOOCOMMERCE,
+            'external_order_id' => '5001',
+            'external_order_number' => '#5001',
             'branch_id' => $this->mainBranch->id,
             'status' => WcOrderStatus::DISPATCHED,
             'payment_status' => WcPaymentStatus::PENDING_COD,
-            'wc_payment_method' => 'cod',
+            'payment_method_label' => 'cod',
             'shipping_cost' => 20,
             'subtotal' => 200,
             'discount_total' => 0,
@@ -130,7 +134,7 @@ class WooCommercePipelineFixesTest extends TestCase
 
         $order = $this->createTestOrder();
 
-        $syncService = app(WooCommerceOrderSyncService::class);
+        $syncService = app(OnlineOrderSyncService::class);
         $invoice = $syncService->deliverOrder($this->owner, $order, [
             'collected_amount' => 220,
             'payment_method' => 'CASH',
@@ -141,7 +145,7 @@ class WooCommercePipelineFixesTest extends TestCase
 
         Queue::assertPushed(SyncOrderStatusToWooCommerceJob::class, function ($job) use ($order) {
             return $job->userId === $this->owner->id
-                && $job->wcOrderId === $order->wc_order_id
+                && $job->wcOrderId === (int) $order->external_order_id
                 && $job->status === 'completed';
         });
     }
@@ -201,13 +205,13 @@ class WooCommercePipelineFixesTest extends TestCase
             ->once()
             ->withArgs(function ($integration, $wcOrderId, $status) use ($order) {
                 return $integration->id === $this->integration->id
-                    && $wcOrderId === $order->wc_order_id
+                    && $wcOrderId === (int) $order->external_order_id
                     && $status === 'completed';
             })
             ->andReturn(true);
         $this->app->instance(WooCommerceApiClientInterface::class, $mockClient);
 
-        $syncService = app(WooCommerceOrderSyncService::class);
+        $syncService = app(OnlineOrderSyncService::class);
         $invoice = $syncService->deliverOrder($this->owner, $order, [
             'collected_amount' => 220,
             'payment_method' => 'CASH',
@@ -230,7 +234,7 @@ class WooCommercePipelineFixesTest extends TestCase
             ->andReturn(false);
         $this->app->instance(WooCommerceApiClientInterface::class, $mockClient);
 
-        $syncService = app(WooCommerceOrderSyncService::class);
+        $syncService = app(OnlineOrderSyncService::class);
         $invoice = $syncService->deliverOrder($this->owner, $order, [
             'collected_amount' => 220,
             'payment_method' => 'CASH',
@@ -249,7 +253,7 @@ class WooCommercePipelineFixesTest extends TestCase
     {
         $order = $this->createTestOrder();
 
-        $syncService = app(WooCommerceOrderSyncService::class);
+        $syncService = app(OnlineOrderSyncService::class);
         $invoice1 = $syncService->deliverOrder($this->owner, $order, [
             'collected_amount' => 220,
             'payment_method' => 'CASH',
@@ -274,7 +278,7 @@ class WooCommercePipelineFixesTest extends TestCase
     {
         $order = $this->createTestOrder(['status' => WcOrderStatus::PENDING_CONFIRMATION]);
 
-        $syncService = app(WooCommerceOrderSyncService::class);
+        $syncService = app(OnlineOrderSyncService::class);
         $syncService->confirmOrder($this->owner, $order, $this->mainBranch->id);
 
         $this->assertEquals(WcOrderStatus::CONFIRMED, $order->fresh()->status);
@@ -295,7 +299,7 @@ class WooCommercePipelineFixesTest extends TestCase
     {
         $order = $this->createTestOrder(['status' => WcOrderStatus::DISPATCHED]);
 
-        $syncService = app(WooCommerceOrderSyncService::class);
+        $syncService = app(OnlineOrderSyncService::class);
         $syncService->returnOrder($this->owner, $order, 'زبون رفض الاستلام');
 
         $this->assertEquals(WcOrderStatus::RETURNED, $order->fresh()->status);
@@ -316,7 +320,7 @@ class WooCommercePipelineFixesTest extends TestCase
     {
         $order = $this->createTestOrder(['status' => WcOrderStatus::CANCELLED]);
 
-        $syncService = app(WooCommerceOrderSyncService::class);
+        $syncService = app(OnlineOrderSyncService::class);
 
         try {
             $syncService->deliverOrder($this->owner, $order, [
@@ -337,9 +341,9 @@ class WooCommercePipelineFixesTest extends TestCase
     {
         $order = $this->createTestOrder(['status' => WcOrderStatus::CONFIRMED]);
 
-        $ingestionService = app(\App\Services\WooCommerce\WcOrderIngestionService::class);
-        $updated = $ingestionService->ingest($this->owner, [
-            'id' => $order->wc_order_id,
+        $ingestionService = app(OnlineOrderIngestionService::class);
+        $updated = $ingestionService->ingest($this->owner, EcommercePlatform::WOOCOMMERCE, [
+            'id' => (int) $order->external_order_id,
             'status' => 'cancelled',
         ]);
 
@@ -354,9 +358,9 @@ class WooCommercePipelineFixesTest extends TestCase
     {
         $order = $this->createTestOrder(['status' => WcOrderStatus::DISPATCHED]);
 
-        $ingestionService = app(\App\Services\WooCommerce\WcOrderIngestionService::class);
-        $updated = $ingestionService->ingest($this->owner, [
-            'id' => $order->wc_order_id,
+        $ingestionService = app(OnlineOrderIngestionService::class);
+        $updated = $ingestionService->ingest($this->owner, EcommercePlatform::WOOCOMMERCE, [
+            'id' => (int) $order->external_order_id,
             'status' => 'cancelled',
         ]);
 
@@ -372,13 +376,13 @@ class WooCommercePipelineFixesTest extends TestCase
     {
         $order = $this->createTestOrder(['status' => WcOrderStatus::DISPATCHED]);
 
-        $syncService = app(WooCommerceOrderSyncService::class);
+        $syncService = app(OnlineOrderSyncService::class);
         $syncService->returnOrder($this->owner, $order, 'العميل رفض الاستلام');
         $this->assertEquals(WcOrderStatus::RETURNED, $order->fresh()->status);
 
-        $ingestionService = app(\App\Services\WooCommerce\WcOrderIngestionService::class);
-        $updated = $ingestionService->ingest($this->owner, [
-            'id' => $order->wc_order_id,
+        $ingestionService = app(OnlineOrderIngestionService::class);
+        $updated = $ingestionService->ingest($this->owner, EcommercePlatform::WOOCOMMERCE, [
+            'id' => (int) $order->external_order_id,
             'status' => 'cancelled',
         ]);
 
@@ -394,7 +398,7 @@ class WooCommercePipelineFixesTest extends TestCase
     {
         $order = $this->createTestOrder(['status' => WcOrderStatus::DELIVERED]);
 
-        $syncService = app(WooCommerceOrderSyncService::class);
+        $syncService = app(OnlineOrderSyncService::class);
 
         try {
             $syncService->returnOrder($this->owner, $order, 'محاولة إرجاع بعد التسليم');
@@ -431,11 +435,11 @@ class WooCommercePipelineFixesTest extends TestCase
         $product = Product::where('user_id', $this->owner->id)->where('wc_product_id', 999)->first();
         $initialStock = (float) BranchStock::where('branch_id', $this->mainBranch->id)->where('product_id', $product->id)->value('quantity');
 
-        $syncService = app(WooCommerceOrderSyncService::class);
+        $syncService = app(OnlineOrderSyncService::class);
         $syncService->dispatchToMandob($this->owner, $order, $mandob->id);
 
         $transfer = StockTransfer::where('user_id', $this->owner->id)
-            ->where('notes', 'like', WcOrderVanTransferService::buildTransferNotePrefix($order->wc_order_id) . '%')
+            ->where('notes', 'like', OnlineOrderVanTransferService::buildTransferNotePrefix($order) . '%')
             ->first();
 
         $this->assertNotNull($transfer);
@@ -487,13 +491,15 @@ class WooCommercePipelineFixesTest extends TestCase
             'quantity' => 50,
         ]);
 
-        $order12 = WcOrder::create([
+        $order12 = OnlineOrder::create([
             'user_id' => $this->owner->id,
-            'wc_order_id' => 12,
+            'platform' => EcommercePlatform::WOOCOMMERCE,
+            'external_order_id' => '12',
+            'external_order_number' => '#12',
             'branch_id' => $this->mainBranch->id,
             'status' => WcOrderStatus::CONFIRMED,
             'payment_status' => WcPaymentStatus::PENDING_COD,
-            'wc_payment_method' => 'cod',
+            'payment_method_label' => 'cod',
             'shipping_cost' => 10,
             'subtotal' => 100,
             'discount_total' => 0,
@@ -511,13 +517,15 @@ class WooCommercePipelineFixesTest extends TestCase
             ],
         ]);
 
-        $order123 = WcOrder::create([
+        $order123 = OnlineOrder::create([
             'user_id' => $this->owner->id,
-            'wc_order_id' => 123,
+            'platform' => EcommercePlatform::WOOCOMMERCE,
+            'external_order_id' => '123',
+            'external_order_number' => '#123',
             'branch_id' => $this->mainBranch->id,
             'status' => WcOrderStatus::CONFIRMED,
             'payment_status' => WcPaymentStatus::PENDING_COD,
-            'wc_payment_method' => 'cod',
+            'payment_method_label' => 'cod',
             'shipping_cost' => 10,
             'subtotal' => 150,
             'discount_total' => 0,
@@ -535,12 +543,12 @@ class WooCommercePipelineFixesTest extends TestCase
             ],
         ]);
 
-        $syncService = app(WooCommerceOrderSyncService::class);
+        $syncService = app(OnlineOrderSyncService::class);
         $syncService->dispatchToMandob($this->owner, $order12, $mandob->id);
         $syncService->dispatchToMandob($this->owner, $order123, $mandob->id);
 
-        $prefix12 = WcOrderVanTransferService::buildTransferNotePrefix(12);
-        $prefix123 = WcOrderVanTransferService::buildTransferNotePrefix(123);
+        $prefix12 = OnlineOrderVanTransferService::buildTransferNotePrefix($order12);
+        $prefix123 = OnlineOrderVanTransferService::buildTransferNotePrefix($order123);
 
         $transfer12 = StockTransfer::where('user_id', $this->owner->id)
             ->where('notes', 'like', $prefix12 . '%')
@@ -595,11 +603,11 @@ class WooCommercePipelineFixesTest extends TestCase
 
         $order = $this->createTestOrder(['status' => WcOrderStatus::CONFIRMED]);
 
-        $syncService = app(WooCommerceOrderSyncService::class);
+        $syncService = app(OnlineOrderSyncService::class);
         $syncService->dispatchToMandob($this->owner, $order, $mandob->id);
 
         $transfer = StockTransfer::where('user_id', $this->owner->id)
-            ->where('notes', 'like', WcOrderVanTransferService::buildTransferNotePrefix($order->wc_order_id) . '%')
+            ->where('notes', 'like', OnlineOrderVanTransferService::buildTransferNotePrefix($order) . '%')
             ->first();
 
         $this->assertNotNull($transfer);
@@ -623,12 +631,12 @@ class WooCommercePipelineFixesTest extends TestCase
 
         $order = $this->createTestOrder(['status' => WcOrderStatus::DISPATCHED]);
 
-        $syncService = app(WooCommerceOrderSyncService::class);
+        $syncService = app(OnlineOrderSyncService::class);
         $syncService->returnOrder($this->owner, $order, 'رفض استلام');
 
         Queue::assertPushed(SyncOrderStatusToWooCommerceJob::class, function ($job) use ($order) {
             return $job->userId === $this->owner->id
-                && $job->wcOrderId === $order->wc_order_id
+                && $job->wcOrderId === (int) $order->external_order_id
                 && $job->status === 'cancelled';
         });
     }
@@ -672,8 +680,8 @@ class WooCommercePipelineFixesTest extends TestCase
 
         $this->app->instance(WooCommerceApiClientInterface::class, $mockClient);
 
-        $syncService = app(WooCommerceOrderSyncService::class);
-        $result = $syncService->pullRecentOrders($this->owner, 3);
+        $syncService = app(OnlineOrderSyncService::class);
+        $result = $syncService->pullRecentOrders($this->owner, EcommercePlatform::WOOCOMMERCE, 3);
 
         $this->assertEquals(5, $result['imported']);
         $this->assertEquals(5, $result['total']);

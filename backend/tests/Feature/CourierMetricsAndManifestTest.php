@@ -5,13 +5,14 @@ namespace Tests\Feature;
 use App\Enums\PartyType;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
+use App\Enums\EcommercePlatform;
 use App\Enums\WcOrderStatus;
 use App\Enums\WcPaymentStatus;
 use App\Models\Branch;
 use App\Models\Party;
 use App\Models\Subscription;
 use App\Models\User;
-use App\Models\WcOrder;
+use App\Models\OnlineOrder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -67,9 +68,11 @@ class CourierMetricsAndManifestTest extends TestCase
             ]);
 
             // شحنتين لكل شركة
-            WcOrder::create([
+            OnlineOrder::create([
                 'user_id' => $this->owner->id,
-                'wc_order_id' => 1000 + $i,
+                'platform' => EcommercePlatform::WOOCOMMERCE,
+                'external_order_id' => (string) (1000 + $i),
+                'external_order_number' => '#' . (1000 + $i),
                 'branch_id' => $this->branch->id,
                 'courier_party_id' => $courier->id,
                 'status' => WcOrderStatus::SHIPPED_VIA_COURIER,
@@ -114,7 +117,9 @@ class CourierMetricsAndManifestTest extends TestCase
             $isPrepaid = ($i <= 20);
             $ordersData[] = [
                 'user_id' => $this->owner->id,
-                'wc_order_id' => 5000 + $i,
+                'platform' => EcommercePlatform::WOOCOMMERCE->value,
+                'external_order_id' => (string) (5000 + $i),
+                'external_order_number' => '#' . (5000 + $i),
                 'branch_id' => $this->branch->id,
                 'courier_party_id' => $courier->id,
                 'status' => WcOrderStatus::SHIPPED_VIA_COURIER->value,
@@ -126,7 +131,7 @@ class CourierMetricsAndManifestTest extends TestCase
                 'updated_at' => now(),
             ];
         }
-        WcOrder::insert($ordersData);
+        OnlineOrder::insert($ordersData);
 
         // 1. طلب الصفحة الأولى: يجب أن ترجع 50 شحنة فقط
         $res = $this->withHeader('Authorization', "Bearer {$this->token}")

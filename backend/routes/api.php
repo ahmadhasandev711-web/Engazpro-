@@ -196,16 +196,18 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
                 Route::delete('anoofy/connection', [\App\Http\Controllers\Api\AnoofyConnectionController::class, 'disconnect']);
             });
 
-            // WooCommerce Orders & Dispatch (طلبات المتجر والشحن والتسليم الميداني)
-            Route::prefix('wc-orders')->group(function () {
-                Route::get('/', [\App\Http\Controllers\Api\WcOrderController::class, 'index']);
-                Route::post('pull', [\App\Http\Controllers\Api\WcOrderController::class, 'pull']);
-                Route::get('/{id}', [\App\Http\Controllers\Api\WcOrderController::class, 'show']);
-                Route::post('/{id}/confirm', [\App\Http\Controllers\Api\WcOrderController::class, 'confirm']);
-                Route::post('/{id}/dispatch', [\App\Http\Controllers\Api\WcOrderController::class, 'dispatchToMandob']);
-                Route::post('/{id}/dispatch-courier', [\App\Http\Controllers\Api\WcOrderController::class, 'dispatchCourier']);
-                Route::post('/{id}/deliver', [\App\Http\Controllers\Api\WcOrderController::class, 'deliver']);
-                Route::post('/{id}/return', [\App\Http\Controllers\Api\WcOrderController::class, 'returnOrder']);
+            // Unified Online Store Orders & Dispatch (طلبات المتجر والشحن والتسليم الميداني)
+            Route::prefix('online-orders')->group(function () {
+                Route::get('/', [\App\Http\Controllers\Api\OnlineOrderController::class, 'index']);
+                Route::post('pull', [\App\Http\Controllers\Api\OnlineOrderController::class, 'pull']);
+                Route::get('/{id}', [\App\Http\Controllers\Api\OnlineOrderController::class, 'show']);
+                Route::post('/{id}/confirm', [\App\Http\Controllers\Api\OnlineOrderController::class, 'confirm']);
+                Route::post('/{id}/dispatch', [\App\Http\Controllers\Api\OnlineOrderController::class, 'dispatchToMandob']);
+                Route::post('/{id}/dispatch-courier', [\App\Http\Controllers\Api\OnlineOrderController::class, 'dispatchCourier']);
+                Route::post('/{id}/deliver', [\App\Http\Controllers\Api\OnlineOrderController::class, 'deliver']);
+                Route::post('/{id}/return', [\App\Http\Controllers\Api\OnlineOrderController::class, 'returnOrder']);
+                Route::post('/{id}/log-call', [\App\Http\Controllers\Api\OnlineOrderController::class, 'logCall']);
+                Route::post('/{id}/cancel', [\App\Http\Controllers\Api\OnlineOrderController::class, 'cancel']);
             });
 
             // Shopify Integration (ربط ومزامنة متجر شوبيفاي)
@@ -220,18 +222,6 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
                 Route::post('import-products', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'importProducts']);
                 Route::post('products/{product}/push-stock', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'pushProductStock']);
                 Route::post('push-all-stocks', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'pushAllStocks']);
-            });
-
-            // Shopify Orders & Dispatch (طلبات شوبيفاي والشحن والتسليم الميداني)
-            Route::prefix('shopify-orders')->group(function () {
-                Route::get('/', [\App\Http\Controllers\Api\ShopifyOrderController::class, 'index']);
-                Route::post('pull', [\App\Http\Controllers\Api\ShopifyOrderController::class, 'pull']);
-                Route::get('/{id}', [\App\Http\Controllers\Api\ShopifyOrderController::class, 'show']);
-                Route::post('/{id}/confirm', [\App\Http\Controllers\Api\ShopifyOrderController::class, 'confirm']);
-                Route::post('/{id}/dispatch', [\App\Http\Controllers\Api\ShopifyOrderController::class, 'dispatchToMandob']);
-                Route::post('/{id}/dispatch-courier', [\App\Http\Controllers\Api\ShopifyOrderController::class, 'dispatchCourier']);
-                Route::post('/{id}/deliver', [\App\Http\Controllers\Api\ShopifyOrderController::class, 'deliver']);
-                Route::post('/{id}/return', [\App\Http\Controllers\Api\ShopifyOrderController::class, 'returnOrder']);
             });
         });
 

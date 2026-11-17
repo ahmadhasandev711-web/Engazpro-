@@ -40,8 +40,8 @@ export const Tabs: React.FC<TabsProps> = ({ tabs, activeTab, onChange, className
             className={cn(
               'inline-flex items-center gap-2 min-h-[44px] px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand disabled:opacity-50 disabled:pointer-events-none',
               isActive
-                ? 'bg-panel text-brand shadow-2xs font-black'
-                : 'text-muted hover:text-ink hover:bg-panel/50'
+                ? 'bg-panel text-ink border border-line shadow-2xs font-black [&>svg]:text-brand'
+                : 'text-muted hover:text-ink hover:bg-panel/60 border border-transparent'
             )}
           >
             {tab.icon}
@@ -50,7 +50,7 @@ export const Tabs: React.FC<TabsProps> = ({ tabs, activeTab, onChange, className
               <span
                 className={cn(
                   'px-1.5 py-0.5 rounded-full text-[10px] font-black',
-                  isActive ? 'bg-brand-soft text-brand-ink' : 'bg-line text-muted'
+                  isActive ? 'bg-brand-soft text-brand' : 'bg-line text-muted'
                 )}
               >
                 {tab.count}

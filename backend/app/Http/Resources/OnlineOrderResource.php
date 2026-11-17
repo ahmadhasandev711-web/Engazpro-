@@ -2,21 +2,22 @@
 
 namespace App\Http\Resources;
 
+use App\Models\OnlineOrder;
 use App\Models\User;
-use App\Models\WcOrder;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class WcOrderResource extends JsonResource
+class OnlineOrderResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
-        /** @var WcOrder $order */
+        /** @var OnlineOrder $order */
         $order = $this->resource;
         $user = $request->user();
         $canViewPhone = $user && $this->userCanViewCustomerPhone($user, $order);
 
         $data = $order->toArray();
+        $data['display_reference'] = $order->displayReference();
 
         if (!$canViewPhone) {
             $data['customer_phone'] = null;
@@ -28,16 +29,12 @@ class WcOrderResource extends JsonResource
         return $data;
     }
 
-    protected function userCanViewCustomerPhone(User $user, WcOrder $order): bool
+    protected function userCanViewCustomerPhone(User $user, OnlineOrder $order): bool
     {
         if ($user->isOwnerOrAdmin() || $user->isManager() || $user->isSupervisor()) {
             return true;
         }
 
-        if ($user->isMandob()) {
-            return (int) $order->mandob_id === (int) $user->id;
-        }
-
-        return false;
+        return $user->isMandob() && (int) $order->mandob_id === (int) $user->id;
     }
 }

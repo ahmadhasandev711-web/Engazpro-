@@ -1,6 +1,6 @@
 import React from 'react';
 import { PosReceiptModal } from '../pos/PosReceiptModal';
-import { cleanItemName } from './helpers';
+import { cleanItemName, getOrderDisplayRef, isOrderPrepaid } from './helpers';
 import type { WcOrdersViewModel } from './types';
 
 export const WcOrderReceipt: React.FC<{ vm: WcOrdersViewModel }> = ({ vm }) => {
@@ -43,7 +43,7 @@ export const WcOrderReceipt: React.FC<{ vm: WcOrdersViewModel }> = ({ vm }) => {
                 }
               : {
                   id: printOrder.id,
-                  invoice_number: `WC-${printOrder.wc_order_id}`,
+                  invoice_number: `ORD-${getOrderDisplayRef(printOrder).replace(/^#/, '')}`,
                   date: (printOrder.order_date || printOrder.created_at || '').split('T')[0],
                   created_at: printOrder.order_date || printOrder.created_at,
                   party: printOrder.party || {
@@ -73,18 +73,12 @@ export const WcOrderReceipt: React.FC<{ vm: WcOrdersViewModel }> = ({ vm }) => {
                   discount: printOrder.discount_total,
                   shipping_amount: printOrder.shipping_cost,
                   total: printOrder.total,
-                  paid_amount:
-                    printOrder.payment_status === 'PAID_ONLINE' ||
-                    (printOrder.wc_payment_method && printOrder.wc_payment_method !== 'cod')
-                      ? printOrder.total
-                      : 0,
-                  payment_method:
-                    printOrder.payment_status === 'PAID_ONLINE' ||
-                    (printOrder.wc_payment_method && printOrder.wc_payment_method !== 'cod')
-                      ? 'CARD'
-                      : printOrder.courier_party_id
-                        ? 'COURIER_COD'
-                        : 'CASH',
+                  paid_amount: isOrderPrepaid(printOrder) ? printOrder.total : 0,
+                  payment_method: isOrderPrepaid(printOrder)
+                    ? 'CARD'
+                    : printOrder.courier_party_id
+                      ? 'COURIER_COD'
+                      : 'CASH',
                   courier_name: printOrder.courier_name,
                   tracking_number: printOrder.tracking_number,
                 }

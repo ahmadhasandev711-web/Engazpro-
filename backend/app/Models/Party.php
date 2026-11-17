@@ -61,7 +61,7 @@ class Party extends Model
 
     public function courierOrders(): HasMany
     {
-        return $this->hasMany(WcOrder::class, 'courier_party_id');
+        return $this->hasMany(OnlineOrder::class, 'courier_party_id');
     }
 
     public function scopeCustomers(Builder $query): Builder

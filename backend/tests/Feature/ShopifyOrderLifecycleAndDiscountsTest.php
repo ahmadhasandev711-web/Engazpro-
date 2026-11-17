@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Contracts\ShopifyGraphqlClientInterface;
 use App\Enums\BranchType;
+use App\Enums\EcommercePlatform;
 use App\Enums\PartyType;
 use App\Enums\ProductType;
 use App\Enums\ShopifyAuthMode;
@@ -14,11 +15,11 @@ use App\Enums\WcOrderStatus;
 use App\Enums\WcPaymentStatus;
 use App\Models\Branch;
 use App\Models\BranchStock;
+use App\Models\OnlineOrder;
 use App\Models\Party;
 use App\Models\Product;
 use App\Models\ShopifyIntegration;
 use App\Models\ShopifyLocationMapping;
-use App\Models\ShopifyOrder;
 use App\Models\StockTransfer;
 use App\Models\Subscription;
 use App\Models\User;
@@ -139,8 +140,8 @@ class ShopifyOrderLifecycleAndDiscountsTest extends TestCase
             'CONTENT_TYPE' => 'application/json',
         ], $payload)->assertStatus(202);
 
-        $order = ShopifyOrder::where('shopify_order_id', 6001001)->firstOrFail();
-        $this->assertSame('#1045', $order->shopify_order_number);
+        $order = OnlineOrder::where('platform', EcommercePlatform::SHOPIFY->value)->where('external_order_id', '6001001')->firstOrFail();
+        $this->assertSame('#1045', $order->external_order_number);
         $this->assertSame($this->nasrBranch->id, $order->branch_id);
         $this->assertSame(['RAMADAN80'], $order->coupon_codes);
         $this->assertSame(800.0, (float) $order->subtotal);
@@ -163,10 +164,11 @@ class ShopifyOrderLifecycleAndDiscountsTest extends TestCase
         })->andReturn(['fulfillment' => ['id' => 'gid://shopify/Fulfillment/888', 'status' => 'SUCCESS']]);
         $this->app->instance(ShopifyGraphqlClientInterface::class, $mock);
 
-        $order = ShopifyOrder::create([
+        $order = OnlineOrder::create([
             'user_id' => $this->owner->id,
-            'shopify_order_id' => 6002002,
-            'shopify_order_number' => '#1050',
+            'platform' => EcommercePlatform::SHOPIFY,
+            'external_order_id' => '6002002',
+            'external_order_number' => '#1050',
             'branch_id' => $this->nasrBranch->id,
             'party_id' => Party::create(['user_id' => $this->owner->id, 'type' => PartyType::CUSTOMER->value, 'name' => 'أحمد علي'])->id,
             'status' => WcOrderStatus::PENDING_CONFIRMATION,
@@ -183,21 +185,21 @@ class ShopifyOrderLifecycleAndDiscountsTest extends TestCase
         ]);
         $order->items()->create([
             'user_id' => $this->owner->id, 'product_id' => $this->product->id,
-            'shopify_product_id' => 90001, 'shopify_variant_id' => 91001, 'quantity' => 2,
+            'external_product_id' => '90001', 'external_variant_id' => '91001', 'quantity' => 2,
         ]);
 
         // 1. Confirm
-        $this->actingAs($this->owner)->postJson("/api/shopify-orders/{$order->id}/confirm", ['branch_id' => $this->nasrBranch->id])
+        $this->actingAs($this->owner)->postJson("/api/online-orders/{$order->id}/confirm", ['branch_id' => $this->nasrBranch->id])
             ->assertOk();
 
         // 2. Dispatch to Mandob -> creates in-transit van transfer
-        $this->actingAs($this->owner)->postJson("/api/shopify-orders/{$order->id}/dispatch", ['mandob_id' => $this->mandob->id])
+        $this->actingAs($this->owner)->postJson("/api/online-orders/{$order->id}/dispatch", ['mandob_id' => $this->mandob->id])
             ->assertOk();
         $transfer = StockTransfer::latest('id')->firstOrFail();
         $this->assertSame(StockTransferStatus::IN_TRANSIT, $transfer->status);
 
         // 3. Deliver -> settles van transfer, creates invoice matching 770.00, pushes fulfillment to Shopify
-        $delivRes = $this->actingAs($this->owner)->postJson("/api/shopify-orders/{$order->id}/deliver", ['collected_amount' => 770]);
+        $delivRes = $this->actingAs($this->owner)->postJson("/api/online-orders/{$order->id}/deliver", ['collected_amount' => 770]);
         $delivRes->assertOk();
 
         $this->assertSame(StockTransferStatus::RECEIVED, $transfer->fresh()->status);
@@ -212,10 +214,11 @@ class ShopifyOrderLifecycleAndDiscountsTest extends TestCase
         $mock->shouldReceive('getOrderFulfillmentOrders')->once()->andReturn([]);
         $this->app->instance(ShopifyGraphqlClientInterface::class, $mock);
 
-        $order = ShopifyOrder::create([
+        $order = OnlineOrder::create([
             'user_id' => $this->owner->id,
-            'shopify_order_id' => 6003003,
-            'shopify_order_number' => '#1060',
+            'platform' => EcommercePlatform::SHOPIFY,
+            'external_order_id' => '6003003',
+            'external_order_number' => '#1060',
             'branch_id' => $this->nasrBranch->id,
             'party_id' => Party::create(['user_id' => $this->owner->id, 'type' => PartyType::CUSTOMER->value, 'name' => 'منى حسن'])->id,
             'status' => WcOrderStatus::CONFIRMED,
@@ -231,15 +234,15 @@ class ShopifyOrderLifecycleAndDiscountsTest extends TestCase
         ]);
         $order->items()->create([
             'user_id' => $this->owner->id, 'product_id' => $this->product->id,
-            'shopify_product_id' => 90001, 'shopify_variant_id' => 91001, 'quantity' => 1,
+            'external_product_id' => '90001', 'external_variant_id' => '91001', 'quantity' => 1,
         ]);
 
-        $this->actingAs($this->owner)->postJson("/api/shopify-orders/{$order->id}/dispatch-courier", [
+        $this->actingAs($this->owner)->postJson("/api/online-orders/{$order->id}/dispatch-courier", [
             'courier_party_id' => $this->courier->id,
             'tracking_number' => 'BOSTA-999111',
         ])->assertOk();
 
-        $this->actingAs($this->owner)->postJson("/api/shopify-orders/{$order->id}/deliver", ['collected_amount' => 440])
+        $this->actingAs($this->owner)->postJson("/api/online-orders/{$order->id}/deliver", ['collected_amount' => 440])
             ->assertOk();
 
         // Courier collected 440, shipping fee credited 40 -> net balance due from courier = 400

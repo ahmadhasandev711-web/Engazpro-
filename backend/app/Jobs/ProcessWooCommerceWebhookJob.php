@@ -2,10 +2,11 @@
 
 namespace App\Jobs;
 
+use App\Enums\EcommercePlatform;
 use App\Enums\QueueName;
 use App\Jobs\Middleware\WithTenantContext;
 use App\Models\User;
-use App\Services\WooCommerce\WcOrderIngestionService;
+use App\Services\OnlineOrders\OnlineOrderIngestionService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -34,7 +35,7 @@ class ProcessWooCommerceWebhookJob implements ShouldQueue
         return [new WithTenantContext($this->userId)];
     }
 
-    public function handle(WcOrderIngestionService $ingestionService): void
+    public function handle(OnlineOrderIngestionService $ingestionService): void
     {
         $user = User::withoutGlobalScopes()->find($this->userId);
         if (!$user) {
@@ -43,7 +44,7 @@ class ProcessWooCommerceWebhookJob implements ShouldQueue
         }
 
         if (!empty($this->payload['id'])) {
-            $ingestionService->ingest($user, $this->payload);
+            $ingestionService->ingest($user, EcommercePlatform::WOOCOMMERCE, $this->payload);
         }
     }
 }

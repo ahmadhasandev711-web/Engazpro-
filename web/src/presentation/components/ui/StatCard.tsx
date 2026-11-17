@@ -14,31 +14,22 @@ export interface StatCardProps {
   children?: React.ReactNode;
 }
 
-const VALUE_TONE_CLASSES: Record<StatCardTone, string> = {
-  neutral: 'text-ink',
-  brand: 'text-brand',
-  ok: 'text-ok',
-  warn: 'text-warn',
-  bad: 'text-bad',
-  info: 'text-info',
-};
-
-const ICON_TONE_CLASSES: Record<StatCardTone, string> = {
-  neutral: 'bg-surface-2 text-muted',
-  brand: 'bg-brand-soft text-brand',
-  ok: 'bg-ok-soft text-ok',
-  warn: 'bg-warn-soft text-warn',
-  bad: 'bg-bad-soft text-bad',
-  info: 'bg-info-soft text-info',
+const DOT_TONE_CLASSES: Record<StatCardTone, string> = {
+  neutral: 'bg-muted/40',
+  brand: 'bg-brand',
+  ok: 'bg-ok',
+  warn: 'bg-warn',
+  bad: 'bg-bad',
+  info: 'bg-info',
 };
 
 const HIGHLIGHT_CLASSES: Record<StatCardTone, string> = {
-  neutral: 'border-2 border-line-2 bg-surface-2/50',
-  brand: 'border-2 border-brand bg-brand-soft/40',
-  ok: 'border-2 border-ok bg-ok-soft/40',
-  warn: 'border-2 border-warn bg-warn-soft/40',
-  bad: 'border-2 border-bad bg-bad-soft/40',
-  info: 'border-2 border-info bg-info-soft/40',
+  neutral: 'bg-panel border border-line-2 shadow-sm',
+  brand: 'bg-panel border border-brand/40 shadow-sm',
+  ok: 'bg-panel border border-brand/40 shadow-sm',
+  warn: 'bg-panel border border-brand/40 shadow-sm',
+  bad: 'bg-panel border border-bad/40 shadow-sm',
+  info: 'bg-panel border border-brand/40 shadow-sm',
 };
 
 export const StatCard: React.FC<StatCardProps> = ({
@@ -62,30 +53,26 @@ export const StatCard: React.FC<StatCardProps> = ({
       <div className="flex items-center justify-between gap-2 mb-1.5 sm:mb-2">
         <span
           className={cn(
-            'text-[11px] sm:text-xs font-bold truncate',
-            highlight ? VALUE_TONE_CLASSES[tone] : 'text-muted'
+            'inline-flex items-center gap-1.5 text-[11px] sm:text-xs font-bold truncate',
+            highlight ? 'text-ink' : 'text-muted'
           )}
         >
-          {label}
+          {tone !== 'neutral' && (
+            <span
+              className={cn('w-2 h-2 rounded-full shrink-0', DOT_TONE_CLASSES[tone])}
+              aria-hidden="true"
+            />
+          )}
+          <span className="truncate">{label}</span>
         </span>
         {icon && (
-          <div
-            className={cn(
-              'w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center shrink-0',
-              ICON_TONE_CLASSES[tone]
-            )}
-          >
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center shrink-0 bg-surface-2 text-muted border border-line/60">
             {icon}
           </div>
         )}
       </div>
 
-      <div
-        className={cn(
-          'text-lg sm:text-2xl font-black tracking-tight tabular-nums',
-          VALUE_TONE_CLASSES[tone]
-        )}
-      >
+      <div className="text-lg sm:text-2xl font-black tracking-tight tabular-nums text-ink">
         {value}
       </div>
 

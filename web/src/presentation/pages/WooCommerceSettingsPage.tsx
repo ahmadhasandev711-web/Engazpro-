@@ -24,6 +24,8 @@ import { useHaptic } from '../hooks/useHaptic';
 import { useConfirm } from '../context/ConfirmContext';
 import { Badge, Button, Card, Input, PageHeader, Select } from '../components/ui';
 
+const SHOW_ANOOFY_UI = import.meta.env.VITE_ENABLE_ANOOFY_UI === 'true';
+
 export const WooCommerceSettingsPage: React.FC = () => {
   const queryClient = useQueryClient();
   const { success } = useHaptic();
@@ -563,53 +565,55 @@ export const WooCommerceSettingsPage: React.FC = () => {
           </Card>
 
           {/* Anoofy-Woo Call Center Card */}
-          <Card className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-2xl bg-ok-soft border border-ok/30 flex items-center justify-center text-ok shrink-0">
-                  <Headphones className="w-5 h-5" />
+          {SHOW_ANOOFY_UI && (
+            <Card className="space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-10 h-10 rounded-2xl bg-ok-soft border border-ok/30 flex items-center justify-center text-ok shrink-0">
+                    <Headphones className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-black text-ink">ربط إضافة كول سنتر Anoofy (Anoofy-Woo)</h2>
+                    <p className="text-2xs text-muted">استقبال تأكيدات الكول سنتر وتعديل الأصناف والعناوين مباشرة</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-sm font-black text-ink">ربط إضافة كول سنتر Anoofy (Anoofy-Woo)</h2>
-                  <p className="text-2xs text-muted">استقبال تأكيدات الكول سنتر وتعديل الأصناف والعناوين مباشرة</p>
-                </div>
+                <Badge tone={settingsData?.anoofy_connected ? 'ok' : 'neutral'} dot={settingsData?.anoofy_connected}>
+                  {settingsData?.anoofy_connected ? 'متصل' : 'غير متصل'}
+                </Badge>
               </div>
-              <Badge tone={settingsData?.anoofy_connected ? 'ok' : 'neutral'} dot={settingsData?.anoofy_connected}>
-                {settingsData?.anoofy_connected ? 'متصل' : 'غير متصل'}
-              </Badge>
-            </div>
 
-            <p className="text-xs text-muted leading-relaxed">
-              عند توليد مفتاح الربط، قم بنسخه ولصقه في إعدادات إضافة Anoofy في ووردبريس للتحقق من الاتصال واستقبال أحداث تأكيد الطلبات تلقائياً.
-            </p>
+              <p className="text-xs text-muted leading-relaxed">
+                عند توليد مفتاح الربط، قم بنسخه ولصقه في إعدادات إضافة Anoofy في ووردبريس للتحقق من الاتصال واستقبال أحداث تأكيد الطلبات تلقائياً.
+              </p>
 
-            <div className="flex flex-wrap items-center gap-3 pt-2">
-              <Button
-                type="button"
-                variant="primary"
-                size="md"
-                onClick={() => generateAnoofyKeyMutation.mutate()}
-                isLoading={generateAnoofyKeyMutation.isPending}
-                disabled={generateAnoofyKeyMutation.isPending}
-                leftIcon={<Key className="w-4 h-4" />}
-              >
-                {settingsData?.anoofy_connected ? 'توليد مفتاح ربط جديد (إعادة ربط)' : 'توليد مفتاح ربط جديد'}
-              </Button>
-
-              {settingsData?.anoofy_connected && (
+              <div className="flex flex-wrap items-center gap-3 pt-2">
                 <Button
                   type="button"
-                  variant="danger"
+                  variant="primary"
                   size="md"
-                  onClick={handleDisconnectAnoofy}
-                  isLoading={disconnectAnoofyMutation.isPending}
-                  disabled={disconnectAnoofyMutation.isPending}
+                  onClick={() => generateAnoofyKeyMutation.mutate()}
+                  isLoading={generateAnoofyKeyMutation.isPending}
+                  disabled={generateAnoofyKeyMutation.isPending}
+                  leftIcon={<Key className="w-4 h-4" />}
                 >
-                  {disconnectAnoofyMutation.isPending ? 'جاري الفصل...' : 'فصل الربط'}
+                  {settingsData?.anoofy_connected ? 'توليد مفتاح ربط جديد (إعادة ربط)' : 'توليد مفتاح ربط جديد'}
                 </Button>
-              )}
-            </div>
-          </Card>
+
+                {settingsData?.anoofy_connected && (
+                  <Button
+                    type="button"
+                    variant="danger"
+                    size="md"
+                    onClick={handleDisconnectAnoofy}
+                    isLoading={disconnectAnoofyMutation.isPending}
+                    disabled={disconnectAnoofyMutation.isPending}
+                  >
+                    {disconnectAnoofyMutation.isPending ? 'جاري الفصل...' : 'فصل الربط'}
+                  </Button>
+                )}
+              </div>
+            </Card>
+          )}
         </div>
 
         {/* Right 1 Col: Quick Actions & Webhook Setup */}
@@ -754,7 +758,7 @@ export const WooCommerceSettingsPage: React.FC = () => {
       </div>
 
       {/* Modal: Anoofy Connection Key Dialog */}
-      {anoofyModalKey && (
+      {SHOW_ANOOFY_UI && anoofyModalKey && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-canvas/80 p-4 backdrop-blur-sm animate-in fade-in duration-150"
           dir="rtl"

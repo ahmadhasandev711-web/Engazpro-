@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\ShopifyAuthMode;
 use App\Models\Concerns\BelongsToStore;
+use App\Services\EcommerceAccessService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,6 +13,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class ShopifyIntegration extends Model
 {
     use HasFactory, BelongsToStore;
+
+    protected static function booted(): void
+    {
+        static::saved(fn (self $integration) => EcommerceAccessService::clearPlatformCache((int) $integration->user_id));
+        static::deleted(fn (self $integration) => EcommerceAccessService::clearPlatformCache((int) $integration->user_id));
+    }
 
     protected $table = 'shopify_integrations';
 

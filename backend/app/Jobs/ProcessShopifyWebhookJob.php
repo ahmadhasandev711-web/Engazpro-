@@ -2,9 +2,10 @@
 
 namespace App\Jobs;
 
+use App\Enums\EcommercePlatform;
 use App\Enums\QueueName;
 use App\Models\User;
-use App\Services\Shopify\ShopifyOrderIngestionService;
+use App\Services\OnlineOrders\OnlineOrderIngestionService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -27,11 +28,11 @@ class ProcessShopifyWebhookJob implements ShouldQueue
         $this->onQueue(QueueName::SHOPIFY_REALTIME->value);
     }
 
-    public function handle(ShopifyOrderIngestionService $ingestionService): void
+    public function handle(OnlineOrderIngestionService $ingestionService): void
     {
         $user = User::withoutGlobalScopes()->findOrFail($this->userId);
         if (str_starts_with($this->topic, 'orders/')) {
-            $ingestionService->ingest($user, $this->payload);
+            $ingestionService->ingest($user, EcommercePlatform::SHOPIFY, $this->payload);
         }
     }
 }

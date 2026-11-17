@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Search, Package, X } from 'lucide-react';
+import { Search, Package, X, ScanBarcode } from 'lucide-react';
 import { formatCurrency } from '@pos-mandob/shared';
 import { Badge, BadgeTone } from '../ui/Badge';
 import { EmptyState } from '../ui/EmptyState';
@@ -50,6 +50,7 @@ interface PosProductCatalogProps {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   onScanBarcode?: (barcode: string) => boolean | Promise<boolean>;
+  onOpenCameraScanner?: () => void;
 }
 
 const ROW_HEIGHT = 172;
@@ -186,6 +187,7 @@ export const PosProductCatalog: React.FC<PosProductCatalogProps> = ({
   searchQuery,
   setSearchQuery,
   onScanBarcode,
+  onOpenCameraScanner,
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef(0);
@@ -281,19 +283,32 @@ export const PosProductCatalog: React.FC<PosProductCatalogProps> = ({
               }
             }}
             placeholder="ابحث باسم الصنف أو امسح الباركود... [F2]"
-            className="w-full pl-24 pr-11 py-3 bg-panel border border-line rounded-2xl text-sm font-medium text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-brand shadow-xs transition-all"
+            className="w-full pl-28 sm:pl-36 pr-11 py-3 bg-panel border border-line rounded-2xl text-sm font-medium text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-brand shadow-xs transition-all"
           />
-          <div className="absolute left-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
-            <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-bold text-muted bg-surface-2 border border-line rounded-md pointer-events-none">
-              F2
-            </kbd>
+          <div className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="p-1 text-muted hover:text-ink rounded-lg"
+                className="p-1.5 text-muted hover:text-ink rounded-lg transition-colors cursor-pointer"
+                title="مسح البحث"
+                aria-label="مسح البحث"
               >
                 <X className="w-4 h-4" />
+              </button>
+            )}
+            <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-bold text-muted bg-surface-2 border border-line rounded-md pointer-events-none">
+              F2
+            </kbd>
+            {onOpenCameraScanner && (
+              <button
+                type="button"
+                onClick={onOpenCameraScanner}
+                className="w-9 h-9 rounded-xl bg-brand-soft text-brand border border-brand/20 hover:bg-brand hover:text-on-brand flex items-center justify-center transition-all active:scale-95 cursor-pointer shadow-2xs"
+                title="مسح الباركود بالكاميرا"
+                aria-label="مسح الباركود بالكاميرا"
+              >
+                <ScanBarcode className="w-4 h-4" />
               </button>
             )}
           </div>

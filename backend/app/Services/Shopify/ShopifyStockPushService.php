@@ -8,6 +8,7 @@ use App\Models\BranchStock;
 use App\Models\Product;
 use App\Models\ShopifyIntegration;
 use App\Models\ShopifyLocationMapping;
+use App\Services\OnlineOrders\OnlineOrderStockReservationService;
 use App\Support\Quantity;
 use App\Support\ShopifyGid;
 use Illuminate\Support\Collection;
@@ -17,7 +18,7 @@ class ShopifyStockPushService
 {
     public function __construct(
         protected ShopifyGraphqlClientInterface $graphqlClient,
-        protected ShopifyStockReservationService $reservationService
+        protected OnlineOrderStockReservationService $reservationService
     ) {}
 
     public function activeMappings(ShopifyIntegration $integration, ?int $onlyBranchId = null): Collection

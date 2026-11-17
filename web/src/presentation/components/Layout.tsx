@@ -131,8 +131,7 @@ export const Layout: React.FC = () => {
     canViewProfitReport,
     canManageStockOperations,
     canManageEcommerceSettings,
-    canViewWooOrders,
-    canViewShopifyOrders,
+    canViewStoreOrders,
   } = usePermissions();
 
   const { data: alertsSummary } = useStockAlertsSummary(canManageStockOperations);
@@ -141,20 +140,11 @@ export const Layout: React.FC = () => {
   const salesGroup: NavItemDef[] = [
     { to: '/dashboard', label: 'الرئيسية', icon: LayoutDashboard },
     { to: '/pos', label: 'نقطة البيع (POS)', icon: Store },
-    ...(canViewWooOrders
+    ...(canViewStoreOrders
       ? [
           {
-            to: '/wc-orders',
-            label: isMandob ? 'طلبات التوصيل والشحن' : 'طلبات المتجر (الشحن)',
-            icon: ShoppingBag,
-          },
-        ]
-      : []),
-    ...(canViewShopifyOrders
-      ? [
-          {
-            to: '/shopify-orders',
-            label: isMandob ? 'توصيل Shopify' : 'طلبات Shopify',
+            to: '/store-orders',
+            label: isMandob ? 'طلبات التوصيل والشحن' : 'طلبات المتجر',
             icon: ShoppingBag,
           },
         ]
@@ -413,7 +403,7 @@ export const Layout: React.FC = () => {
                 <span className="text-sm font-medium text-muted">
                   مرحباً، <strong className="text-ink">{user?.name || 'المستخدم'}</strong>
                   {isOwner && (
-                    <span className="mr-2 text-xs bg-brand-soft text-brand-ink px-2.5 py-0.5 rounded-full font-bold border border-brand/20">
+                    <span className="mr-2 text-xs bg-surface-2 text-ink px-2.5 py-0.5 rounded-full font-bold border border-line">
                       صاحب العمل
                     </span>
                   )}
@@ -423,17 +413,17 @@ export const Layout: React.FC = () => {
                     </span>
                   )}
                   {isSupervisor && (
-                    <span className="mr-2 text-xs bg-info-soft text-info px-2.5 py-0.5 rounded-full font-bold border border-info/20">
+                    <span className="mr-2 text-xs bg-surface-2 text-ink px-2.5 py-0.5 rounded-full font-bold border border-line">
                       مشرف ورديات
                     </span>
                   )}
                   {isMandob && (
-                    <span className="mr-2 text-xs bg-brand-soft text-brand-ink px-2.5 py-0.5 rounded-full font-bold border border-brand/20">
+                    <span className="mr-2 text-xs bg-surface-2 text-ink px-2.5 py-0.5 rounded-full font-bold border border-line">
                       مندوب مبيعات
                     </span>
                   )}
                   {isCashier && (
-                    <span className="mr-2 text-xs bg-warn-soft text-warn px-2.5 py-0.5 rounded-full font-bold border border-warn/20">
+                    <span className="mr-2 text-xs bg-surface-2 text-ink px-2.5 py-0.5 rounded-full font-bold border border-line">
                       كاشير POS
                     </span>
                   )}
@@ -459,11 +449,8 @@ export const Layout: React.FC = () => {
                 )}
               </button>
 
-              {/* PWA Install Button */}
-              <PWAInstallButton variant="header" />
-
               {/* Online Connection Badge */}
-              <span className="text-xs bg-ok-soft text-ok border border-ok/20 px-2.5 sm:px-3 py-1 rounded-full font-medium flex items-center gap-1.5">
+              <span className="text-xs bg-panel text-muted border border-line px-2.5 sm:px-3 py-1 rounded-full font-medium flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-ok animate-pulse" />
                 <span className="hidden sm:inline">الخادم متصل</span>
               </span>

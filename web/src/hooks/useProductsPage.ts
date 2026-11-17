@@ -1,6 +1,7 @@
 import { apiClient } from '../data/api/client';
 import { nativeBackButton } from '../platform/nativeBackButton';
 import { FilterChipOption } from '../presentation/components/mobile/MobileFilterChips';
+import { useDebouncedValue } from './useDebouncedValue';
 import { usePermissions } from './usePermissions';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Product, ProductSchema, ProductInput } from '@pos-mandob/shared';
@@ -25,6 +26,7 @@ export const useProductsPage = () => {
   } = usePermissions();
 
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebouncedValue(search.trim(), 250);
   const [filterTab, setFilterTab] = useState<'ALL' | 'VARIABLE' | 'EXPIRY' | 'NEAR_EXPIRY' | 'LOW_STOCK'>('ALL');
   const [page, setPage] = useState<number>(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -82,10 +84,10 @@ export const useProductsPage = () => {
 
   // Fetch Products
   const { data, isLoading } = useQuery({
-    queryKey: ['products', search, filterTab, page],
+    queryKey: ['products', debouncedSearch, filterTab, page],
     queryFn: async () => {
       const params: any = {
-        search: search || undefined,
+        search: debouncedSearch || undefined,
         page,
       };
       if (filterTab === 'VARIABLE') params.type = 'VARIABLE';

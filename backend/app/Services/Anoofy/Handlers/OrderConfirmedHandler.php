@@ -6,11 +6,12 @@ use App\Contracts\AnoofyEventHandlerInterface;
 use App\DTOs\AnoofyEnvelope;
 use App\DTOs\HandlerOutcome;
 use App\Enums\AnoofyEventResult;
+use App\Enums\EcommercePlatform;
 use App\Enums\WcOrderStatus;
 use App\Exceptions\OrderNotYetSyncedException;
 use App\Jobs\PushStockToWooCommerceJob;
-use App\Models\WcOrder;
-use App\Models\WcOrderItem;
+use App\Models\OnlineOrder;
+use App\Models\OnlineOrderItem;
 use App\Models\WooCommerceIntegration;
 use App\Services\WooCommerce\WcOrderLineItemMapper;
 use App\Support\Money;
@@ -27,8 +28,9 @@ class OrderConfirmedHandler implements AnoofyEventHandlerInterface
     public function handle(WooCommerceIntegration $integration, AnoofyEnvelope $envelope): HandlerOutcome
     {
         $wcOrderId = (int) ($envelope->data['wc_order_id'] ?? 0);
-        $order = WcOrder::where('user_id', $integration->user_id)
-            ->where('wc_order_id', $wcOrderId)
+        $order = OnlineOrder::where('user_id', $integration->user_id)
+            ->where('platform', EcommercePlatform::WOOCOMMERCE->value)
+            ->where('external_order_id', (string) $wcOrderId)
             ->first();
 
         if ($order === null) {
@@ -45,13 +47,12 @@ class OrderConfirmedHandler implements AnoofyEventHandlerInterface
 
     private function checkEarlyExits(
         WooCommerceIntegration $integration,
-        WcOrder $order,
+        OnlineOrder $order,
         AnoofyEnvelope $envelope
     ): ?HandlerOutcome {
-        if ($envelope->orderVersion !== null && $order->anoofy_order_version !== null) {
-            if ($envelope->orderVersion <= $order->anoofy_order_version) {
-                return new HandlerOutcome(AnoofyEventResult::STALE);
-            }
+        $currentVersion = $order->meta('anoofy_order_version');
+        if ($envelope->orderVersion !== null && $currentVersion !== null && $envelope->orderVersion <= (int) $currentVersion) {
+            return new HandlerOutcome(AnoofyEventResult::STALE);
         }
 
         $confirmedAt = CarbonImmutable::parse((string) ($envelope->data['confirmed_at'] ?? $envelope->occurredAt));
@@ -66,19 +67,19 @@ class OrderConfirmedHandler implements AnoofyEventHandlerInterface
         return null;
     }
 
-    protected function onBeforeLock(WcOrder $order): void
+    protected function onBeforeLock(OnlineOrder $order): void
     {
     }
 
     private function processConfirmation(
         WooCommerceIntegration $integration,
-        WcOrder $order,
+        OnlineOrder $order,
         AnoofyEnvelope $envelope
     ): HandlerOutcome {
         $this->onBeforeLock($order);
 
         return DB::transaction(function () use ($integration, $order, $envelope) {
-            $locked = WcOrder::where('id', $order->id)->lockForUpdate()->firstOrFail();
+            $locked = OnlineOrder::where('id', $order->id)->lockForUpdate()->firstOrFail();
 
             $earlyOutcome = $this->checkEarlyExits($integration, $locked, $envelope);
             if ($earlyOutcome !== null) {
@@ -92,13 +93,15 @@ class OrderConfirmedHandler implements AnoofyEventHandlerInterface
         });
     }
 
-    private function applyOrderUpdates(int $userId, WcOrder $locked, AnoofyEnvelope $envelope): void
+    private function applyOrderUpdates(int $userId, OnlineOrder $locked, AnoofyEnvelope $envelope): void
     {
         $confirmedAt = CarbonImmutable::parse((string) ($envelope->data['confirmed_at'] ?? $envelope->occurredAt));
         $locked->call_confirmed_at = $confirmedAt;
         $locked->call_confirmed_by = (string) ($envelope->data['confirmed_by_name'] ?? '');
         if ($envelope->orderVersion !== null) {
-            $locked->anoofy_order_version = $envelope->orderVersion;
+            $meta = $locked->platform_meta ?? [];
+            $meta['anoofy_order_version'] = $envelope->orderVersion;
+            $locked->platform_meta = $meta;
         }
 
         $this->updateCustomerDetails($locked, (array) ($envelope->data['customer'] ?? []));
@@ -108,7 +111,7 @@ class OrderConfirmedHandler implements AnoofyEventHandlerInterface
         }
     }
 
-    private function updateCustomerDetails(WcOrder $order, array $customer): void
+    private function updateCustomerDetails(OnlineOrder $order, array $customer): void
     {
         if (empty($customer)) {
             return;
@@ -132,9 +135,9 @@ class OrderConfirmedHandler implements AnoofyEventHandlerInterface
         }
     }
 
-    private function syncLineItems(int $userId, WcOrder $order, array $rawItems): void
+    private function syncLineItems(int $userId, OnlineOrder $order, array $rawItems): void
     {
-        $oldPairs = WcOrderItem::where('wc_order_id', $order->id)
+        $oldPairs = OnlineOrderItem::where('online_order_id', $order->id)
             ->whereNotNull('product_id')
             ->get(['product_id', 'product_variant_id'])
             ->map(fn ($it) => [$it->product_id, $it->product_variant_id])
@@ -146,11 +149,9 @@ class OrderConfirmedHandler implements AnoofyEventHandlerInterface
         $order->items_snapshot = $this->lineItemMapper->enrich($userId, $normalized, $products, $variants);
         $this->recalculateOrderTotals($order, $normalized);
 
-        WcOrderItem::where('wc_order_id', $order->id)->delete();
+        OnlineOrderItem::where('online_order_id', $order->id)->delete();
         $newRows = $this->lineItemMapper->buildItemRows($userId, $order->id, $normalized, $products, $variants);
-        foreach ($newRows as $row) {
-            WcOrderItem::create($row);
-        }
+        $this->persistOnlineOrderItems($order->id, $newRows);
 
         $newPairs = array_filter(
             array_map(fn ($r) => [$r['product_id'], $r['product_variant_id']], $newRows),
@@ -160,7 +161,25 @@ class OrderConfirmedHandler implements AnoofyEventHandlerInterface
         $this->dispatchStockPushJobs($userId, array_merge($oldPairs, $newPairs));
     }
 
-    private function recalculateOrderTotals(WcOrder $order, array $items): void
+    /**
+     * @param  list<array<string, mixed>>  $rows
+     */
+    private function persistOnlineOrderItems(int $orderId, array $rows): void
+    {
+        foreach ($rows as $row) {
+            OnlineOrderItem::create([
+                'user_id' => $row['user_id'],
+                'online_order_id' => $orderId,
+                'product_id' => $row['product_id'],
+                'product_variant_id' => $row['product_variant_id'],
+                'external_product_id' => !empty($row['wc_product_id']) ? (string) $row['wc_product_id'] : null,
+                'external_variant_id' => !empty($row['wc_variation_id']) ? (string) $row['wc_variation_id'] : null,
+                'quantity' => $row['quantity'],
+            ]);
+        }
+    }
+
+    private function recalculateOrderTotals(OnlineOrder $order, array $items): void
     {
         $subtotal = Money::zero();
         foreach ($items as $item) {

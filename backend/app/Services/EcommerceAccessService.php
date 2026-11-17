@@ -7,9 +7,20 @@ use App\Exceptions\PosDomainException;
 use App\Models\ShopifyIntegration;
 use App\Models\User;
 use App\Models\WooCommerceIntegration;
+use Illuminate\Support\Facades\Cache;
 
 class EcommerceAccessService
 {
+    public static function platformCacheKey(int $accountId): string
+    {
+        return "ecommerce_active_platform:{$accountId}";
+    }
+
+    public static function clearPlatformCache(int $accountId): void
+    {
+        Cache::forget(self::platformCacheKey($accountId));
+    }
+
     public function isEnabledForAccount(int $accountId): bool
     {
         return (bool) User::withoutGlobalScopes()
@@ -19,21 +30,18 @@ class EcommerceAccessService
 
     public function activePlatformForAccount(int $accountId): ?EcommercePlatform
     {
-        $wcActive = WooCommerceIntegration::withoutGlobalScopes()
-            ->where('user_id', $accountId)
-            ->where('is_active', true)
-            ->exists();
+        $cached = Cache::remember(self::platformCacheKey($accountId), 60, function () use ($accountId): string {
+            if (WooCommerceIntegration::withoutGlobalScopes()->where('user_id', $accountId)->where('is_active', true)->exists()) {
+                return EcommercePlatform::WOOCOMMERCE->value;
+            }
+            if (ShopifyIntegration::withoutGlobalScopes()->where('user_id', $accountId)->where('is_active', true)->exists()) {
+                return EcommercePlatform::SHOPIFY->value;
+            }
 
-        if ($wcActive) {
-            return EcommercePlatform::WOOCOMMERCE;
-        }
+            return '';
+        });
 
-        $shopifyActive = ShopifyIntegration::withoutGlobalScopes()
-            ->where('user_id', $accountId)
-            ->where('is_active', true)
-            ->exists();
-
-        return $shopifyActive ? EcommercePlatform::SHOPIFY : null;
+        return $cached !== '' ? EcommercePlatform::tryFrom($cached) : null;
     }
 
     public function assertAddonEnabled(int $accountId): void

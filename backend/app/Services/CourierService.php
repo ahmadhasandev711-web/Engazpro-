@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\EcommercePlatform;
 use App\Enums\LedgerSource;
 use App\Enums\PartyType;
 use App\Enums\PaymentMethod;
@@ -12,10 +13,9 @@ use App\Enums\WcPaymentStatus;
 use App\Http\Resources\PartyResource;
 use App\Models\Invoice;
 use App\Models\LedgerEntry;
+use App\Models\OnlineOrder;
 use App\Models\Party;
-use App\Models\ShopifyOrder;
 use App\Models\User;
-use App\Models\WcOrder;
 use App\Exceptions\PosDomainException;
 use App\Models\Payment;
 use App\Services\PaymentService;
@@ -56,7 +56,7 @@ class CourierService
 
     private function fetchCourierWcStats(int $accountId, array $courierIds)
     {
-        return WcOrder::where('user_id', $accountId)
+        return OnlineOrder::where('user_id', $accountId)
             ->whereIn('courier_party_id', $courierIds)
             ->selectRaw('courier_party_id, COUNT(*) as total_orders_count, COALESCE(SUM(CASE WHEN status = ? THEN 1 ELSE 0 END), 0) as active_orders_count, COALESCE(SUM(CASE WHEN status = ? THEN 1 ELSE 0 END), 0) as delivered_orders_count, COALESCE(SUM(CASE WHEN status = ? AND payment_status != ? THEN total ELSE 0 END), 0) as pending_cod_amount', [
                 WcOrderStatus::SHIPPED_VIA_COURIER->value,
@@ -73,7 +73,9 @@ class CourierService
     {
         return Invoice::where('user_id', $accountId)
             ->whereIn('courier_party_id', $courierIds)
+            ->whereNull('online_order_id')
             ->whereNull('wc_order_id')
+            ->whereNull('shopify_order_id')
             ->selectRaw('courier_party_id, COUNT(*) as total_invoices_count, COALESCE(SUM(CASE WHEN remaining_amount > 0 THEN 1 ELSE 0 END), 0) as active_invoices_count, COALESCE(SUM(remaining_amount), 0) as pending_direct_amount')
             ->groupBy('courier_party_id')
             ->get()
@@ -139,10 +141,10 @@ class CourierService
 
     private function buildManifestBaseQueries(int $accountId, int $courierId, ?int $branchId): array
     {
-        $wc = WcOrder::where('user_id', $accountId)->where('courier_party_id', $courierId)->when($branchId, fn ($q) => $q->where('branch_id', $branchId));
-        $inv = Invoice::where('user_id', $accountId)->where('courier_party_id', $courierId)->whereNull('wc_order_id')->when($branchId, fn ($q) => $q->where('branch_id', $branchId));
+        $online = OnlineOrder::where('user_id', $accountId)->where('courier_party_id', $courierId)->when($branchId, fn ($q) => $q->where('branch_id', $branchId));
+        $inv = Invoice::where('user_id', $accountId)->where('courier_party_id', $courierId)->whereNull('online_order_id')->whereNull('wc_order_id')->whereNull('shopify_order_id')->when($branchId, fn ($q) => $q->where('branch_id', $branchId));
 
-        return [$wc, $inv];
+        return [$online, $inv];
     }
 
     private function computeManifestMetrics($wcBaseQuery, $invBaseQuery): array
@@ -191,7 +193,7 @@ class CourierService
             $query->where('payment_status', WcPaymentStatus::PAID_ONLINE->value);
         }
         if ($search !== '') {
-            $query->where(fn ($q) => $q->where('wc_order_id', 'like', "%{$search}%")->orWhere('customer_name', 'like', "%{$search}%")->orWhere('customer_phone', 'like', "%{$search}%")->orWhere('tracking_number', 'like', "%{$search}%"));
+            $query->where(fn ($q) => $q->where('external_order_id', 'like', "%{$search}%")->orWhere('external_order_number', 'like', "%{$search}%")->orWhere('customer_name', 'like', "%{$search}%")->orWhere('customer_phone', 'like', "%{$search}%")->orWhere('tracking_number', 'like', "%{$search}%"));
         }
     }
 
@@ -215,8 +217,8 @@ class CourierService
 
     private function paginateManifestShipments($wcFiltered, $invFiltered, array $filters): array
     {
-        $source = $filters['source'] ?? 'ALL';
-        $wcCount = ($source === 'ALL' || $source === 'WOOCOMMERCE') ? $wcFiltered->count() : 0;
+        $source = strtoupper((string) ($filters['source'] ?? 'ALL'));
+        $wcCount = $this->applyManifestSourceFilter($wcFiltered, $source) ? $wcFiltered->count() : 0;
         $invCount = ($source === 'ALL' || $source === 'DIRECT_SALE') ? $invFiltered->count() : 0;
         $perPage = 50;
         $page = max(1, (int) ($filters['page'] ?? request()->input('page', 1)));
@@ -239,14 +241,29 @@ class CourierService
         return [$shipments, $wcCount + $invCount, $page, $perPage];
     }
 
-    private function formatWcManifestShipment(WcOrder $order): array
+    private function applyManifestSourceFilter($query, string $source): bool
+    {
+        if (!in_array($source, ['ALL', 'ONLINE_ORDER', 'WOOCOMMERCE', 'SHOPIFY'], true)) {
+            return false;
+        }
+        if ($source === 'WOOCOMMERCE') {
+            $query->where('platform', EcommercePlatform::WOOCOMMERCE->value);
+        } elseif ($source === 'SHOPIFY') {
+            $query->where('platform', EcommercePlatform::SHOPIFY->value);
+        }
+
+        return true;
+    }
+
+    private function formatWcManifestShipment(OnlineOrder $order): array
     {
         $isPaidOnline = $order->payment_status === WcPaymentStatus::PAID_ONLINE;
 
         return [
-            'id' => $order->id, 'source' => 'WOOCOMMERCE', 'reference' => '#' . $order->wc_order_id,
-            'wc_order_id' => $order->wc_order_id, 'invoice_id' => $order->invoice_id,
-            'customer_name' => $order->customer_name ?: 'عميل ووكومرس', 'customer_phone' => $order->customer_phone,
+            'id' => $order->id, 'source' => strtoupper($order->platform->value), 'platform' => $order->platform->value,
+            'platform_label' => $order->platform->label(), 'reference' => $order->displayReference(),
+            'wc_order_id' => $order->external_order_id, 'invoice_id' => $order->invoice_id,
+            'customer_name' => $order->customer_name ?: "عميل {$order->platform->label()}", 'customer_phone' => $order->customer_phone,
             'customer_address' => $order->customer_address, 'city' => $order->city, 'tracking_number' => $order->tracking_number,
             'branch_name' => $order->branch?->name, 'total' => Money::of($order->total)->getAmount(),
             'shipping_cost' => Money::of($order->shipping_cost)->getAmount(),
@@ -283,7 +300,7 @@ class CourierService
     /**
      * تسجيل قيد استحقاق تحصيل الشحنة في دفتر شركة الشحن عند التسليم
      */
-    public function recordDeliveryCollection(User $user, Invoice $invoice, WcOrder|ShopifyOrder $order, float $collectedAmount): void
+    public function recordDeliveryCollection(User $user, Invoice $invoice, OnlineOrder $order, float $collectedAmount): void
     {
         if (!$order->courier_party_id || $collectedAmount <= 0) {
             return;
@@ -292,7 +309,7 @@ class CourierService
         DB::transaction(fn() => $this->persistDeliveryCollection($user, $invoice, $order, $collectedAmount));
     }
 
-    private function persistDeliveryCollection(User $user, Invoice $invoice, WcOrder|ShopifyOrder $order, float $collectedAmount): void
+    private function persistDeliveryCollection(User $user, Invoice $invoice, OnlineOrder $order, float $collectedAmount): void
     {
         $courier = Party::where('user_id', $user->getAccountId())
             ->where('type', PartyType::COURIER->value)
@@ -313,8 +330,8 @@ class CourierService
             return;
         }
 
-        $ref = $order instanceof ShopifyOrder ? ($order->shopify_order_number ?: "#{$order->shopify_order_id}") : "#{$order->wc_order_id}";
-        $fallbackCustomer = $order instanceof ShopifyOrder ? 'عميل شوبيفاي' : 'عميل ووكومرس';
+        $ref = $order->displayReference();
+        $fallbackCustomer = "عميل {$order->platform->label()}";
         $desc = "تحصيل شحنة أوردر {$ref} - العميل: " . ($order->customer_name ?: $fallbackCustomer);
         $this->ledgerService->recordEntry($user, $courier, LedgerSource::INVOICE->value, $invoice->id, $invoice->date->format('Y-m-d'), $desc, $collectedAmount, 0.0);
     }

@@ -27,6 +27,8 @@ class SettingService
                 self::KEY_STORE_PHONE,
                 self::KEY_STORE_ADDRESS,
                 self::KEY_CURRENCY,
+                self::KEY_MAX_DISCOUNT_PERCENT,
+                self::KEY_ALLOW_NEGATIVE_BRANCH_STOCK,
             ])
             ->pluck('value', 'key');
 
@@ -35,8 +37,8 @@ class SettingService
             'store_phone' => $settings->get(self::KEY_STORE_PHONE) ?: ($user->owner?->phone ?? $user->phone),
             'store_address' => $settings->get(self::KEY_STORE_ADDRESS) ?: '',
             'currency' => $settings->get(self::KEY_CURRENCY) ?: 'ج.م',
-            'max_discount_percent' => $this->getMaxDiscountPercent($user),
-            'allow_negative_branch_stock' => $this->allowsNegativeBranchStock($user),
+            'max_discount_percent' => $this->parseMaxDiscountPercent($settings->get(self::KEY_MAX_DISCOUNT_PERCENT)),
+            'allow_negative_branch_stock' => $this->parseNegativeStockFlag($settings->get(self::KEY_ALLOW_NEGATIVE_BRANCH_STOCK)),
         ];
     }
 
@@ -50,11 +52,7 @@ class SettingService
             ->where('key', self::KEY_ALLOW_NEGATIVE_BRANCH_STOCK)
             ->value('value');
 
-        if (!is_string($value) || trim($value) === '') {
-            return false;
-        }
-
-        return filter_var($value, FILTER_VALIDATE_BOOLEAN);
+        return $this->parseNegativeStockFlag($value);
     }
 
     /**
@@ -68,6 +66,20 @@ class SettingService
             ->where('key', self::KEY_MAX_DISCOUNT_PERCENT)
             ->value('value');
 
+        return $this->parseMaxDiscountPercent($value);
+    }
+
+    private function parseNegativeStockFlag(mixed $value): bool
+    {
+        if (!is_string($value) || trim($value) === '') {
+            return false;
+        }
+
+        return filter_var($value, FILTER_VALIDATE_BOOLEAN);
+    }
+
+    private function parseMaxDiscountPercent(mixed $value): float
+    {
         if (!is_string($value) || trim($value) === '') {
             return 100.0;
         }

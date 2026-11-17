@@ -39,6 +39,7 @@ class Invoice extends Model
         'notes',
         'wc_order_id',
         'shopify_order_id',
+        'online_order_id',
         'shipping_amount',
     ];
 
@@ -46,6 +47,7 @@ class Invoice extends Model
         'courier_party_id' => 'integer',
         'wc_order_id' => 'integer',
         'shopify_order_id' => 'integer',
+        'online_order_id' => 'integer',
         'shipping_amount' => 'decimal:2',
         'type' => InvoiceType::class,
         'payment_method' => PaymentMethod::class,
@@ -86,6 +88,11 @@ class Invoice extends Model
     public function courierParty(): BelongsTo
     {
         return $this->belongsTo(Party::class, 'courier_party_id');
+    }
+
+    public function onlineOrder(): BelongsTo
+    {
+        return $this->belongsTo(OnlineOrder::class, 'online_order_id');
     }
 
     public function parentInvoice(): BelongsTo

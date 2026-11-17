@@ -22,7 +22,9 @@ export const ActiveShiftBanner: React.FC = () => {
       return res.data?.data;
     },
     enabled: canOperateShift,
-    refetchInterval: 30000,
+    refetchInterval: 60000,
+    refetchIntervalInBackground: false,
+    staleTime: 30000,
   });
 
   const activeShift = shiftData;

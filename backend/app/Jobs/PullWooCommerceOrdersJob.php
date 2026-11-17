@@ -2,10 +2,11 @@
 
 namespace App\Jobs;
 
+use App\Enums\EcommercePlatform;
 use App\Enums\QueueName;
 use App\Jobs\Middleware\WithTenantContext;
 use App\Models\User;
-use App\Services\WooCommerce\WooCommerceOrderSyncService;
+use App\Services\OnlineOrders\OnlineOrderSyncService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -33,15 +34,15 @@ class PullWooCommerceOrdersJob implements ShouldQueue
     }
 
     /**
-     * @return array{imported: int, updated: int, failed: int, errors: list<string>}
+     * @return array{imported: int, updated: int, total: int}
      */
-    public function handle(WooCommerceOrderSyncService $orderSyncService): array
+    public function handle(OnlineOrderSyncService $orderSyncService): array
     {
         $user = User::withoutGlobalScopes()->find($this->actingUserId)
             ?? User::withoutGlobalScopes()->findOrFail($this->accountId);
 
         try {
-            return $orderSyncService->pullRecentOrders($user);
+            return $orderSyncService->pullRecentOrders($user, EcommercePlatform::WOOCOMMERCE);
         } catch (\Throwable $e) {
             Log::error('PullWooCommerceOrdersJob failed', [
                 'account_id' => $this->accountId,

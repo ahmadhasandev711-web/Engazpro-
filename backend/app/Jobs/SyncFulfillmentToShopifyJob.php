@@ -4,8 +4,8 @@ namespace App\Jobs;
 
 use App\Contracts\ShopifyGraphqlClientInterface;
 use App\Enums\QueueName;
+use App\Models\OnlineOrder;
 use App\Models\ShopifyIntegration;
-use App\Models\ShopifyOrder;
 use App\Support\ShopifyGid;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -32,15 +32,15 @@ class SyncFulfillmentToShopifyJob implements ShouldQueue
     {
         $integration = ShopifyIntegration::withoutGlobalScopes()
             ->where('user_id', $this->userId)->where('is_active', true)->first();
-        $order = ShopifyOrder::withoutGlobalScopes()->where('user_id', $this->userId)->find($this->localOrderId);
+        $order = OnlineOrder::withoutGlobalScopes()->where('user_id', $this->userId)->find($this->localOrderId);
 
-        if (!$integration || !$order || !$order->shopify_order_id) {
+        if (!$integration || !$order || !$order->external_order_id) {
             return;
         }
 
         $fulfillmentOrders = $graphqlClient->getOrderFulfillmentOrders(
             $integration,
-            ShopifyGid::toGid('Order', $order->shopify_order_id)
+            ShopifyGid::toGid('Order', (int) $order->external_order_id)
         );
         $lineItemsByFo = $this->collectOpenFulfillmentOrderItems($fulfillmentOrders);
         if (empty($lineItemsByFo)) {

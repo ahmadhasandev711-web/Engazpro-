@@ -7,7 +7,7 @@ use App\Enums\AnoofyOutboxStatus;
 use App\Enums\WcOrderStatus;
 use App\Jobs\SendAnoofyEventJob;
 use App\Models\AnoofyOutboxEvent;
-use App\Models\WcOrder;
+use App\Models\OnlineOrder;
 use App\Models\WooCommerceIntegration;
 use Carbon\CarbonImmutable;
 
@@ -17,7 +17,7 @@ class AnoofyOutboxService
         private readonly AnoofyEnvelopeFactory $envelopeFactory
     ) {}
 
-    public function recordStageChange(WcOrder $order, ?WcOrderStatus $previousStatus): ?AnoofyOutboxEvent
+    public function recordStageChange(OnlineOrder $order, ?WcOrderStatus $previousStatus): ?AnoofyOutboxEvent
     {
         $integration = WooCommerceIntegration::withoutGlobalScopes()
             ->where('user_id', $order->user_id)
@@ -27,23 +27,24 @@ class AnoofyOutboxService
             return null;
         }
 
-        WcOrder::withoutGlobalScopes()->whereKey($order->id)->increment('anoofy_outbound_version');
-        $newVersion = (int) WcOrder::withoutGlobalScopes()->whereKey($order->id)->value('anoofy_outbound_version');
+        $meta = OnlineOrder::withoutGlobalScopes()->whereKey($order->id)->value('platform_meta') ?? [];
+        $newVersion = ((int) ($meta['anoofy_outbound_version'] ?? 0)) + 1;
+        $meta['anoofy_outbound_version'] = $newVersion;
+        OnlineOrder::withoutGlobalScopes()->whereKey($order->id)->update(['platform_meta' => $meta]);
 
-        $payload = $this->buildPayload($order, $previousStatus, $newVersion);
-
-        return $this->createOutboxEvent($order, $payload, $newVersion);
+        return $this->createOutboxEvent($order, $this->buildPayload($order, $previousStatus, $newVersion), $newVersion);
     }
 
     /**
      * @param array<string, mixed> $payload
      */
-    private function createOutboxEvent(WcOrder $order, array $payload, int $version): AnoofyOutboxEvent
+    private function createOutboxEvent(OnlineOrder $order, array $payload, int $version): AnoofyOutboxEvent
     {
         $outbox = AnoofyOutboxEvent::create([
             'user_id' => $order->user_id,
             'event_id' => $payload['event_id'],
             'event_type' => AnoofyEventType::ORDER_STAGE_CHANGED,
+            'online_order_id' => $order->id,
             'wc_order_id' => $order->id,
             'order_version' => $version,
             'payload' => $payload,
@@ -59,10 +60,10 @@ class AnoofyOutboxService
     /**
      * @return array<string, mixed>
      */
-    private function buildPayload(WcOrder $order, ?WcOrderStatus $previousStatus, int $version): array
+    private function buildPayload(OnlineOrder $order, ?WcOrderStatus $previousStatus, int $version): array
     {
         $data = [
-            'wc_order_id' => (int) $order->wc_order_id,
+            'wc_order_id' => (int) $order->external_order_id,
             'stage' => $order->status->value,
             'previous_stage' => $previousStatus?->value,
             'changed_at' => CarbonImmutable::now('UTC')->format('Y-m-d\TH:i:s\Z'),

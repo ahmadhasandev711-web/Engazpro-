@@ -1,10 +1,12 @@
 import React from 'react';
-import { Truck, AlertCircle, X, Package, Check, Building2, Plus } from 'lucide-react';
+import { Truck, AlertCircle, X, Package, Check, Building2, Plus, PhoneOff, CalendarClock, Ban } from 'lucide-react';
+import { OnlineOrderCallStatus } from '@pos-mandob/shared';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { Badge } from '../ui/Badge';
 import { cn } from '../../utils/cn';
+import { CANCEL_REASON_OPTIONS, getOrderDisplayRef, getOrderPlatformLabel, isOrderPrepaid } from './helpers';
 import type { WcOrdersViewModel } from './types';
 
 export const WcOrderActionModals: React.FC<{ vm: WcOrdersViewModel }> = ({ vm }) => {
@@ -49,6 +51,22 @@ export const WcOrderActionModals: React.FC<{ vm: WcOrdersViewModel }> = ({ vm })
     setCollectedAmount,
     paymentMethod,
     setPaymentMethod,
+    callModalOrder,
+    setCallModalOrder,
+    callOutcome,
+    setCallOutcome,
+    callScheduledAt,
+    setCallScheduledAt,
+    callNotes,
+    setCallNotes,
+    logCallMutation,
+    cancelModalOrder,
+    setCancelModalOrder,
+    cancelReason,
+    setCancelReason,
+    cancelNotes,
+    setCancelNotes,
+    cancelMutation,
     setFeedback,
     user,
     branches,
@@ -72,7 +90,7 @@ export const WcOrderActionModals: React.FC<{ vm: WcOrdersViewModel }> = ({ vm })
             <div className="w-12 h-1.5 bg-line rounded-full mx-auto mb-1 sm:hidden shrink-0" />
             <div className="flex items-center justify-between border-b border-line pb-3">
               <h3 className="font-black text-sm text-ink tabular-nums">
-                تأكيد الطلب #{confirmModalOrder.wc_order_id}
+                تأكيد الطلب {getOrderDisplayRef(confirmModalOrder)}
               </h3>
               <button
                 type="button"
@@ -175,7 +193,7 @@ export const WcOrderActionModals: React.FC<{ vm: WcOrdersViewModel }> = ({ vm })
             <div className="w-12 h-1.5 bg-line rounded-full mx-auto mb-1 sm:hidden shrink-0" />
             <div className="flex items-center justify-between border-b border-line pb-3">
               <h3 className="font-black text-sm text-ink tabular-nums">
-                إسناد الطلب للمندوب #{dispatchModalOrder.wc_order_id}
+                إسناد الطلب للمندوب {getOrderDisplayRef(dispatchModalOrder)}
               </h3>
               <button
                 type="button"
@@ -312,7 +330,7 @@ export const WcOrderActionModals: React.FC<{ vm: WcOrdersViewModel }> = ({ vm })
             <div className="w-12 h-1.5 bg-line rounded-full mx-auto mb-1 sm:hidden shrink-0" />
             <div className="flex items-center justify-between border-b border-line pb-3">
               <h3 className="font-black text-sm text-ink tabular-nums">
-                تسليم وتحصيل الطلب #{deliverModalOrder.wc_order_id}
+                تسليم وتحصيل الطلب {getOrderDisplayRef(deliverModalOrder)}
               </h3>
               <button
                 type="button"
@@ -330,12 +348,12 @@ export const WcOrderActionModals: React.FC<{ vm: WcOrdersViewModel }> = ({ vm })
                   <span>شركة الشحن: {deliverModalOrder.courier_name || 'شركة شحن خارجية'}</span>
                 </div>
                 <p className="text-2xs leading-relaxed">
-                  {deliverModalOrder.payment_status === 'PAID_ONLINE' || (deliverModalOrder.wc_payment_method && deliverModalOrder.wc_payment_method !== 'cod')
+                  {isOrderPrepaid(deliverModalOrder)
                     ? 'الطلب مسدد أونلاين مسبقاً، ومهمة شركة الشحن هي التوصيل فقط (المطلوب تحصيله 0 ج.م).'
                     : 'المبلغ المحصل سيُقيد كعهدة معلقة في كشف حساب شركة الشحن، ولن يدخل الخزينة إلا عند توريد الكاش بسند قبض.'}
                 </p>
               </div>
-            ) : (deliverModalOrder.payment_status === 'PAID_ONLINE' || (deliverModalOrder.wc_payment_method && deliverModalOrder.wc_payment_method !== 'cod')) ? (
+            ) : isOrderPrepaid(deliverModalOrder) ? (
               <div className="p-3 bg-ok-soft rounded-2xl border border-ok/20 text-xs text-ok space-y-1">
                 <div className="font-bold flex items-center gap-1">
                   <span>✓</span>
@@ -418,7 +436,7 @@ export const WcOrderActionModals: React.FC<{ vm: WcOrdersViewModel }> = ({ vm })
             <div className="flex items-center justify-between border-b border-line pb-3">
               <h3 className="font-black text-sm text-ink flex items-center gap-2 tabular-nums">
                 <Package className="w-5 h-5 text-brand" />
-                <span>إسناد الطلب لشركة شحن #{courierModalOrder.wc_order_id}</span>
+                <span>إسناد الطلب لشركة شحن {getOrderDisplayRef(courierModalOrder)}</span>
               </h3>
               <button
                 type="button"
@@ -612,6 +630,222 @@ export const WcOrderActionModals: React.FC<{ vm: WcOrdersViewModel }> = ({ vm })
                 className="min-h-[44px] font-bold text-xs"
               >
                 إلغاء
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal 5: Call Center Follow-Up Modal */}
+      {callModalOrder && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-canvas/80 p-0 sm:p-4 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="bg-panel border border-line rounded-t-[2.5rem] sm:rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
+            <div className="w-12 h-1.5 bg-line rounded-full mx-auto mb-1 sm:hidden" />
+            <div className="flex items-center justify-between border-b border-line pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-xl bg-warn-soft border border-warn/20 flex items-center justify-center text-warn">
+                  <CalendarClock className="w-5 h-5" />
+                </div>
+                <h3 className="text-base font-black text-ink">
+                  تسجيل مكالمة طلب <span className="text-brand tabular-nums">{getOrderDisplayRef(callModalOrder)}</span>
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCallModalOrder(null)}
+                className="p-2 hover:bg-surface-2 rounded-xl text-muted hover:text-ink cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCallOutcome(OnlineOrderCallStatus.NO_ANSWER)}
+                  className={cn(
+                    'p-3 rounded-2xl border font-black text-xs flex items-center justify-center gap-2 transition-all cursor-pointer',
+                    callOutcome === OnlineOrderCallStatus.NO_ANSWER
+                      ? 'bg-warn-soft border-warn text-warn'
+                      : 'bg-surface-2/60 border-line text-muted hover:text-ink'
+                  )}
+                >
+                  <PhoneOff className="w-4 h-4" />
+                  <span>ما ردّش</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCallOutcome(OnlineOrderCallStatus.CALLBACK_SCHEDULED)}
+                  className={cn(
+                    'p-3 rounded-2xl border font-black text-xs flex items-center justify-center gap-2 transition-all cursor-pointer',
+                    callOutcome === OnlineOrderCallStatus.CALLBACK_SCHEDULED
+                      ? 'bg-info-soft border-info text-info'
+                      : 'bg-surface-2/60 border-line text-muted hover:text-ink'
+                  )}
+                >
+                  <CalendarClock className="w-4 h-4" />
+                  <span>أجّل لوقت معيّن</span>
+                </button>
+              </div>
+
+              {callOutcome === OnlineOrderCallStatus.CALLBACK_SCHEDULED && (
+                <div className="space-y-2">
+                  <label className="block font-bold text-ink">موعد معاودة الاتصال المطلوب:</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { label: 'بعد ساعة', hours: 1 },
+                      { label: 'بعد 3 ساعات', hours: 3 },
+                      { label: 'غداً', hours: 24 },
+                    ].map((preset) => (
+                      <button
+                        key={preset.label}
+                        type="button"
+                        onClick={() => {
+                          const target = new Date(Date.now() + preset.hours * 3600 * 1000);
+                          setCallScheduledAt(new Date(target.getTime() - target.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
+                        }}
+                        className="px-2.5 py-1 rounded-xl bg-surface-2 border border-line text-2xs font-bold text-ink hover:border-brand cursor-pointer"
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                  <Input
+                    type="datetime-local"
+                    value={callScheduledAt}
+                    onChange={(e) => setCallScheduledAt(e.target.value)}
+                    className="tabular-nums font-bold"
+                  />
+                </div>
+              )}
+
+              <div>
+                <Input
+                  label="ملاحظات المكالمة (اختياري):"
+                  value={callNotes}
+                  onChange={(e) => setCallNotes(e.target.value)}
+                  placeholder="مثال: الهاتف مغلق / العميل طلب التواصل مساءً"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 pt-2">
+              <Button
+                variant="primary"
+                size="lg"
+                onClick={() =>
+                  logCallMutation.mutate({
+                    orderId: callModalOrder.id,
+                    callStatus: callOutcome,
+                    scheduledAt: callScheduledAt,
+                    notes: callNotes,
+                  })
+                }
+                disabled={
+                  logCallMutation.isPending ||
+                  (callOutcome === OnlineOrderCallStatus.CALLBACK_SCHEDULED && !callScheduledAt)
+                }
+                isLoading={logCallMutation.isPending}
+                className="flex-1 min-h-[44px] font-black text-xs"
+              >
+                حفظ نتيجة المكالمة
+              </Button>
+              <Button
+                variant="secondary"
+                size="lg"
+                onClick={() => setCallModalOrder(null)}
+                className="min-h-[44px] font-bold text-xs"
+              >
+                إغلاق
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal 6: Cancel Order Modal */}
+      {cancelModalOrder && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-canvas/80 p-0 sm:p-4 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="bg-panel border border-line rounded-t-[2.5rem] sm:rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
+            <div className="w-12 h-1.5 bg-line rounded-full mx-auto mb-1 sm:hidden" />
+            <div className="flex items-center justify-between border-b border-line pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-xl bg-bad-soft border border-bad/20 flex items-center justify-center text-bad">
+                  <Ban className="w-5 h-5" />
+                </div>
+                <h3 className="text-base font-black text-ink">
+                  إلغاء الطلب <span className="text-bad tabular-nums">{getOrderDisplayRef(cancelModalOrder)}</span>
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCancelModalOrder(null)}
+                className="p-2 hover:bg-surface-2 rounded-xl text-muted hover:text-ink cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              <div className="p-3 bg-bad-soft border border-bad/20 rounded-2xl text-bad font-bold leading-relaxed">
+                سيتم إلغاء الطلب وفك حجز المخزون فوراً، وتحديث حالة الطلب تلقائياً على متجر {getOrderPlatformLabel(cancelModalOrder)}.
+              </div>
+
+              <div className="space-y-2">
+                <label className="block font-black text-ink">اختر سبب الإلغاء *</label>
+                <div className="space-y-1.5">
+                  {CANCEL_REASON_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setCancelReason(opt.value)}
+                      className={cn(
+                        'w-full text-right px-3.5 py-2.5 rounded-xl border font-bold transition-all cursor-pointer flex items-center justify-between',
+                        cancelReason === opt.value
+                          ? 'bg-bad-soft border-bad text-bad'
+                          : 'bg-surface-2/60 border-line text-ink hover:border-line-2'
+                      )}
+                    >
+                      <span>{opt.label}</span>
+                      {cancelReason === opt.value && <Check className="w-4 h-4 shrink-0" />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <Input
+                label="ملاحظات إضافية (اختياري):"
+                value={cancelNotes}
+                onChange={(e) => setCancelNotes(e.target.value)}
+                placeholder="تفاصيل إضافية حول سبب الإلغاء..."
+              />
+            </div>
+
+            <div className="flex items-center gap-2 pt-2">
+              <Button
+                variant="danger"
+                size="lg"
+                onClick={() =>
+                  cancelMutation.mutate({
+                    orderId: cancelModalOrder.id,
+                    reason: cancelReason,
+                    notes: cancelNotes,
+                  })
+                }
+                disabled={cancelMutation.isPending}
+                isLoading={cancelMutation.isPending}
+                className="flex-1 min-h-[44px] font-black text-xs"
+              >
+                تأكيد إلغاء الطلب
+              </Button>
+              <Button
+                variant="secondary"
+                size="lg"
+                onClick={() => setCancelModalOrder(null)}
+                className="min-h-[44px] font-bold text-xs"
+              >
+                تراجع
               </Button>
             </div>
           </div>

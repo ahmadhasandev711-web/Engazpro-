@@ -71,6 +71,8 @@ export const EmployeesPage: React.FC = () => {
       const res = await apiClient.get('/branches');
       return res.data?.data || [];
     },
+    staleTime: 1000 * 60 * 15,
+    gcTime: 1000 * 60 * 30,
   });
   const branches: any[] = Array.isArray(rawBranches) ? rawBranches : ((rawBranches as any)?.data || []);
 

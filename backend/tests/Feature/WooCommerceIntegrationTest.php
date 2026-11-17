@@ -3,16 +3,17 @@
 namespace Tests\Feature;
 
 use App\Enums\BranchType;
+use App\Enums\EcommercePlatform;
 use App\Enums\WcOrderStatus;
 use App\Enums\WcPaymentStatus;
 use App\Models\Branch;
 use App\Models\BranchStock;
+use App\Models\OnlineOrder;
 use App\Models\Party;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Subscription;
 use App\Models\User;
-use App\Models\WcOrder;
 use App\Models\WooCommerceIntegration;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -302,8 +303,8 @@ class WooCommerceIntegrationTest extends TestCase
         $this->assertNotNull($party);
         $this->assertEquals('01012345678', $party->phone, 'Phone must be normalized to Egyptian local format');
 
-        // Verify WcOrder record created
-        $order = WcOrder::where('user_id', $this->owner->id)->where('wc_order_id', 5001)->first();
+        // Verify OnlineOrder record created
+        $order = OnlineOrder::where('user_id', $this->owner->id)->where('platform', EcommercePlatform::WOOCOMMERCE->value)->where('external_order_id', '5001')->first();
         $this->assertNotNull($order);
         $this->assertEquals(WcOrderStatus::PENDING_CONFIRMATION, $order->status);
         $this->assertEquals(WcPaymentStatus::PENDING_COD, $order->payment_status);
@@ -326,7 +327,7 @@ class WooCommerceIntegrationTest extends TestCase
         );
 
         $dupResponse->assertStatus(202);
-        $this->assertEquals(1, WcOrder::where('user_id', $this->owner->id)->where('wc_order_id', 5001)->count());
+        $this->assertEquals(1, OnlineOrder::where('user_id', $this->owner->id)->where('platform', EcommercePlatform::WOOCOMMERCE->value)->where('external_order_id', '5001')->count());
     }
 
     public function test_wc_order_fulfillment_lifecycle_confirm_dispatch_deliver(): void
@@ -356,9 +357,11 @@ class WooCommerceIntegrationTest extends TestCase
             'type' => 'CUSTOMER',
         ]);
 
-        $order = WcOrder::create([
+        $order = OnlineOrder::create([
             'user_id' => $this->owner->id,
-            'wc_order_id' => 7001,
+            'platform' => EcommercePlatform::WOOCOMMERCE,
+            'external_order_id' => '7001',
+            'external_order_number' => '#7001',
             'party_id' => $party->id,
             'branch_id' => $this->onlineWarehouse->id,
             'status' => WcOrderStatus::PENDING_CONFIRMATION,
@@ -382,7 +385,7 @@ class WooCommerceIntegrationTest extends TestCase
 
         // Step 1: Confirm order with sufficient stock
         $confirmRes = $this->withHeader('Authorization', "Bearer {$this->token}")
-            ->postJson("/api/wc-orders/{$order->id}/confirm", [
+            ->postJson("/api/online-orders/{$order->id}/confirm", [
                 'branch_id' => $this->onlineWarehouse->id,
             ]);
 
@@ -391,7 +394,7 @@ class WooCommerceIntegrationTest extends TestCase
 
         // Step 2: Dispatch order to mandob (creates StockTransfer from onlineWarehouse to vanBranch)
         $dispatchRes = $this->withHeader('Authorization', "Bearer {$this->token}")
-            ->postJson("/api/wc-orders/{$order->id}/dispatch", [
+            ->postJson("/api/online-orders/{$order->id}/dispatch", [
                 'mandob_id' => $this->mandob->id,
             ]);
 
@@ -405,7 +408,7 @@ class WooCommerceIntegrationTest extends TestCase
         ]);
 
         $deliverRes = $this->withHeader('Authorization', "Bearer {$this->token}")
-            ->postJson("/api/wc-orders/{$order->id}/deliver", [
+            ->postJson("/api/online-orders/{$order->id}/deliver", [
                 'collected_amount' => 640.00,
                 'payment_method' => 'CASH',
             ]);

@@ -115,4 +115,19 @@ mutation RegisterWebhook($topic: WebhookSubscriptionTopic!, $webhookSubscription
   }
 }
 GRAPHQL;
+
+    public const ORDER_CANCEL = <<<'GRAPHQL'
+mutation CancelOrder($orderId: ID!, $reason: OrderCancelReason!, $notifyCustomer: Boolean, $restock: Boolean!, $staffNote: String) {
+  orderCancel(
+    orderId: $orderId
+    reason: $reason
+    notifyCustomer: $notifyCustomer
+    restock: $restock
+    staffNote: $staffNote
+  ) {
+    job { id }
+    orderCancelUserErrors { field message code }
+  }
+}
+GRAPHQL;
 }

@@ -3,9 +3,9 @@
 use App\Models\Invoice;
 use App\Models\LedgerEntry;
 use App\Models\Party;
-use App\Models\WcOrder;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -37,7 +37,12 @@ return new class extends Migration
                     Invoice::whereIn('party_id', $duplicateIds)->update(['party_id' => $canonical->id]);
 
                     // Re-link WooCommerce orders to canonical party
-                    WcOrder::whereIn('party_id', $duplicateIds)->update(['party_id' => $canonical->id]);
+                    if (Schema::hasTable('wc_orders')) {
+                        DB::table('wc_orders')->whereIn('party_id', $duplicateIds)->update(['party_id' => $canonical->id]);
+                    }
+                    if (Schema::hasTable('online_orders')) {
+                        DB::table('online_orders')->whereIn('party_id', $duplicateIds)->update(['party_id' => $canonical->id]);
+                    }
 
                     // Re-link ledger entries to canonical party
                     LedgerEntry::whereIn('party_id', $duplicateIds)->update(['party_id' => $canonical->id]);

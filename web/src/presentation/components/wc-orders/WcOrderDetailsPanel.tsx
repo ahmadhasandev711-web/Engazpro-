@@ -1,5 +1,5 @@
 import React from 'react';
-import { formatCurrency, WcOrderStatus, WcPaymentStatus } from '@pos-mandob/shared';
+import { formatCurrency, OnlineOrderCallStatus, WcOrderStatus, WcPaymentStatus } from '@pos-mandob/shared';
 import {
   ShoppingBag,
   Truck,
@@ -15,12 +15,23 @@ import {
   AlertCircle,
   Clock,
   Circle,
+  Headphones,
+  PhoneOff,
+  CalendarClock,
+  Ban,
 } from 'lucide-react';
 import {
   cleanItemName,
   formatOrderDate,
+  formatShortDateTime,
   getStatusBadge,
   getCallConfirmedBadge,
+  getOrderDisplayRef,
+  getOrderPlatformLabel,
+  getCancelReasonLabel,
+  buildTelUrl,
+  buildWhatsAppUrl,
+  buildDefaultOrderWhatsAppMessage,
   calculateOrderStages,
   OrderStage,
 } from './helpers';
@@ -50,6 +61,9 @@ export const WcOrderDetailsPanel: React.FC<WcOrderDetailsPanelProps> = ({ vm, on
     openCourierModal,
     openDeliverModal,
     setPrintOrder,
+    openCallModal,
+    logCallMutation,
+    openCancelModal,
     user,
     branches,
     mandobs,
@@ -79,12 +93,8 @@ export const WcOrderDetailsPanel: React.FC<WcOrderDetailsPanelProps> = ({ vm, on
   const phone = order.customer_phone || order.party?.phone;
   const address = order.customer_address || order.party?.address;
   const gov = order.governorate || order.city;
-  const cleanPhoneForWa = phone ? phone.replace(/\D/g, '') : '';
-  const waUrl = cleanPhoneForWa
-    ? cleanPhoneForWa.startsWith('2')
-      ? `https://wa.me/${cleanPhoneForWa}`
-      : `https://wa.me/2${cleanPhoneForWa}`
-    : null;
+  const telUrl = buildTelUrl(phone);
+  const waUrl = buildWhatsAppUrl(phone, buildDefaultOrderWhatsAppMessage(order));
 
   return (
     <div
@@ -108,7 +118,7 @@ export const WcOrderDetailsPanel: React.FC<WcOrderDetailsPanelProps> = ({ vm, on
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <h2 className="text-sm font-black text-ink tabular-nums">
-                طلب ووكومرس #{order.wc_order_id}
+                طلب {getOrderPlatformLabel(order)} {getOrderDisplayRef(order)}
               </h2>
               {getCallConfirmedBadge(order)}
               {getStatusBadge(order.status)}
@@ -212,14 +222,15 @@ export const WcOrderDetailsPanel: React.FC<WcOrderDetailsPanelProps> = ({ vm, on
             </div>
 
             {/* Quick Contact Buttons */}
-            <div className="flex items-center gap-2">
-              {phone && (
+            <div className="flex items-center gap-2 flex-wrap">
+              {telUrl && (
                 <a
-                  href={`tel:${phone}`}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-panel border border-line text-ink hover:text-ok rounded-xl text-xs font-bold transition-all shadow-2xs active:scale-95 tabular-nums min-h-[36px]"
+                  href={telUrl}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-panel border border-line text-ink hover:text-ok hover:border-ok/40 rounded-xl text-xs font-black transition-all shadow-2xs active:scale-95 tabular-nums min-h-[40px]"
+                  title="اتصال هاتفي بالعميل"
                 >
-                  <Phone className="w-3.5 h-3.5 text-ok" />
-                  <span>{phone}</span>
+                  <Phone className="w-4 h-4 text-ok" />
+                  <span>اتصال ({phone})</span>
                 </a>
               )}
               {waUrl && (
@@ -227,9 +238,10 @@ export const WcOrderDetailsPanel: React.FC<WcOrderDetailsPanelProps> = ({ vm, on
                   href={waUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-ok text-on-brand hover:opacity-90 rounded-xl text-xs font-bold transition-all shadow-xs active:scale-95 min-h-[36px]"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-ok text-on-brand hover:opacity-90 rounded-xl text-xs font-black transition-all shadow-xs active:scale-95 min-h-[40px]"
+                  title="إرسال رسالة واتساب للعميل"
                 >
-                  <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                     <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z" />
                   </svg>
                   <span>واتساب</span>
@@ -257,6 +269,62 @@ export const WcOrderDetailsPanel: React.FC<WcOrderDetailsPanelProps> = ({ vm, on
             </div>
           )}
         </div>
+
+        {/* Call Center History & Cancellation Reason Card */}
+        {(Number(order.call_attempts_count || 0) > 0 || order.call_status || order.status === WcOrderStatus.CANCELLED) && (
+          <div className="bg-surface-2/60 border border-line rounded-2xl p-3.5 space-y-2 text-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black text-ink flex items-center gap-1.5">
+                <Headphones className="w-4 h-4 text-brand" />
+                <span>سجل الكول سنتر والمتابعة</span>
+              </span>
+              {Number(order.call_attempts_count || 0) > 0 && (
+                <span className="text-2xs font-black bg-panel border border-line px-2 py-0.5 rounded-lg tabular-nums text-ink">
+                  {order.call_attempts_count} محاولات
+                </span>
+              )}
+            </div>
+
+            {order.last_call_attempt_at && (
+              <div className="flex items-center justify-between text-2xs text-muted">
+                <span>آخر محاولة اتصال:</span>
+                <span className="font-bold text-ink tabular-nums">
+                  {formatShortDateTime(order.last_call_attempt_at)}
+                  {order.last_call_attempt_by ? ` (${order.last_call_attempt_by})` : ''}
+                </span>
+              </div>
+            )}
+
+            {order.call_status === OnlineOrderCallStatus.CALLBACK_SCHEDULED && order.call_scheduled_at && (
+              <div className="flex items-center justify-between text-2xs text-info bg-info-soft border border-info/20 rounded-xl px-2.5 py-1.5 font-bold">
+                <span>موعد المعاودة المحدد:</span>
+                <span className="tabular-nums">{formatShortDateTime(order.call_scheduled_at)}</span>
+              </div>
+            )}
+
+            {order.call_notes && (
+              <div className="text-2xs text-muted bg-panel border border-line rounded-xl p-2 font-medium">
+                <span className="font-bold text-ink">ملاحظة المكالمة: </span>
+                <span>{order.call_notes}</span>
+              </div>
+            )}
+
+            {order.status === WcOrderStatus.CANCELLED && (
+              <div className="bg-bad-soft border border-bad/20 rounded-xl p-2.5 text-xs text-bad space-y-1">
+                <div className="font-black flex items-center gap-1.5">
+                  <Ban className="w-3.5 h-3.5 shrink-0" />
+                  <span>سبب الإلغاء: {getCancelReasonLabel(order.cancel_reason)}</span>
+                </div>
+                {order.cancel_notes && (
+                  <p className="text-2xs font-medium leading-relaxed">{order.cancel_notes}</p>
+                )}
+                {order.cancelled_at && (
+                  <p className="text-2xs opacity-80 tabular-nums">تاريخ الإلغاء: {formatShortDateTime(order.cancelled_at)}</p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Products & Line Items */}
         <div className="space-y-2">
@@ -342,9 +410,9 @@ export const WcOrderDetailsPanel: React.FC<WcOrderDetailsPanelProps> = ({ vm, on
             <div className="flex justify-between text-ok">
               <span className="flex items-center gap-1">
                 <span>خصم الكوبون:</span>
-                {order.wc_coupon_codes && order.wc_coupon_codes.length > 0 && (
+                {((order.coupon_codes ?? order.wc_coupon_codes) || []).length > 0 && (
                   <span className="bg-ok-soft text-ok text-2xs px-1.5 py-0.5 rounded font-bold">
-                    {order.wc_coupon_codes.join(', ')}
+                    {(order.coupon_codes ?? order.wc_coupon_codes).join(', ')}
                   </span>
                 )}
               </span>
@@ -359,7 +427,7 @@ export const WcOrderDetailsPanel: React.FC<WcOrderDetailsPanelProps> = ({ vm, on
             <span>طريقة الدفع:</span>
             <span className="font-bold text-ink">
               {order.payment_status === WcPaymentStatus.PAID_ONLINE ? '💳 مدفوع أونلاين' : '💵 الدفع عند الاستلام (COD)'}
-              {order.wc_payment_method ? ` (${order.wc_payment_method})` : ''}
+              {(order.payment_method_label || order.wc_payment_method) ? ` (${order.payment_method_label || order.wc_payment_method})` : ''}
             </span>
           </div>
         </div>
@@ -396,54 +464,98 @@ export const WcOrderDetailsPanel: React.FC<WcOrderDetailsPanelProps> = ({ vm, on
       {/* Action Footer */}
       <div className="pt-3 border-t border-line flex flex-col gap-2 shrink-0">
         {!isMandob && order.status === WcOrderStatus.PENDING_CONFIRMATION && (
-          <Button
-            variant="primary"
-            size="lg"
-            onClick={() => {
-              if (!isAside) setViewingOrder(null);
-              setConfirmModalOrder(order);
-              setConfirmError(null);
-              setForceConfirm(false);
-              const defaultBranch = isManager
-                ? branches.find((b: any) => b.id === user?.branch_id)
-                : (branches.find((b: any) => b.id === order.branch_id) ||
-                   branches.find((b: any) => b.is_main) ||
-                   branches[0]);
-              setSelectedBranchId(defaultBranch?.id ?? (user?.branch_id ?? ''));
-            }}
-            leftIcon={<CheckCircle2 className="w-5 h-5" />}
-            className="w-full min-h-[44px] font-black text-xs"
-          >
-            تأكيد الطلب وتحديد المخزن
-          </Button>
+          <div className="space-y-2">
+            <Button
+              variant="primary"
+              size="lg"
+              onClick={() => {
+                if (!isAside) setViewingOrder(null);
+                setConfirmModalOrder(order);
+                setConfirmError(null);
+                setForceConfirm(false);
+                const defaultBranch = isManager
+                  ? branches.find((b: any) => b.id === user?.branch_id)
+                  : (branches.find((b: any) => b.id === order.branch_id) ||
+                     branches.find((b: any) => b.is_main) ||
+                     branches[0]);
+                setSelectedBranchId(defaultBranch?.id ?? (user?.branch_id ?? ''));
+              }}
+              leftIcon={<CheckCircle2 className="w-5 h-5" />}
+              className="w-full min-h-[44px] font-black text-xs"
+            >
+              تأكيد الطلب وتحديد المخزن
+            </Button>
+
+            <div className="grid grid-cols-3 gap-2">
+              <Button
+                variant="secondary"
+                size="md"
+                onClick={() => logCallMutation.mutate({ orderId: order.id, callStatus: OnlineOrderCallStatus.NO_ANSWER })}
+                disabled={logCallMutation.isPending}
+                leftIcon={<PhoneOff className="w-3.5 h-3.5 text-warn" />}
+                className="min-h-[40px] font-bold text-xs"
+              >
+                ما ردّش
+              </Button>
+              <Button
+                variant="secondary"
+                size="md"
+                onClick={() => openCallModal(order, OnlineOrderCallStatus.CALLBACK_SCHEDULED)}
+                leftIcon={<CalendarClock className="w-3.5 h-3.5 text-info" />}
+                className="min-h-[40px] font-bold text-xs"
+              >
+                أجّل لوقت
+              </Button>
+              <Button
+                variant="danger"
+                size="md"
+                onClick={() => openCancelModal(order)}
+                leftIcon={<Ban className="w-3.5 h-3.5" />}
+                className="min-h-[40px] font-bold text-xs"
+              >
+                إلغاء الطلب
+              </Button>
+            </div>
+          </div>
         )}
 
-        {!isMandob && order.status === WcOrderStatus.CONFIRMED && (
-          <div className="grid grid-cols-2 gap-2">
+        {!isMandob && (order.status === WcOrderStatus.CONFIRMED || order.status === WcOrderStatus.PREPARING) && (
+          <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant="secondary"
+                size="md"
+                onClick={() => {
+                  if (!isAside) setViewingOrder(null);
+                  setDispatchModalOrder(order);
+                  setSelectedMandobId(order.mandob_id || (mandobs[0]?.id ?? ''));
+                }}
+                leftIcon={<Truck className="w-4 h-4" />}
+                className="min-h-[44px] font-black text-xs"
+              >
+                إسناد لمندوب
+              </Button>
+              <Button
+                variant="secondary"
+                size="md"
+                onClick={() => {
+                  if (!isAside) setViewingOrder(null);
+                  openCourierModal(order);
+                }}
+                leftIcon={<Package className="w-4 h-4" />}
+                className="min-h-[44px] font-black text-xs"
+              >
+                إسناد لشركة شحن
+              </Button>
+            </div>
             <Button
-              variant="secondary"
+              variant="ghost"
               size="md"
-              onClick={() => {
-                if (!isAside) setViewingOrder(null);
-                setDispatchModalOrder(order);
-                setSelectedMandobId(order.mandob_id || (mandobs[0]?.id ?? ''));
-              }}
-              leftIcon={<Truck className="w-4 h-4" />}
-              className="min-h-[44px] font-black text-xs"
+              onClick={() => openCancelModal(order)}
+              leftIcon={<Ban className="w-4 h-4 text-bad" />}
+              className="w-full min-h-[40px] font-bold text-xs text-bad hover:bg-bad-soft border border-bad/20"
             >
-              إسناد لمندوب
-            </Button>
-            <Button
-              variant="secondary"
-              size="md"
-              onClick={() => {
-                if (!isAside) setViewingOrder(null);
-                openCourierModal(order);
-              }}
-              leftIcon={<Package className="w-4 h-4" />}
-              className="min-h-[44px] font-black text-xs"
-            >
-              إسناد لشركة شحن
+              إلغاء الطلب قبل الشحن
             </Button>
           </div>
         )}

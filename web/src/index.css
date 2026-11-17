@@ -117,3 +117,18 @@
 .barcode-label-hairline {
   border-color: rgb(var(--c-paper-ink));
 }
+
+@keyframes scanBeam {
+  0%, 100% {
+    transform: translateY(16px);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translateY(236px);
+    opacity: 1;
+  }
+}
+
+.animate-scan-beam {
+  animation: scanBeam 2.1s ease-in-out infinite;
+}

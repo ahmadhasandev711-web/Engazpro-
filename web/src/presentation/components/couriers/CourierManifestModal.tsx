@@ -5,7 +5,7 @@ import { Badge, Button, Input } from '../ui';
 import { PaginationBar } from '../common/PaginationBar';
 
 export type ManifestPaymentFilter = 'ALL' | 'COD' | 'PREPAID';
-export type ManifestSourceFilter = 'ALL' | 'WOOCOMMERCE' | 'DIRECT_SALE';
+export type ManifestSourceFilter = 'ALL' | 'ONLINE_ORDER' | 'WOOCOMMERCE' | 'SHOPIFY' | 'DIRECT_SALE';
 
 export interface CourierManifestMetrics {
   total_shipments: number;
@@ -60,7 +60,7 @@ const PAYMENT_TABS: { key: ManifestPaymentFilter; label: string }[] = [
 
 const SOURCE_TABS: { key: ManifestSourceFilter; label: string }[] = [
   { key: 'ALL', label: 'الكل' },
-  { key: 'WOOCOMMERCE', label: 'ووكومرس' },
+  { key: 'ONLINE_ORDER', label: 'طلبات المتجر' },
   { key: 'DIRECT_SALE', label: 'مباشر (POS)' },
 ];
 
@@ -255,7 +255,9 @@ export const CourierManifestModal: React.FC<CourierManifestModalProps> = ({
                     <td className="py-2.5 px-3">
                       <span className="font-bold tabular-nums text-brand block">{s.reference}</span>
                       <Badge tone="neutral" className="mt-0.5 text-2xs px-1.5 py-0">
-                        {s.source === 'WOOCOMMERCE' ? 'ووكومرس' : 'فاتورة مباشرة'}
+                        {s.source === 'DIRECT_SALE'
+                          ? 'فاتورة مباشرة'
+                          : s.platform_label || (s.source === 'SHOPIFY' ? 'شوبيفاي' : 'ووكومرس')}
                       </Badge>
                       {s.shipped_at && (
                         <span className="block text-2xs text-muted tabular-nums mt-0.5">{s.shipped_at}</span>

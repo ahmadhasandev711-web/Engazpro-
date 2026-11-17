@@ -5,14 +5,15 @@ namespace Tests\Feature;
 use App\Contracts\HostResolver;
 use App\Enums\AnoofyEventResult;
 use App\Enums\AnoofyEventType;
+use App\Enums\EcommercePlatform;
 use App\Enums\UserRole;
 use App\Enums\WcOrderStatus;
 use App\Jobs\PushStockToWooCommerceJob;
 use App\Models\AnoofyInboxEvent;
+use App\Models\OnlineOrder;
+use App\Models\OnlineOrderItem;
 use App\Models\Product;
 use App\Models\User;
-use App\Models\WcOrder;
-use App\Models\WcOrderItem;
 use App\Models\WooCommerceIntegration;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -163,20 +164,21 @@ class AnoofyInboundIntegrationTest extends TestCase
             'cost_price' => 90,
         ]);
 
-        $order = WcOrder::create([
+        $order = OnlineOrder::create([
             'user_id' => $this->owner->id,
-            'wc_order_id' => 5001,
+            'platform' => EcommercePlatform::WOOCOMMERCE,
+            'external_order_id' => '5001',
             'status' => WcOrderStatus::PENDING_CONFIRMATION,
             'customer_phone' => '01000000000',
             'subtotal' => 100,
             'total' => 100,
         ]);
 
-        WcOrderItem::create([
+        OnlineOrderItem::create([
             'user_id' => $this->owner->id,
-            'wc_order_id' => $order->id,
+            'online_order_id' => $order->id,
             'product_id' => $productOld->id,
-            'wc_product_id' => 901,
+            'external_product_id' => '901',
             'quantity' => 1,
         ]);
 
@@ -225,12 +227,12 @@ class AnoofyInboundIntegrationTest extends TestCase
         $this->assertSame('المنصورة', $order->city);
         $this->assertEquals(300, $order->subtotal);
 
-        $this->assertDatabaseMissing('wc_order_items', [
-            'wc_order_id' => $order->id,
+        $this->assertDatabaseMissing('online_order_items', [
+            'online_order_id' => $order->id,
             'product_id' => $productOld->id,
         ]);
-        $this->assertDatabaseHas('wc_order_items', [
-            'wc_order_id' => $order->id,
+        $this->assertDatabaseHas('online_order_items', [
+            'online_order_id' => $order->id,
             'product_id' => $productNew->id,
             'quantity' => 2,
         ]);
@@ -305,11 +307,12 @@ class AnoofyInboundIntegrationTest extends TestCase
     // Case f: order.confirmed قديم (order_version أقل أو يساوي المسجل)
     public function test_case_f_stale_order_version(): void
     {
-        $order = WcOrder::create([
+        $order = OnlineOrder::create([
             'user_id' => $this->owner->id,
-            'wc_order_id' => 5002,
+            'platform' => EcommercePlatform::WOOCOMMERCE,
+            'external_order_id' => '5002',
             'status' => WcOrderStatus::PENDING_CONFIRMATION,
-            'anoofy_order_version' => 3,
+            'platform_meta' => ['anoofy_order_version' => 3],
             'customer_phone' => '01000000000',
         ]);
 
@@ -345,9 +348,10 @@ class AnoofyInboundIntegrationTest extends TestCase
     // Case g: order.confirmed لتأكيد تم قبل anoofy_connected_at
     public function test_case_g_confirmed_before_connection_ignored(): void
     {
-        $order = WcOrder::create([
+        $order = OnlineOrder::create([
             'user_id' => $this->owner->id,
-            'wc_order_id' => 5003,
+            'platform' => EcommercePlatform::WOOCOMMERCE,
+            'external_order_id' => '5003',
             'status' => WcOrderStatus::PENDING_CONFIRMATION,
         ]);
 
@@ -382,9 +386,10 @@ class AnoofyInboundIntegrationTest extends TestCase
     // Case h: order.confirmed لأوردر حالته مش PENDING_CONFIRMATION
     public function test_case_h_order_not_pending_confirmation_ignored(): void
     {
-        $order = WcOrder::create([
+        $order = OnlineOrder::create([
             'user_id' => $this->owner->id,
-            'wc_order_id' => 5004,
+            'platform' => EcommercePlatform::WOOCOMMERCE,
+            'external_order_id' => '5004',
             'status' => WcOrderStatus::DISPATCHED,
         ]);
 
@@ -530,7 +535,7 @@ class AnoofyInboundIntegrationTest extends TestCase
             'discount_total' => '0.00',
         ];
         $this->sendWooCommerceWebhook($wcPayload)->assertStatus(202);
-        $this->assertTrue(WcOrder::withoutGlobalScopes()->where('user_id', $this->owner->id)->where('wc_order_id', 8888)->exists());
+        $this->assertTrue(OnlineOrder::withoutGlobalScopes()->where('user_id', $this->owner->id)->where('platform', EcommercePlatform::WOOCOMMERCE->value)->where('external_order_id', '8888')->exists());
 
         // 3. Retry same Anoofy event -> 200 processed
         $secondResp = $this->sendAnoofyRequest($anoofyBody);
@@ -546,9 +551,10 @@ class AnoofyInboundIntegrationTest extends TestCase
 
     public function test_order_confirmed_snapshot_mutates_only_allowed_columns(): void
     {
-        $order = WcOrder::create([
+        $order = OnlineOrder::create([
             'user_id' => $this->owner->id,
-            'wc_order_id' => 7001,
+            'platform' => EcommercePlatform::WOOCOMMERCE,
+            'external_order_id' => '7001',
             'order_date' => CarbonImmutable::parse('2026-11-04T10:00:00Z'),
             'status' => WcOrderStatus::PENDING_CONFIRMATION,
             'customer_name' => 'محمد سعيد',
@@ -592,7 +598,7 @@ class AnoofyInboundIntegrationTest extends TestCase
         $allowedChanges = [
             'call_confirmed_at',
             'call_confirmed_by',
-            'anoofy_order_version',
+            'platform_meta',
             'customer_phone',
             'customer_address',
             'city',
@@ -607,7 +613,7 @@ class AnoofyInboundIntegrationTest extends TestCase
         }
 
         $this->assertSame('سارة', $after['call_confirmed_by']);
-        $this->assertSame(2, (int) $after['anoofy_order_version']);
+        $this->assertSame(2, (int) $order->fresh()->meta('anoofy_order_version'));
         $this->assertSame('01099999999', $after['customer_phone']);
         $this->assertSame('شارع جديد - شقة 1', $after['customer_address']);
         $this->assertSame('الإسكندرية', $after['city']);
@@ -648,9 +654,10 @@ class AnoofyInboundIntegrationTest extends TestCase
             'cost_price' => 70,
         ]);
 
-        $order = WcOrder::create([
+        $order = OnlineOrder::create([
             'user_id' => $this->owner->id,
-            'wc_order_id' => 99110,
+            'platform' => EcommercePlatform::WOOCOMMERCE,
+            'external_order_id' => '99110',
             'status' => WcOrderStatus::PENDING_CONFIRMATION,
             'subtotal' => 120,
             'total' => 120,
@@ -680,7 +687,7 @@ class AnoofyInboundIntegrationTest extends TestCase
 
         $this->sendAnoofyRequest($body)->assertStatus(200);
 
-        $item = WcOrderItem::withoutGlobalScopes()->where('wc_order_id', $order->id)->first();
+        $item = OnlineOrderItem::withoutGlobalScopes()->where('online_order_id', $order->id)->first();
         $this->assertNotNull($item);
         $this->assertSame($product->id, $item->product_id, 'product_id must resolve to merchant catalog product id, not null');
     }

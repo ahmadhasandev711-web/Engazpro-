@@ -1,5 +1,5 @@
 import React from 'react';
-import { useWcOrders } from '../../hooks/useWcOrders';
+import { useOnlineOrders } from '../../hooks/useOnlineOrders';
 import { WcOrdersToolbar } from '../components/wc-orders/WcOrdersToolbar';
 import { WcOrdersList } from '../components/wc-orders/WcOrdersList';
 import { WcOrderDetailsPanel } from '../components/wc-orders/WcOrderDetailsPanel';
@@ -7,8 +7,8 @@ import { WcOrderDetailsModal } from '../components/wc-orders/WcOrderDetailsModal
 import { WcOrderActionModals } from '../components/wc-orders/WcOrderActionModals';
 import { WcOrderReceipt } from '../components/wc-orders/WcOrderReceipt';
 
-export const WcOrdersPage: React.FC = () => {
-  const vm = useWcOrders();
+export const StoreOrdersPage: React.FC = () => {
+  const vm = useOnlineOrders();
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">

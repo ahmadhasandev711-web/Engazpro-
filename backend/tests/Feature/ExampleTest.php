@@ -14,6 +14,10 @@ class ExampleTest extends TestCase
     {
         $response = $this->get('/');
 
-        $response->assertRedirect('https://engazpro.com');
+        $response->assertOk()
+            ->assertExactJson([
+                'service' => config('app.name'),
+                'status' => 'ok',
+            ]);
     }
 }

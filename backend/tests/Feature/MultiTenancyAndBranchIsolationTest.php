@@ -16,8 +16,9 @@ use App\Models\StockTransferItem;
 use App\Models\Subscription;
 use App\Models\Treasury;
 use App\Models\User;
-use App\Models\WcOrder;
+use App\Enums\EcommercePlatform;
 use App\Enums\WcOrderStatus;
+use App\Models\OnlineOrder;
 use App\Enums\WcPaymentStatus;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -235,10 +236,12 @@ class MultiTenancyAndBranchIsolationTest extends TestCase
         ]);
 
         // Order 1 in Branch A1
-        WcOrder::create([
+        OnlineOrder::create([
             'user_id' => $this->ownerA->id,
+            'platform' => EcommercePlatform::WOOCOMMERCE,
+            'external_order_id' => '901',
+            'external_order_number' => '#901',
             'branch_id' => $this->branchA1->id,
-            'wc_order_id' => 901,
             'customer_name' => 'عميل فرع 1',
             'total' => 150,
             'shipping_cost' => 30,
@@ -248,10 +251,12 @@ class MultiTenancyAndBranchIsolationTest extends TestCase
         ]);
 
         // Order 2 in Branch A2
-        WcOrder::create([
+        OnlineOrder::create([
             'user_id' => $this->ownerA->id,
+            'platform' => EcommercePlatform::WOOCOMMERCE,
+            'external_order_id' => '902',
+            'external_order_number' => '#902',
             'branch_id' => $this->branchA2->id,
-            'wc_order_id' => 902,
             'customer_name' => 'عميل فرع 2',
             'total' => 250,
             'shipping_cost' => 40,

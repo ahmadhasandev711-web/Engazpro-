@@ -10,9 +10,8 @@ use App\Models\Product;
 use App\Models\Subscription;
 use App\Models\User;
 use App\Models\WooCommerceIntegration;
-use App\Services\WooCommerce\WcOrderIngestionService;
+use App\Services\OnlineOrders\OnlineOrderIngestionService;
 use App\Services\WooCommerce\WooCommerceApiClient;
-use App\Services\WooCommerce\WooCommerceOrderSyncService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 use Mockery;
@@ -105,7 +104,7 @@ class TenantQueueContextTest extends TestCase
 
     public function test_tenant_auth_context_resets_and_does_not_bleed_across_jobs(): void
     {
-        $mockIngestionService = Mockery::mock(WcOrderIngestionService::class);
+        $mockIngestionService = Mockery::mock(OnlineOrderIngestionService::class);
         $mockIngestionService->shouldReceive('ingest')->once();
 
         // 1. تنفيذ job المتجر A

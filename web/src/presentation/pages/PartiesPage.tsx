@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { apiClient } from '../../data/api/client';
 import { Party, PartySchema, PartyInput, PartyType, formatCurrency } from '@pos-mandob/shared';
+import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { usePermissions } from '../../hooks/usePermissions';
 import { MobileFilterChips, FilterChipOption } from '../components/mobile/MobileFilterChips';
 import { PartyMobileCard } from '../components/mobile/PartyMobileCard';
@@ -56,6 +57,7 @@ export const PartiesPage: React.FC = () => {
   const Icon = isSupplier ? Truck : Users;
 
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebouncedValue(search.trim(), 250);
   const [page, setPage] = useState<number>(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingParty, setEditingParty] = useState<Party | null>(null);
@@ -68,12 +70,12 @@ export const PartiesPage: React.FC = () => {
 
   // Fetch Parties
   const { data, isLoading } = useQuery({
-    queryKey: ['parties', type, search, page],
+    queryKey: ['parties', type, debouncedSearch, page],
     queryFn: async () => {
       const res = await apiClient.get('/parties', {
         params: {
           type,
-          search: search || undefined,
+          search: debouncedSearch || undefined,
           page,
         },
       });
@@ -413,9 +415,15 @@ export const PartiesPage: React.FC = () => {
                         )}
                       </td>
                       <td className="py-3.5 px-4">
-                        <Badge tone={balanceTone} className="font-black tabular-nums">
-                          {formatCurrency(p.balance)}
-                        </Badge>
+                        {p.balance === 0 ? (
+                          <span className="text-xs font-bold text-muted tabular-nums">
+                            {formatCurrency(p.balance)}
+                          </span>
+                        ) : (
+                          <Badge tone={balanceTone} className="font-black tabular-nums">
+                            {formatCurrency(p.balance)}
+                          </Badge>
+                        )}
                       </td>
                       <td className="py-3.5 px-4 text-muted text-xs tabular-nums">
                         <span className="inline-flex items-center gap-1">

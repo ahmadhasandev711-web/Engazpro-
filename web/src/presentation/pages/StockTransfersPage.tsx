@@ -17,6 +17,7 @@ import {
   Check,
 } from 'lucide-react';
 import { apiClient } from '../../data/api/client';
+import { REFERENCE_QUERY_OPTIONS } from '../../data/api/queryPresets';
 import { usePermissions } from '../../hooks/usePermissions';
 import { StockTransferStatus, StockTransfer } from '@pos-mandob/shared';
 import { StockTransferMobileCard } from '../components/mobile/StockTransferMobileCard';
@@ -74,6 +75,7 @@ export const StockTransfersPage: React.FC = () => {
       const res = await apiClient.get('/branches');
       return res.data?.data || [];
     },
+    ...REFERENCE_QUERY_OPTIONS,
   });
   const branches: any[] = Array.isArray(rawBranches) ? rawBranches : ((rawBranches as any)?.data || []);
 
@@ -102,7 +104,8 @@ export const StockTransfersPage: React.FC = () => {
       };
     },
     placeholderData: (previousData) => previousData,
-    refetchInterval: 15000,
+    refetchInterval: 45000,
+    refetchIntervalInBackground: false,
   });
 
   // 4. Create Transfer Mutation

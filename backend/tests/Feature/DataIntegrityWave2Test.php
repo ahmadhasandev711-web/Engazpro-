@@ -168,15 +168,17 @@ class DataIntegrityWave2Test extends TestCase
         $shiftService = app(\App\Services\ShiftService::class);
         $shift = $shiftService->openShift($mandob, 50.0);
 
-        // إنشاء أوردر ووكومرس وتكليف المندوب به
-        $order = \App\Models\WcOrder::create([
+        // إنشاء أوردر متجر وتكليف المندوب به
+        $order = \App\Models\OnlineOrder::create([
             'user_id' => $this->owner->id,
-            'wc_order_id' => 7771,
+            'platform' => \App\Enums\EcommercePlatform::WOOCOMMERCE,
+            'external_order_id' => '7771',
+            'external_order_number' => '#7771',
             'branch_id' => $this->fromBranch->id,
             'mandob_id' => $mandob->id,
             'status' => \App\Enums\WcOrderStatus::DISPATCHED,
             'payment_status' => \App\Enums\WcPaymentStatus::PENDING_COD,
-            'wc_payment_method' => 'cod',
+            'payment_method_label' => 'cod',
             'shipping_cost' => 10,
             'subtotal' => 100,
             'discount_total' => 0,
@@ -213,7 +215,7 @@ class DataIntegrityWave2Test extends TestCase
             ->andReturn($dummyInvoice);
         $this->app->instance(\App\Services\InvoiceService::class, $mockInvoiceService);
 
-        $syncService = app(\App\Services\WooCommerce\WooCommerceOrderSyncService::class);
+        $syncService = app(\App\Services\OnlineOrders\OnlineOrderSyncService::class);
         $invoice = $syncService->deliverOrder($this->owner, $order, [
             'collected_amount' => 110,
             'payment_method' => 'CASH',

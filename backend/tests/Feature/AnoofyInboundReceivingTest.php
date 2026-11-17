@@ -4,12 +4,13 @@ namespace Tests\Feature;
 
 use App\Enums\AnoofyEventResult;
 use App\Enums\AnoofyEventType;
+use App\Enums\EcommercePlatform;
 use App\Enums\UserRole;
 use App\Enums\WcOrderStatus;
 use App\Models\AnoofyInboxEvent;
+use App\Models\OnlineOrder;
+use App\Models\OnlineOrderItem;
 use App\Models\User;
-use App\Models\WcOrder;
-use App\Models\WcOrderItem;
 use App\Models\WooCommerceIntegration;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -143,9 +144,10 @@ class AnoofyInboundReceivingTest extends TestCase
 
     public function test_processes_valid_event_and_records_inbox(): void
     {
-        WcOrder::create([
+        OnlineOrder::create([
             'user_id' => $this->user->id,
-            'wc_order_id' => 5001,
+            'platform' => EcommercePlatform::WOOCOMMERCE,
+            'external_order_id' => '5001',
             'status' => WcOrderStatus::PENDING_CONFIRMATION,
         ]);
 
@@ -235,9 +237,10 @@ class AnoofyInboundReceivingTest extends TestCase
         $this->integration->anoofy_connected_at = null;
         $this->integration->save();
 
-        WcOrder::create([
+        OnlineOrder::create([
             'user_id' => $this->user->id,
-            'wc_order_id' => 5001,
+            'platform' => EcommercePlatform::WOOCOMMERCE,
+            'external_order_id' => '5001',
             'status' => WcOrderStatus::PENDING_CONFIRMATION,
         ]);
 
@@ -274,9 +277,10 @@ class AnoofyInboundReceivingTest extends TestCase
     {
         Queue::fake();
 
-        $order = WcOrder::create([
+        $order = OnlineOrder::create([
             'user_id' => $this->user->id,
-            'wc_order_id' => 5001,
+            'platform' => EcommercePlatform::WOOCOMMERCE,
+            'external_order_id' => '5001',
             'status' => WcOrderStatus::PENDING_CONFIRMATION,
             'shipping_cost' => 15.00,
             'discount_total' => 10.00,
@@ -356,22 +360,22 @@ class AnoofyInboundReceivingTest extends TestCase
         $this->assertEquals(204.99, (float) $order->total);
         $this->assertEquals($expectedTotal, (float) $order->total);
 
-        // wc_order_items assertions
-        $items = WcOrderItem::withoutGlobalScopes()->where('wc_order_id', $order->id)->orderBy('wc_product_id')->get();
+        // online_order_items assertions
+        $items = OnlineOrderItem::withoutGlobalScopes()->where('online_order_id', $order->id)->orderBy('external_product_id')->get();
         $this->assertCount(2, $items);
-        $this->assertEquals(901, $items[0]->wc_product_id);
+        $this->assertEquals('901', $items[0]->external_product_id);
         $this->assertEquals(3, (int) $items[0]->quantity);
-        $this->assertEquals(902, $items[1]->wc_product_id);
+        $this->assertEquals('902', $items[1]->external_product_id);
         $this->assertEquals(1, (int) $items[1]->quantity);
 
-        $this->assertDatabaseHas('wc_order_items', [
-            'wc_order_id' => $order->id,
-            'wc_product_id' => 901,
+        $this->assertDatabaseHas('online_order_items', [
+            'online_order_id' => $order->id,
+            'external_product_id' => '901',
             'quantity' => 3,
         ]);
-        $this->assertDatabaseHas('wc_order_items', [
-            'wc_order_id' => $order->id,
-            'wc_product_id' => 902,
+        $this->assertDatabaseHas('online_order_items', [
+            'online_order_id' => $order->id,
+            'external_product_id' => '902',
             'quantity' => 1,
         ]);
 

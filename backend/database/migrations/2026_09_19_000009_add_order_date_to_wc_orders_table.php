@@ -1,7 +1,5 @@
 <?php
 
-use App\Models\Party;
-use App\Models\WcOrder;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -22,18 +20,18 @@ return new class extends Migration
         ]);
 
         // 2. Backfill missing customer phone and address from associated party
-        $orders = WcOrder::whereNotNull('party_id')
+        $orders = DB::table('wc_orders')
+            ->whereNotNull('party_id')
             ->where(function ($q) {
                 $q->whereNull('customer_phone')
                   ->orWhere('customer_phone', '')
                   ->orWhereNull('customer_address')
                   ->orWhere('customer_address', '');
             })
-            ->with('party')
             ->get();
 
         foreach ($orders as $order) {
-            $party = $order->party;
+            $party = DB::table('parties')->where('id', $order->party_id)->first();
             if (!$party) {
                 continue;
             }
@@ -47,7 +45,7 @@ return new class extends Migration
             }
 
             if (!empty($updates)) {
-                $order->update($updates);
+                DB::table('wc_orders')->where('id', $order->id)->update($updates);
             }
         }
     }

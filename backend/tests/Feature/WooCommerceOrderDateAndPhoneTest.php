@@ -2,14 +2,15 @@
 
 namespace Tests\Feature;
 
+use App\Enums\EcommercePlatform;
 use App\Enums\PartyType;
 use App\Enums\UserRole;
 use App\Models\Branch;
+use App\Models\OnlineOrder;
 use App\Models\Party;
 use App\Models\User;
-use App\Models\WcOrder;
 use App\Models\WooCommerceIntegration;
-use App\Services\WooCommerce\WcOrderIngestionService;
+use App\Services\OnlineOrders\OnlineOrderIngestionService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -43,7 +44,7 @@ class WooCommerceOrderDateAndPhoneTest extends TestCase
             'is_active' => true,
         ]);
 
-        $ingestionService = app(WcOrderIngestionService::class);
+        $ingestionService = app(OnlineOrderIngestionService::class);
 
         // WooCommerce payload where shipping phone is empty string, but billing phone has number
         $wcPayload = [
@@ -81,7 +82,7 @@ class WooCommerceOrderDateAndPhoneTest extends TestCase
             ],
         ];
 
-        $order = $ingestionService->ingest($user, $wcPayload);
+        $order = $ingestionService->ingest($user, EcommercePlatform::WOOCOMMERCE, $wcPayload);
 
         $this->assertEquals('01012345678', $order->customer_phone);
         $this->assertStringContainsString('Street 10', $order->customer_address);
@@ -90,12 +91,12 @@ class WooCommerceOrderDateAndPhoneTest extends TestCase
         $this->assertEquals('2026-08-15 10:30:00', $order->order_date->format('Y-m-d H:i:s'));
 
         // Test date range filter on API
-        $response = $this->actingAs($user)->getJson('/api/wc-orders?date_from=2026-08-01&date_to=2026-08-31');
+        $response = $this->actingAs($user)->getJson('/api/online-orders?date_from=2026-08-01&date_to=2026-08-31');
         $response->assertOk();
         $this->assertCount(1, $response->json('data.data'));
 
         // Test outside range
-        $responseOut = $this->actingAs($user)->getJson('/api/wc-orders?date_from=2026-09-01&date_to=2026-09-30');
+        $responseOut = $this->actingAs($user)->getJson('/api/online-orders?date_from=2026-09-01&date_to=2026-09-30');
         $responseOut->assertOk();
         $this->assertCount(0, $responseOut->json('data.data'));
     }
@@ -145,7 +146,7 @@ class WooCommerceOrderDateAndPhoneTest extends TestCase
             'image_url' => 'https://mystore.test/images/shirt-black-xl.jpg',
         ]);
 
-        $ingestionService = app(WcOrderIngestionService::class);
+        $ingestionService = app(OnlineOrderIngestionService::class);
 
         // 1. Initial Order with earlier date
         $payload1 = [
@@ -186,7 +187,7 @@ class WooCommerceOrderDateAndPhoneTest extends TestCase
             ],
         ];
 
-        $order = $ingestionService->ingest($user, $payload1);
+        $order = $ingestionService->ingest($user, EcommercePlatform::WOOCOMMERCE, $payload1);
 
         $this->assertEquals('2026-07-10 14:00:00', $order->order_date->format('Y-m-d H:i:s'));
         $snapshot = $order->items_snapshot;
@@ -199,7 +200,7 @@ class WooCommerceOrderDateAndPhoneTest extends TestCase
         // 2. Re-sync with authoritative WC date
         $payload2 = $payload1;
         $payload2['date_created'] = '2026-07-10T15:30:00';
-        $updatedOrder = $ingestionService->ingest($user, $payload2);
+        $updatedOrder = $ingestionService->ingest($user, EcommercePlatform::WOOCOMMERCE, $payload2);
 
         $this->assertEquals('2026-07-10 15:30:00', $updatedOrder->order_date->format('Y-m-d H:i:s'));
     }

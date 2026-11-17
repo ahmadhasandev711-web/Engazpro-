@@ -4,18 +4,19 @@ namespace Tests\Feature;
 
 use App\Contracts\WooCommerceApiClientInterface;
 use App\Enums\BranchType;
+use App\Enums\EcommercePlatform;
 use App\Enums\WcOrderStatus;
 use App\Enums\WcPaymentStatus;
 use App\Exceptions\WooCommerceConnectionException;
 use App\Jobs\PushStockToWooCommerceJob;
 use App\Models\Branch;
 use App\Models\BranchStock;
+use App\Models\OnlineOrder;
+use App\Models\OnlineOrderItem;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Subscription;
 use App\Models\User;
-use App\Models\WcOrder;
-use App\Models\WcOrderItem;
 use App\Models\WooCommerceIntegration;
 use App\Services\WooCommerce\WooCommerceBulkStockPushService;
 use App\Services\WooCommerce\WooStockPushService;
@@ -86,20 +87,21 @@ class WooCommerceUnifiedStockPushTest extends TestCase
             'quantity' => 10,
         ]);
 
-        $order = WcOrder::create([
+        $order = OnlineOrder::create([
             'user_id' => $this->owner->id,
-            'wc_order_id' => 9001,
+            'platform' => EcommercePlatform::WOOCOMMERCE,
+            'external_order_id' => '9001',
             'branch_id' => $this->storeBranch->id,
             'status' => WcOrderStatus::PENDING_CONFIRMATION,
             'payment_status' => WcPaymentStatus::PENDING_COD,
             'total' => 200,
         ]);
 
-        WcOrderItem::create([
+        OnlineOrderItem::create([
             'user_id' => $this->owner->id,
-            'wc_order_id' => $order->id,
+            'online_order_id' => $order->id,
             'product_id' => $product->id,
-            'wc_product_id' => 1001,
+            'external_product_id' => '1001',
             'quantity' => '2.00',
         ]);
 
@@ -146,20 +148,21 @@ class WooCommerceUnifiedStockPushTest extends TestCase
             'quantity' => 10,
         ]);
 
-        $order = WcOrder::create([
+        $order = OnlineOrder::create([
             'user_id' => $this->owner->id,
-            'wc_order_id' => 9002,
+            'platform' => EcommercePlatform::WOOCOMMERCE,
+            'external_order_id' => '9002',
             'branch_id' => $this->storeBranch->id,
             'status' => WcOrderStatus::CONFIRMED,
             'payment_status' => WcPaymentStatus::PENDING_COD,
             'total' => 300,
         ]);
 
-        WcOrderItem::create([
+        OnlineOrderItem::create([
             'user_id' => $this->owner->id,
-            'wc_order_id' => $order->id,
+            'online_order_id' => $order->id,
             'product_id' => $product->id,
-            'wc_product_id' => 1002,
+            'external_product_id' => '1002',
             'quantity' => '2.00',
         ]);
 
@@ -238,22 +241,23 @@ class WooCommerceUnifiedStockPushTest extends TestCase
         ]);
 
         // Reserve 1 item from Variant A
-        $order = WcOrder::create([
+        $order = OnlineOrder::create([
             'user_id' => $this->owner->id,
-            'wc_order_id' => 9003,
+            'platform' => EcommercePlatform::WOOCOMMERCE,
+            'external_order_id' => '9003',
             'branch_id' => $this->storeBranch->id,
             'status' => WcOrderStatus::PREPARING,
             'payment_status' => WcPaymentStatus::PENDING_COD,
             'total' => 200,
         ]);
 
-        WcOrderItem::create([
+        OnlineOrderItem::create([
             'user_id' => $this->owner->id,
-            'wc_order_id' => $order->id,
+            'online_order_id' => $order->id,
             'product_id' => $parent->id,
             'product_variant_id' => $variantA->id,
-            'wc_product_id' => 2001,
-            'wc_variation_id' => 3001,
+            'external_product_id' => '2001',
+            'external_variant_id' => '3001',
             'quantity' => '1.00',
         ]);
 
@@ -326,20 +330,21 @@ class WooCommerceUnifiedStockPushTest extends TestCase
             'quantity' => 15,
         ]);
 
-        $order = WcOrder::create([
+        $order = OnlineOrder::create([
             'user_id' => $this->owner->id,
-            'wc_order_id' => 9004,
+            'platform' => EcommercePlatform::WOOCOMMERCE,
+            'external_order_id' => '9004',
             'branch_id' => $this->storeBranch->id,
             'status' => WcOrderStatus::SHIPPED_VIA_COURIER,
             'payment_status' => WcPaymentStatus::PENDING_COD,
             'total' => 160,
         ]);
 
-        WcOrderItem::create([
+        OnlineOrderItem::create([
             'user_id' => $this->owner->id,
-            'wc_order_id' => $order->id,
+            'online_order_id' => $order->id,
             'product_id' => $product->id,
-            'wc_product_id' => 4001,
+            'external_product_id' => '4001',
             'quantity' => '5.00',
         ]);
 

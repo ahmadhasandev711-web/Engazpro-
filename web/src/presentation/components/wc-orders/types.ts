@@ -1,3 +1,3 @@
-import type { useWcOrders } from '../../../hooks/useWcOrders';
+import type { useOnlineOrders } from '../../../hooks/useOnlineOrders';
 
-export type WcOrdersViewModel = ReturnType<typeof useWcOrders>;
+export type WcOrdersViewModel = ReturnType<typeof useOnlineOrders>;

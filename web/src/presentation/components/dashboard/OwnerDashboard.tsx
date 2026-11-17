@@ -15,7 +15,6 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { formatCurrency } from '@pos-mandob/shared';
-import { PWAInstallBanner } from '../pwa/PWAInstallBanner';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { useStockAlertsSummary } from '../../../hooks/useStockOperations';
 import { RecentActivityMobileCard } from '../mobile/RecentActivityMobileCard';
@@ -110,9 +109,6 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* PWA Install Banner */}
-      <PWAInstallBanner />
-
       {/* Header & Quick Action Buttons */}
       <PageHeader
         title="لوحة المتابعة الشاملة"
@@ -122,7 +118,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
             : 'ملخص فوري لمبيعات وأرباح وحصيلة اليوم النقدية الصافية للمتجر'
         }
         badge={
-          <Badge tone="brand" className="tabular-nums">
+          <Badge tone="neutral" className="tabular-nums">
             {data?.today || new Date().toISOString().split('T')[0]}
           </Badge>
         }
@@ -153,8 +149,8 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
               variant="secondary"
               size="md"
               onClick={() => navigate('/payments')}
-              leftIcon={<CreditCard className="w-4 h-4 text-ok" />}
-              className="hidden sm:inline-flex border-ok/30 bg-ok-soft text-ok hover:bg-ok-soft/80"
+              leftIcon={<CreditCard className="w-4 h-4 text-muted" />}
+              className="hidden sm:inline-flex"
             >
               سند قبض / صرف
             </Button>
@@ -177,8 +173,8 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
           variant="secondary"
           size="md"
           onClick={() => navigate('/payments')}
-          leftIcon={<CreditCard className="w-4 h-4 text-ok" />}
-          className="w-full text-xs font-bold border-ok/30 bg-ok-soft text-ok hover:bg-ok-soft/80"
+          leftIcon={<CreditCard className="w-4 h-4 text-muted" />}
+          className="w-full text-xs font-bold"
         >
           سند قبض / صرف
         </Button>
@@ -186,7 +182,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
 
       {/* Low Stock / Expiring Batch Alert Banner */}
       {canManageStockOperations && (alertsSummary?.total_alerts ?? 0) > 0 && (
-        <Card className="p-3.5 sm:p-4 bg-warn-soft/50 border-warn/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <Card className="p-3.5 sm:p-4 bg-panel border-line flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-warn-soft text-warn flex items-center justify-center flex-shrink-0">
               <AlertTriangle className="w-5 h-5" />
@@ -239,23 +235,23 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
               {Number(kpis?.today_cash_sales) > 0 && (
                 <div className="flex justify-between text-muted">
                   <span>كاش بالخزينة:</span>
-                  <span className="font-bold text-ok tabular-nums">
+                  <span className="font-bold text-ink tabular-nums">
                     {formatCurrency(kpis?.today_cash_sales ?? 0)}
                   </span>
                 </div>
               )}
               {Number(kpis?.today_courier_pending_sales) > 0 && (
-                <div className="flex justify-between text-brand">
+                <div className="flex justify-between text-muted">
                   <span>معلق شحن:</span>
-                  <span className="font-bold tabular-nums">
+                  <span className="font-bold text-ink tabular-nums">
                     {formatCurrency(kpis?.today_courier_pending_sales ?? 0)}
                   </span>
                 </div>
               )}
               {Number(kpis?.today_electronic_sales) > 0 && (
-                <div className="flex justify-between text-info">
+                <div className="flex justify-between text-muted">
                   <span>إلكتروني:</span>
-                  <span className="font-bold tabular-nums">
+                  <span className="font-bold text-ink tabular-nums">
                     {formatCurrency(kpis?.today_electronic_sales ?? 0)}
                   </span>
                 </div>
@@ -320,13 +316,13 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* الداخل (Inflow) */}
-            <div className="p-4 rounded-xl bg-ok-soft/50 border border-ok/20 space-y-2.5">
-              <div className="flex items-center justify-between text-xs font-black text-ok border-b border-ok/20 pb-2">
-                <span className="flex items-center gap-1">
+            <div className="p-4 rounded-xl bg-panel border border-line space-y-2.5">
+              <div className="flex items-center justify-between text-xs font-black text-ink border-b border-line pb-2">
+                <span className="flex items-center gap-1.5">
                   <ArrowDownLeft className="w-4 h-4 text-ok" />
                   المقبوضات النقدية الداخلة (+)
                 </span>
-                <span className="tabular-nums">{formatCurrency(cashFlow?.inflow.total ?? 0)}</span>
+                <span className="tabular-nums text-ok">{formatCurrency(cashFlow?.inflow.total ?? 0)}</span>
               </div>
               <div className="space-y-1.5 text-xs text-muted">
                 <div className="flex justify-between">
@@ -351,13 +347,13 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
             </div>
 
             {/* الخارج (Outflow) */}
-            <div className="p-4 rounded-xl bg-bad-soft/50 border border-bad/20 space-y-2.5">
-              <div className="flex items-center justify-between text-xs font-black text-bad border-b border-bad/20 pb-2">
-                <span className="flex items-center gap-1">
+            <div className="p-4 rounded-xl bg-panel border border-line space-y-2.5">
+              <div className="flex items-center justify-between text-xs font-black text-ink border-b border-line pb-2">
+                <span className="flex items-center gap-1.5">
                   <ArrowUpRight className="w-4 h-4 text-bad" />
                   المدفوعات النقدية الخارجة (-)
                 </span>
-                <span className="tabular-nums">{formatCurrency(cashFlow?.outflow.total ?? 0)}</span>
+                <span className="tabular-nums text-bad">{formatCurrency(cashFlow?.outflow.total ?? 0)}</span>
               </div>
               <div className="space-y-1.5 text-xs text-muted">
                 <div className="flex justify-between">
@@ -389,11 +385,11 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
           </div>
 
           {/* الخلاصة الصافية */}
-          <div className="p-3.5 bg-warn-soft border border-warn/30 rounded-xl flex items-center justify-between gap-3">
+          <div className="p-3.5 bg-surface-2 border border-line rounded-xl flex items-center justify-between gap-3">
             <span className="text-xs font-bold text-ink">
               صافي النقدية الفعلية لليوم (الداخل - الخارج):
             </span>
-            <span className="text-lg font-black text-warn tabular-nums">
+            <span className="text-lg font-black text-ink tabular-nums">
               {formatCurrency(cashFlow?.net_cash_flow ?? 0)}
             </span>
           </div>

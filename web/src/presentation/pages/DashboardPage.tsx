@@ -15,7 +15,8 @@ export const DashboardPage: React.FC = () => {
       const res = await apiClient.get('/dashboard');
       return res.data?.data;
     },
-    refetchInterval: 30000,
+    refetchInterval: 60000,
+    refetchIntervalInBackground: false,
   });
 
   if (isMandob) {

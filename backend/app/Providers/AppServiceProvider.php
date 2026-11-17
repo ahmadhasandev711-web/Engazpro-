@@ -11,21 +11,18 @@ use App\Models\BranchStock;
 use App\Models\Category;
 use App\Models\Expense;
 use App\Models\Invoice;
+use App\Models\OnlineOrder;
 use App\Models\Party;
 use App\Models\Payment;
 use App\Models\PayrollPayout;
 use App\Models\Product;
-use App\Models\ShopifyOrder;
 use App\Models\StockTransfer;
 use App\Models\Treasury;
 use App\Models\User;
-use App\Models\WcOrder;
 use App\Observers\BranchStockShopifyObserver;
 use App\Observers\BranchStockWooCommerceObserver;
+use App\Observers\OnlineOrderStockSyncObserver;
 use App\Observers\PartyWooCommerceObserver;
-use App\Observers\ShopifyOrderStockSyncObserver;
-use App\Observers\WcOrderAnoofyStageObserver;
-use App\Observers\WcOrderStockSyncObserver;
 use App\Policies\BranchPolicy;
 use App\Policies\CategoryPolicy;
 use App\Policies\EmployeePolicy;
@@ -128,9 +125,7 @@ class AppServiceProvider extends ServiceProvider
         BranchStock::observe(BranchStockWooCommerceObserver::class);
         BranchStock::observe(BranchStockShopifyObserver::class);
         Party::observe(PartyWooCommerceObserver::class);
-        WcOrder::observe(WcOrderStockSyncObserver::class);
-        WcOrder::observe(WcOrderAnoofyStageObserver::class);
-        ShopifyOrder::observe(ShopifyOrderStockSyncObserver::class);
+        OnlineOrder::observe(OnlineOrderStockSyncObserver::class);
     }
 
     private function registerRateLimiters(): void

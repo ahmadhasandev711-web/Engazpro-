@@ -6,13 +6,14 @@ use App\Contracts\AnoofyOutboundClientInterface;
 use App\Contracts\HostResolver;
 use App\Enums\AnoofyEventType;
 use App\Enums\AnoofyOutboxStatus;
+use App\Enums\EcommercePlatform;
 use App\Enums\UserRole;
 use App\Enums\WcOrderStatus;
 use App\Jobs\SendAnoofyEventJob;
 use App\Models\AnoofyOutboxEvent;
+use App\Models\OnlineOrder;
 use App\Models\Subscription;
 use App\Models\User;
-use App\Models\WcOrder;
 use App\Models\WooCommerceIntegration;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -24,7 +25,7 @@ class SendAnoofyEventJobTest extends TestCase
     use RefreshDatabase, SimulatesHttpContext;
 
     private User $owner;
-    private WcOrder $order;
+    private OnlineOrder $order;
     private WooCommerceIntegration $integration;
     private AnoofyOutboxEvent $outbox;
 
@@ -44,9 +45,11 @@ class SendAnoofyEventJobTest extends TestCase
             'price' => 1000,
         ]);
 
-        $this->order = WcOrder::create([
+        $this->order = OnlineOrder::create([
             'user_id' => $this->owner->id,
-            'wc_order_id' => 8001,
+            'platform' => EcommercePlatform::WOOCOMMERCE,
+            'external_order_id' => '8001',
+            'external_order_number' => '#8001',
             'order_date' => now(),
             'status' => WcOrderStatus::CONFIRMED,
             'subtotal' => 150,
@@ -69,6 +72,7 @@ class SendAnoofyEventJobTest extends TestCase
             'user_id' => $this->owner->id,
             'event_id' => '44444444-4444-4444-8444-444444444444',
             'event_type' => AnoofyEventType::ORDER_STAGE_CHANGED,
+            'online_order_id' => $this->order->id,
             'wc_order_id' => $this->order->id,
             'order_version' => 1,
             'payload' => [

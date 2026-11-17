@@ -109,6 +109,26 @@ class ShopifyGraphqlClient implements ShopifyGraphqlClientInterface
         return $result;
     }
 
+    public function cancelOrder(
+        ShopifyIntegration $integration,
+        string $orderGid,
+        string $reason,
+        bool $restock,
+        ?string $staffNote = null
+    ): array {
+        $data = $this->query($integration, ShopifyGraphqlQueries::ORDER_CANCEL, [
+            'orderId' => $orderGid, 'reason' => $reason, 'notifyCustomer' => false,
+            'restock' => $restock, 'staffNote' => $staffNote,
+        ]);
+        $result = $data['orderCancel'] ?? [];
+        $errors = $result['orderCancelUserErrors'] ?? [];
+        if (!empty($errors) && !$this->isAlreadyCancelledError($errors)) {
+            $this->assertNoUserErrors($errors, 'فشل إلغاء الطلب على Shopify');
+        }
+
+        return $result;
+    }
+
     public function registerWebhooks(ShopifyIntegration $integration, string $callbackUrl, array $topics): bool
     {
         foreach ($topics as $topic) {
@@ -163,5 +183,12 @@ class ShopifyGraphqlClient implements ShopifyGraphqlClientInterface
         $msg = strtolower((string) ($userErrors[0]['message'] ?? ''));
 
         return str_contains($msg, 'already been taken') || str_contains($msg, 'already exists');
+    }
+
+    private function isAlreadyCancelledError(array $userErrors): bool
+    {
+        $msg = strtolower((string) ($userErrors[0]['message'] ?? ''));
+
+        return str_contains($msg, 'already cancel');
     }
 }

@@ -5,14 +5,15 @@ namespace Tests\Feature;
 use App\DTOs\AnoofyEnvelope;
 use App\Enums\AnoofyEventResult;
 use App\Enums\AnoofyEventType;
+use App\Enums\EcommercePlatform;
 use App\Enums\UserRole;
 use App\Enums\WcOrderStatus;
 use App\Exceptions\OrderNotYetSyncedException;
 use App\Jobs\PushStockToWooCommerceJob;
+use App\Models\OnlineOrder;
+use App\Models\OnlineOrderItem;
 use App\Models\Product;
 use App\Models\User;
-use App\Models\WcOrder;
-use App\Models\WcOrderItem;
 use App\Models\WooCommerceIntegration;
 use App\Services\Anoofy\Handlers\OrderConfirmedHandler;
 use Carbon\CarbonImmutable;
@@ -70,11 +71,12 @@ class OrderConfirmedHandlerTest extends TestCase
 
     public function test_returns_stale_when_order_version_is_older_or_equal(): void
     {
-        $order = WcOrder::create([
+        $order = OnlineOrder::create([
             'user_id' => $this->user->id,
-            'wc_order_id' => 5001,
+            'platform' => EcommercePlatform::WOOCOMMERCE,
+            'external_order_id' => '5001',
             'status' => WcOrderStatus::PENDING_CONFIRMATION,
-            'anoofy_order_version' => 2,
+            'platform_meta' => ['anoofy_order_version' => 2],
         ]);
 
         $envelope = new AnoofyEnvelope(
@@ -97,9 +99,10 @@ class OrderConfirmedHandlerTest extends TestCase
 
     public function test_returns_ignored_when_confirmed_at_is_before_connected_at(): void
     {
-        $order = WcOrder::create([
+        $order = OnlineOrder::create([
             'user_id' => $this->user->id,
-            'wc_order_id' => 5001,
+            'platform' => EcommercePlatform::WOOCOMMERCE,
+            'external_order_id' => '5001',
             'status' => WcOrderStatus::PENDING_CONFIRMATION,
         ]);
 
@@ -124,9 +127,10 @@ class OrderConfirmedHandlerTest extends TestCase
 
     public function test_returns_ignored_when_order_status_is_not_pending_confirmation(): void
     {
-        $order = WcOrder::create([
+        $order = OnlineOrder::create([
             'user_id' => $this->user->id,
-            'wc_order_id' => 5001,
+            'platform' => EcommercePlatform::WOOCOMMERCE,
+            'external_order_id' => '5001',
             'status' => WcOrderStatus::DISPATCHED,
         ]);
 
@@ -151,9 +155,10 @@ class OrderConfirmedHandlerTest extends TestCase
 
     public function test_successfully_processes_confirmation_and_updates_fields(): void
     {
-        $order = WcOrder::create([
+        $order = OnlineOrder::create([
             'user_id' => $this->user->id,
-            'wc_order_id' => 5001,
+            'platform' => EcommercePlatform::WOOCOMMERCE,
+            'external_order_id' => '5001',
             'status' => WcOrderStatus::PENDING_CONFIRMATION,
             'customer_phone' => '01000000000',
             'customer_address' => 'قديم',
@@ -186,7 +191,7 @@ class OrderConfirmedHandlerTest extends TestCase
         $order->refresh();
         $this->assertSame(WcOrderStatus::PENDING_CONFIRMATION, $order->status);
         $this->assertSame('سارة أحمد', $order->call_confirmed_by);
-        $this->assertSame(1, $order->anoofy_order_version);
+        $this->assertSame(1, $order->meta('anoofy_order_version'));
         $this->assertSame('01011223344', $order->customer_phone);
         $this->assertSame('15 شارع النصر - شقة 4', $order->customer_address);
         $this->assertSame('مدينة نصر', $order->city);
@@ -213,21 +218,22 @@ class OrderConfirmedHandlerTest extends TestCase
             'cost_price' => 50,
         ]);
 
-        $order = WcOrder::create([
+        $order = OnlineOrder::create([
             'user_id' => $this->user->id,
-            'wc_order_id' => 5001,
+            'platform' => EcommercePlatform::WOOCOMMERCE,
+            'external_order_id' => '5001',
             'status' => WcOrderStatus::PENDING_CONFIRMATION,
             'subtotal' => 100,
             'total' => 100,
         ]);
 
-        WcOrderItem::create([
+        OnlineOrderItem::create([
             'user_id' => $this->user->id,
-            'wc_order_id' => $order->id,
+            'online_order_id' => $order->id,
             'product_id' => $productOld->id,
             'product_variant_id' => null,
-            'wc_product_id' => 801,
-            'wc_variation_id' => null,
+            'external_product_id' => '801',
+            'external_variant_id' => null,
             'quantity' => 1,
         ]);
 
@@ -263,12 +269,12 @@ class OrderConfirmedHandlerTest extends TestCase
         $this->assertEquals(300, $order->total);
 
         // Old item removed, new item created
-        $this->assertDatabaseMissing('wc_order_items', [
-            'wc_order_id' => $order->id,
+        $this->assertDatabaseMissing('online_order_items', [
+            'online_order_id' => $order->id,
             'product_id' => $productOld->id,
         ]);
-        $this->assertDatabaseHas('wc_order_items', [
-            'wc_order_id' => $order->id,
+        $this->assertDatabaseHas('online_order_items', [
+            'online_order_id' => $order->id,
             'product_id' => $productNew->id,
             'quantity' => 3,
         ]);
@@ -284,16 +290,17 @@ class OrderConfirmedHandlerTest extends TestCase
 
     public function test_concurrent_status_change_is_ignored_post_lock(): void
     {
-        $order = WcOrder::create([
+        $order = OnlineOrder::create([
             'user_id' => $this->user->id,
-            'wc_order_id' => 5005,
+            'platform' => EcommercePlatform::WOOCOMMERCE,
+            'external_order_id' => '5005',
             'status' => WcOrderStatus::PENDING_CONFIRMATION,
         ]);
 
         $customHandler = new class($this->app->make(\App\Services\WooCommerce\WcOrderLineItemMapper::class)) extends OrderConfirmedHandler {
-            protected function onBeforeLock(WcOrder $order): void
+            protected function onBeforeLock(OnlineOrder $order): void
             {
-                WcOrder::where('id', $order->id)->update([
+                OnlineOrder::where('id', $order->id)->update([
                     'status' => WcOrderStatus::CONFIRMED->value,
                 ]);
             }

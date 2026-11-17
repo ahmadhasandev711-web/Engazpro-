@@ -12,11 +12,22 @@ import {
   Truck,
   Copy,
   Check,
+  PhoneOff,
+  CalendarClock,
+  Ban,
 } from 'lucide-react';
-import { formatCurrency, WcOrderStatus, WcPaymentStatus } from '@pos-mandob/shared';
+import { formatCurrency, WcOrderStatus } from '@pos-mandob/shared';
 import { MobileCard } from './MobileCard';
 import { useHaptic } from '../../hooks/useHaptic';
-import { getStatusBadge, getCallConfirmedBadge } from '../wc-orders/helpers';
+import {
+  getStatusBadge,
+  getCallConfirmedBadge,
+  getOrderDisplayRef,
+  isOrderPrepaid,
+  buildTelUrl,
+  buildWhatsAppUrl,
+  buildDefaultOrderWhatsAppMessage,
+} from '../wc-orders/helpers';
 import { Button } from '../ui/Button';
 
 interface WcOrderMobileCardProps {
@@ -27,6 +38,9 @@ interface WcOrderMobileCardProps {
   onAssignCourier?: (order: any) => void;
   onAssignMandob?: (order: any) => void;
   onDeliver?: (order: any) => void;
+  onNoAnswer?: (order: any) => void;
+  onScheduleCall?: (order: any) => void;
+  onCancelOrder?: (order: any) => void;
   canConfirm?: boolean;
   canDispatch?: boolean;
   canDeliver?: boolean;
@@ -66,6 +80,9 @@ export const WcOrderMobileCard: React.FC<WcOrderMobileCardProps> = ({
   onAssignCourier,
   onAssignMandob,
   onDeliver,
+  onNoAnswer,
+  onScheduleCall,
+  onCancelOrder,
   canConfirm = true,
   canDispatch = true,
   canDeliver = true,
@@ -88,9 +105,7 @@ export const WcOrderMobileCard: React.FC<WcOrderMobileCardProps> = ({
     }
   };
 
-  const isPrepaid =
-    order.payment_status === WcPaymentStatus.PAID_ONLINE ||
-    (order.wc_payment_method && order.wc_payment_method !== 'cod');
+  const isPrepaid = isOrderPrepaid(order);
 
   return (
     <MobileCard className="bg-panel border-line space-y-3.5">
@@ -99,7 +114,7 @@ export const WcOrderMobileCard: React.FC<WcOrderMobileCardProps> = ({
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <span className="tabular-nums text-sm font-black text-ink bg-surface-2 px-2.5 py-0.5 rounded-lg border border-line">
-              #{order.wc_order_id}
+              {getOrderDisplayRef(order)}
             </span>
             <span className="text-2xs font-bold text-muted flex items-center gap-1">
               <Calendar className="w-3 h-3" />
@@ -141,39 +156,44 @@ export const WcOrderMobileCard: React.FC<WcOrderMobileCardProps> = ({
         )}
 
         {/* Quick Phone & WhatsApp Buttons */}
-        {phone && (
-          <div className="flex items-center gap-2 pt-1">
-            <a
-              href={`tel:${phone}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                selection();
-              }}
-              className="flex-1 py-2 px-3 bg-panel hover:bg-surface-2 text-ink font-bold text-xs rounded-xl border border-line flex items-center justify-center gap-1.5 active:scale-95 transition-all tabular-nums min-h-[36px]"
-            >
-              <Phone className="w-3.5 h-3.5 text-ok" />
-              <span className="text-2xs">{phone}</span>
-            </a>
+        {(() => {
+          const telUrl = buildTelUrl(phone);
+          const waUrl = buildWhatsAppUrl(phone, buildDefaultOrderWhatsAppMessage(order));
+          if (!phone || !telUrl) return null;
+          return (
+            <div className="flex items-center gap-2 pt-1">
+              <a
+                href={telUrl}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  selection();
+                }}
+                className="flex-1 py-2 px-3 bg-panel hover:bg-surface-2 text-ink font-bold text-xs rounded-xl border border-line flex items-center justify-center gap-1.5 active:scale-95 transition-all tabular-nums min-h-[36px]"
+              >
+                <Phone className="w-3.5 h-3.5 text-ok" />
+                <span className="text-2xs">{phone}</span>
+              </a>
 
-            <a
-              href={`https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(
-                `مرحباً ${order.customer_name}، نود تأكيد طلبك رقم #${order.wc_order_id} من متجرنا.`
-              )}`}
-              target="_blank"
-              rel="noreferrer"
-              onClick={(e) => {
-                e.stopPropagation();
-                selection();
-              }}
-              className="py-2 px-4 bg-ok text-on-brand hover:opacity-90 font-black text-xs rounded-xl flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-xs min-h-[36px]"
-            >
-              <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-                <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z" />
-              </svg>
-              <span>واتساب</span>
-            </a>
-          </div>
-        )}
+              {waUrl && (
+                <a
+                  href={waUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    selection();
+                  }}
+                  className="py-2 px-4 bg-ok text-on-brand hover:opacity-90 font-black text-xs rounded-xl flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-xs min-h-[36px]"
+                >
+                  <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z" />
+                  </svg>
+                  <span>واتساب</span>
+                </a>
+              )}
+            </div>
+          );
+        })()}
       </div>
 
       {/* 3. Items Summary Preview */}
@@ -304,18 +324,67 @@ export const WcOrderMobileCard: React.FC<WcOrderMobileCardProps> = ({
       {/* 6. Context-Aware Primary Action Button */}
       <div className="pt-1">
         {order.status === WcOrderStatus.PENDING_CONFIRMATION && onConfirm && canConfirm && (
-          <Button
-            variant="primary"
-            size="lg"
-            onClick={() => {
-              selection();
-              onConfirm(order);
-            }}
-            leftIcon={<CheckCircle2 className="w-4 h-4" />}
-            className="w-full min-h-[44px] font-black text-xs"
-          >
-            تأكيد وتجهيز الطلب الآن ⚡
-          </Button>
+          <div className="space-y-2">
+            <Button
+              variant="primary"
+              size="lg"
+              onClick={() => {
+                selection();
+                onConfirm(order);
+              }}
+              leftIcon={<CheckCircle2 className="w-4 h-4" />}
+              className="w-full min-h-[44px] font-black text-xs"
+            >
+              تأكيد وتجهيز الطلب الآن ⚡
+            </Button>
+
+            {(onNoAnswer || onScheduleCall || onCancelOrder) && (
+              <div className="grid grid-cols-3 gap-1.5">
+                {onNoAnswer && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      selection();
+                      onNoAnswer(order);
+                    }}
+                    leftIcon={<PhoneOff className="w-3.5 h-3.5 text-warn" />}
+                    className="min-h-[38px] font-bold text-2xs"
+                  >
+                    ما ردّش
+                  </Button>
+                )}
+                {onScheduleCall && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      selection();
+                      onScheduleCall(order);
+                    }}
+                    leftIcon={<CalendarClock className="w-3.5 h-3.5 text-info" />}
+                    className="min-h-[38px] font-bold text-2xs"
+                  >
+                    أجّل لوقت
+                  </Button>
+                )}
+                {onCancelOrder && (
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={() => {
+                      selection();
+                      onCancelOrder(order);
+                    }}
+                    leftIcon={<Ban className="w-3.5 h-3.5" />}
+                    className="min-h-[38px] font-bold text-2xs"
+                  >
+                    إلغاء
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
         )}
 
         {order.status === WcOrderStatus.CONFIRMED && (

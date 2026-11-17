@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\EcommercePlatform;
 use App\Enums\InvoiceType;
 use App\Enums\PartyType;
 use App\Enums\PaymentMethod;
@@ -15,14 +16,13 @@ use App\Models\Branch;
 use App\Models\BranchStock;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
+use App\Models\OnlineOrder;
+use App\Models\OnlineOrderItem;
 use App\Models\Party;
 use App\Models\Product;
-use App\Models\ShopifyOrder;
-use App\Models\ShopifyOrderItem;
 use App\Models\Subscription;
 use App\Models\Treasury;
 use App\Models\User;
-use App\Models\WcOrder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -114,28 +114,31 @@ class TenantIsolationAndSecurityHardeningTest extends TestCase
         ]);
         BranchStock::create(['branch_id' => $branchA->id, 'product_id' => $productA->id, 'quantity' => 10]);
 
-        $shopifyOrderA = ShopifyOrder::create([
-            'user_id' => $ownerA->id, 'shopify_order_id' => 9901, 'shopify_order_number' => '#9901',
+        $shopifyOrderA = OnlineOrder::create([
+            'user_id' => $ownerA->id, 'platform' => EcommercePlatform::SHOPIFY,
+            'external_order_id' => '9901', 'external_order_number' => '#9901',
             'status' => WcOrderStatus::PENDING_CONFIRMATION, 'payment_status' => WcPaymentStatus::PENDING_COD,
             'total' => 100, 'subtotal' => 100,
         ]);
-        ShopifyOrderItem::create([
-            'user_id' => $ownerA->id, 'shopify_order_id' => $shopifyOrderA->id, 'product_id' => $productA->id, 'quantity' => 1,
+        OnlineOrderItem::create([
+            'user_id' => $ownerA->id, 'online_order_id' => $shopifyOrderA->id, 'product_id' => $productA->id, 'quantity' => 1,
         ]);
 
-        $wcOrderA = WcOrder::create([
-            'user_id' => $ownerA->id, 'wc_order_id' => 8801, 'status' => WcOrderStatus::PENDING_CONFIRMATION,
+        $wcOrderA = OnlineOrder::create([
+            'user_id' => $ownerA->id, 'platform' => EcommercePlatform::WOOCOMMERCE,
+            'external_order_id' => '8801', 'external_order_number' => '#8801',
+            'status' => WcOrderStatus::PENDING_CONFIRMATION,
             'payment_status' => WcPaymentStatus::PENDING_COD, 'total' => 100, 'subtotal' => 100,
         ]);
 
         // Cross-tenant confirm order rejected
-        $this->actingAs($ownerA)->postJson("/api/shopify-orders/{$shopifyOrderA->id}/confirm", ['branch_id' => $branchB->id])
+        $this->actingAs($ownerA)->postJson("/api/online-orders/{$shopifyOrderA->id}/confirm", ['branch_id' => $branchB->id])
             ->assertStatus(422);
-        $this->actingAs($ownerA)->postJson("/api/wc-orders/{$wcOrderA->id}/confirm", ['branch_id' => $branchB->id])
+        $this->actingAs($ownerA)->postJson("/api/online-orders/{$wcOrderA->id}/confirm", ['branch_id' => $branchB->id])
             ->assertStatus(422);
 
         // Cross-tenant mandob rejected
-        $this->actingAs($ownerA)->postJson("/api/shopify-orders/{$shopifyOrderA->id}/dispatch", ['mandob_id' => $ownerB->id])
+        $this->actingAs($ownerA)->postJson("/api/online-orders/{$shopifyOrderA->id}/dispatch", ['mandob_id' => $ownerB->id])
             ->assertStatus(422);
 
         // Cross-tenant online_branch_id in WooCommerce settings rejected

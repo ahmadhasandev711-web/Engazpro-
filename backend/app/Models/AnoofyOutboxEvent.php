@@ -19,6 +19,7 @@ class AnoofyOutboxEvent extends Model
         'user_id',
         'event_id',
         'event_type',
+        'online_order_id',
         'wc_order_id',
         'order_version',
         'payload',
@@ -29,6 +30,7 @@ class AnoofyOutboxEvent extends Model
     ];
 
     protected $casts = [
+        'online_order_id' => 'integer',
         'event_type' => AnoofyEventType::class,
         'status' => AnoofyOutboxStatus::class,
         'order_version' => 'integer',
@@ -42,8 +44,13 @@ class AnoofyOutboxEvent extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function onlineOrder(): BelongsTo
+    {
+        return $this->belongsTo(OnlineOrder::class, 'online_order_id');
+    }
+
     public function wcOrder(): BelongsTo
     {
-        return $this->belongsTo(WcOrder::class, 'wc_order_id');
+        return $this->onlineOrder();
     }
 }

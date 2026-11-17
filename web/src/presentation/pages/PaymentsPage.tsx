@@ -5,6 +5,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { PaymentSchema, PaymentInput, PaymentMethod, Party, formatCurrency } from '@pos-mandob/shared';
 import { apiClient } from '../../data/api/client';
+import { REFERENCE_QUERY_OPTIONS } from '../../data/api/queryPresets';
+import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { usePermissions } from '../../hooks/usePermissions';
 import { DateRangeFilter, calculatePresetDates } from '../components/common/DateRangeFilter';
 import { PaginationBar } from '../components/common/PaginationBar';
@@ -21,6 +23,7 @@ export const PaymentsPage: React.FC = () => {
   const initialDates = calculatePresetDates('today');
   const [activeTab, setActiveTab] = useState<'ALL' | 'RECEIPT' | 'PAYMENT'>(isOwner ? 'ALL' : 'RECEIPT');
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebouncedValue(search.trim(), 250);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
   const [fromDate, setFromDate] = useState<string>(initialDates.from);
   const [toDate, setToDate] = useState<string>(initialDates.to);
@@ -49,6 +52,7 @@ export const PaymentsPage: React.FC = () => {
       return res.data?.data || [];
     },
     enabled: isOwner,
+    ...REFERENCE_QUERY_OPTIONS,
   });
 
   // Form for new voucher
@@ -74,13 +78,13 @@ export const PaymentsPage: React.FC = () => {
 
   // Queries
   const { data: paymentsData, isLoading } = useQuery({
-    queryKey: ['payments', activeTab, selectedEmployeeId, search, fromDate, toDate, page],
+    queryKey: ['payments', activeTab, selectedEmployeeId, debouncedSearch, fromDate, toDate, page],
     queryFn: async () => {
       const res = await apiClient.get('/payments', {
         params: {
           type: activeTab === 'ALL' ? undefined : activeTab,
           created_by: selectedEmployeeId || undefined,
-          search: search || undefined,
+          search: debouncedSearch || undefined,
           date_from: fromDate || undefined,
           date_to: toDate || undefined,
           page,
@@ -101,6 +105,7 @@ export const PaymentsPage: React.FC = () => {
       });
       return (res.data?.data?.data || res.data?.data || []) as Party[];
     },
+    ...REFERENCE_QUERY_OPTIONS,
   });
 
   const availableParties = partiesData || [];

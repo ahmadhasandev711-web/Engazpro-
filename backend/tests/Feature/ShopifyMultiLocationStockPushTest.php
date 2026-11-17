@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Contracts\ShopifyGraphqlClientInterface;
+use App\Enums\EcommercePlatform;
 use App\Enums\ProductType;
 use App\Enums\ShopifyAuthMode;
 use App\Enums\SubscriptionStatus;
@@ -10,12 +11,12 @@ use App\Enums\UserRole;
 use App\Enums\WcOrderStatus;
 use App\Models\Branch;
 use App\Models\BranchStock;
+use App\Models\OnlineOrder;
+use App\Models\OnlineOrderItem;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\ShopifyIntegration;
 use App\Models\ShopifyLocationMapping;
-use App\Models\ShopifyOrder;
-use App\Models\ShopifyOrderItem;
 use App\Models\Subscription;
 use App\Models\User;
 use App\Services\Shopify\ShopifyStockSyncGate;
@@ -102,19 +103,21 @@ class ShopifyMultiLocationStockPushTest extends TestCase
             'shopify_inventory_item_id' => 7001,
         ]);
 
-        $order = ShopifyOrder::create([
+        $order = OnlineOrder::create([
             'user_id' => $this->owner->id,
-            'shopify_order_id' => 8801,
+            'platform' => EcommercePlatform::SHOPIFY,
+            'external_order_id' => '8801',
+            'external_order_number' => '#8801',
             'branch_id' => $this->mainBranch->id,
             'status' => WcOrderStatus::CONFIRMED,
             'total' => 600,
         ]);
-        ShopifyOrderItem::create([
+        OnlineOrderItem::create([
             'user_id' => $this->owner->id,
-            'shopify_order_id' => $order->id,
+            'online_order_id' => $order->id,
             'product_id' => $product->id,
-            'shopify_product_id' => 5001,
-            'shopify_variant_id' => 6001,
+            'external_product_id' => '5001',
+            'external_variant_id' => '6001',
             'quantity' => 3,
         ]);
 

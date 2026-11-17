@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { formatCurrency } from '@pos-mandob/shared';
 import { apiClient } from '../../data/api/client';
+import { REFERENCE_QUERY_OPTIONS } from '../../data/api/queryPresets';
 import { useAuthStore } from '../../data/store/useAuthStore';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useHoldInvoices, HeldCart } from '../../hooks/useHoldInvoices';
@@ -27,6 +28,7 @@ import { HeldCartsModal } from '../components/pos/HeldCartsModal';
 import { OpenShiftModal } from '../components/shifts/OpenShiftModal';
 import { ProductVariantModal } from '../components/products/ProductVariantModal';
 import { MobileBottomSheet } from '../components/mobile/MobileBottomSheet';
+import { MobileCameraScannerModal } from '../components/mobile/MobileCameraScannerModal';
 import { nativeBackButton } from '../../platform/nativeBackButton';
 import { useHaptic } from '../hooks/useHaptic';
 import { useConfirm } from '../context/ConfirmContext';
@@ -56,6 +58,7 @@ export const PosPage: React.FC = () => {
   const [isHeldCartsModalOpen, setIsHeldCartsModalOpen] = useState<boolean>(false);
   const [isOpenShiftModalOpen, setIsOpenShiftModalOpen] = useState<boolean>(false);
   const [isMobileCartOpen, setIsMobileCartOpen] = useState<boolean>(false);
+  const [isCameraScannerOpen, setIsCameraScannerOpen] = useState<boolean>(false);
   const { selection: hapticSelection } = useHaptic();
   const [completedInvoice, setCompletedInvoice] = useState<any | null>(null);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
@@ -143,6 +146,7 @@ export const PosPage: React.FC = () => {
       const list = Array.isArray(raw) ? raw : Array.isArray(raw?.data) ? raw.data : [];
       return list as PosCategoryChip[];
     },
+    ...REFERENCE_QUERY_OPTIONS,
   });
 
   // Active Shift Query
@@ -154,7 +158,9 @@ export const PosPage: React.FC = () => {
       return res.data?.data;
     },
     enabled: canOperateShift,
-    refetchInterval: 15000,
+    refetchInterval: 60000,
+    refetchIntervalInBackground: false,
+    staleTime: 30000,
   });
 
   const { data: branches = [] } = useQuery({
@@ -163,6 +169,7 @@ export const PosPage: React.FC = () => {
       const res = await apiClient.get('/branches');
       return res.data?.data || [];
     },
+    ...REFERENCE_QUERY_OPTIONS,
   });
 
   // Defensive array normalization for branches (prevents crashes if cached object exists)
@@ -252,7 +259,10 @@ export const PosPage: React.FC = () => {
     lookupCode,
     onAddToCart: addToCart,
     onAddCustomSelection: addCustomSelectionToCart,
-    onOpenVariantModal: setVariantModalProduct,
+    onOpenVariantModal: (product) => {
+      setIsCameraScannerOpen(false);
+      setVariantModalProduct(product);
+    },
     onNotFound: (barcode) => {
       setSearchQuery(barcode);
       showToast(`لم يتم العثور على صنف بالباركود: ${barcode}`);
@@ -438,6 +448,11 @@ export const PosPage: React.FC = () => {
           e.preventDefault();
           return;
         }
+        if (isCameraScannerOpen) {
+          setIsCameraScannerOpen(false);
+          e.preventDefault();
+          return;
+        }
         if (variantModalProduct) {
           setVariantModalProduct(null);
           e.preventDefault();
@@ -505,6 +520,7 @@ export const PosPage: React.FC = () => {
     isPaymentModalOpen,
     isReceiptModalOpen,
     isHeldCartsModalOpen,
+    isCameraScannerOpen,
     variantModalProduct,
     isMobileCartOpen,
     activeShift,
@@ -662,6 +678,7 @@ export const PosPage: React.FC = () => {
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
               onScanBarcode={handleScanOrInputBarcode}
+              onOpenCameraScanner={() => setIsCameraScannerOpen(true)}
             />
           </AppErrorBoundary>
         </div>
@@ -807,6 +824,13 @@ export const PosPage: React.FC = () => {
           setIsOpenShiftModalOpen(false);
           refetchShift();
         }}
+      />
+
+      {/* Mobile Camera Barcode Scanner */}
+      <MobileCameraScannerModal
+        isOpen={isCameraScannerOpen}
+        onClose={() => setIsCameraScannerOpen(false)}
+        onScan={handleScanOrInputBarcode}
       />
     </div>
   );

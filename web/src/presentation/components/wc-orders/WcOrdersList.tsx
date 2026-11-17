@@ -1,8 +1,19 @@
 import React from 'react';
 import { WcOrderMobileCard } from '../mobile/WcOrderMobileCard';
-import { formatCurrency, WcOrderStatus, WcPaymentStatus } from '@pos-mandob/shared';
-import { ShoppingBag, Truck, CheckCircle2, Phone, MapPin, DollarSign, RotateCcw, Package, Copy, Check, Printer, Calendar, Eye } from 'lucide-react';
-import { cleanItemName, formatOrderDate, getStatusBadge, getCallConfirmedBadge } from './helpers';
+import { formatCurrency, OnlineOrderCallStatus, WcOrderStatus, WcPaymentStatus } from '@pos-mandob/shared';
+import { ShoppingBag, Truck, CheckCircle2, Phone, MapPin, DollarSign, RotateCcw, Package, Copy, Check, Printer, Calendar, Eye, PhoneOff, CalendarClock, Ban } from 'lucide-react';
+import {
+  cleanItemName,
+  formatOrderDate,
+  formatShortDateTime,
+  getStatusBadge,
+  getCallConfirmedBadge,
+  getOrderDisplayRef,
+  getCancelReasonLabel,
+  buildTelUrl,
+  buildWhatsAppUrl,
+  buildDefaultOrderWhatsAppMessage,
+} from './helpers';
 import { Button } from '../ui/Button';
 import { EmptyState } from '../ui/EmptyState';
 import { Badge } from '../ui/Badge';
@@ -26,6 +37,9 @@ export const WcOrdersList: React.FC<{ vm: WcOrdersViewModel }> = ({ vm }) => {
     setCopiedTrackingId,
     openDeliverModal,
     setPrintOrder,
+    openCallModal,
+    logCallMutation,
+    openCancelModal,
     user,
     branches,
     mandobs,
@@ -69,6 +83,9 @@ export const WcOrdersList: React.FC<{ vm: WcOrdersViewModel }> = ({ vm }) => {
                   setSelectedMandobId(o.mandob_id || (mandobs[0]?.id ?? ''));
                 }}
                 onDeliver={(o) => openDeliverModal(o)}
+                onNoAnswer={(o) => logCallMutation.mutate({ orderId: o.id, callStatus: OnlineOrderCallStatus.NO_ANSWER })}
+                onScheduleCall={(o) => openCallModal(o, OnlineOrderCallStatus.CALLBACK_SCHEDULED)}
+                onCancelOrder={(o) => openCancelModal(o)}
                 canConfirm={isOwnerOrAdmin || isManager}
                 canDispatch={isOwnerOrAdmin || isManager}
                 canDeliver={isOwnerOrAdmin || isManager || isMandob}
@@ -105,7 +122,7 @@ export const WcOrdersList: React.FC<{ vm: WcOrdersViewModel }> = ({ vm }) => {
                           className="text-xs font-black text-brand-ink bg-brand-soft hover:opacity-90 border border-brand/20 px-2.5 py-0.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1"
                           title="اضغط لعرض تفاصيل الطلب"
                         >
-                          <span className="tabular-nums">#{order.wc_order_id}</span>
+                          <span className="tabular-nums">{getOrderDisplayRef(order)}</span>
                           <span>🛒</span>
                         </button>
                         {(order.order_date || order.created_at) && (
@@ -143,32 +160,36 @@ export const WcOrdersList: React.FC<{ vm: WcOrdersViewModel }> = ({ vm }) => {
                       const phone = order.customer_phone || order.party?.phone;
                       const address = order.customer_address || order.party?.address;
                       const gov = order.governorate || order.city;
+                      const telUrl = buildTelUrl(phone);
+                      const waUrl = buildWhatsAppUrl(phone, buildDefaultOrderWhatsAppMessage(order));
 
                       return (
                         <div>
                           <h3 className="text-sm font-black text-ink">{order.customer_name}</h3>
                           <div className="flex flex-wrap items-center gap-2 text-2xs text-muted mt-1.5">
-                            {phone ? (
+                            {phone && telUrl ? (
                               <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                                 <a
-                                  href={`tel:${phone}`}
+                                  href={telUrl}
                                   className="inline-flex items-center gap-1.5 text-ok font-bold bg-ok-soft hover:opacity-90 border border-ok/20 px-2.5 py-1 rounded-xl active:scale-95 transition-all tabular-nums"
                                   title="اتصال هاتفي مباشر"
                                 >
                                   <Phone className="w-3.5 h-3.5 text-ok" />
                                   <span>{phone}</span>
                                 </a>
-                                <a
-                                  href={`https://wa.me/${phone.replace(/\D/g, '')}`}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="p-1.5 bg-ok text-on-brand hover:opacity-90 rounded-xl shadow-xs active:scale-90 transition-all flex items-center justify-center"
-                                  title="محادثة واتساب"
-                                >
-                                  <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-                                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z"/>
-                                  </svg>
-                                </a>
+                                {waUrl && (
+                                  <a
+                                    href={waUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="p-1.5 bg-ok text-on-brand hover:opacity-90 rounded-xl shadow-xs active:scale-90 transition-all flex items-center justify-center"
+                                    title="محادثة واتساب"
+                                  >
+                                    <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                                      <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z"/>
+                                    </svg>
+                                  </a>
+                                )}
                               </div>
                             ) : (
                               <span className="flex items-center gap-1 text-muted">
@@ -186,6 +207,15 @@ export const WcOrdersList: React.FC<{ vm: WcOrdersViewModel }> = ({ vm }) => {
                             <p className="text-2xs text-muted mt-1.5 flex items-center gap-1 truncate">
                               <MapPin className="w-3 h-3 text-muted shrink-0" />
                               <span className="truncate">{address}</span>
+                            </p>
+                          )}
+                          {order.last_call_attempt_at && !order.call_confirmed_at && (
+                            <p className="text-2xs text-warn mt-1.5 font-bold flex items-center gap-1.5 tabular-nums">
+                              <PhoneOff className="w-3 h-3 shrink-0" />
+                              <span>
+                                آخر محاولة: {formatShortDateTime(order.last_call_attempt_at)}
+                                {order.last_call_attempt_by ? ` (${order.last_call_attempt_by})` : ''}
+                              </span>
                             </p>
                           )}
                         </div>
@@ -324,25 +354,57 @@ export const WcOrdersList: React.FC<{ vm: WcOrdersViewModel }> = ({ vm }) => {
                   {/* Action Buttons based on Status */}
                   <div className="pt-2 border-t border-line" onClick={(e) => e.stopPropagation()}>
                     {!isMandob && order.status === WcOrderStatus.PENDING_CONFIRMATION && (
-                      <Button
-                        variant="primary"
-                        size="md"
-                        onClick={() => {
-                          setConfirmModalOrder(order);
-                          setConfirmError(null);
-                          setForceConfirm(false);
-                          const defaultBranch = isManager
-                            ? branches.find((b: any) => b.id === user?.branch_id)
-                            : (branches.find((b: any) => b.id === order.branch_id) ||
-                               branches.find((b: any) => b.is_main) ||
-                               branches[0]);
-                          setSelectedBranchId(defaultBranch?.id ?? (user?.branch_id ?? ''));
-                        }}
-                        leftIcon={<CheckCircle2 className="w-4 h-4" />}
-                        className="w-full font-black text-xs"
-                      >
-                        تأكيد الطلب وتحديد المخزن
-                      </Button>
+                      <div className="space-y-2">
+                        <Button
+                          variant="primary"
+                          size="md"
+                          onClick={() => {
+                            setConfirmModalOrder(order);
+                            setConfirmError(null);
+                            setForceConfirm(false);
+                            const defaultBranch = isManager
+                              ? branches.find((b: any) => b.id === user?.branch_id)
+                              : (branches.find((b: any) => b.id === order.branch_id) ||
+                                 branches.find((b: any) => b.is_main) ||
+                                 branches[0]);
+                            setSelectedBranchId(defaultBranch?.id ?? (user?.branch_id ?? ''));
+                          }}
+                          leftIcon={<CheckCircle2 className="w-4 h-4" />}
+                          className="w-full font-black text-xs"
+                        >
+                          تأكيد الطلب وتحديد المخزن
+                        </Button>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => logCallMutation.mutate({ orderId: order.id, callStatus: OnlineOrderCallStatus.NO_ANSWER })}
+                            disabled={logCallMutation.isPending}
+                            leftIcon={<PhoneOff className="w-3.5 h-3.5 text-warn" />}
+                            className="font-bold text-2xs"
+                          >
+                            ما ردّش
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => openCallModal(order, OnlineOrderCallStatus.CALLBACK_SCHEDULED)}
+                            leftIcon={<CalendarClock className="w-3.5 h-3.5 text-info" />}
+                            className="font-bold text-2xs"
+                          >
+                            أجّل لوقت
+                          </Button>
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            onClick={() => openCancelModal(order)}
+                            leftIcon={<Ban className="w-3.5 h-3.5" />}
+                            className="font-bold text-2xs"
+                          >
+                            إلغاء
+                          </Button>
+                        </div>
+                      </div>
                     )}
 
                     {!isMandob && order.status === WcOrderStatus.CONFIRMED && (
@@ -459,6 +521,12 @@ export const WcOrdersList: React.FC<{ vm: WcOrdersViewModel }> = ({ vm }) => {
                     {order.status === WcOrderStatus.RETURNED && (
                       <div className="text-center py-2 text-xs font-bold text-bad bg-bad-soft rounded-xl border border-bad/20">
                         تم تسجيل الطلب كمرتجع ↩️
+                      </div>
+                    )}
+
+                    {order.status === WcOrderStatus.CANCELLED && (
+                      <div className="text-center py-2 px-3 text-xs font-bold text-bad bg-bad-soft rounded-xl border border-bad/20">
+                        ملغي: {getCancelReasonLabel(order.cancel_reason)}
                       </div>
                     )}
                   </div>

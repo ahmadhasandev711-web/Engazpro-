@@ -22,36 +22,47 @@ export const WcOrdersToolbar: React.FC<{ vm: WcOrdersViewModel }> = ({ vm }) => 
     feedback,
     setFeedback,
     orders,
+    statusCounts,
     pullMutation,
     user,
   } = vm;
 
   const tabCounts = useMemo(() => {
+    if (statusCounts) {
+      return statusCounts;
+    }
     const counts: Record<string, number> = {
       ALL: orders.length,
       PENDING_CONFIRMATION: 0,
+      NO_ANSWER: 0,
       CONFIRMED: 0,
       DISPATCHED: 0,
       SHIPPED_VIA_COURIER: 0,
       DELIVERED: 0,
       RETURNED: 0,
+      CANCELLED: 0,
     };
     orders.forEach((o: any) => {
       if (counts[o.status] !== undefined) {
         counts[o.status]++;
       }
+      if (o.status === 'PENDING_CONFIRMATION' && (o.call_status === 'NO_ANSWER' || o.call_status === 'CALLBACK_SCHEDULED')) {
+        counts.NO_ANSWER++;
+      }
     });
     return counts;
-  }, [orders]);
+  }, [orders, statusCounts]);
 
   const tabs: TabItem[] = [
-    { id: 'ALL', label: 'كافة الطلبات', count: tabCounts.ALL },
-    { id: 'PENDING_CONFIRMATION', label: 'بانتظار التأكيد', count: tabCounts.PENDING_CONFIRMATION },
-    { id: 'CONFIRMED', label: 'مؤكدة وقيد التجهيز', count: tabCounts.CONFIRMED },
-    { id: 'DISPATCHED', label: 'مع المناديب', count: tabCounts.DISPATCHED },
-    { id: 'SHIPPED_VIA_COURIER', label: 'مع شركات الشحن', count: tabCounts.SHIPPED_VIA_COURIER },
-    { id: 'DELIVERED', label: 'تم تسليمها', count: tabCounts.DELIVERED },
-    { id: 'RETURNED', label: 'مرتجع', count: tabCounts.RETURNED },
+    { id: 'ALL', label: 'كافة الطلبات', count: tabCounts.ALL ?? 0 },
+    { id: 'PENDING_CONFIRMATION', label: 'بانتظار التأكيد', count: tabCounts.PENDING_CONFIRMATION ?? 0 },
+    { id: 'NO_ANSWER', label: 'ما ردّش', count: tabCounts.NO_ANSWER ?? 0 },
+    { id: 'CONFIRMED', label: 'مؤكدة وقيد التجهيز', count: tabCounts.CONFIRMED ?? 0 },
+    { id: 'DISPATCHED', label: 'مع المناديب', count: tabCounts.DISPATCHED ?? 0 },
+    { id: 'SHIPPED_VIA_COURIER', label: 'مع شركات الشحن', count: tabCounts.SHIPPED_VIA_COURIER ?? 0 },
+    { id: 'DELIVERED', label: 'تم تسليمها', count: tabCounts.DELIVERED ?? 0 },
+    { id: 'RETURNED', label: 'مرتجع', count: tabCounts.RETURNED ?? 0 },
+    { id: 'CANCELLED', label: 'ملغي', count: tabCounts.CANCELLED ?? 0 },
   ];
 
   const storeSubtitle = user?.business_name

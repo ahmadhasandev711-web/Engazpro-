@@ -97,34 +97,59 @@ class DashboardService
     }
 
     /**
-     * احتساب إجمالي وصافي وتفصيل المبيعات لفترة محددة
+     * احتساب إجمالي وصافي وتفصيل المبيعات لفترة محددة في استعلام واحد مجمّع
      */
     protected function calculateSalesBetween(User $user, string $startDate, string $endDate): array
     {
         $isEmployee = $user->isMandob() || $user->isCashier();
 
-        $query = Invoice::query()
-            ->when($isEmployee, fn($q) => $q->where('created_by', $user->id))
-            ->when($user->isManager() && $user->branch_id, fn($q) => $q->where('branch_id', $user->branch_id))
+        $row = Invoice::query()
+            ->when($isEmployee, fn ($q) => $q->where('created_by', $user->id))
+            ->when($user->isManager() && $user->branch_id, fn ($q) => $q->where('branch_id', $user->branch_id))
             ->where('date', '>=', $startDate)
-            ->where('date', '<=', $endDate . ' 23:59:59');
+            ->where('date', '<=', $endDate . ' 23:59:59')
+            ->selectRaw($this->buildSalesBetweenSql(), $this->salesBetweenBindings())
+            ->first();
 
-        $gross = Money::of((clone $query)->where('type', InvoiceType::SALE->value)->sum('total') ?? 0);
-        $cashSales = Money::of((clone $query)->where('type', InvoiceType::SALE->value)->where('payment_method', PaymentMethod::CASH->value)->sum('paid_amount') ?? 0);
-        $courierPendingSales = Money::of((clone $query)->where('type', InvoiceType::SALE->value)->where('payment_method', PaymentMethod::COURIER_COD->value)->sum('paid_amount') ?? 0);
-        $electronicSales = Money::of((clone $query)->where('type', InvoiceType::SALE->value)->whereIn('payment_method', [PaymentMethod::CARD->value, PaymentMethod::INSTAPAY->value, PaymentMethod::VODAFONE_CASH->value, PaymentMethod::TRANSFER->value, TreasuryType::BANK->value, TreasuryType::WALLET->value])->sum('paid_amount') ?? 0);
-        $creditSales = Money::of((clone $query)->where('type', InvoiceType::SALE->value)->sum('remaining_amount') ?? 0);
-        $returns = Money::of((clone $query)->where('type', InvoiceType::SALE_RETURN->value)->sum('total') ?? 0);
-        $net = $gross->subtract($returns);
+        $gross = Money::of($row->gross ?? 0);
+        $returns = Money::of($row->returns ?? 0);
 
         return [
             'gross' => $gross->getAmount(),
-            'cash' => $cashSales->getAmount(),
-            'courier_pending' => $courierPendingSales->getAmount(),
-            'electronic' => $electronicSales->getAmount(),
-            'credit' => $creditSales->getAmount(),
+            'cash' => Money::of($row->cash ?? 0)->getAmount(),
+            'courier_pending' => Money::of($row->courier_pending ?? 0)->getAmount(),
+            'electronic' => Money::of($row->electronic ?? 0)->getAmount(),
+            'credit' => Money::of($row->credit ?? 0)->getAmount(),
             'returns' => $returns->getAmount(),
-            'net' => $net->getAmount(),
+            'net' => $gross->subtract($returns)->getAmount(),
+        ];
+    }
+
+    private function buildSalesBetweenSql(): string
+    {
+        return 'COALESCE(SUM(CASE WHEN type = ? THEN total ELSE 0 END), 0) as gross, '
+            . 'COALESCE(SUM(CASE WHEN type = ? AND payment_method = ? THEN paid_amount ELSE 0 END), 0) as cash, '
+            . 'COALESCE(SUM(CASE WHEN type = ? AND payment_method = ? THEN paid_amount ELSE 0 END), 0) as courier_pending, '
+            . 'COALESCE(SUM(CASE WHEN type = ? AND payment_method IN (?, ?, ?, ?, ?, ?) THEN paid_amount ELSE 0 END), 0) as electronic, '
+            . 'COALESCE(SUM(CASE WHEN type = ? THEN remaining_amount ELSE 0 END), 0) as credit, '
+            . 'COALESCE(SUM(CASE WHEN type = ? THEN total ELSE 0 END), 0) as returns';
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function salesBetweenBindings(): array
+    {
+        $sale = InvoiceType::SALE->value;
+
+        return [
+            $sale,
+            $sale, PaymentMethod::CASH->value,
+            $sale, PaymentMethod::COURIER_COD->value,
+            $sale, PaymentMethod::CARD->value, PaymentMethod::INSTAPAY->value, PaymentMethod::VODAFONE_CASH->value,
+            PaymentMethod::TRANSFER->value, TreasuryType::BANK->value, TreasuryType::WALLET->value,
+            $sale,
+            InvoiceType::SALE_RETURN->value,
         ];
     }
 
@@ -135,20 +160,21 @@ class DashboardService
     {
         $dayRange = [$today, $today . ' 23:59:59'];
 
-        $cogsSales = InvoiceItem::whereHas('invoice', fn($q) => $q->where('type', InvoiceType::SALE->value)->whereBetween('date', $dayRange))
-            ->sum(DB::raw('quantity * purchase_price_at_sale'));
+        $cogs = Invoice::whereBetween('invoices.date', $dayRange)
+            ->join('invoice_items', 'invoice_items.invoice_id', '=', 'invoices.id')
+            ->selectRaw(
+                'COALESCE(SUM(CASE WHEN invoices.type = ? THEN invoice_items.quantity * invoice_items.purchase_price_at_sale ELSE 0 END), 0) as sales_cogs, '
+                . 'COALESCE(SUM(CASE WHEN invoices.type = ? THEN invoice_items.quantity * invoice_items.purchase_price_at_sale ELSE 0 END), 0) as returns_cogs',
+                [InvoiceType::SALE->value, InvoiceType::SALE_RETURN->value]
+            )
+            ->first();
 
-        $cogsReturns = InvoiceItem::whereHas('invoice', fn($q) => $q->where('type', InvoiceType::SALE_RETURN->value)->whereBetween('date', $dayRange))
-            ->sum(DB::raw('quantity * purchase_price_at_sale'));
-
-        $netCogs = Money::of($cogsSales ?? 0)->subtract(Money::of($cogsReturns ?? 0));
+        $netCogs = Money::of($cogs->sales_cogs ?? 0)->subtract(Money::of($cogs->returns_cogs ?? 0));
         $grossProfit = Money::of($todayNetSales)->subtract($netCogs);
-
         $todayExpenses = Money::of(Expense::whereBetween('date', $dayRange)->sum('amount') ?? 0);
-        $todayNetProfit = $grossProfit->subtract($todayExpenses);
 
         return [
-            'today_net_profit' => $todayNetProfit->getAmount(),
+            'today_net_profit' => $grossProfit->subtract($todayExpenses)->getAmount(),
             'today_expenses' => $todayExpenses->getAmount(),
         ];
     }
@@ -167,10 +193,11 @@ class DashboardService
         $electronicSales = $this->sumDailySalesByMethods($user, $isEmployee, $isManager, $dayRange, $electronicMethods);
 
         $cashReceipts = $this->sumDailyCashVouchers($user, $isEmployee, $isManager, $dayRange, PaymentType::RECEIPT->value);
-        $cashPurchaseReturns = $isEmployee ? 0.0 : $this->sumDailyCashInvoices($user, false, $isManager, $dayRange, InvoiceType::PURCHASE_RETURN->value);
-        $cashPurchases = $isEmployee ? 0.0 : $this->sumDailyCashInvoices($user, false, $isManager, $dayRange, InvoiceType::PURCHASE->value);
+        $cashByType = $this->sumDailyCashInvoicesByType($user, $isEmployee, $isManager, $dayRange);
+        $cashPurchaseReturns = $isEmployee ? 0.0 : ($cashByType[InvoiceType::PURCHASE_RETURN->value] ?? 0.0);
+        $cashPurchases = $isEmployee ? 0.0 : ($cashByType[InvoiceType::PURCHASE->value] ?? 0.0);
         $cashPayments = $isEmployee ? 0.0 : $this->sumDailyCashVouchers($user, false, $isManager, $dayRange, PaymentType::PAYMENT->value);
-        $cashSaleReturns = $this->sumDailyCashInvoices($user, $isEmployee, $isManager, $dayRange, InvoiceType::SALE_RETURN->value);
+        $cashSaleReturns = $cashByType[InvoiceType::SALE_RETURN->value] ?? 0.0;
 
         $totalIn = Money::of($cashSales)->add($cashReceipts)->add($cashPurchaseReturns);
         $totalOut = Money::of($cashPurchases)->add($cashPayments)->add($cashSaleReturns)->add($todayExpenses);
@@ -206,14 +233,21 @@ class DashboardService
         return Money::of($sum ?? 0)->getAmount();
     }
 
-    private function sumDailyCashInvoices(User $user, bool $isEmployee, bool $isManager, array $dayRange, string $type): float
+    /**
+     * @return array<string, float>
+     */
+    private function sumDailyCashInvoicesByType(User $user, bool $isEmployee, bool $isManager, array $dayRange): array
     {
-        $sum = Invoice::where('type', $type)->where('payment_method', PaymentMethod::CASH->value)->whereBetween('date', $dayRange)
-            ->when($isEmployee, fn($q) => $q->where('created_by', $user->id))
-            ->when($isManager, fn($q) => $q->where('branch_id', $user->branch_id))
-            ->sum('paid_amount');
+        $rows = Invoice::whereIn('type', [InvoiceType::SALE_RETURN->value, InvoiceType::PURCHASE->value, InvoiceType::PURCHASE_RETURN->value])
+            ->where('payment_method', PaymentMethod::CASH->value)
+            ->whereBetween('date', $dayRange)
+            ->when($isEmployee, fn ($q) => $q->where('created_by', $user->id))
+            ->when($isManager, fn ($q) => $q->where('branch_id', $user->branch_id))
+            ->selectRaw('type, COALESCE(SUM(paid_amount), 0) as total_paid')
+            ->groupBy('type')
+            ->pluck('total_paid', 'type');
 
-        return Money::of($sum ?? 0)->getAmount();
+        return $rows->map(fn ($val) => Money::of($val ?? 0)->getAmount())->all();
     }
 
     /**

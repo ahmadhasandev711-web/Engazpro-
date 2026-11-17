@@ -3,16 +3,17 @@
 namespace Tests\Feature;
 
 use App\Enums\BranchType;
+use App\Enums\EcommercePlatform;
 use App\Enums\WcOrderStatus;
 use App\Enums\WcPaymentStatus;
 use App\Models\Branch;
+use App\Models\OnlineOrder;
+use App\Models\OnlineOrderItem;
 use App\Models\Party;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Subscription;
 use App\Models\User;
-use App\Models\WcOrder;
-use App\Models\WcOrderItem;
 use App\Models\WooCommerceIntegration;
 use App\Contracts\WooCommerceApiClientInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -135,9 +136,9 @@ class WcOrderIngestionCharacterizationTest extends TestCase
         $response = $this->sendWebhook($payload);
         $response->assertStatus(202);
 
-        $order = WcOrder::where('user_id', $this->owner->id)->where('wc_order_id', 50001)->firstOrFail();
+        $order = OnlineOrder::where('user_id', $this->owner->id)->where('platform', EcommercePlatform::WOOCOMMERCE->value)->where('external_order_id', '50001')->firstOrFail();
         $party = Party::where('user_id', $this->owner->id)->where('id', $order->party_id)->firstOrFail();
-        $items = WcOrderItem::where('wc_order_id', $order->id)->orderBy('id')->get();
+        $items = OnlineOrderItem::where('online_order_id', $order->id)->orderBy('id')->get();
 
         $expectedOrder = [
             'user_id' => $this->owner->id,
@@ -166,7 +167,7 @@ class WcOrderIngestionCharacterizationTest extends TestCase
 
         $actualOrder = [
             'user_id' => $order->user_id,
-            'wc_order_id' => $order->wc_order_id,
+            'wc_order_id' => (int) $order->external_order_id,
             'order_date' => $order->order_date?->format('Y-m-d H:i:s'),
             'party_id' => $order->party_id,
             'branch_id' => $order->branch_id,
@@ -174,7 +175,7 @@ class WcOrderIngestionCharacterizationTest extends TestCase
             'courier_name' => $order->courier_name,
             'status' => $order->status->value,
             'payment_status' => $order->payment_status->value,
-            'wc_payment_method' => $order->wc_payment_method,
+            'wc_payment_method' => $order->payment_method_label,
             'shipping_cost' => (string) $order->shipping_cost,
             'subtotal' => (string) $order->subtotal,
             'discount_total' => (string) $order->discount_total,
@@ -186,7 +187,7 @@ class WcOrderIngestionCharacterizationTest extends TestCase
             'governorate' => $order->governorate,
             'city' => $order->city,
             'notes' => $order->notes,
-            'wc_coupon_codes' => $order->wc_coupon_codes,
+            'wc_coupon_codes' => $order->coupon_codes,
         ];
 
         $this->assertSame($expectedOrder, $actualOrder);
@@ -220,7 +221,7 @@ class WcOrderIngestionCharacterizationTest extends TestCase
                 'wc_order_id' => $order->id,
                 'product_id' => $this->simpleProduct->id,
                 'product_variant_id' => null,
-                'wc_product_id' => 901,
+                'wc_product_id' => '901',
                 'wc_variation_id' => null,
                 'quantity' => '2.00',
             ],
@@ -229,8 +230,8 @@ class WcOrderIngestionCharacterizationTest extends TestCase
                 'wc_order_id' => $order->id,
                 'product_id' => $this->variableProduct->id,
                 'product_variant_id' => $this->variant->id,
-                'wc_product_id' => 902,
-                'wc_variation_id' => 9021,
+                'wc_product_id' => '902',
+                'wc_variation_id' => '9021',
                 'quantity' => '1.00',
             ],
             [
@@ -238,7 +239,7 @@ class WcOrderIngestionCharacterizationTest extends TestCase
                 'wc_order_id' => $order->id,
                 'product_id' => null,
                 'product_variant_id' => null,
-                'wc_product_id' => 99999,
+                'wc_product_id' => '99999',
                 'wc_variation_id' => null,
                 'quantity' => '1.00',
             ],
@@ -246,11 +247,11 @@ class WcOrderIngestionCharacterizationTest extends TestCase
 
         $actualItems = $items->map(fn($it) => [
             'user_id' => $it->user_id,
-            'wc_order_id' => $it->wc_order_id,
+            'wc_order_id' => $it->online_order_id,
             'product_id' => $it->product_id,
             'product_variant_id' => $it->product_variant_id,
-            'wc_product_id' => $it->wc_product_id,
-            'wc_variation_id' => $it->wc_variation_id,
+            'wc_product_id' => $it->external_product_id,
+            'wc_variation_id' => $it->external_variant_id,
             'quantity' => (string) $it->quantity,
         ])->all();
 
@@ -266,7 +267,7 @@ class WcOrderIngestionCharacterizationTest extends TestCase
         $response = $this->sendWebhook($payload);
         $response->assertStatus(202);
 
-        $order = WcOrder::where('user_id', $this->owner->id)->where('wc_order_id', 50002)->firstOrFail();
+        $order = OnlineOrder::where('user_id', $this->owner->id)->where('platform', EcommercePlatform::WOOCOMMERCE->value)->where('external_order_id', '50002')->firstOrFail();
         $party = Party::where('user_id', $this->owner->id)->where('id', $order->party_id)->firstOrFail();
 
         $expectedOrder = [
@@ -296,7 +297,7 @@ class WcOrderIngestionCharacterizationTest extends TestCase
 
         $actualOrder = [
             'user_id' => $order->user_id,
-            'wc_order_id' => $order->wc_order_id,
+            'wc_order_id' => (int) $order->external_order_id,
             'order_date' => $order->order_date?->format('Y-m-d H:i:s'),
             'party_id' => $order->party_id,
             'branch_id' => $order->branch_id,
@@ -304,7 +305,7 @@ class WcOrderIngestionCharacterizationTest extends TestCase
             'courier_name' => $order->courier_name,
             'status' => $order->status->value,
             'payment_status' => $order->payment_status->value,
-            'wc_payment_method' => $order->wc_payment_method,
+            'wc_payment_method' => $order->payment_method_label,
             'shipping_cost' => (string) $order->shipping_cost,
             'subtotal' => (string) $order->subtotal,
             'discount_total' => (string) $order->discount_total,
@@ -316,7 +317,7 @@ class WcOrderIngestionCharacterizationTest extends TestCase
             'governorate' => $order->governorate,
             'city' => $order->city,
             'notes' => $order->notes,
-            'wc_coupon_codes' => $order->wc_coupon_codes,
+            'wc_coupon_codes' => $order->coupon_codes,
         ];
 
         $this->assertSame($expectedOrder, $actualOrder);
@@ -367,7 +368,7 @@ class WcOrderIngestionCharacterizationTest extends TestCase
         ];
 
         $this->sendWebhook($initialPayload)->assertStatus(202);
-        $firstOrder = WcOrder::where('user_id', $this->owner->id)->where('wc_order_id', 50003)->firstOrFail();
+        $firstOrder = OnlineOrder::where('user_id', $this->owner->id)->where('platform', EcommercePlatform::WOOCOMMERCE->value)->where('external_order_id', '50003')->firstOrFail();
         $this->assertNull($firstOrder->customer_phone);
         $this->assertNull($firstOrder->customer_address);
 
@@ -400,7 +401,7 @@ class WcOrderIngestionCharacterizationTest extends TestCase
         $payload1Pending['status'] = 'processing';
         $this->sendWebhook($payload1Pending)->assertStatus(202);
 
-        $order1 = WcOrder::where('user_id', $this->owner->id)->where('wc_order_id', 50004)->firstOrFail();
+        $order1 = OnlineOrder::where('user_id', $this->owner->id)->where('platform', EcommercePlatform::WOOCOMMERCE->value)->where('external_order_id', '50004')->firstOrFail();
         $this->assertSame(WcOrderStatus::PENDING_CONFIRMATION, $order1->status);
 
         // Webhook arrives with status=cancelled
@@ -416,7 +417,7 @@ class WcOrderIngestionCharacterizationTest extends TestCase
         $payload2['status'] = 'processing';
         $this->sendWebhook($payload2)->assertStatus(202);
 
-        $order2 = WcOrder::where('user_id', $this->owner->id)->where('wc_order_id', 50006)->firstOrFail();
+        $order2 = OnlineOrder::where('user_id', $this->owner->id)->where('platform', EcommercePlatform::WOOCOMMERCE->value)->where('external_order_id', '50006')->firstOrFail();
         // Move to DISPATCHED
         $order2->update([
             'status' => WcOrderStatus::DISPATCHED,
@@ -450,7 +451,7 @@ class WcOrderIngestionCharacterizationTest extends TestCase
         $payload1['billing']['email'] = 'sami.subcase1@example.com';
         $this->sendWebhook($payload1)->assertStatus(202);
 
-        $order1 = WcOrder::where('user_id', $this->owner->id)->where('wc_order_id', 50007)->firstOrFail();
+        $order1 = OnlineOrder::where('user_id', $this->owner->id)->where('platform', EcommercePlatform::WOOCOMMERCE->value)->where('external_order_id', '50007')->firstOrFail();
         $this->assertSame('سامي يوسف', $order1->customer_name);
 
         // 2. Fallback to party name when shipping & billing names are empty
@@ -468,7 +469,7 @@ class WcOrderIngestionCharacterizationTest extends TestCase
         ]);
         $this->sendWebhook($payload2)->assertStatus(202);
 
-        $order2 = WcOrder::where('user_id', $this->owner->id)->where('wc_order_id', 50008)->firstOrFail();
+        $order2 = OnlineOrder::where('user_id', $this->owner->id)->where('platform', EcommercePlatform::WOOCOMMERCE->value)->where('external_order_id', '50008')->firstOrFail();
         $this->assertSame('العميل الدائم المسجل', $order2->customer_name);
 
         // 3. Fallback to 'عميل أونلاين' when shipping, billing, and party name are empty
@@ -479,7 +480,7 @@ class WcOrderIngestionCharacterizationTest extends TestCase
         $payload3['billing']['email'] = '';
         $this->sendWebhook($payload3)->assertStatus(202);
 
-        $order3 = WcOrder::where('user_id', $this->owner->id)->where('wc_order_id', 50009)->firstOrFail();
+        $order3 = OnlineOrder::where('user_id', $this->owner->id)->where('platform', EcommercePlatform::WOOCOMMERCE->value)->where('external_order_id', '50009')->firstOrFail();
         $this->assertSame('عميل أونلاين', $order3->customer_name);
     }
 }
