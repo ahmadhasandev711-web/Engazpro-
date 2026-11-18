@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\PaymentMethod;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -17,14 +18,17 @@ class PaymentRequest extends FormRequest
         $accountId = $this->user()?->getAccountId();
 
         return [
-            'party_id' => [
-                'required',
-                $accountId ? Rule::exists('parties', 'id')->where('user_id', $accountId) : 'exists:parties,id',
-            ],
+            'party_id' => ['required', $accountId ? Rule::exists('parties', 'id')->where('user_id', $accountId) : 'exists:parties,id'],
             'idempotency_key' => ['nullable', 'string', 'max:100'],
             'type' => ['required', 'in:PAYMENT,RECEIPT'],
             'amount' => ['required', 'numeric', 'min:0.01'],
-            'method' => ['nullable', 'string', 'in:CASH,CARD,TRANSFER'],
+            'method' => ['nullable', 'string', Rule::in([
+                PaymentMethod::CASH->value,
+                PaymentMethod::CARD->value,
+                PaymentMethod::INSTAPAY->value,
+                PaymentMethod::VODAFONE_CASH->value,
+                PaymentMethod::TRANSFER->value,
+            ])],
             'date' => ['required', 'date'],
             'notes' => ['nullable', 'string'],
         ];
@@ -37,6 +41,7 @@ class PaymentRequest extends FormRequest
             'type.required' => 'نوع السند مطلوب (قبض أو صرف)',
             'amount.required' => 'مبلغ السند مطلوب',
             'amount.min' => 'يجب أن يكون المبلغ أكبر من الصفر',
+            'method.in' => 'طريقة الدفع المختارة غير صالحة.',
             'date.required' => 'تاريخ السند مطلوب',
         ];
     }
