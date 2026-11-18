@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Search, Trash2, ArrowDownLeft, ArrowUpRight, AlertCircle, X, CheckCircle2, Receipt, Printer } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { PaymentSchema, PaymentInput, PaymentMethod, formatCurrency } from '@pos-mandob/shared';
+import { PaymentSchema, PaymentInput, PaymentMethod, formatCurrency, getPaymentMethodLabel } from '@pos-mandob/shared';
 import { apiClient } from '../../data/api/client';
 import { fetchPartySelectOptions } from '../../data/api/asyncOptionLoaders';
 import { REFERENCE_QUERY_OPTIONS } from '../../data/api/queryPresets';
@@ -15,7 +15,6 @@ import { PaymentMobileCard } from '../components/mobile/PaymentMobileCard';
 import { PaymentReceiptModal, PaymentReceiptData } from '../components/payments/PaymentReceiptModal';
 import { nativeBackButton } from '../../platform/nativeBackButton';
 import { useConfirm } from '../context/ConfirmContext';
-import { getPaymentMethodLabel } from '../utils/paymentMethodLabels';
 import { AsyncSearchSelect, Badge, Button, Card, DataTable, EmptyState, Input, PageHeader, Select, Tabs, Textarea, TabItem } from '../components/ui';
 
 export const PaymentsPage: React.FC = () => {

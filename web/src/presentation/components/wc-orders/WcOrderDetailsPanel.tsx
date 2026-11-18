@@ -261,7 +261,14 @@ export const WcOrderDetailsPanel: React.FC<WcOrderDetailsPanelProps> = ({ vm, on
             {address && <span className="font-medium text-muted">{address}</span>}
           </div>
 
-          {/* Customer Note from WooCommerce */}
+          {/* Customer Note & Multi-Location Shopify Alerts */}
+          {Array.isArray((order as any).platform_meta?.split_fulfillment_locations) &&
+            (order as any).platform_meta.split_fulfillment_locations.length > 1 && (
+            <div className="bg-warn-soft border border-warn/30 rounded-xl p-2.5 text-xs text-warn font-bold">
+              تنبيه Shopify: هذا الطلب مقسّم بين عدة مواقع تخزين ({(order as any).platform_meta.split_fulfillment_locations.join('، ')}) — يرجى مراجعة توفر البنود قبل الشحن.
+            </div>
+          )}
+
           {order.notes && (
             <div className="bg-warn-soft border border-warn/20 rounded-xl p-2.5 text-xs text-warn flex items-start gap-2">
               <span className="font-bold shrink-0">ملاحظات العميل:</span>

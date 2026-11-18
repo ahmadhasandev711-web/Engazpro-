@@ -18,6 +18,7 @@ class ShopifyAuthService
     public function __construct(
         protected EcommerceAccessService $ecommerceAccess
     ) {}
+
     public function ensureValidAccessToken(ShopifyIntegration $integration, bool $forceRefresh = false): string
     {
         $hasToken = !empty($integration->access_token);
@@ -28,11 +29,10 @@ class ShopifyAuthService
 
             return $integration->access_token;
         }
-
         $stillValid = $hasToken && !$forceRefresh && $integration->token_expires_at
             && $integration->token_expires_at->gt(now()->addMinutes(5));
 
-        return $stillValid ? $integration->access_token : $this->exchangeClientCredentials($integration);
+        return $stillValid ? $integration->access_token : $this->refreshWithLock($integration, $forceRefresh);
     }
 
     public function exchangeClientCredentials(ShopifyIntegration $integration): string
@@ -113,15 +113,53 @@ class ShopifyAuthService
         if (empty($hmacHeader) || empty($secret)) {
             return false;
         }
-
         $computed = base64_encode(hash_hmac('sha256', $rawPayload, $secret, true));
 
         return hash_equals($computed, $hmacHeader);
     }
 
+    /**
+     * Resolve candidate HMAC secrets: manual webhook secret, app client_secret, and global client_secret.
+     *
+     * @return list<string>
+     */
+    public function resolveValidWebhookSecrets(ShopifyIntegration $integration): array
+    {
+        $candidates = array_filter([
+            $integration->webhook_secret,
+            $integration->client_secret,
+            config('services.shopify.client_secret'),
+        ], fn ($v) => is_string($v) && trim($v) !== '');
+
+        return array_values(array_unique($candidates));
+    }
+
+    public function verifyWebhookSignature(ShopifyIntegration $integration, string $rawPayload, ?string $hmacHeader): bool
+    {
+        foreach ($this->resolveValidWebhookSecrets($integration) as $secret) {
+            if ($this->verifyWebhookHmac($rawPayload, $hmacHeader, $secret)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function refreshWithLock(ShopifyIntegration $integration, bool $forceRefresh): string
+    {
+        return Cache::lock("shopify_token_refresh_{$integration->id}", 15)->block(5, function () use ($integration, $forceRefresh) {
+            $fresh = $integration->fresh();
+            if ($fresh && !$forceRefresh && !empty($fresh->access_token) && $fresh->token_expires_at?->gt(now()->addMinutes(5))) {
+                return $fresh->access_token;
+            }
+
+            return $this->exchangeClientCredentials($fresh ?? $integration);
+        });
+    }
+
     private function defaultReturnUrl(): string
     {
-        return rtrim((string) request()->header('origin', url('/')), '/') . '/shopify/settings?auth=success';
+        return rtrim((string) request()->header('origin', url('/')), '/') . '/shopify?auth=success';
     }
 
     /**
@@ -146,7 +184,11 @@ class ShopifyAuthService
         }
 
         $params = collect($query)->except(['hmac', 'signature'])->sortKeys()
-            ->map(fn ($v, $k) => "{$k}={$v}")->implode('&');
+            ->map(function ($v, $k) {
+                $val = is_array($v) ? ('["' . implode('", "', $v) . '"]') : (string) $v;
+
+                return "{$k}={$val}";
+            })->implode('&');
 
         if (!hash_equals(hash_hmac('sha256', $params, $clientSecret), $hmac)) {
             throw new ShopifyConnectionException('توقيع التحقق الأمني HMAC غير صالح.', 403);
@@ -158,7 +200,6 @@ class ShopifyAuthService
         $response = Http::timeout(20)->post("https://{$shop}/admin/oauth/access_token", [
             'client_id' => $clientId, 'client_secret' => $clientSecret, 'code' => $code,
         ]);
-
         if (!$response->successful() || empty($response->json('access_token'))) {
             throw new ShopifyConnectionException('فشل استبدال رمز التفويض من Shopify للحصول على Access Token.', 422);
         }

@@ -8,7 +8,10 @@ return [
     */
 
     'trial_days' => (int) env('POS_TRIAL_DAYS', 14),
+    'basic_monthly_price' => (float) env('POS_BASIC_MONTHLY_PRICE', 299.00),
     'annual_subscription_price' => (float) env('POS_ANNUAL_PRICE', 3000.00),
+    'pro_monthly_price' => (float) env('POS_PRO_MONTHLY_PRICE', 499.00),
+    'pro_annual_subscription_price' => (float) env('POS_PRO_ANNUAL_PRICE', 5000.00),
     'ecommerce_addon_annual_price' => (float) env('POS_ECOMMERCE_ADDON_PRICE', 2000.00),
     'currency' => env('POS_CURRENCY', 'EGP'),
 

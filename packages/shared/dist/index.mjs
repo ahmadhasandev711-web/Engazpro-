@@ -561,6 +561,20 @@ function formatNumber(num) {
   const safeNum = Number(num) || 0;
   return safeNum.toLocaleString("ar-EG");
 }
+var PAYMENT_METHOD_LABELS = {
+  CASH: "\u0646\u0642\u062F\u064A (\u0643\u0627\u0634)",
+  CARD: "\u0628\u0637\u0627\u0642\u0629 / \u0641\u064A\u0632\u0627",
+  INSTAPAY: "\u0625\u0646\u0633\u062A\u0627\u0628\u0627\u064A (InstaPay)",
+  VODAFONE_CASH: "\u0641\u0648\u062F\u0627\u0641\u0648\u0646 \u0643\u0627\u0634",
+  TRANSFER: "\u062A\u062D\u0648\u064A\u0644 \u0628\u0646\u0643\u064A",
+  COURIER_COD: "\u062A\u062D\u0635\u064A\u0644 \u0634\u0631\u0643\u0629 \u0634\u062D\u0646 (COD)",
+  SPLIT: "\u062F\u0641\u0639 \u0645\u062C\u0632\u0623",
+  CREDIT: "\u0622\u062C\u0644 (\u0639\u0644\u0649 \u0627\u0644\u062D\u0633\u0627\u0628)"
+};
+function getPaymentMethodLabel(method) {
+  if (!method) return PAYMENT_METHOD_LABELS.CASH;
+  return PAYMENT_METHOD_LABELS[method] ?? method;
+}
 function formatDate(dateString) {
   if (!dateString) return "";
   const date = new Date(dateString);
@@ -636,5 +650,6 @@ export {
   formatCurrency,
   formatDate,
   formatDateTime,
-  formatNumber
+  formatNumber,
+  getPaymentMethodLabel
 };

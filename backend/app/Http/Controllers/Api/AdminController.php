@@ -8,10 +8,12 @@ use App\Http\Requests\Admin\ExtendSubscriptionRequest;
 use App\Http\Requests\Admin\GenerateLicensesRequest;
 use App\Http\Requests\Admin\ResetMerchantPasswordRequest;
 use App\Http\Requests\Admin\RevokeSubscriptionRequest;
+use App\Http\Requests\Admin\UpdatePlatformPricingRequest;
 use App\Models\User;
 use App\Services\ActivationCodeService;
 use App\Services\AdminAuditService;
 use App\Services\AdminStatsService;
+use App\Services\PlatformPricingService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -22,6 +24,7 @@ class AdminController extends Controller
         protected ActivationCodeService $codeService,
         protected AdminStatsService $statsService,
         protected AdminAuditService $auditService,
+        protected PlatformPricingService $pricingService,
     ) {}
 
     public function stats(): JsonResponse
@@ -173,5 +176,24 @@ class AdminController extends Controller
         );
 
         return response()->json(['success' => true, 'data' => $logs]);
+    }
+
+    public function getPricing(): JsonResponse
+    {
+        return response()->json([
+            'success' => true,
+            'data' => $this->pricingService->getPricing(),
+        ]);
+    }
+
+    public function updatePricing(UpdatePlatformPricingRequest $request): JsonResponse
+    {
+        $updated = $this->pricingService->updatePricing($request->validated());
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم تحديث تسعير باقات المنصة وربطه بصفحة الأسعار وأكواد التفعيل بنجاح.',
+            'data' => $updated,
+        ]);
     }
 }

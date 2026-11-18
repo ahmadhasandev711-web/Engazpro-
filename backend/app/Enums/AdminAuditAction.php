@@ -17,6 +17,7 @@ enum AdminAuditAction: string
     case ADMIN_ACCESS_DENIED = 'ADMIN_ACCESS_DENIED';
     case INQUIRY_UPDATED = 'INQUIRY_UPDATED';
     case INQUIRY_DELETED = 'INQUIRY_DELETED';
+    case PRICING_UPDATED = 'PRICING_UPDATED';
 
     public function label(): string
     {
@@ -34,6 +35,7 @@ enum AdminAuditAction: string
             self::ADMIN_ACCESS_DENIED => 'رفض وصول إداري',
             self::INQUIRY_UPDATED => 'تحديث طلب متجر',
             self::INQUIRY_DELETED => 'حذف طلب متجر',
+            self::PRICING_UPDATED => 'تحديث تسعير المنصة',
         };
     }
 }

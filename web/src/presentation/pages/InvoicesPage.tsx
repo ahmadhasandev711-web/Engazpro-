@@ -20,9 +20,10 @@ import {
   Save,
   Share2,
 } from 'lucide-react';
-import { InvoiceType, formatCurrency } from '@pos-mandob/shared';
+import { InvoiceType, formatCurrency, getPaymentMethodLabel } from '@pos-mandob/shared';
 import { apiClient } from '../../data/api/client';
 import { REFERENCE_QUERY_OPTIONS } from '../../data/api/queryPresets';
+import { InvoiceItemMeta } from '../components/common/InvoiceItemMeta';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { usePermissions } from '../../hooks/usePermissions';
 import { DateRangeFilter, calculatePresetDates } from '../components/common/DateRangeFilter';
@@ -714,19 +715,7 @@ export const InvoicesPage: React.FC = () => {
                         <CreditCard className="w-3.5 h-3.5" /> طريقة الدفع
                       </span>
                       <p className="font-bold text-ink">
-                        {invoiceDetails.payment_method === 'CASH'
-                          ? 'نقدي (كاش)'
-                          : invoiceDetails.payment_method === 'CREDIT'
-                            ? 'آجل (على الحساب)'
-                            : invoiceDetails.payment_method === 'CARD'
-                              ? 'فيزا / بطاقة'
-                              : invoiceDetails.payment_method === 'INSTAPAY'
-                                ? 'إنستاباي'
-                                : invoiceDetails.payment_method === 'VODAFONE_CASH'
-                                  ? 'فودافون كاش'
-                                  : invoiceDetails.payment_method === 'SPLIT'
-                                    ? 'دفع مجزأ'
-                                    : 'تحويل بنكي'}
+                        {getPaymentMethodLabel(invoiceDetails.payment_method)}
                       </p>
                     </div>
                     <div className="space-y-1">
@@ -909,7 +898,14 @@ export const InvoicesPage: React.FC = () => {
                         {invoiceDetails.items?.map((item: any, idx: number) => (
                           <tr key={item.id || idx} className="hover:bg-surface-2/50">
                             <td className="py-2.5 px-3 tabular-nums text-muted">{idx + 1}</td>
-                            <td className="py-2.5 px-3 font-bold text-ink">{item.product_name}</td>
+                            <td className="py-2.5 px-3 font-bold text-ink">
+                              <div>{item.product_name}</div>
+                              <InvoiceItemMeta
+                                variantName={item.variant_name}
+                                batchNumber={item.batch_number}
+                                unitName={item.unit_name}
+                              />
+                            </td>
                             <td className="py-2.5 px-3 text-center font-bold tabular-nums">
                               {item.quantity}
                             </td>

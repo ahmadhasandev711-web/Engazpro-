@@ -8,7 +8,6 @@ use App\Exceptions\NoActiveStockBranchesException;
 use App\Exceptions\PosDomainException;
 use App\Exceptions\WooCommerceConnectionException;
 use App\Models\Branch;
-use App\Models\BranchStock;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\WooCommerceIntegration;
@@ -50,22 +49,7 @@ class WooStockPushService
      */
     public function availableQuantity(int $accountId, int $productId, ?int $variantId, array $branchIds): Quantity
     {
-        if (empty($branchIds)) {
-            return Quantity::zero();
-        }
-
-        $query = BranchStock::withoutGlobalScopes()
-            ->whereIn('branch_id', $branchIds)
-            ->where('product_id', $productId);
-
-        $variantId !== null
-            ? $query->where('product_variant_id', $variantId)
-            : $query->whereNull('product_variant_id');
-
-        $raw = $query->sum('quantity') ?? 0;
-        $reserved = $this->reservationService->reservedQuantity($accountId, $productId, $variantId, $branchIds);
-
-        return Quantity::of($raw)->subtract($reserved)->maxZero();
+        return $this->reservationService->netAvailableForBranches($accountId, $productId, $variantId, $branchIds);
     }
 
     public function push(WooCommerceIntegration $integration, Product $product, ?ProductVariant $variant = null): Quantity

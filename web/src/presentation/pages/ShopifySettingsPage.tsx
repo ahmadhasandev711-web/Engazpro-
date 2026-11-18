@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   CheckCircle2,
@@ -9,6 +9,7 @@ import {
   Copy,
   Zap,
   MapPin,
+  Webhook,
 } from 'lucide-react';
 import { apiClient } from '../../data/api/client';
 import { EcommercePlatform, ShopifyAuthMode } from '@pos-mandob/shared';
@@ -26,11 +27,15 @@ interface LocationMappingRow {
 
 export const ShopifySettingsPage: React.FC = () => {
   const queryClient = useQueryClient();
+  const activeEcommercePlatform = useAuthStore((s) => s.user?.active_ecommerce_platform);
+  const fetchMe = useAuthStore((s) => s.fetchMe);
+
   const [shopDomain, setShopDomain] = useState('');
   const [authMode, setAuthMode] = useState<ShopifyAuthMode>(ShopifyAuthMode.ACCESS_TOKEN);
   const [accessToken, setAccessToken] = useState('');
   const [clientId, setClientId] = useState('');
   const [clientSecret, setClientSecret] = useState('');
+  const [webhookSecret, setWebhookSecret] = useState('');
   const [defaultBranchId, setDefaultBranchId] = useState<number | ''>('');
   const [autoSyncStock, setAutoSyncStock] = useState(true);
   const [isActive, setIsActive] = useState(true);
@@ -42,12 +47,12 @@ export const ShopifySettingsPage: React.FC = () => {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('auth') === 'success') {
-      useAuthStore.getState().fetchMe();
+      fetchMe();
       setFeedback({ type: 'success', message: 'تم ربط متجر Shopify عبر OAuth ومزامنة المواقع بنجاح!' });
       queryClient.invalidateQueries({ queryKey: ['shopify-settings'] });
       window.history.replaceState({}, document.title, window.location.pathname);
     }
-  }, [queryClient]);
+  }, [queryClient, fetchMe]);
 
   const { data: branches = [] } = useQuery<any[]>({
     queryKey: ['branches'],
@@ -78,6 +83,14 @@ export const ShopifySettingsPage: React.FC = () => {
     );
   }, [settings]);
 
+  const duplicateBranchIds = useMemo(() => {
+    const counts = new Map<number, number>();
+    mappings.forEach((m) => {
+      if (m.branch_id) counts.set(Number(m.branch_id), (counts.get(Number(m.branch_id)) || 0) + 1);
+    });
+    return new Set(Array.from(counts.entries()).filter(([, c]) => c > 1).map(([id]) => id));
+  }, [mappings]);
+
   const notify = (type: 'success' | 'error', message: string) => {
     setFeedback({ type, message });
     setTimeout(() => setFeedback(null), 5000);
@@ -91,15 +104,17 @@ export const ShopifySettingsPage: React.FC = () => {
         access_token: accessToken.trim() || undefined,
         client_id: clientId.trim() || undefined,
         client_secret: clientSecret.trim() || undefined,
+        webhook_secret: webhookSecret.trim() || undefined,
         default_branch_id: defaultBranchId || null,
         auto_sync_stock: autoSyncStock,
         is_active: isActive,
       }),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['shopify-settings'] });
-      useAuthStore.getState().fetchMe();
+      fetchMe();
       setAccessToken('');
       setClientSecret('');
+      setWebhookSecret('');
       notify('success', res.data?.message || 'تم حفظ إعدادات Shopify بنجاح');
     },
     onError: (err: any) => notify('error', err.response?.data?.message || 'فشل حفظ الإعدادات'),
@@ -123,13 +138,22 @@ export const ShopifySettingsPage: React.FC = () => {
     onError: (err: any) => notify('error', err.response?.data?.message || 'فشل جلب المواقع'),
   });
 
+  const registerWebhooksMutation = useMutation({
+    mutationFn: () => apiClient.post('/shopify/register-webhooks'),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['shopify-settings'] });
+      notify('success', res.data?.message || 'تم تسجيل الـ Webhooks بنجاح');
+    },
+    onError: (err: any) => notify('error', err.response?.data?.message || 'تعذر تسجيل بعض الـ Webhooks'),
+  });
+
   const saveMappingsMutation = useMutation({
     mutationFn: () =>
       apiClient.post('/shopify/location-mappings', {
         mappings: mappings.map((m) => ({
           id: m.id,
           branch_id: m.branch_id ? Number(m.branch_id) : null,
-          auto_sync_stock: m.auto_sync_stock,
+          auto_sync_stock: Boolean(m.branch_id) && m.auto_sync_stock,
         })),
       }),
     onSuccess: (res) => {
@@ -165,6 +189,14 @@ export const ShopifySettingsPage: React.FC = () => {
     }
   };
 
+  const handleSaveMappings = () => {
+    if (duplicateBranchIds.size > 0) {
+      notify('error', 'لا يمكن ربط أكثر من موقع Shopify بنفس المخزن/الفرع لمنع تضاعف الأرصدة.');
+      return;
+    }
+    saveMappingsMutation.mutate();
+  };
+
   const copyText = (value: string, key: 'url' | 'secret') => {
     navigator.clipboard?.writeText(value);
     setCopiedKey(key);
@@ -175,7 +207,7 @@ export const ShopifySettingsPage: React.FC = () => {
     <div className="space-y-6 max-w-6xl mx-auto pb-12">
       <PageHeader
         title="تكامل متجر Shopify (GraphQL 2026-10)"
-        description="ربط ثنائي الاتجاه مع دعم المواقع المتعددة (Multi-Location)، استيراد الكتالوج والخصومات، ودفع المخزون اللحظي"
+        description="ربط موثّق مع POS كمصدر وحيد للمخزون، دعم المواقع المتعددة (1-to-1)، واستيراد الكتالوج والطلبات"
         badge={
           <Badge tone={settings?.is_active ? 'ok' : 'neutral'} dot>
             {settings?.is_active ? 'متصل ونشط' : 'غير مفعل'}
@@ -183,12 +215,22 @@ export const ShopifySettingsPage: React.FC = () => {
         }
       />
 
-      {useAuthStore.getState().user?.active_ecommerce_platform === EcommercePlatform.WOOCOMMERCE && (
+      {activeEcommercePlatform === EcommercePlatform.WOOCOMMERCE && (
         <div className="p-4 rounded-2xl border bg-warn-soft border-warn/30 text-warn flex items-center gap-3 text-xs font-bold">
           <AlertCircle className="w-5 h-5 shrink-0" />
           <span>
             متجر WooCommerce مربوط ومفعّل حالياً. يدعم النظام منصة متجر إلكتروني واحدة فقط؛ قم بتعطيل تفعيل WooCommerce أولاً إذا أردت التحويل إلى Shopify.
           </span>
+        </div>
+      )}
+
+      {settings?.last_error && (
+        <div className="p-4 rounded-2xl border bg-bad-soft border-bad/25 text-bad flex items-start gap-3 text-xs font-bold">
+          <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-black">آخر تنبيه/خطأ في المزامنة:</p>
+            <p className="mt-0.5 font-medium">{settings.last_error}</p>
+          </div>
         </div>
       )}
 
@@ -225,17 +267,26 @@ export const ShopifySettingsPage: React.FC = () => {
             />
           </div>
 
-          {authMode === 'ACCESS_TOKEN' && (
-            <Input
-              label={`Access Token ${settings?.access_token_preview ? `(المحفوظ: ${settings.access_token_preview})` : ''}`}
-              type="password"
-              placeholder="shpat_xxxxxxxxxxxxxxxxxxxxxxxx"
-              value={accessToken}
-              onChange={(e) => setAccessToken(e.target.value)}
-            />
+          {authMode === ShopifyAuthMode.ACCESS_TOKEN && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input
+                label={`Access Token ${settings?.access_token_preview ? `(المحفوظ: ${settings.access_token_preview})` : ''}`}
+                type="password"
+                placeholder="shpat_xxxxxxxxxxxxxxxxxxxxxxxx"
+                value={accessToken}
+                onChange={(e) => setAccessToken(e.target.value)}
+              />
+              <Input
+                label="Webhook Signing Secret (اختياري للربط اليدوي)"
+                type="password"
+                placeholder="من Shopify Notifications > Webhooks"
+                value={webhookSecret}
+                onChange={(e) => setWebhookSecret(e.target.value)}
+              />
+            </div>
           )}
 
-          {authMode === 'CLIENT_CREDENTIALS' && (
+          {authMode === ShopifyAuthMode.CLIENT_CREDENTIALS && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input label="Client ID" value={clientId} onChange={(e) => setClientId(e.target.value)} placeholder="من Shopify Dev Dashboard" />
               <Input
@@ -247,7 +298,7 @@ export const ShopifySettingsPage: React.FC = () => {
             </div>
           )}
 
-          {authMode === 'OAUTH' && (
+          {authMode === ShopifyAuthMode.OAUTH && (
             <div className="p-4 rounded-2xl bg-brand-soft border border-brand/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <p className="text-xs font-bold text-ink">اضغط للانتقال إلى لوحة Shopify ومنح الصلاحيات وتوليد المفاتيح تلقائياً.</p>
               <Button variant="primary" size="sm" onClick={handleOAuthConnect}>
@@ -269,7 +320,7 @@ export const ShopifySettingsPage: React.FC = () => {
             <div className="flex flex-col justify-end gap-2 pb-1">
               <label className="flex items-center gap-2 text-xs font-bold text-ink cursor-pointer">
                 <input type="checkbox" checked={autoSyncStock} onChange={(e) => setAutoSyncStock(e.target.checked)} />
-                مزامنة المخزون لحظياً نحو مواقع Shopify عند كل حركة بيع/شراء
+                مزامنة المخزون لحظياً من POS إلى Shopify عند كل حركة
               </label>
               <label className="flex items-center gap-2 text-xs font-bold text-ink cursor-pointer">
                 <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
@@ -305,6 +356,15 @@ export const ShopifySettingsPage: React.FC = () => {
           <Button className="w-full" variant="secondary" isLoading={pushStocksMutation.isPending} onClick={() => pushStocksMutation.mutate()}>
             <Warehouse className="w-4 h-4 ml-1" /> دفع كافة الأرصدة لمواقع Shopify
           </Button>
+          <Button className="w-full" variant="secondary" isLoading={registerWebhooksMutation.isPending} onClick={() => registerWebhooksMutation.mutate()}>
+            <Webhook className="w-4 h-4 ml-1" /> تسجيل / تحديث الـ Webhooks تلقائياً
+          </Button>
+
+          {settings?.webhook_registered_at && (
+            <p className="text-[11px] font-bold text-ok">
+              ✓ آخر تسجيل ناجح للـ Webhooks: {new Date(settings.webhook_registered_at).toLocaleString('ar-EG')}
+            </p>
+          )}
 
           {settings?.webhook_url && (
             <div className="space-y-2 pt-3 border-t border-line text-xs">
@@ -333,19 +393,25 @@ export const ShopifySettingsPage: React.FC = () => {
           <div className="flex items-center gap-2">
             <MapPin className="w-5 h-5 text-brand" />
             <div>
-              <h2 className="text-base font-black text-ink">3. ربط مواقع Shopify بالمخازن والفروع (Location ↔ Branch Mapping)</h2>
-              <p className="text-xs text-muted">ربط كل موقع على Shopify بالفرع/المخزن المقابل له في السيستم لدفع المخزون وتوجيه الطلبات بدقة</p>
+              <h2 className="text-base font-black text-ink">3. ربط مواقع Shopify بالمخازن والفروع (1-to-1 Mapping)</h2>
+              <p className="text-xs text-muted">كل موقع Shopify يُربط بمخزن مستقل (يُمنع ربط موقعين بنفس المخزن لمنع تضاعف الأرصدة)</p>
             </div>
           </div>
           <div className="flex gap-2">
             <Button variant="secondary" size="sm" isLoading={syncLocationsMutation.isPending} onClick={() => syncLocationsMutation.mutate()}>
               <RefreshCw className="w-4 h-4 ml-1" /> تحديث المواقع
             </Button>
-            <Button variant="primary" size="sm" disabled={mappings.length === 0} isLoading={saveMappingsMutation.isPending} onClick={() => saveMappingsMutation.mutate()}>
+            <Button variant="primary" size="sm" disabled={mappings.length === 0 || duplicateBranchIds.size > 0} isLoading={saveMappingsMutation.isPending} onClick={handleSaveMappings}>
               حفظ الربط
             </Button>
           </div>
         </div>
+
+        {duplicateBranchIds.size > 0 && (
+          <div className="p-3 rounded-xl border border-bad/30 bg-bad-soft text-bad text-xs font-bold">
+            يوجد مخزن مرتبط بأكثر من موقع Shopify في الجدول أدناه — يرجى اختيار مخزن مستقل لكل موقع قبل الحفظ.
+          </div>
+        )}
 
         {mappings.length === 0 ? (
           <div className="p-6 text-center text-xs font-bold text-muted bg-canvas rounded-2xl border border-line">
@@ -357,6 +423,7 @@ export const ShopifySettingsPage: React.FC = () => {
               <thead>
                 <tr className="border-b border-line text-xs text-muted">
                   <th className="py-2.5 px-3">موقع Shopify</th>
+                  <th className="py-2.5 px-3">الحالة</th>
                   <th className="py-2.5 px-3">معرّف الموقع</th>
                   <th className="py-2.5 px-3">الفرع / المخزن المقابل</th>
                   <th className="py-2.5 px-3">مزامنة المخزون</th>
@@ -366,13 +433,17 @@ export const ShopifySettingsPage: React.FC = () => {
                 {mappings.map((m, idx) => (
                   <tr key={m.id} className="border-b border-line/60">
                     <td className="py-2.5 px-3 font-bold text-ink">{m.shopify_location_name}</td>
+                    <td className="py-2.5 px-3">
+                      <Badge tone={m.is_active ? 'ok' : 'neutral'}>{m.is_active ? 'نشط' : 'معطّل'}</Badge>
+                    </td>
                     <td className="py-2.5 px-3 font-mono text-xs text-muted">{m.shopify_location_id}</td>
                     <td className="py-2.5 px-3 min-w-[220px]">
                       <Select
                         value={m.branch_id ?? ''}
                         onChange={(e) => {
+                          const branchVal = e.target.value ? Number(e.target.value) : '';
                           const next = [...mappings];
-                          next[idx] = { ...m, branch_id: e.target.value ? Number(e.target.value) : '' };
+                          next[idx] = { ...m, branch_id: branchVal, auto_sync_stock: Boolean(branchVal) && m.auto_sync_stock };
                           setMappings(next);
                         }}
                         options={[
@@ -385,7 +456,8 @@ export const ShopifySettingsPage: React.FC = () => {
                       <label className="inline-flex items-center gap-2 text-xs font-bold text-ink cursor-pointer">
                         <input
                           type="checkbox"
-                          checked={m.auto_sync_stock}
+                          disabled={!m.branch_id}
+                          checked={Boolean(m.branch_id) && m.auto_sync_stock}
                           onChange={(e) => {
                             const next = [...mappings];
                             next[idx] = { ...m, auto_sync_stock: e.target.checked };

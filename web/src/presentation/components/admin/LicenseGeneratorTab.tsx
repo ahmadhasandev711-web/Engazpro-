@@ -13,8 +13,11 @@ import {
   ChevronLeft,
 } from 'lucide-react';
 import { formatCurrency, formatDate, LicenseKey } from '@pos-mandob/shared';
+import type { PublicPricingData } from '../../../hooks/usePublicPricing';
+import type { UpdatePlatformPricingPayload } from '../../../hooks/useAdmin';
 import { useConfirm } from '../../context/ConfirmContext';
 import { Badge, Button, Card, DataTable, EmptyState, Input, Select } from '../ui';
+import { PlatformPricingCard } from './PlatformPricingCard';
 import clsx from 'clsx';
 
 interface LicenseGeneratorTabProps {
@@ -40,6 +43,9 @@ interface LicenseGeneratorTabProps {
   }) => void;
   onRevokeLicense?: (licenseId: number) => void;
   isGenerating: boolean;
+  pricing?: PublicPricingData;
+  isSavingPricing?: boolean;
+  onSavePricing?: (payload: UpdatePlatformPricingPayload) => Promise<void> | void;
 }
 
 const COUNT_OPTIONS = [
@@ -76,6 +82,9 @@ export const LicenseGeneratorTab: React.FC<LicenseGeneratorTabProps> = ({
   onGenerate,
   onRevokeLicense,
   isGenerating,
+  pricing,
+  isSavingPricing = false,
+  onSavePricing,
 }) => {
   const { confirm } = useConfirm();
   const [generateCount, setGenerateCount] = useState<number>(1);
@@ -84,6 +93,14 @@ export const LicenseGeneratorTab: React.FC<LicenseGeneratorTabProps> = ({
   const [ecommerceEnabled, setEcommerceEnabled] = useState<boolean>(false);
   const [batchNotes, setBatchNotes] = useState<string>('اشتراك سنوي (فودافون كاش / إنستاباي)');
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+
+  const liveDefaultPrice = pricing
+    ? (() => {
+        const tier = ecommerceEnabled ? pricing.pro : pricing.basic;
+        if (durationDays >= 365) return Math.round((tier.annual_price * durationDays) / 365);
+        return Math.round((tier.monthly_price * durationDays) / 30);
+      })()
+    : null;
 
   const handleCopyCode = (code: string) => {
     navigator.clipboard.writeText(code);
@@ -137,6 +154,13 @@ export const LicenseGeneratorTab: React.FC<LicenseGeneratorTabProps> = ({
 
   return (
     <div className="space-y-6">
+      {pricing && onSavePricing && (
+        <PlatformPricingCard
+          pricing={pricing}
+          isSaving={isSavingPricing}
+          onSave={onSavePricing}
+        />
+      )}
       {/* Generate New Codes Card */}
       <Card className="border-brand/30 bg-panel space-y-5">
         <div className="border-b border-line pb-4">
@@ -170,7 +194,11 @@ export const LicenseGeneratorTab: React.FC<LicenseGeneratorTabProps> = ({
             step="0.01"
             value={customPrice}
             onChange={(e) => setCustomPrice(e.target.value)}
-            placeholder="السعر الافتراضي للمنصة"
+            placeholder={
+              liveDefaultPrice !== null
+                ? `الافتراضي: ${liveDefaultPrice} ج.م`
+                : 'السعر الافتراضي للمنصة'
+            }
           />
           <Input
             label="بيان الدفعة"
@@ -204,16 +232,12 @@ export const LicenseGeneratorTab: React.FC<LicenseGeneratorTabProps> = ({
           <input
             type="checkbox"
             checked={ecommerceEnabled}
-            onChange={(e) => {
-              const checked = e.target.checked;
-              setEcommerceEnabled(checked);
-              if (checked && !customPrice) setCustomPrice('5000');
-              if (!checked && customPrice === '5000') setCustomPrice('');
-            }}
+            onChange={(e) => setEcommerceEnabled(e.target.checked)}
             className="w-4 h-4 accent-brand rounded cursor-pointer"
           />
           <span>
-            تضمين موديول المتجر الإلكتروني (WooCommerce أو Shopify — الباقة السنوية 5000 ج شاملة إضافة +2000 ج)
+            تضمين موديول المتجر الإلكتروني (WordPress / WooCommerce أو Shopify — السعر الافتراضي من التسعير الموحد:{' '}
+            {pricing ? `${pricing.pro.monthly_price} ج/شهر أو ${pricing.pro.annual_price} ج/سنة` : 'حسب التسعير الموحد'})
           </span>
         </label>
       </Card>

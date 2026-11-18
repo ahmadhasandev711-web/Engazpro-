@@ -2,6 +2,7 @@ import React from 'react';
 import { FileSearch } from 'lucide-react';
 import { Invoice, formatCurrency } from '@pos-mandob/shared';
 import { Badge, Button, Card, Input } from '../ui';
+import { InvoiceItemMeta } from '../common/InvoiceItemMeta';
 
 interface InvoiceParentLookupProps {
   parentInvoice: Invoice | null;
@@ -72,7 +73,7 @@ export const InvoiceParentLookup: React.FC<InvoiceParentLookupProps> = ({
               <span className="tabular-nums text-ink">{parentInvoice.invoice_number}</span>
             </span>
             <span>
-              الطرف: <span className="text-ink">{parentInvoice.party?.name || 'نقدي'}</span>
+              الطرف: <span className="text-ink">{parentInvoice.party_name || parentInvoice.party?.name || 'نقدي'}</span>
             </span>
             <span>
               التاريخ: <span className="text-ink tabular-nums">{parentInvoice.date}</span>
@@ -82,18 +83,23 @@ export const InvoiceParentLookup: React.FC<InvoiceParentLookupProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {parentInvoice.items?.map((item: any) => (
               <button
-                key={item.id || item.product_id}
+                key={`${item.id ?? item.product_id}-${item.product_variant_id ?? 0}-${item.product_batch_id ?? 0}`}
                 type="button"
                 onClick={() => onAddItemToReturn(item)}
-                className="min-h-[44px] flex justify-between items-center p-2.5 bg-surface-2 hover:bg-warn-soft/50 border border-line rounded-xl text-right transition-colors cursor-pointer"
+                className="min-h-[44px] flex justify-between items-center gap-2 p-2.5 bg-surface-2 hover:bg-warn-soft/50 border border-line rounded-xl text-right transition-colors cursor-pointer"
               >
-                <div>
-                  <p className="font-bold text-ink text-xs">{item.product_name}</p>
-                  <p className="text-[11px] text-muted tabular-nums">
+                <div className="min-w-0">
+                  <p className="font-bold text-ink text-xs truncate">{item.product_name}</p>
+                  <InvoiceItemMeta
+                    variantName={item.variant_name}
+                    batchNumber={item.batch_number}
+                    unitName={item.unit_name}
+                  />
+                  <p className="text-[11px] text-muted tabular-nums mt-0.5">
                     الكمية الأصلية: {item.quantity} × {formatCurrency(item.unit_price)}
                   </p>
                 </div>
-                <Badge tone="warn">+ استرجاع</Badge>
+                <Badge tone="warn" className="shrink-0">+ استرجاع</Badge>
               </button>
             ))}
           </div>

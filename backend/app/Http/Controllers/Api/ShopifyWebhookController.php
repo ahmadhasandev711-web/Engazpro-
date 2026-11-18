@@ -19,7 +19,9 @@ class ShopifyWebhookController extends Controller
             $userId,
             $request->getContent(),
             $request->header('X-Shopify-Hmac-Sha256'),
-            $request->header('X-Shopify-Topic')
+            $request->header('X-Shopify-Topic'),
+            $request->header('X-Shopify-Shop-Domain'),
+            $request->header('X-Shopify-Webhook-Id')
         );
 
         return response()->json($result['body'], $result['status']);

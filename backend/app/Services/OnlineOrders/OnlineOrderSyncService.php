@@ -314,7 +314,7 @@ class OnlineOrderSyncService
         $data = array_merge([
             'type' => InvoiceType::SALE->value, 'party_id' => $locked->party_id, 'courier_party_id' => $locked->courier_party_id,
             'branch_id' => $branchId, 'items' => $this->resolveDeliveryItemsPayload($accountId, $locked),
-            'discount' => $locked->discount_total, 'shipping_amount' => $locked->shipping_cost,
+            'discount' => $locked->discount_total, 'tax' => $locked->tax_total ?? 0, 'shipping_amount' => $locked->shipping_cost,
             'paid_amount' => $settlement['paid_amount']->getAmount(), 'payment_method' => $settlement['method'],
             'online_order_id' => $locked->id,
             'notes' => "أوردر {$locked->platform->label()} {$locked->displayReference()}{$tag}" . ($locked->notes ? " | {$locked->notes}" : ''),
@@ -358,7 +358,11 @@ class OnlineOrderSyncService
         $warn = $this->vanTransferService->reverseForReturn($user, $locked);
         $note = 'مرتجع: ' . ($reason ?? 'تم رفض الاستلام');
         $notes = ($locked->notes ? $locked->notes . ' | ' . $note : $note) . ($warn ? ' | ' . $warn : '');
-        $locked->update(['status' => WcOrderStatus::RETURNED, 'notes' => $notes]);
+        $locked->update([
+            'status' => WcOrderStatus::RETURNED,
+            'cancel_reason' => $locked->cancel_reason ?? OrderCancelReason::CUSTOMER_REJECTED,
+            'notes' => $notes,
+        ]);
     }
 
     private function logCallInsideTransaction(

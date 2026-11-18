@@ -27,10 +27,17 @@ class OnlineOrderStockSyncObserver
             return;
         }
 
+        $branchIds = array_values(array_unique(array_filter([
+            $order->branch_id,
+            $order->wasChanged('branch_id') ? $order->getOriginal('branch_id') : null,
+        ])));
+
         $order->loadMissing('items');
-        foreach ($order->items as $item) {
-            if ($item->product_id) {
-                $adapter->dispatchStockPush($order->user_id, $item->product_id, $item->product_variant_id, $order->branch_id);
+        foreach ($branchIds as $branchId) {
+            foreach ($order->items as $item) {
+                if ($item->product_id) {
+                    $adapter->dispatchStockPush($order->user_id, $item->product_id, $item->product_variant_id, (int) $branchId);
+                }
             }
         }
     }

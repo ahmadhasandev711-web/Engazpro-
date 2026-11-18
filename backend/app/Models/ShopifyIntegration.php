@@ -34,6 +34,8 @@ class ShopifyIntegration extends Model
         'auto_sync_stock',
         'is_active',
         'token_expires_at',
+        'webhook_registered_at',
+        'webhook_topics',
         'last_synced_at',
         'last_error',
     ];
@@ -46,6 +48,8 @@ class ShopifyIntegration extends Model
         'auto_sync_stock' => 'boolean',
         'is_active' => 'boolean',
         'token_expires_at' => 'datetime',
+        'webhook_registered_at' => 'datetime',
+        'webhook_topics' => 'array',
         'last_synced_at' => 'datetime',
     ];
 

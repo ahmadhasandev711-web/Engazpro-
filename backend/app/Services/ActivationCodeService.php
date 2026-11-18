@@ -15,7 +15,10 @@ use Illuminate\Validation\ValidationException;
 
 class ActivationCodeService
 {
-    public function __construct(protected AdminAuditService $auditService) {}
+    public function __construct(
+        protected AdminAuditService $auditService,
+        protected PlatformPricingService $pricingService,
+    ) {}
 
     public function generateCodes(
         int $count = 1,
@@ -26,12 +29,11 @@ class ActivationCodeService
         bool $ecommerceEnabled = false
     ): array {
         $batchRef = 'BATCH-' . strtoupper(Str::random(6));
-        $resolvedPrice = $price !== null ? Money::of($price)->getAmount() : null;
+        $resolvedPrice = ($price !== null ? Money::of($price) : $this->pricingService->resolvePlanPrice($ecommerceEnabled, $durationDays))->getAmount();
 
         return DB::transaction(function () use ($count, $durationDays, $plan, $notes, $batchRef, $resolvedPrice, $ecommerceEnabled) {
-            $generated = [];
-            for ($i = 0; $i < $count; $i++) {
-                $generated[] = ActivationCode::create([
+            $generated = array_map(
+                fn () => ActivationCode::create([
                     'code' => 'KASH-' . strtoupper(Str::random(4)) . '-' . strtoupper(Str::random(4)) . '-' . strtoupper(Str::random(4)),
                     'duration_days' => $durationDays,
                     'plan' => $plan,
@@ -40,8 +42,9 @@ class ActivationCodeService
                     'is_used' => false,
                     'batch_reference' => $batchRef,
                     'notes' => $notes,
-                ]);
-            }
+                ]),
+                range(1, $count)
+            );
             $this->auditService->record(AdminAuditAction::LICENSES_GENERATED, "توليد {$count} كود تفعيل ({$plan}) لمدة {$durationDays} يوم", null, compact('count', 'durationDays', 'plan', 'resolvedPrice', 'ecommerceEnabled', 'batchRef'));
             return $generated;
         });
@@ -144,7 +147,9 @@ class ActivationCodeService
         $currentEnd = ($subscription->exists && $subscription->end_date) ? Carbon::parse($subscription->end_date) : now();
         $baseDate = $currentEnd->isFuture() ? $currentEnd : now();
         $newEndDate = $baseDate->copy()->addDays($activationCode->duration_days);
-        $priceMoney = Money::of($activationCode->price ?? config('pos.annual_subscription_price'));
+        $priceMoney = $activationCode->price !== null
+            ? Money::of($activationCode->price)
+            : $this->pricingService->resolvePlanPrice((bool) $activationCode->ecommerce_enabled, (int) $activationCode->duration_days);
 
         $subscription->fill([
             'status' => SubscriptionStatus::ACTIVE,

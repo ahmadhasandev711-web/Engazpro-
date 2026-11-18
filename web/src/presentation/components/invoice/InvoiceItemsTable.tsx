@@ -3,6 +3,7 @@ import { Trash2 } from 'lucide-react';
 import { UseFormRegister, UseFormSetValue } from 'react-hook-form';
 import { Product, formatCurrency, InvoiceInput } from '@pos-mandob/shared';
 import { Badge, Button, Card, DataTable, EmptyState } from '../ui';
+import { InvoiceItemMeta } from '../common/InvoiceItemMeta';
 
 interface InvoiceItemsTableProps {
   fields: any[];
@@ -63,18 +64,11 @@ export const InvoiceItemsTable: React.FC<InvoiceItemsTableProps> = ({
                       <td className="py-3 px-3 text-muted tabular-nums">{index + 1}</td>
                       <td className="py-3 px-3 font-bold text-ink">
                         <div>{product?.name || field.product_name || currentItem?.product_name || `صنف #${field.product_id}`}</div>
-                        <div className="flex flex-wrap gap-1.5 mt-1">
-                          {(field.variant_name || currentItem?.variant_name) && (
-                            <Badge tone="info" className="text-[11px]">
-                              {field.variant_name || currentItem?.variant_name}
-                            </Badge>
-                          )}
-                          {(field.batch_number || currentItem?.batch_number) && (
-                            <Badge tone="warn" className="text-[11px] tabular-nums">
-                              تشغيلة: {field.batch_number || currentItem?.batch_number}
-                            </Badge>
-                          )}
-                        </div>
+                        <InvoiceItemMeta
+                          variantName={field.variant_name || currentItem?.variant_name}
+                          batchNumber={field.batch_number || currentItem?.batch_number}
+                          unitName={field.unit_name || currentItem?.unit_name}
+                        />
                         <input
                           type="hidden"
                           {...register(`items.${index}.product_id`, { valueAsNumber: true })}
@@ -172,18 +166,11 @@ export const InvoiceItemsTable: React.FC<InvoiceItemsTableProps> = ({
                         <span className="font-bold text-ink text-sm block">
                           {product?.name || field.product_name || currentItem?.product_name || `صنف #${field.product_id}`}
                         </span>
-                        <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                          {(field.variant_name || currentItem?.variant_name) && (
-                            <Badge tone="info" className="text-[11px]">
-                              {field.variant_name || currentItem?.variant_name}
-                            </Badge>
-                          )}
-                          {(field.batch_number || currentItem?.batch_number) && (
-                            <Badge tone="warn" className="text-[11px] tabular-nums">
-                              تشغيلة: {field.batch_number || currentItem?.batch_number}
-                            </Badge>
-                          )}
-                        </div>
+                        <InvoiceItemMeta
+                          variantName={field.variant_name || currentItem?.variant_name}
+                          batchNumber={field.batch_number || currentItem?.batch_number}
+                          unitName={field.unit_name || currentItem?.unit_name}
+                        />
                       </div>
                       <Button
                         type="button"

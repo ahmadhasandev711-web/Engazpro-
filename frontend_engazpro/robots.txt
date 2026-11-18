@@ -2,11 +2,14 @@ User-agent: *
 Allow: /
 Allow: /login
 Allow: /register
-Disallow: /admin-dashboard
-Disallow: /admin-dashbord
 Disallow: /dashboard
 Disallow: /pos
+Disallow: /products
+Disallow: /invoices
+Disallow: /store-orders
+Disallow: /shopify
+Disallow: /woocommerce
 Disallow: /settings
-Disallow: /api/
+Disallow: /admin
 
-Sitemap: /sitemap.xml
+Sitemap: https://ebms.online/sitemap.xml

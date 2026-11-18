@@ -238,6 +238,8 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     // Super Admin Routes (حماية مشددة للمدير العام فقط)
     Route::prefix('admin')->middleware(['admin', 'throttle:admin'])->group(function () {
         Route::get('/stats', [\App\Http\Controllers\Api\AdminController::class, 'stats']);
+        Route::get('/pricing', [\App\Http\Controllers\Api\AdminController::class, 'getPricing']);
+        Route::put('/pricing', [\App\Http\Controllers\Api\AdminController::class, 'updatePricing']);
         Route::get('/audit-logs', [\App\Http\Controllers\Api\AdminController::class, 'auditLogs']);
         Route::get('/licenses', [\App\Http\Controllers\Api\AdminController::class, 'licenses']);
         Route::post('/licenses/generate', [\App\Http\Controllers\Api\AdminController::class, 'generateLicenses']);

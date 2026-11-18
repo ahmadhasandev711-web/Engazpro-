@@ -14,6 +14,12 @@ interface StoreInquiryModalProps {
   onClose: () => void;
 }
 
+const PLATFORM_OPTIONS = [
+  { value: 'WordPress / WooCommerce', label: 'WordPress / WooCommerce' },
+  { value: 'Shopify', label: 'Shopify' },
+  { value: 'ترشيح الأنسب لنشاطي', label: 'أريد ترشيح الأنسب لنشاطي' },
+];
+
 const BUSINESS_TYPES = [
   { value: 'أزياء وملابس', label: 'أزياء وملابس' },
   { value: 'أحذية وشنط', label: 'أحذية وشنط' },
@@ -29,12 +35,13 @@ const BUSINESS_TYPES = [
 const SALES_WHATSAPP = import.meta.env.VITE_SALES_WHATSAPP || '201125030642';
 
 /**
- * Modal form allowing visitors to request a custom e-commerce storefront integrated with EngazPRO.
+ * Modal form allowing visitors to request a custom WordPress or Shopify storefront integrated with EBMS.
  */
 export const StoreInquiryModal: React.FC<StoreInquiryModalProps> = ({ isOpen, onClose }) => {
   const [form, setForm] = useState({
     name: '',
     phone: '',
+    platform: 'WordPress / WooCommerce',
     business_type: 'أزياء وملابس',
     city: '',
     notes: '',
@@ -55,8 +62,21 @@ export const StoreInquiryModal: React.FC<StoreInquiryModalProps> = ({ isOpen, on
     setLoading(true);
     setError('');
 
+    const combinedNotes = [
+      `المنصة المفضلة: ${form.platform}`,
+      form.notes.trim(),
+    ]
+      .filter(Boolean)
+      .join(' | ');
+
     try {
-      await apiClient.post('/landing/inquiries', form);
+      await apiClient.post('/landing/inquiries', {
+        name: form.name,
+        phone: form.phone,
+        business_type: form.business_type,
+        city: form.city,
+        notes: combinedNotes,
+      });
       setSuccess(true);
     } catch (err: unknown) {
       const apiErr = err as { response?: { data?: { message?: string } } };
@@ -72,6 +92,7 @@ export const StoreInquiryModal: React.FC<StoreInquiryModalProps> = ({ isOpen, on
     setForm({
       name: '',
       phone: '',
+      platform: 'WordPress / WooCommerce',
       business_type: 'أزياء وملابس',
       city: '',
       notes: '',
@@ -80,7 +101,7 @@ export const StoreInquiryModal: React.FC<StoreInquiryModalProps> = ({ isOpen, on
   };
 
   const handleWhatsAppRedirect = () => {
-    const text = `مرحباً فريق إنجاز برو، قدمت طلباً لتصميم متجر إلكتروني مربوط بالكاشير:\nالاسم: ${form.name}\nرقم الهاتف: ${form.phone}\nالنشاط: ${form.business_type}\nالمدينة: ${form.city || 'غير محددة'}\n${form.notes ? `ملاحظات: ${form.notes}` : ''}`;
+    const text = `مرحباً فريق إنجاز برو (EBMS)، قدمت طلباً لتصميم متجر إلكتروني مربوط بالكاشير:\nالاسم: ${form.name}\nرقم الهاتف: ${form.phone}\nالمنصة المطلوبة: ${form.platform}\nالنشاط: ${form.business_type}\nالمدينة: ${form.city || 'غير محددة'}\n${form.notes ? `ملاحظات: ${form.notes}` : ''}`;
     window.open(`https://wa.me/${SALES_WHATSAPP}?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');
   };
 
@@ -173,6 +194,13 @@ export const StoreInquiryModal: React.FC<StoreInquiryModalProps> = ({ isOpen, on
                 value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
                 placeholder="01012345678"
+              />
+
+              <Select
+                label="المنصة المطلوبة للمتجر"
+                value={form.platform}
+                onChange={(e) => setForm({ ...form, platform: e.target.value })}
+                options={PLATFORM_OPTIONS}
               />
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

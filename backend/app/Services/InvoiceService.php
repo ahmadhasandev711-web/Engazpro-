@@ -156,9 +156,7 @@ class InvoiceService
         $itemTotalMoney = $unitPriceMoney->multiply($qty);
         $variant = !empty($itemData['product_variant_id']) ? $product->variants()->findOrFail($itemData['product_variant_id']) : null;
         $unitName = $itemData['unit_name'] ?? $product->unit;
-        $isSubUnit = ($itemData['is_sub_unit'] ?? false) || ($product->sub_unit && $unitName === $product->sub_unit);
-        $stockFactor = ($isSubUnit && Quantity::of($product->sub_unit_factor ?? 0)->isPositive()) ? Quantity::of($product->sub_unit_factor)->toFloat() : 1.0;
-        $stockDeductQty = $qty * $stockFactor;
+        $stockDeductQty = $this->resolveItemStockQuantity($product, $unitName, $qty, $itemData['is_sub_unit'] ?? null);
         $batch = $this->resolveInvoiceItemBatch($product, $variant, $type, $stockDeductQty, $itemData['product_batch_id'] ?? null);
         $rawCost = ($type === InvoiceType::SALE->value || $type === InvoiceType::SALE_RETURN->value) ? ($batch?->purchase_price ?? $variant?->purchase_price ?? $product->purchase_price) : $itemData['unit_price'];
 
@@ -173,6 +171,14 @@ class InvoiceService
             'unit_price' => $unitPriceMoney->getAmount(), 'purchase_price_at_sale' => Money::of($rawCost ?? 0)->getAmount(),
             'total' => $itemTotalMoney->getAmount(), 'notes' => $itemData['notes'] ?? null,
         ], $itemTotalMoney];
+    }
+
+    private function resolveItemStockQuantity(Product $product, ?string $unitName, float $qty, ?bool $explicitIsSubUnit = null): float
+    {
+        $isSubUnit = ($explicitIsSubUnit ?? false) || ($product->sub_unit && $unitName === $product->sub_unit);
+        $factor = Quantity::of($product->sub_unit_factor ?? 0);
+
+        return ($isSubUnit && $factor->isPositive()) ? $qty * $factor->toFloat() : $qty;
     }
 
     private function resolveInvoiceItemBatch(Product $product, $variant, string $type, float $stockDeductQty, ?int $batchId)
@@ -483,13 +489,13 @@ class InvoiceService
     public function deleteInvoice(User $user, int $invoiceId): void
     {
         DB::transaction(function () use ($user, $invoiceId) {
-            $invoice = Invoice::where('user_id', $user->getAccountId())->findOrFail($invoiceId);
+            $invoice = Invoice::where('user_id', $user->getAccountId())
+                ->with(['items.product', 'items.variant', 'items.batch'])
+                ->findOrFail($invoiceId);
             $invoiceTypeStr = $invoice->type instanceof \BackedEnum ? $invoice->type->value : (string) $invoice->type;
 
             $this->reverseInvoiceStock($user, $invoice, $invoiceTypeStr);
-            if ($invoice->party_id) {
-                $this->reverseInvoiceFinancials($user, $invoice, $invoiceTypeStr);
-            }
+            $this->reverseInvoiceFinancials($user, $invoice, $invoiceTypeStr);
             $invoice->items()->delete();
             $invoice->delete();
         });
@@ -502,14 +508,21 @@ class InvoiceService
             InvoiceType::PURCHASE->value, InvoiceType::SALE_RETURN->value => StockMovementType::OUT->value,
         };
         foreach ($invoice->items as $item) {
-            $this->stockService->recordMovement($user, $item->product, $movementType, LedgerSource::REVERSAL->value, $invoice->id, $item->quantity, $item->unit_price, "إلغاء فاتورة {$invoice->invoice_number}");
+            if (!$item->product) {
+                continue;
+            }
+            $stockQty = $this->resolveItemStockQuantity($item->product, $item->unit_name, Quantity::of($item->quantity)->toFloat());
+            $note = "إلغاء فاتورة {$invoice->invoice_number}" . ($item->variant_name ? " ({$item->variant_name})" : '');
+            $this->stockService->recordMovement($user, $item->product, $movementType, LedgerSource::REVERSAL->value, $invoice->id, $stockQty, $item->unit_price, $note, $item->variant, $item->batch, $invoice->branch_id);
         }
     }
 
     private function reverseInvoiceFinancials(User $user, Invoice $invoice, string $invoiceTypeStr): void
     {
-        $party = Party::where('user_id', $user->getAccountId())->findOrFail($invoice->party_id);
-        $this->reversePartyLedgerForInvoice($user, $party, $invoice, $invoiceTypeStr);
+        if ($invoice->party_id) {
+            $party = Party::where('user_id', $user->getAccountId())->findOrFail($invoice->party_id);
+            $this->reversePartyLedgerForInvoice($user, $party, $invoice, $invoiceTypeStr);
+        }
         $this->reverseTreasuryTransactionsForInvoice($user, $invoice);
         Payment::where('user_id', $user->getAccountId())->where('invoice_id', $invoice->id)->delete();
     }

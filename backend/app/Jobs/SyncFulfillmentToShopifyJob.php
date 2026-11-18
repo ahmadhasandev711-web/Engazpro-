@@ -38,6 +38,20 @@ class SyncFulfillmentToShopifyJob implements ShouldQueue
             return;
         }
 
+        try {
+            $this->dispatchFulfillment($graphqlClient, $integration, $order);
+            $integration->update(['last_error' => null]);
+        } catch (\Throwable $e) {
+            $integration->update(['last_error' => 'فشل مزامنة شحن الطلب ' . $order->displayReference() . ': ' . $e->getMessage()]);
+            throw $e;
+        }
+    }
+
+    private function dispatchFulfillment(
+        ShopifyGraphqlClientInterface $graphqlClient,
+        ShopifyIntegration $integration,
+        OnlineOrder $order
+    ): void {
         $fulfillmentOrders = $graphqlClient->getOrderFulfillmentOrders(
             $integration,
             ShopifyGid::toGid('Order', (int) $order->external_order_id)
@@ -48,7 +62,7 @@ class SyncFulfillmentToShopifyJob implements ShouldQueue
         }
 
         $input = ['lineItemsByFulfillmentOrder' => $lineItemsByFo, 'notifyCustomer' => false];
-        if (!empty($order->courier_name) || !empty($order->tracking_number)) {
+        if (!empty($order->tracking_number)) {
             $input['trackingInfo'] = array_filter([
                 'company' => $order->courier_name,
                 'number' => $order->tracking_number,

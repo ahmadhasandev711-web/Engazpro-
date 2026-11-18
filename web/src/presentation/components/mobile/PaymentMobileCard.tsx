@@ -1,8 +1,7 @@
 import React from 'react';
 import { ArrowDownLeft, ArrowUpRight, Trash2, User, FileText, CreditCard, Printer } from 'lucide-react';
-import { formatCurrency } from '@pos-mandob/shared';
+import { formatCurrency, getPaymentMethodLabel } from '@pos-mandob/shared';
 import { Badge, Button, Card } from '../ui';
-import { getPaymentMethodLabel } from '../../utils/paymentMethodLabels';
 
 interface PaymentMobileCardProps {
   payment: any;

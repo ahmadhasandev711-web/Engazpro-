@@ -233,15 +233,15 @@ export const ProductsList: React.FC<{ vm: ProductsViewModel }> = ({ vm }) => {
                     {(canEditProduct || canDeleteProduct) && (
                       <td className="py-3.5 px-4 text-center">
                         <div className="flex items-center justify-center gap-1">
-                          {/* Direct WooCommerce Stock Push */}
-                          {Boolean((p as any).wc_product_id) && (
+                          {/* Direct E-Commerce Stock Push */}
+                          {(Boolean((p as any).wc_product_id) || Boolean((p as any).shopify_product_id)) && (
                             <Button
                               variant="ghost"
                               size="md"
                               onClick={() => handlePushStock(p)}
                               disabled={syncingProductId === p.id}
                               className="min-w-[44px] px-0 text-brand hover:bg-brand-soft"
-                              title="مزامنة الرصيد مع ووكومرس فورياً"
+                              title={Boolean((p as any).shopify_product_id) ? 'مزامنة الرصيد مع Shopify فورياً' : 'مزامنة الرصيد مع ووكومرس فورياً'}
                             >
                               <RefreshCw className={`w-4 h-4 ${syncingProductId === p.id ? 'animate-spin' : ''}`} />
                             </Button>

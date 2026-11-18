@@ -26,8 +26,11 @@ class ShopifySettingsService
         'ORDERS_CREATE',
         'ORDERS_UPDATED',
         'ORDERS_CANCELLED',
+        'ORDERS_EDITED',
+        'REFUNDS_CREATE',
         'PRODUCTS_CREATE',
         'PRODUCTS_UPDATE',
+        'LOCATIONS_UPDATE',
     ];
 
     public function __construct(
@@ -95,29 +98,21 @@ class ShopifySettingsService
     public function syncLocations(ShopifyIntegration $integration): EloquentCollection
     {
         $remoteLocations = $this->graphqlClient->getLocations($integration);
+        $singleLocationOnly = count($remoteLocations) === 1;
 
-        DB::transaction(function () use ($integration, $remoteLocations) {
+        DB::transaction(function () use ($integration, $remoteLocations, $singleLocationOnly) {
+            $defaultBranchUsed = ShopifyLocationMapping::withoutGlobalScopes()
+                ->where('user_id', $integration->user_id)
+                ->where('shopify_integration_id', $integration->id)
+                ->whereNotNull('branch_id')
+                ->where('branch_id', $integration->default_branch_id)
+                ->exists();
+
             foreach ($remoteLocations as $loc) {
-                $existing = ShopifyLocationMapping::withoutGlobalScopes()
-                    ->where('user_id', $integration->user_id)
-                    ->where('shopify_location_id', $loc['id'])
-                    ->first();
-
-                if ($existing) {
-                    $existing->update(['shopify_location_name' => $loc['name'], 'is_active' => $loc['is_active']]);
-                } else {
-                    ShopifyLocationMapping::create([
-                        'user_id' => $integration->user_id,
-                        'shopify_integration_id' => $integration->id,
-                        'shopify_location_id' => $loc['id'],
-                        'shopify_location_name' => $loc['name'],
-                        'branch_id' => $integration->default_branch_id,
-                        'auto_sync_stock' => true,
-                        'is_active' => $loc['is_active'],
-                    ]);
-                }
+                $this->upsertRemoteLocation($integration, $loc, $singleLocationOnly && !$defaultBranchUsed);
             }
         });
+        ShopifyStockSyncGate::forget($integration->user_id);
 
         return $integration->locationMappings()->with('branch')->get();
     }
@@ -138,7 +133,7 @@ class ShopifySettingsService
                     ->whereKey((int) $row['id'])
                     ->update([
                         'branch_id' => $branchId,
-                        'auto_sync_stock' => (bool) ($row['auto_sync_stock'] ?? true),
+                        'auto_sync_stock' => $branchId !== null && (bool) ($row['auto_sync_stock'] ?? true),
                     ]);
             }
         });
@@ -156,8 +151,15 @@ class ShopifySettingsService
     {
         $integration = $this->findActiveOrFail($accountId);
         $callbackUrl = url("/api/webhooks/shopify/{$integration->user_id}");
+        $ok = $this->graphqlClient->registerWebhooks($integration, $callbackUrl, self::DEFAULT_WEBHOOK_TOPICS);
 
-        return $this->graphqlClient->registerWebhooks($integration, $callbackUrl, self::DEFAULT_WEBHOOK_TOPICS);
+        $integration->update([
+            'webhook_registered_at' => $ok ? now() : $integration->webhook_registered_at,
+            'webhook_topics' => $ok ? self::DEFAULT_WEBHOOK_TOPICS : $integration->webhook_topics,
+            'last_error' => $ok ? null : 'تعذر تسجيل بعض خطافات الويب (Webhooks) على Shopify؛ تأكد من رابط HTTPS والصلاحيات.',
+        ]);
+
+        return $ok;
     }
 
     public function countLinkedProducts(int $accountId): int
@@ -197,6 +199,31 @@ class ShopifySettingsService
         return ['queued' => true, 'linked_count' => $this->countLinkedProducts($user->getAccountId())];
     }
 
+    private function upsertRemoteLocation(ShopifyIntegration $integration, array $loc, bool $allowAutoDefaultBranch): void
+    {
+        $existing = ShopifyLocationMapping::withoutGlobalScopes()
+            ->where('user_id', $integration->user_id)
+            ->where('shopify_location_id', $loc['id'])
+            ->first();
+
+        if ($existing) {
+            $existing->update(['shopify_location_name' => $loc['name'], 'is_active' => $loc['is_active']]);
+
+            return;
+        }
+
+        $autoBranch = $allowAutoDefaultBranch ? $integration->default_branch_id : null;
+        ShopifyLocationMapping::create([
+            'user_id' => $integration->user_id,
+            'shopify_integration_id' => $integration->id,
+            'shopify_location_id' => $loc['id'],
+            'shopify_location_name' => $loc['name'],
+            'branch_id' => $autoBranch,
+            'auto_sync_stock' => $autoBranch !== null,
+            'is_active' => $loc['is_active'],
+        ]);
+    }
+
     private function applyCredentialsAndFlags(ShopifyIntegration $integration, array $validated): void
     {
         if (!empty($validated['access_token']) && !str_contains((string) $validated['access_token'], '...')) {
@@ -222,8 +249,7 @@ class ShopifySettingsService
     {
         try {
             $this->syncLocations($integration);
-            $callbackUrl = url("/api/webhooks/shopify/{$integration->user_id}");
-            $this->graphqlClient->registerWebhooks($integration, $callbackUrl, self::DEFAULT_WEBHOOK_TOPICS);
+            $this->registerWebhooks($integration->user_id);
         } catch (\Throwable $e) {
             Log::warning("Shopify initial setup sync failed for store #{$integration->user_id}: " . $e->getMessage());
         }

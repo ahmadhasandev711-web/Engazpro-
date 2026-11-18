@@ -7,6 +7,7 @@ use App\Enums\OrderCancelReason;
 use App\Enums\QueueName;
 use App\Models\OnlineOrder;
 use App\Models\ShopifyIntegration;
+use App\Models\ShopifyLocationMapping;
 use App\Services\Shopify\ShopifyStockSyncGate;
 use App\Support\ShopifyGid;
 use Illuminate\Bus\Queueable;
@@ -43,13 +44,35 @@ class CancelShopifyOrderJob implements ShouldQueue
         $reason = $order->cancel_reason ?? OrderCancelReason::OTHER;
         $noteParts = array_filter([$reason->label(), $order->cancel_notes]);
         $staffNote = !empty($noteParts) ? implode(' - ', $noteParts) : null;
+        $shouldShopifyRestock = $this->shouldRestockOnShopify($integration, $order);
 
-        $graphqlClient->cancelOrder(
-            $integration,
-            ShopifyGid::toGid('Order', (int) $order->external_order_id),
-            $reason->toShopifyReason(),
-            !ShopifyStockSyncGate::isActive($this->userId),
-            $staffNote
-        );
+        try {
+            $graphqlClient->cancelOrder(
+                $integration,
+                ShopifyGid::toGid('Order', (int) $order->external_order_id),
+                $reason->toShopifyReason(),
+                $shouldShopifyRestock,
+                $staffNote
+            );
+            $integration->update(['last_error' => null]);
+        } catch (\Throwable $e) {
+            $integration->update(['last_error' => 'فشل إلغاء الطلب ' . $order->displayReference() . ' على Shopify: ' . $e->getMessage()]);
+            throw $e;
+        }
+    }
+
+    private function shouldRestockOnShopify(ShopifyIntegration $integration, OnlineOrder $order): bool
+    {
+        if (!ShopifyStockSyncGate::isActive($this->userId) || !$order->branch_id) {
+            return true;
+        }
+
+        return !ShopifyLocationMapping::withoutGlobalScopes()
+            ->where('user_id', $this->userId)
+            ->where('shopify_integration_id', $integration->id)
+            ->where('branch_id', $order->branch_id)
+            ->where('is_active', true)
+            ->where('auto_sync_stock', true)
+            ->exists();
     }
 }

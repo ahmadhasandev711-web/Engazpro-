@@ -1,0 +1,1 @@
+import{r as s,j as n,s as i}from"./index-DOw3PzfE.js";const c=({src:e,alt:a,className:t})=>{const[o,r]=s.useState(!1);return s.useEffect(()=>{r(!1)},[e]),!e||o?null:n.jsx("img",{src:e,alt:a,loading:"lazy",decoding:"async",onError:()=>r(!0),className:i("object-cover shrink-0 bg-surface-2 border border-line",t)})};export{c as P};

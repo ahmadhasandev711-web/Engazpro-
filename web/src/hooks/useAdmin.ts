@@ -349,6 +349,47 @@ export const useUpdateInquiryStatus = () => {
   });
 };
 
+import { DEFAULT_PUBLIC_PRICING, type PublicPricingData } from './usePublicPricing';
+
+export interface UpdatePlatformPricingPayload {
+  basic_monthly_price: number;
+  basic_annual_price: number;
+  pro_monthly_price: number;
+  pro_annual_price: number;
+  trial_days: number;
+}
+
+export const useAdminPricing = () => {
+  return useQuery<PublicPricingData>({
+    queryKey: ['admin-pricing'],
+    queryFn: async () => {
+      const res = await apiClient.get<{ success: boolean; data: PublicPricingData }>('/admin/pricing');
+      return res.data.data;
+    },
+    initialData: DEFAULT_PUBLIC_PRICING,
+    staleTime: 1000 * 60 * 5,
+  });
+};
+
+export const useUpdateAdminPricing = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: UpdatePlatformPricingPayload) => {
+      const res = await apiClient.put<{ success: boolean; message: string; data: PublicPricingData }>(
+        '/admin/pricing',
+        payload
+      );
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-pricing'] });
+      queryClient.invalidateQueries({ queryKey: ['public-pricing'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-audit-logs'] });
+    },
+  });
+};
+
 export const useDeleteInquiry = () => {
   const queryClient = useQueryClient();
 

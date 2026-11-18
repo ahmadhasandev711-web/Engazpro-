@@ -4,7 +4,6 @@ namespace App\Services\Shopify;
 
 use App\Contracts\ShopifyGraphqlClientInterface;
 use App\Exceptions\ShopifyConnectionException;
-use App\Models\BranchStock;
 use App\Models\Product;
 use App\Models\ShopifyIntegration;
 use App\Models\ShopifyLocationMapping;
@@ -36,15 +35,7 @@ class ShopifyStockPushService
 
     public function availableQuantityForBranch(int $accountId, int $productId, ?int $variantId, int $branchId): Quantity
     {
-        $raw = BranchStock::withoutGlobalScopes()
-            ->where('branch_id', $branchId)
-            ->where('product_id', $productId)
-            ->when($variantId !== null, fn ($q) => $q->where('product_variant_id', $variantId), fn ($q) => $q->whereNull('product_variant_id'))
-            ->sum('quantity') ?? 0;
-
-        $reserved = $this->reservationService->reservedQuantity($accountId, $productId, $variantId, [$branchId]);
-
-        return Quantity::of($raw)->subtract($reserved)->maxZero();
+        return $this->reservationService->netAvailableForBranches($accountId, $productId, $variantId, [$branchId]);
     }
 
     /**
@@ -58,11 +49,17 @@ class ShopifyStockPushService
         }
 
         $entries = $this->buildInventoryEntries($integration, $product, $mappings, $onlyVariantId);
-        foreach (array_chunk($entries, 250) as $chunk) {
-            $this->graphqlClient->setInventoryQuantities($integration, $chunk, (string) Str::uuid());
+        if (empty($entries)) {
+            return ['pushed_entries' => 0, 'locations_count' => $mappings->count()];
         }
 
-        return ['pushed_entries' => count($entries), 'locations_count' => $mappings->count()];
+        $refUri = "gid://engazpro/Product/{$product->id}";
+        $pushed = 0;
+        foreach (array_chunk($entries, 250) as $chunk) {
+            $pushed += $this->pushChunkWithRecovery($integration, $chunk, $refUri);
+        }
+
+        return ['pushed_entries' => $pushed, 'locations_count' => $mappings->count()];
     }
 
     public function pushProductForAccount(int $accountId, Product $product): array
@@ -80,6 +77,75 @@ class ShopifyStockPushService
         $res = $this->pushProduct($integration, $product);
 
         return ['pushed_entries' => $res['pushed_entries'], 'locations_count' => $res['locations_count'], 'message' => "تم دفع رصيد '{$product->name}' إلى {$res['locations_count']} موقع على Shopify بنجاح"];
+    }
+
+    private function pushChunkWithRecovery(ShopifyIntegration $integration, array $chunk, string $refUri): int
+    {
+        try {
+            $this->graphqlClient->setInventoryQuantities($integration, $chunk, (string) Str::uuid(), $refUri);
+
+            return count($chunk);
+        } catch (ShopifyConnectionException $e) {
+            if ($this->isNotStockedError($e)) {
+                return $this->activateAndRetryChunk($integration, $chunk, $refUri);
+            }
+            if (count($chunk) > 1) {
+                return $this->pushEntriesIndividually($integration, $chunk, $refUri);
+            }
+            $integration->update(['last_error' => $e->getMessage()]);
+            throw $e;
+        }
+    }
+
+    private function activateAndRetryChunk(ShopifyIntegration $integration, array $chunk, string $refUri): int
+    {
+        foreach ($chunk as $entry) {
+            try {
+                $this->graphqlClient->activateInventory($integration, $entry['inventoryItemId'], $entry['locationId']);
+            } catch (\Throwable) {
+                // Already active items or single broken SKUs are isolated in the subsequent retry.
+            }
+        }
+
+        try {
+            $this->graphqlClient->setInventoryQuantities($integration, $chunk, (string) Str::uuid(), $refUri);
+
+            return count($chunk);
+        } catch (ShopifyConnectionException $retryError) {
+            if (count($chunk) > 1) {
+                return $this->pushEntriesIndividually($integration, $chunk, $refUri);
+            }
+            $integration->update(['last_error' => $retryError->getMessage()]);
+            throw $retryError;
+        }
+    }
+
+    private function pushEntriesIndividually(ShopifyIntegration $integration, array $chunk, string $refUri): int
+    {
+        $succeeded = 0;
+        foreach ($chunk as $entry) {
+            try {
+                $this->graphqlClient->setInventoryQuantities($integration, [$entry], (string) Str::uuid(), $refUri);
+                $succeeded++;
+            } catch (\Throwable $e) {
+                $integration->update(['last_error' => $e->getMessage()]);
+            }
+        }
+
+        return $succeeded;
+    }
+
+    private function isNotStockedError(ShopifyConnectionException $e): bool
+    {
+        foreach ($e->userErrors as $err) {
+            $code = strtoupper((string) ($err['code'] ?? ''));
+            $msg = strtoupper((string) ($err['message'] ?? ''));
+            if (str_contains($code, 'NOT_STOCKED') || str_contains($msg, 'NOT STOCKED')) {
+                return true;
+            }
+        }
+
+        return str_contains(strtoupper($e->getMessage()), 'NOT STOCKED');
     }
 
     private function buildInventoryEntries(ShopifyIntegration $integration, Product $product, Collection $mappings, ?int $onlyVariantId): array
@@ -112,12 +178,12 @@ class ShopifyStockPushService
         if ($product->isVariable() && $product->variants->isNotEmpty()) {
             return $product->variants
                 ->when($onlyVariantId !== null, fn ($c) => $c->where('id', $onlyVariantId))
-                ->filter(fn ($v) => !empty($v->shopify_inventory_item_id))
+                ->filter(fn ($v) => !empty($v->shopify_inventory_item_id) && ($v->shopify_tracked ?? true))
                 ->map(fn ($v) => ['variant_id' => $v->id, 'inventory_item_id' => (int) $v->shopify_inventory_item_id])
                 ->values()->all();
         }
 
-        return !empty($product->shopify_inventory_item_id)
+        return !empty($product->shopify_inventory_item_id) && ($product->shopify_tracked ?? true)
             ? [['variant_id' => null, 'inventory_item_id' => (int) $product->shopify_inventory_item_id]]
             : [];
     }

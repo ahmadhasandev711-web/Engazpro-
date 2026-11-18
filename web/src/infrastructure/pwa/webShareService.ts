@@ -4,7 +4,7 @@
  * Provides native OS sharing for receipts & invoices on mobile with WhatsApp fallback.
  */
 
-import { formatCurrency } from '@pos-mandob/shared';
+import { formatCurrency, getPaymentMethodLabel } from '@pos-mandob/shared';
 
 export interface ShareInvoicePayload {
   title: string;
@@ -86,24 +86,9 @@ export function formatInvoiceWhatsAppText(invoice: any, storeInfo: InvoiceWhatsA
 
   text += `💰 *الصافي المطلوب: ${totalFormatted}*\n`;
 
-  const paymentMethodLabel =
-    invoice.payment_method === 'CASH'
-      ? 'نقدي (كاش)'
-      : invoice.payment_method === 'CARD'
-      ? 'بطاقة بنكية / فيزا'
-      : invoice.payment_method === 'INSTAPAY'
-      ? 'إنستاباي (InstaPay)'
-      : invoice.payment_method === 'VODAFONE_CASH'
-      ? 'فودافون كاش'
-      : invoice.payment_method === 'COURIER_COD'
-      ? 'تحصيل شحن (COD)'
-      : invoice.payment_method === 'SPLIT'
-      ? 'دفع مجزأ'
-      : invoice.payment_method === 'TRANSFER'
-      ? 'تحويل بنكي'
-      : invoice.payment_method === 'CREDIT'
-      ? 'آجل على الحساب'
-      : invoice.payment_method;
+  const paymentMethodLabel = invoice.payment_method
+    ? getPaymentMethodLabel(invoice.payment_method)
+    : undefined;
 
   if (paymentMethodLabel) {
     text += `💳 طريقة السداد: ${paymentMethodLabel}\n`;

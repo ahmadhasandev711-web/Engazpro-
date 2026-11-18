@@ -223,4 +223,63 @@ class ShopifyProductImportTest extends TestCase
 
         Queue::assertPushed(ImportShopifyProductsPageJob::class);
     }
+
+    public function test_ignores_explicitly_unmapped_location_paginates_variants_and_skips_archived(): void
+    {
+        ShopifyLocationMapping::where('shopify_location_id', 102)->update(['branch_id' => null, 'auto_sync_stock' => false]);
+
+        $mock = Mockery::mock(ShopifyGraphqlClientInterface::class);
+        $mock->shouldReceive('getProductsPage')->once()->andReturn([
+            'has_next_page' => false,
+            'end_cursor' => null,
+            'products' => [
+                [
+                    'id' => 'gid://shopify/Product/7900',
+                    'title' => 'منتج مؤرشف',
+                    'status' => 'ARCHIVED',
+                    'variants' => ['edges' => []],
+                ],
+                [
+                    'id' => 'gid://shopify/Product/7901',
+                    'title' => 'قميص مقاسات',
+                    'status' => 'ACTIVE',
+                    'hasOnlyDefaultVariant' => false,
+                    'variants' => [
+                        'pageInfo' => ['hasNextPage' => true, 'endCursor' => 'v_cur_1'],
+                        'edges' => [[
+                            'node' => [
+                                'id' => 'gid://shopify/ProductVariant/8901', 'title' => 'S / أبيض', 'sku' => 'SHIRT-S',
+                                'price' => '300.00', 'selectedOptions' => [['name' => 'Size', 'value' => 'S'], ['name' => 'Color', 'value' => 'أبيض']],
+                                'media' => ['nodes' => [['image' => ['url' => 'https://cdn.shopify.com/shirt-s.jpg']]]],
+                                'inventoryItem' => ['id' => 'gid://shopify/InventoryItem/9901', 'tracked' => true, 'inventoryLevels' => ['nodes' => [
+                                    ['location' => ['id' => 'gid://shopify/Location/102'], 'quantities' => [['quantity' => 50]]], // ignored location -> must NOT dump into mainBranch!
+                                ]]],
+                            ],
+                        ]],
+                    ],
+                ],
+            ],
+        ]);
+        $mock->shouldReceive('getProductVariantsPage')->once()->with($this->integration, 'gid://shopify/Product/7901', 'v_cur_1')->andReturn([
+            'has_next_page' => false,
+            'end_cursor' => null,
+            'variants' => [[
+                'id' => 'gid://shopify/ProductVariant/8902', 'title' => 'M / أبيض', 'sku' => 'SHIRT-M',
+                'price' => '300.00', 'selectedOptions' => [['name' => 'Size', 'value' => 'M'], ['name' => 'Color', 'value' => 'أبيض']],
+                'inventoryItem' => ['id' => 'gid://shopify/InventoryItem/9902', 'tracked' => false, 'inventoryLevels' => ['nodes' => []]],
+            ]],
+        ]);
+        $this->app->instance(ShopifyGraphqlClientInterface::class, $mock);
+
+        $res = app(ShopifyProductImportService::class)->importProducts($this->owner, $this->integration, true);
+        $this->assertSame(1, $res['imported']);
+        $this->assertNull(Product::where('shopify_product_id', 7900)->first());
+        $shirt = Product::where('shopify_product_id', 7901)->firstOrFail();
+        $this->assertCount(2, $shirt->variants);
+        $varS = $shirt->variants->firstWhere('shopify_variant_id', 8901);
+        $varM = $shirt->variants->firstWhere('shopify_variant_id', 8902);
+        $this->assertSame('https://cdn.shopify.com/shirt-s.jpg', $varS->image_url);
+        $this->assertFalse((bool) $varM->shopify_tracked);
+        $this->assertNull(BranchStock::where('branch_id', $this->mainBranch->id)->where('product_id', $shirt->id)->first());
+    }
 }

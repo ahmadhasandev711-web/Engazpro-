@@ -178,4 +178,72 @@ class ShopifyMultiLocationStockPushTest extends TestCase
         $this->assertSame(10, $byLoc['gid://shopify/Location/101']['quantity']);
         $this->assertSame(5, $byLoc['gid://shopify/Location/102']['quantity']);
     }
+
+    public function test_activates_inventory_and_retries_with_fresh_idempotency_key_when_not_stocked(): void
+    {
+        $usedKeys = [];
+        $calls = 0;
+        $mock = Mockery::mock(ShopifyGraphqlClientInterface::class);
+        $mock->shouldReceive('setInventoryQuantities')->twice()->andReturnUsing(function ($int, $quantities, $key) use (&$calls, &$usedKeys) {
+            $calls++;
+            $usedKeys[] = $key;
+            if ($calls === 1) {
+                throw new \App\Exceptions\ShopifyConnectionException('Not stocked', 422, [['code' => 'ITEM_NOT_STOCKED_AT_LOCATION', 'message' => 'Item not stocked']]);
+            }
+
+            return ['inventoryAdjustmentGroup' => ['reason' => 'correction'], 'userErrors' => []];
+        });
+        $mock->shouldReceive('activateInventory')->once()->withArgs(
+            fn ($int, $itemGid, $locGid) => $itemGid === 'gid://shopify/InventoryItem/7050' && $locGid === 'gid://shopify/Location/101'
+        )->andReturn(['inventoryLevel' => ['id' => 'gid://shopify/InventoryLevel/1']]);
+        $this->app->instance(ShopifyGraphqlClientInterface::class, $mock);
+
+        $product = Product::withoutEvents(fn () => Product::create([
+            'user_id' => $this->owner->id, 'name' => 'تيشيرت بيسك', 'purchase_price' => 50, 'sale_price' => 120,
+            'quantity' => 7, 'unit' => 'قطعة', 'type' => ProductType::STANDARD->value,
+            'shopify_product_id' => 5050, 'shopify_variant_id' => 6050, 'shopify_inventory_item_id' => 7050, 'shopify_tracked' => true,
+        ]));
+        BranchStock::withoutEvents(fn () => BranchStock::create(['branch_id' => $this->mainBranch->id, 'product_id' => $product->id, 'quantity' => 7]));
+
+        $res = app(\App\Services\Shopify\ShopifyStockPushService::class)->pushProduct($this->integration, $product, $this->mainBranch->id);
+        $this->assertSame(1, $res['pushed_entries']);
+        $this->assertCount(2, $usedKeys);
+        $this->assertNotSame($usedKeys[0], $usedKeys[1]);
+    }
+
+    public function test_moving_order_branch_syncs_both_original_and_new_shopify_locations(): void
+    {
+        $pushedLocations = [];
+        $mock = Mockery::mock(ShopifyGraphqlClientInterface::class);
+        $mock->shouldReceive('setInventoryQuantities')->andReturnUsing(function ($int, $quantities) use (&$pushedLocations) {
+            foreach ($quantities as $q) {
+                $pushedLocations[] = $q['locationId'];
+            }
+
+            return ['inventoryAdjustmentGroup' => ['reason' => 'correction'], 'userErrors' => []];
+        });
+        $this->app->instance(ShopifyGraphqlClientInterface::class, $mock);
+
+        $product = Product::withoutEvents(fn () => Product::create([
+            'user_id' => $this->owner->id, 'name' => 'بنطلون جينز', 'purchase_price' => 150, 'sale_price' => 350,
+            'quantity' => 15, 'unit' => 'قطعة', 'type' => ProductType::STANDARD->value,
+            'shopify_product_id' => 5099, 'shopify_variant_id' => 6099, 'shopify_inventory_item_id' => 7099,
+        ]));
+        BranchStock::withoutEvents(function () use ($product) {
+            BranchStock::create(['branch_id' => $this->mainBranch->id, 'product_id' => $product->id, 'quantity' => 10]);
+            BranchStock::create(['branch_id' => $this->nasrBranch->id, 'product_id' => $product->id, 'quantity' => 5]);
+        });
+
+        $order = OnlineOrder::create([
+            'user_id' => $this->owner->id, 'platform' => EcommercePlatform::SHOPIFY, 'external_order_id' => '9911',
+            'branch_id' => $this->mainBranch->id, 'status' => WcOrderStatus::PENDING_CONFIRMATION, 'total' => 350,
+        ]);
+        OnlineOrderItem::create([
+            'user_id' => $this->owner->id, 'online_order_id' => $order->id, 'product_id' => $product->id, 'quantity' => 1,
+        ]);
+
+        $order->update(['branch_id' => $this->nasrBranch->id]);
+        $this->assertContains('gid://shopify/Location/101', $pushedLocations);
+        $this->assertContains('gid://shopify/Location/102', $pushedLocations);
+    }
 }

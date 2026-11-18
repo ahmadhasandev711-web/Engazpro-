@@ -351,10 +351,11 @@ class AdminStatsService
 
     private function getFinancialStats(): array
     {
-        $defaultPrice = Money::of(config('pos.annual_subscription_price'));
+        $pricing = app(PlatformPricingService::class);
         $estimated = Money::zero();
-        foreach (ActivationCode::where('is_used', true)->get(['price']) as $code) {
-            $estimated = $estimated->add(Money::of($code->price ?? $defaultPrice->getAmount()));
+        foreach (ActivationCode::where('is_used', true)->get(['price', 'ecommerce_enabled', 'duration_days']) as $code) {
+            $fallback = $pricing->resolvePlanPrice((bool) $code->ecommerce_enabled, (int) ($code->duration_days ?? 365))->getAmount();
+            $estimated = $estimated->add(Money::of($code->price ?? $fallback));
         }
 
         $recorded = Money::zero();

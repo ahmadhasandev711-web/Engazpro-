@@ -64,8 +64,11 @@ class ShopifyAuthAndSettingsTest extends TestCase
                 ->push(['data' => ['webhookSubscriptionCreate' => ['webhookSubscription' => ['id' => 'gid://shopify/WebhookSubscription/1', 'topic' => 'ORDERS_CREATE', 'uri' => 'https://app.test'], 'userErrors' => []]]])
                 ->push(['data' => ['webhookSubscriptionCreate' => ['webhookSubscription' => ['id' => 'gid://shopify/WebhookSubscription/2', 'topic' => 'ORDERS_UPDATED', 'uri' => 'https://app.test'], 'userErrors' => []]]])
                 ->push(['data' => ['webhookSubscriptionCreate' => ['webhookSubscription' => ['id' => 'gid://shopify/WebhookSubscription/3', 'topic' => 'ORDERS_CANCELLED', 'uri' => 'https://app.test'], 'userErrors' => []]]])
-                ->push(['data' => ['webhookSubscriptionCreate' => ['webhookSubscription' => ['id' => 'gid://shopify/WebhookSubscription/4', 'topic' => 'PRODUCTS_CREATE', 'uri' => 'https://app.test'], 'userErrors' => []]]])
-                ->push(['data' => ['webhookSubscriptionCreate' => ['webhookSubscription' => ['id' => 'gid://shopify/WebhookSubscription/5', 'topic' => 'PRODUCTS_UPDATE', 'uri' => 'https://app.test'], 'userErrors' => []]]])
+                ->push(['data' => ['webhookSubscriptionCreate' => ['webhookSubscription' => ['id' => 'gid://shopify/WebhookSubscription/4', 'topic' => 'ORDERS_EDITED', 'uri' => 'https://app.test'], 'userErrors' => []]]])
+                ->push(['data' => ['webhookSubscriptionCreate' => ['webhookSubscription' => ['id' => 'gid://shopify/WebhookSubscription/5', 'topic' => 'REFUNDS_CREATE', 'uri' => 'https://app.test'], 'userErrors' => []]]])
+                ->push(['data' => ['webhookSubscriptionCreate' => ['webhookSubscription' => ['id' => 'gid://shopify/WebhookSubscription/6', 'topic' => 'PRODUCTS_CREATE', 'uri' => 'https://app.test'], 'userErrors' => []]]])
+                ->push(['data' => ['webhookSubscriptionCreate' => ['webhookSubscription' => ['id' => 'gid://shopify/WebhookSubscription/7', 'topic' => 'PRODUCTS_UPDATE', 'uri' => 'https://app.test'], 'userErrors' => []]]])
+                ->push(['data' => ['webhookSubscriptionCreate' => ['webhookSubscription' => ['id' => 'gid://shopify/WebhookSubscription/8', 'topic' => 'LOCATIONS_UPDATE', 'uri' => 'https://app.test'], 'userErrors' => []]]])
                 ->push(['data' => ['shop' => ['name' => 'My Fashion', 'currencyCode' => 'EGP', 'myshopifyDomain' => 'my-fashion.myshopify.com']]])
                 ->push(['data' => ['locations' => ['edges' => [
                     ['node' => ['id' => 'gid://shopify/Location/1001', 'name' => 'Main Warehouse', 'isActive' => true]],
@@ -86,11 +89,13 @@ class ShopifyAuthAndSettingsTest extends TestCase
             ->assertJsonPath('data.shop_domain', 'my-fashion.myshopify.com')
             ->assertJsonPath('data.access_token_preview', 'shpat_...abcd');
 
+        // Multi-location stores must NOT auto-map every location to the same branch (prevents 2x overselling)
         $this->assertDatabaseHas('shopify_location_mappings', [
             'user_id' => $this->owner->id,
             'shopify_location_id' => 1001,
             'shopify_location_name' => 'Main Warehouse',
-            'branch_id' => $this->mainBranch->id,
+            'branch_id' => null,
+            'auto_sync_stock' => false,
         ]);
 
         $testRes = $this->actingAs($this->owner)->postJson('/api/shopify/test-connection');
@@ -225,5 +230,62 @@ class ShopifyAuthAndSettingsTest extends TestCase
         $this->assertSame('idem-key-123', $capturedRequest['variables']['idempotencyKey']);
         $this->assertArrayHasKey('changeFromQuantity', $capturedRequest['variables']['input']['quantities'][0]);
         $this->assertNull($capturedRequest['variables']['input']['quantities'][0]['changeFromQuantity']);
+    }
+
+    public function test_enforces_one_to_one_branch_mapping_and_verifies_webhook_security(): void
+    {
+        $integration = ShopifyIntegration::create([
+            'user_id' => $this->owner->id,
+            'shop_domain' => 'secure-shop.myshopify.com',
+            'auth_mode' => ShopifyAuthMode::CLIENT_CREDENTIALS,
+            'client_id' => 'cid_1',
+            'client_secret' => 'app_client_secret_xyz',
+            'webhook_secret' => 'random_local_secret',
+            'is_active' => true,
+        ]);
+        $locA = ShopifyLocationMapping::create([
+            'user_id' => $this->owner->id, 'shopify_integration_id' => $integration->id,
+            'shopify_location_id' => 7001, 'shopify_location_name' => 'Loc A',
+        ]);
+        $locB = ShopifyLocationMapping::create([
+            'user_id' => $this->owner->id, 'shopify_integration_id' => $integration->id,
+            'shopify_location_id' => 7002, 'shopify_location_name' => 'Loc B',
+        ]);
+
+        // Assigning two locations to the same branch must fail validation (1-to-1 rule)
+        $this->actingAs($this->owner)->postJson('/api/shopify/location-mappings', [
+            'mappings' => [
+                ['id' => $locA->id, 'branch_id' => $this->mainBranch->id, 'auto_sync_stock' => true],
+                ['id' => $locB->id, 'branch_id' => $this->mainBranch->id, 'auto_sync_stock' => true],
+            ],
+        ])->assertStatus(422);
+
+        // App-registered webhook HMAC verified using client_secret + replay protection
+        $payload = json_encode(['id' => 999888, 'name' => '#1099', 'line_items' => []]);
+        $hmac = base64_encode(hash_hmac('sha256', $payload, 'app_client_secret_xyz', true));
+
+        $this->call('POST', '/api/webhooks/shopify/' . $this->owner->id, [], [], [], [
+            'HTTP_X-Shopify-Hmac-Sha256' => $hmac,
+            'HTTP_X-Shopify-Topic' => 'orders/cancelled',
+            'HTTP_X-Shopify-Shop-Domain' => 'evil-shop.myshopify.com',
+            'HTTP_X-Shopify-Webhook-Id' => 'wh-evt-1',
+            'CONTENT_TYPE' => 'application/json',
+        ], $payload)->assertStatus(403);
+
+        $this->call('POST', '/api/webhooks/shopify/' . $this->owner->id, [], [], [], [
+            'HTTP_X-Shopify-Hmac-Sha256' => $hmac,
+            'HTTP_X-Shopify-Topic' => 'orders/cancelled',
+            'HTTP_X-Shopify-Shop-Domain' => 'secure-shop.myshopify.com',
+            'HTTP_X-Shopify-Webhook-Id' => 'wh-evt-2',
+            'CONTENT_TYPE' => 'application/json',
+        ], $payload)->assertStatus(202);
+
+        $this->call('POST', '/api/webhooks/shopify/' . $this->owner->id, [], [], [], [
+            'HTTP_X-Shopify-Hmac-Sha256' => $hmac,
+            'HTTP_X-Shopify-Topic' => 'orders/cancelled',
+            'HTTP_X-Shopify-Shop-Domain' => 'secure-shop.myshopify.com',
+            'HTTP_X-Shopify-Webhook-Id' => 'wh-evt-2',
+            'CONTENT_TYPE' => 'application/json',
+        ], $payload)->assertStatus(200)->assertJsonPath('message', 'Duplicate Shopify webhook ignored');
     }
 }

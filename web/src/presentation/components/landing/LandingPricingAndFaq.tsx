@@ -5,85 +5,139 @@ import {
   CheckCircle2,
   ChevronDown,
   MessageCircle,
+  Sparkles,
 } from 'lucide-react';
-import type { PublicPricingData } from '../../../hooks/usePublicPricing';
+import type { PublicPricingData, TierPricingData } from '../../../hooks/usePublicPricing';
 import { BrandLogo } from '../common/BrandLogo';
 import { Badge, Button, Card } from '../ui';
+import {
+  BASIC_PLAN_FEATURES,
+  BRAND_IDENTITY,
+  FAQ_ITEMS,
+  ONBOARDING_STEPS,
+  PRO_PLAN_FEATURES,
+} from './landingContent';
 
 interface LandingPricingAndFaqProps {
   pricing: PublicPricingData;
   onWhatsApp: (text: string) => void;
 }
 
-const ONBOARDING_STEPS = [
-  {
-    step: '1',
-    title: 'أنشئ حسابك في دقيقة',
-    desc: 'أدخل اسم نشاطك وحدد فروعك وخزائنك. تبدأ تجربتك المجانية فوراً بدون بطاقة بنكية.',
-  },
-  {
-    step: '2',
-    title: 'استورد أصنافك أو اربط ووكومرس',
-    desc: 'ارفع أصنافك من Excel بنقرة واحدة أو فعّل المزامنة مع متجرك الإلكتروني لسحب المنتجات.',
-  },
-  {
-    step: '3',
-    title: 'ابدأ البيع وراقب كل جنيه',
-    desc: 'أصدر فواتير POS، سلّم عهد المناديب بأذون رسمية، وطابق تقفيل الورديات أولاً بأول.',
-  },
-] as const;
+interface PricingTierCardProps {
+  badge: string;
+  badgeTone: 'neutral' | 'brand';
+  title: string;
+  subtitle: string;
+  tier: TierPricingData;
+  billingCycle: 'monthly' | 'yearly';
+  trialDays: number;
+  features: readonly string[];
+  featured?: boolean;
+  whatsAppText: string;
+  onWhatsApp: (text: string) => void;
+}
 
-const PLAN_FEATURES = [
-  'نظام كاشير POS لمسي سريع مع باركود والمقاسات والألوان',
-  'تعدد الفروع والمخازن والتحويلات الموثقة بالاستلام',
-  'حسابات دقيقة لعهَد المناديب والمرتجعات والتحصيلات',
-  'فصل الخزن والبنوك والمحافظ وتقفيل الورديات Z-Report',
-  'ربط ثنائي الاتجاه مع متجر WooCommerce عبر Webhooks',
-  'إصدار فواتير A4 وطابعات حرارية 58mm و 80mm وباركود',
-  'أدوار وصلاحيات دقيقة للموظفين + سجل نشاطات',
-  'تشغيل سحابي مستقر + وضع PWA على الهاتف والكمبيوتر',
-] as const;
+const PricingTierCard: React.FC<PricingTierCardProps> = ({
+  badge,
+  badgeTone,
+  title,
+  subtitle,
+  tier,
+  billingCycle,
+  trialDays,
+  features,
+  featured = false,
+  whatsAppText,
+  onWhatsApp,
+}) => {
+  const isYearly = billingCycle === 'yearly';
+  const mainPrice = isYearly
+    ? Math.round(tier.yearly_monthly_equivalent)
+    : tier.monthly_price;
 
-const FAQ_ITEMS = [
-  {
-    question: 'هل أحتاج لجهاز كاشير غالي الثمن لتشغيل إنجاز برو؟',
-    answer:
-      'لا، يعمل النظام من أي متصفح على الكمبيوتر أو اللابتوب أو التابلت والموبايل، ويدعم طابعات الإيصالات الحرارية 58mm و 80mm وطباعة A4 وقارئات الباركود القياسية.',
-  },
-  {
-    question: 'كيف يحميني النظام من عجز الكاشير أو لخبطة عهد المناديب؟',
-    answer:
-      'كل كاشير يفتح ويقفل ورديته بمطابقة النقدية الفعلية بالمتوقعة في تقرير Z-Report، ولكل مندوب عهدة منفصلة ولا تنتقل البضاعة بين الفروع والمناديب إلا بأذون تحويل موثقة بالاستلام.',
-  },
-  {
-    question: 'هل الباقة تشمل تصميم متجر إلكتروني أم برنامج الكاشير والمخازن فقط؟',
-    answer:
-      'اشتراك الباقة السحابية يغطي منظومة الكاشير والمخازن والفروع والمناديب والربط التلقائي مع ووكومرس، بينما تصميم وتطوير متجر إلكتروني خاص بك من الصفر هو خدمة مستقلة اختيارية حسب الطلب.',
-  },
-  {
-    question: 'كيف يعمل تفعيل الباقة بعد انتهاء الفترة التجريبية؟',
-    answer:
-      'تستمتع بجميع المميزات مجاناً خلال الفترة التجريبية. وعند الترقية يمكنك تفعيل كود اشتراك سنوي أو التواصل مع الدعم عبر واتساب للتفعيل الفوري مع احتفاظك بكافة فواتيرك وبياناتك.',
-  },
-] as const;
+  return (
+    <Card
+      className={`text-right p-6 sm:p-8 flex flex-col justify-between space-y-6 bg-panel ${
+        featured ? 'border-brand ring-2 ring-brand/15 shadow-xl' : 'border-line shadow-md'
+      }`}
+    >
+      <div className="space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-line pb-5">
+          <div className="space-y-1.5">
+            <Badge tone={badgeTone}>{badge}</Badge>
+            <h3 className="text-xl font-black text-ink pt-1">{title}</h3>
+            <p className="text-xs text-muted leading-relaxed">{subtitle}</p>
+          </div>
+
+          <div className="sm:text-left shrink-0">
+            <div className="flex items-baseline gap-1.5 sm:justify-end">
+              <span className="text-3xl sm:text-4xl font-black text-brand tabular-nums">
+                {mainPrice.toLocaleString('en-US')}
+              </span>
+              <span className="text-xs font-bold text-muted">ج.م / شهرياً</span>
+            </div>
+            <p className="text-2xs font-bold text-muted mt-1">
+              {isYearly
+                ? `يُدفع ${tier.annual_price.toLocaleString('en-US')} ج.م سنوياً (توفير ${tier.annual_savings.toLocaleString('en-US')} ج)`
+                : `أو ${tier.annual_price.toLocaleString('en-US')} ج.م سنوياً`}
+            </p>
+          </div>
+        </div>
+
+        <ul className="space-y-2.5 text-xs sm:text-sm font-semibold text-ink">
+          {features.map((feat) => (
+            <li key={feat} className="flex items-start gap-2.5">
+              <CheckCircle2 className="w-4 h-4 text-ok shrink-0 mt-0.5" />
+              <span>{feat}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="space-y-3 pt-2">
+        <div className="p-3 rounded-2xl bg-brand-soft border border-brand/20 text-xs text-brand-ink font-bold text-center">
+          تبدأ بتجربة {trialDays} يوم مجاناً بدون بطاقة بنكية
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-2.5">
+          <Link to="/register" className="flex-1">
+            <Button
+              variant={featured ? 'primary' : 'secondary'}
+              size="lg"
+              className="w-full"
+              rightIcon={<ArrowLeft className="w-4 h-4 shrink-0" />}
+            >
+              ابدأ التجربة المجانية
+            </Button>
+          </Link>
+          <Button
+            type="button"
+            variant="secondary"
+            size="lg"
+            onClick={() => onWhatsApp(whatsAppText)}
+            leftIcon={<MessageCircle className="w-4 h-4 text-ok shrink-0" />}
+          >
+            استفسر واتساب
+          </Button>
+        </div>
+      </div>
+    </Card>
+  );
+};
 
 /**
- * Renders onboarding steps, transparent API-driven pricing card, accessible FAQ accordion, final CTA, and footer.
+ * Renders onboarding steps, two-tier API-driven pricing (Monthly default + Annual switch), FAQ accordion, light CTA, and footer.
  */
 export const LandingPricingAndFaq: React.FC<LandingPricingAndFaqProps> = ({
   pricing,
   onWhatsApp,
 }) => {
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('yearly');
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [activeLegalModal, setActiveLegalModal] = useState<'privacy' | 'terms' | null>(null);
 
-  const displayedPrice =
-    billingCycle === 'yearly' ? pricing.yearly_monthly_equivalent : pricing.monthly_price;
-
   return (
     <>
-      {/* 5. Three-Step Onboarding */}
       <section className="relative z-10 py-14 sm:py-16">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 text-center space-y-10">
           <div className="space-y-2">
@@ -95,7 +149,7 @@ export const LandingPricingAndFaq: React.FC<LandingPricingAndFaqProps> = ({
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-right">
             {ONBOARDING_STEPS.map((item) => (
-              <Card key={item.step} className="space-y-3">
+              <Card key={item.step} className="space-y-3 bg-panel">
                 <div className="w-11 h-11 rounded-2xl bg-brand text-on-brand font-black text-lg flex items-center justify-center tabular-nums">
                   {item.step}
                 </div>
@@ -107,156 +161,100 @@ export const LandingPricingAndFaq: React.FC<LandingPricingAndFaqProps> = ({
         </div>
       </section>
 
-      {/* 6. Pricing Section */}
-      <section id="pricing" className="scroll-mt-24 relative z-10 py-16 sm:py-20 bg-panel/60 border-y border-line">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center space-y-8">
-          <div className="space-y-3">
-            <Badge tone="ok">أسعار واضحة بدون رسوم خفية</Badge>
+      <section id="pricing" className="scroll-mt-24 relative z-10 py-16 sm:py-20 bg-panel border-y border-line">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 text-center space-y-9">
+          <div className="space-y-3 max-w-2xl mx-auto">
+            <Badge tone="ok">أسعار واضحة وعادلة بالنظام الشهري أو السنوي</Badge>
             <h2 className="text-2xl sm:text-4xl font-black text-ink">
-              باقة شاملة لكل مميزات المنظومة، تبدأ بتجربة مجانية
+              اختر الباقة المناسبة لنشاطك وابدأ مجاناً
             </h2>
             <p className="text-sm text-muted">
-              جميع الوحدات والتقارير متاحة من اليوم الأول بدون تقسيم مميزات أساسية.
+              جميع الوحدات والتقارير الأساسية متاحة من اليوم الأول، مع خصم شهرين مجاناً عند الاشتراك السنوي.
             </p>
           </div>
 
-          {/* Billing Cycle Switcher */}
-          <div className="flex items-center justify-center gap-3">
+          {/* Monthly (Default) vs Yearly Switcher */}
+          <div className="inline-flex items-center gap-2 p-1.5 rounded-2xl bg-surface-2 border border-line">
             <button
               type="button"
               onClick={() => setBillingCycle('monthly')}
-              className={`text-sm font-bold transition-colors ${
-                billingCycle === 'monthly' ? 'text-ink' : 'text-muted'
+              className={`min-h-[40px] px-5 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer ${
+                billingCycle === 'monthly'
+                  ? 'bg-panel text-ink shadow-sm border border-line'
+                  : 'text-muted hover:text-ink'
               }`}
             >
-              دفع شهري
+              اشتراك شهري
             </button>
-
-            <button
-              type="button"
-              role="switch"
-              aria-checked={billingCycle === 'yearly'}
-              aria-label="تبديل نظام الدفع بين الشهري والسنوي"
-              onClick={() =>
-                setBillingCycle((prev) => (prev === 'yearly' ? 'monthly' : 'yearly'))
-              }
-              className={`relative w-14 h-8 rounded-full transition-colors p-1 flex items-center ${
-                billingCycle === 'yearly' ? 'bg-brand' : 'bg-surface-2 border border-line'
-              }`}
-            >
-              <span
-                className={`w-6 h-6 rounded-full transition-transform ${
-                  billingCycle === 'yearly'
-                    ? '-translate-x-6 bg-panel shadow-sm'
-                    : 'translate-x-0 bg-muted'
-                }`}
-              />
-            </button>
-
             <button
               type="button"
               onClick={() => setBillingCycle('yearly')}
-              className={`text-sm font-bold flex items-center gap-2 transition-colors ${
-                billingCycle === 'yearly' ? 'text-brand-ink' : 'text-muted'
+              className={`min-h-[40px] px-5 rounded-xl text-xs sm:text-sm font-black flex items-center gap-2 transition-all cursor-pointer ${
+                billingCycle === 'yearly'
+                  ? 'bg-brand text-on-brand shadow-sm'
+                  : 'text-muted hover:text-ink'
               }`}
             >
               <span>اشتراك سنوي</span>
-              <Badge tone="ok">وفّر {pricing.annual_savings.toLocaleString('en-US')} ج.م</Badge>
+              <span className="text-2xs px-2 py-0.5 rounded-full bg-ok-soft text-ok-ink font-black">
+                شهرين مجاناً
+              </span>
             </button>
           </div>
 
-          {/* Main Plan Card */}
-          <Card className="text-right space-y-6 border-brand/30 shadow-lg">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-line">
-              <div className="space-y-1.5">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="text-xl sm:text-2xl font-black text-ink">
-                    الباقة المتكاملة — EngazPRO
-                  </h3>
-                  <Badge tone="brand">الأكثر توفيراً</Badge>
-                </div>
-                <p className="text-xs sm:text-sm text-muted">
-                  تشمل تجربة مجانية كاملة لمدة {pricing.trial_days} يوماً بدون بطاقة بنكية
-                </p>
-              </div>
+          {/* Two Pricing Cards */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+            <PricingTierCard
+              badge="الباقة الأساسية"
+              badgeTone="neutral"
+              title="باقة المحلات والمخازن"
+              subtitle="مثالية للمحلات، معارض الملابس والأحذية، الفروع، والمناديب."
+              tier={pricing.basic}
+              billingCycle={billingCycle}
+              trialDays={pricing.trial_days}
+              features={BASIC_PLAN_FEATURES}
+              whatsAppText="مرحباً، أرغب في الاستفسار عن باقة المحلات والمخازن (الأساسية) في إنجاز برو EBMS."
+              onWhatsApp={onWhatsApp}
+            />
 
-              <div className="sm:text-left shrink-0">
-                <div className="flex items-baseline sm:justify-end gap-1.5">
-                  <span className="text-4xl font-black text-brand tabular-nums">
-                    {displayedPrice.toLocaleString('en-US')}
-                  </span>
-                  <span className="text-xs font-bold text-muted">ج.م / شهر</span>
-                </div>
-                {billingCycle === 'yearly' ? (
-                  <div className="text-xs font-bold text-ok-ink mt-1 tabular-nums">
-                    يُدفع {pricing.annual_price.toLocaleString('en-US')} ج.م سنوياً
-                  </div>
-                ) : (
-                  <div className="text-xs text-muted mt-1 tabular-nums">
-                    أو {pricing.annual_price.toLocaleString('en-US')} ج.م سنوياً (شهرين مجاناً)
-                  </div>
-                )}
-              </div>
-            </div>
+            <PricingTierCard
+              badge="الأكثر تكاملاً"
+              badgeTone="brand"
+              title="باقة المتاجر المتكاملة (برو)"
+              subtitle="تشمل كامل المحلات والمخازن + ربط لحظي مع متاجر Shopify و WordPress."
+              tier={pricing.pro}
+              billingCycle={billingCycle}
+              trialDays={pricing.trial_days}
+              features={PRO_PLAN_FEATURES}
+              featured
+              whatsAppText="مرحباً، أرغب في الاشتراك بباقة المتاجر المتكاملة (برو) الشاملة لربط Shopify و WordPress."
+              onWhatsApp={onWhatsApp}
+            />
+          </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm font-medium text-ink">
-              {PLAN_FEATURES.map((feat) => (
-                <div key={feat} className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-ok shrink-0 mt-0.5" />
-                  <span>{feat}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="p-3.5 rounded-xl bg-surface-2 border border-line text-xs text-muted leading-relaxed">
-              <strong className="text-ink">توضيح شفاف:</strong> يشمل الاشتراك برنامج الكاشير، المخازن، الفروع، المناديب، والمزامنة التلقائية مع متاجر WooCommerce. بينما خدمة تصميم متجر إلكتروني من الصفر هي باقة تطوير مستقلة اختيارية.
-            </div>
-
-            <div className="flex flex-col sm:flex-row items-center gap-3 pt-1">
-              <Link to="/register" className="w-full sm:flex-1">
-                <Button size="lg" className="w-full font-black" rightIcon={<ArrowLeft className="w-4 h-4 shrink-0" />}>
-                  ابدأ تجربتك المجانية ({pricing.trial_days} يوم)
-                </Button>
-              </Link>
-              <Button
-                type="button"
-                variant="secondary"
-                size="lg"
-                className="w-full sm:w-auto font-bold"
-                leftIcon={<MessageCircle className="w-4 h-4 text-ok shrink-0" />}
-                onClick={() =>
-                  onWhatsApp(
-                    `مرحباً، أريد الاستفسار عن باقة إنجاز برو (${billingCycle === 'yearly' ? 'السنوية' : 'الشهرية'}) وتجربة ${pricing.trial_days} يوم.`
-                  )
-                }
-              >
-                اسأل فريق المبيعات
-              </Button>
-            </div>
-          </Card>
+          <p className="text-xs text-muted">
+            ملاحظة: خدمة تصميم وبناء متجر إلكتروني خاص بك من الصفر (WordPress أو Shopify) خدمة مستقلة يُحدد سعرها حسب تفاصيل المتجر.
+          </p>
         </div>
       </section>
 
-      {/* 7. FAQ Section (Aligned with JSON-LD Schema in index.html) */}
-      <section id="faq" className="scroll-mt-24 relative z-10 py-16">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 space-y-8">
+      <section id="faq" className="scroll-mt-24 relative z-10 py-16 sm:py-20">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 space-y-8">
           <div className="text-center space-y-2">
-            <Badge tone="neutral">أسئلة شائعة</Badge>
-            <h2 className="text-2xl sm:text-3xl font-black text-ink">
-              إجابات واضحة قبل أن تبدأ
-            </h2>
+            <Badge tone="neutral">الأسئلة الشائعة</Badge>
+            <h2 className="text-2xl sm:text-3xl font-black text-ink">إجابات واضحة قبل أن تبدأ</h2>
           </div>
 
           <div className="space-y-3">
             {FAQ_ITEMS.map((item, idx) => {
               const isOpen = openFaq === idx;
               return (
-                <Card key={item.question} className="p-0 sm:p-0 overflow-hidden">
+                <Card key={item.question} className="p-0 sm:p-0 overflow-hidden bg-panel">
                   <button
                     type="button"
                     aria-expanded={isOpen}
                     onClick={() => setOpenFaq(isOpen ? null : idx)}
-                    className="w-full px-5 py-4 flex items-center justify-between gap-4 text-right text-sm sm:text-base font-black text-ink hover:bg-surface-2/60 transition-colors"
+                    className="w-full px-5 py-4 flex items-center justify-between gap-4 text-right text-sm sm:text-base font-black text-ink hover:bg-surface-2/60 transition-colors cursor-pointer"
                   >
                     <span>{item.question}</span>
                     <ChevronDown
@@ -266,7 +264,7 @@ export const LandingPricingAndFaq: React.FC<LandingPricingAndFaqProps> = ({
                     />
                   </button>
                   {isOpen && (
-                    <div className="px-5 pb-4 pt-1 text-xs sm:text-sm text-muted leading-relaxed border-t border-line">
+                    <div className="px-5 pb-4 pt-2 text-xs sm:text-sm text-muted leading-relaxed border-t border-line">
                       {item.answer}
                     </div>
                   )}
@@ -277,33 +275,33 @@ export const LandingPricingAndFaq: React.FC<LandingPricingAndFaqProps> = ({
         </div>
       </section>
 
-      {/* 8. Final Conversion Banner */}
+      {/* Light-Only Conversion Banner */}
       <section className="relative z-10 pb-16">
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
-          <Card className="bg-brand text-on-brand border-brand text-center space-y-5 shadow-lg">
-            <h2 className="text-2xl sm:text-3xl font-black">
-              ابدأ تنظيم مبيعاتك ومخازنك اليوم خلال دقيقة واحدة
+          <Card className="bg-brand-soft border-2 border-brand/25 text-center space-y-5 shadow-md p-6 sm:p-10">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-panel border border-brand/20 text-xs font-black text-brand mx-auto">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>{BRAND_IDENTITY.acronym} • {BRAND_IDENTITY.arabicFull}</span>
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-black text-ink">
+              ابدأ تنظيم مبيعاتك ومخازنك ومتجرك اليوم خلال دقيقة واحدة
             </h2>
-            <p className="text-xs sm:text-sm opacity-90 max-w-2xl mx-auto leading-relaxed">
-              أنشئ متجرك السحابي الآن وجرّب الكاشير، المناديب، وتقفيل الورديات لمدة {pricing.trial_days} يوماً مجاناً بالكامل دون بطاقة بنكية.
+            <p className="text-xs sm:text-sm text-muted max-w-2xl mx-auto leading-relaxed">
+              أنشئ حسابك السحابي الآن وجرّب الكاشير، المناديب، تقفيل الورديات، وربط Shopify أو WordPress لمدة {pricing.trial_days} يوماً مجاناً بالكامل دون بطاقة بنكية.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-1">
               <Link to="/register" className="w-full sm:w-auto">
                 <Button
-                  variant="secondary"
+                  variant="primary"
                   size="lg"
-                  className="w-full sm:w-auto font-black"
+                  className="w-full sm:w-auto font-black shadow-sm"
                   rightIcon={<ArrowLeft className="w-4 h-4 shrink-0" />}
                 >
-                  أنشئ متجرك المجاني الآن
+                  أنشئ حسابك المجاني الآن
                 </Button>
               </Link>
               <Link to="/login" className="w-full sm:w-auto">
-                <Button
-                  variant="ghost"
-                  size="lg"
-                  className="w-full sm:w-auto text-on-brand hover:bg-panel/15 border border-on-brand/30"
-                >
+                <Button variant="secondary" size="lg" className="w-full sm:w-auto">
                   لديك حساب؟ دخول الكاشير
                 </Button>
               </Link>
@@ -312,39 +310,41 @@ export const LandingPricingAndFaq: React.FC<LandingPricingAndFaqProps> = ({
         </div>
       </section>
 
-      {/* 9. Clean Footer */}
       <footer className="relative z-10 border-t border-line bg-panel py-8">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted">
-          <div className="flex items-center gap-2.5">
+          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
             <BrandLogo size="sm" showArabic={false} />
-            <span>— منظومة نقاط البيع والمخازن والمناديب</span>
+            <span>— {BRAND_IDENTITY.arabicFull} ({BRAND_IDENTITY.englishFull} · {BRAND_IDENTITY.acronym})</span>
           </div>
 
           <div className="flex flex-wrap items-center justify-center gap-5 font-semibold">
+            <a href="#showcase" className="hover:text-ink transition-colors">
+              صور النظام
+            </a>
             <a href="#pricing" className="hover:text-ink transition-colors">
               الأسعار
             </a>
-            <a href="#faq" className="hover:text-ink transition-colors">
-              الأسئلة الشائعة
+            <a href="#custom-store" className="hover:text-ink transition-colors">
+              تصميم المتاجر
             </a>
             <button
               type="button"
               onClick={() => setActiveLegalModal('privacy')}
-              className="hover:text-ink transition-colors"
+              className="hover:text-ink transition-colors cursor-pointer"
             >
               سياسة الخصوصية
             </button>
             <button
               type="button"
               onClick={() => setActiveLegalModal('terms')}
-              className="hover:text-ink transition-colors"
+              className="hover:text-ink transition-colors cursor-pointer"
             >
               شروط الخدمة
             </button>
             <button
               type="button"
-              onClick={() => onWhatsApp('مرحباً، أود الاستفسار عن منظومة إنجاز برو.')}
-              className="hover:text-ok-ink transition-colors"
+              onClick={() => onWhatsApp('مرحباً، أود الاستفسار عن منظومة إنجاز برو EBMS.')}
+              className="hover:text-ok-ink transition-colors cursor-pointer"
             >
               الدعم الفوري
             </button>
@@ -352,7 +352,6 @@ export const LandingPricingAndFaq: React.FC<LandingPricingAndFaqProps> = ({
         </div>
       </footer>
 
-      {/* Legal Policy Modal */}
       {activeLegalModal && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/50 backdrop-blur-xs"
@@ -373,7 +372,7 @@ export const LandingPricingAndFaq: React.FC<LandingPricingAndFaqProps> = ({
             </div>
             <p className="text-xs sm:text-sm text-muted leading-relaxed">
               {activeLegalModal === 'privacy'
-                ? 'جميع بيانات متجرك، فواتيرك، وعملائك معزولة بالكامل ومشفرة على خوادم إنجاز برو. لا يتم بيع أو مشاركة أي بيانات مالية أو تجارية مع أي طرف ثالث.'
+                ? 'جميع بيانات متجرك، فواتيرك، وعملائك معزولة بالكامل ومشفرة على خوادم إنجاز برو (EBMS). لا يتم بيع أو مشاركة أي بيانات مالية أو تجارية مع أي طرف ثالث.'
                 : 'يُمنح كل مشترك فترة تجريبية مجانية لتقييم المنظومة قبل الترقية. يلتزم المشترك بحفظ سرية بيانات الدخول وصلاحيات الموظفين داخل حسابه.'}
             </p>
           </Card>

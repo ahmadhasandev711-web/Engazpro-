@@ -25,7 +25,9 @@ class ShopifyOrderPayloadParser
             'shopify_order_id' => ShopifyGid::extractId($raw['id'] ?? null) ?? 0,
             'shopify_order_number' => (string) ($raw['name'] ?? ($raw['order_number'] ?? '')),
             'shopify_location_id' => $this->extractLocationId($raw, $isGraphql),
+            'split_fulfillment_locations' => $this->extractSplitLocations($raw, $isGraphql),
             'fulfillment_order_id' => $this->extractFulfillmentOrderId($raw, $isGraphql),
+            'currency' => $this->extractCurrency($raw),
             'order_date' => $this->parseDate($raw['createdAt'] ?? ($raw['created_at'] ?? null)),
             'is_cancelled' => !empty($raw['cancelledAt'] ?? ($raw['cancelled_at'] ?? null)),
             'payment_status' => $this->determinePaymentStatus($raw, $isGraphql),
@@ -55,8 +57,13 @@ class ShopifyOrderPayloadParser
     private function normalizeLineItems(array $raw, bool $isGraphql): array
     {
         $nodes = $isGraphql ? collect($raw['lineItems']['edges'] ?? [])->pluck('node')->all() : ($raw['line_items'] ?? []);
+        $refundedMap = $isGraphql ? [] : $this->buildRestRefundedQuantities($raw['refunds'] ?? []);
 
-        return collect($nodes)->filter(fn ($i) => is_array($i))->map(function (array $item) use ($isGraphql) {
+        return collect($nodes)->filter(fn ($i) => is_array($i))->map(function (array $item) use ($isGraphql, $refundedMap) {
+            $qty = $this->resolveEffectiveLineQuantity($item, $isGraphql, $refundedMap);
+            if ($qty <= 0) {
+                return null;
+            }
             $unitPrice = $isGraphql
                 ? Money::of($item['originalUnitPriceSet']['shopMoney']['amount'] ?? ($item['variant']['price'] ?? 0))
                 : Money::of($item['price'] ?? 0);
@@ -68,24 +75,55 @@ class ShopifyOrderPayloadParser
                 'title' => (string) ($item['title'] ?? 'صنف أونلاين'),
                 'variant_title' => $item['variant']['title'] ?? ($item['variant_title'] ?? null),
                 'sku' => !empty($item['sku']) ? trim((string) $item['sku']) : null,
-                'quantity' => Quantity::of($item['quantity'] ?? 1)->toFloat(),
+                'quantity' => $qty,
                 'unit_price' => $unitPrice->getAmount(),
                 'compare_at_price' => is_numeric($compareAt) ? Money::of($compareAt)->getAmount() : null,
-                'image_url' => $item['variant']['image']['url'] ?? null,
+                'image_url' => ShopifyGraphqlQueries::extractVariantMediaUrl($item['variant'] ?? []),
             ];
-        })->values()->all();
+        })->filter()->values()->all();
+    }
+
+    private function resolveEffectiveLineQuantity(array $item, bool $isGraphql, array $refundedMap): float
+    {
+        if ($isGraphql) {
+            return Quantity::of($item['currentQuantity'] ?? ($item['quantity'] ?? 1))->toFloat();
+        }
+        $lineId = (int) ($item['id'] ?? 0);
+        $rawQty = Quantity::of($item['quantity'] ?? 1);
+        $refunded = $lineId > 0 && isset($refundedMap[$lineId]) ? Quantity::of($refundedMap[$lineId]) : Quantity::zero();
+
+        return $rawQty->subtract($refunded)->maxZero()->toFloat();
+    }
+
+    /**
+     * @return array<int, float>
+     */
+    private function buildRestRefundedQuantities(array $refunds): array
+    {
+        $map = [];
+        foreach ($refunds as $refund) {
+            foreach ($refund['refund_line_items'] ?? [] as $rli) {
+                $id = (int) ($rli['line_item_id'] ?? 0);
+                if ($id > 0) {
+                    $map[$id] = ($map[$id] ?? 0.0) + Quantity::of($rli['quantity'] ?? 0)->toFloat();
+                }
+            }
+        }
+
+        return $map;
     }
 
     private function calculateFinancialTotals(array $raw, array $lineItems, bool $isGraphql): array
     {
         $subtotal = array_reduce($lineItems, fn (Money $c, array $i) => $c->add(Money::of($i['unit_price'])->multiply($i['quantity'])), Money::zero());
         $shipping = $this->resolveNetShippingMoney($raw, $isGraphql);
-        $tax = Money::of($isGraphql ? ($raw['currentTotalTaxSet']['shopMoney']['amount'] ?? 0) : ($raw['current_total_tax'] ?? ($raw['total_tax'] ?? 0)));
+        $taxesIncluded = (bool) ($raw['taxesIncluded'] ?? ($raw['taxes_included'] ?? false));
+        $rawTax = Money::of($isGraphql ? ($raw['currentTotalTaxSet']['shopMoney']['amount'] ?? 0) : ($raw['current_total_tax'] ?? ($raw['total_tax'] ?? 0)));
+        $applicableTax = $taxesIncluded ? Money::zero() : $rawTax;
         $rawTotal = $isGraphql ? ($raw['currentTotalPriceSet']['shopMoney']['amount'] ?? 0) : ($raw['current_total_price'] ?? ($raw['total_price'] ?? 0));
         $total = Money::of($rawTotal);
 
-        // Strict reconciliation guarantees InvoiceService total === Shopify current_total_price
-        $reconciledDiscount = $subtotal->add($shipping)->add($tax)->subtract($total);
+        $reconciledDiscount = $subtotal->add($shipping)->add($applicableTax)->subtract($total);
         if ($reconciledDiscount->isNegative()) {
             $reconciledDiscount = Money::zero();
         }
@@ -94,6 +132,7 @@ class ShopifyOrderPayloadParser
             'subtotal' => $subtotal->getAmount(),
             'shipping_cost' => $shipping->getAmount(),
             'discount_total' => $reconciledDiscount->getAmount(),
+            'tax_total' => $applicableTax->getAmount(),
             'total' => $total->getAmount(),
         ];
     }
@@ -131,6 +170,22 @@ class ShopifyOrderPayloadParser
         return ShopifyGid::extractId($raw['location_id'] ?? null);
     }
 
+    /**
+     * @return list<int>
+     */
+    private function extractSplitLocations(array $raw, bool $isGraphql): array
+    {
+        $edges = $isGraphql ? ($raw['fulfillmentOrders']['edges'] ?? []) : [];
+        $ids = collect($edges)
+            ->map(fn ($edge) => ShopifyGid::extractId($edge['node']['assignedLocation']['location']['id'] ?? null))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        return count($ids) > 1 ? $ids : [];
+    }
+
     private function extractFulfillmentOrderId(array $raw, bool $isGraphql): ?int
     {
         if (!$isGraphql) {
@@ -138,6 +193,13 @@ class ShopifyOrderPayloadParser
         }
 
         return ShopifyGid::extractId($raw['fulfillmentOrders']['edges'][0]['node']['id'] ?? null);
+    }
+
+    private function extractCurrency(array $raw): ?string
+    {
+        $code = $raw['currencyCode'] ?? ($raw['currentTotalPriceSet']['shopMoney']['currencyCode'] ?? ($raw['currency'] ?? null));
+
+        return is_string($code) && trim($code) !== '' ? strtoupper(trim($code)) : null;
     }
 
     private function parseDate(mixed $val): CarbonInterface

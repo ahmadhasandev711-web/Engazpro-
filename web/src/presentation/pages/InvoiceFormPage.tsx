@@ -187,10 +187,14 @@ export const InvoiceFormPage: React.FC = () => {
 
   // Queries
   const { data: productsData } = useQuery({
-    queryKey: ['products', debouncedSearchProduct],
+    queryKey: ['products-form', debouncedSearchProduct, selectedBranchId],
     queryFn: async () => {
-      const res = await apiClient.get('/products', {
-        params: { search: debouncedSearchProduct || undefined, per_page: 24 },
+      const res = await apiClient.get('/products/pos-catalog', {
+        params: {
+          search: debouncedSearchProduct || undefined,
+          branch_id: selectedBranchId || undefined,
+          per_page: 24,
+        },
       });
       return (res.data?.data?.data || res.data?.data) as Product[];
     },
@@ -218,6 +222,9 @@ export const InvoiceFormPage: React.FC = () => {
       if (inv.party_id) {
         setValue('party_id', inv.party_id);
       }
+      if (inv.branch_id && !isCashier && !isMandob) {
+        setValue('branch_id', inv.branch_id);
+      }
     } catch (err: any) {
       setErrorMessage(err.response?.data?.message || 'لم يتم العثور على فاتورة بهذا الرقم');
       setParentInvoice(null);
@@ -226,8 +233,20 @@ export const InvoiceFormPage: React.FC = () => {
     }
   };
 
+  const isSameInvoiceLine = (line: any, candidate: any) =>
+    Number(line.product_id) === Number(candidate.product_id) &&
+    (line.product_variant_id ?? null) === (candidate.product_variant_id ?? null) &&
+    (line.product_batch_id ?? null) === (candidate.product_batch_id ?? null) &&
+    (line.unit_name ?? null) === (candidate.unit_name ?? null);
+
   const addProductToInvoice = (product: Product, defaultPrice?: number) => {
-    const existingIndex = fields.findIndex((f: any) => f.product_id === product.id);
+    const candidate = {
+      product_id: product.id,
+      product_variant_id: null,
+      product_batch_id: null,
+      unit_name: product.unit ?? null,
+    };
+    const existingIndex = fields.findIndex((f: any) => isSameInvoiceLine(f, candidate));
     if (existingIndex >= 0) {
       const currentQty = Number(items[existingIndex]?.quantity || 0);
       setValue(`items.${existingIndex}.quantity`, currentQty + 1, { shouldValidate: true, shouldDirty: true });
@@ -241,9 +260,11 @@ export const InvoiceFormPage: React.FC = () => {
 
       append({
         product_id: product.id,
+        product_name: product.name,
+        unit_name: product.unit ?? null,
         quantity: 1,
         unit_price: price,
-      });
+      } as any);
     }
   };
 
@@ -260,48 +281,60 @@ export const InvoiceFormPage: React.FC = () => {
 
   const handleVariantSelect = (payload: VariantSelectionPayload) => {
     const prod = payload.product;
-    const variantId = payload.variant?.id ?? null;
-    const variantName = payload.variant?.name ?? null;
-    const batchId = payload.batch?.id ?? null;
-    const batchNumber = payload.batch?.batch_number ?? null;
+    const candidate = {
+      product_id: prod.id,
+      product_variant_id: payload.variant?.id ?? null,
+      variant_name: payload.variant?.name ?? null,
+      product_batch_id: payload.batch?.id ?? null,
+      batch_number: payload.batch?.batch_number ?? null,
+      unit_name: payload.unit_name ?? null,
+    };
 
-    const existingIndex = fields.findIndex(
-      (f: any) =>
-        f.product_id === prod.id &&
-        (f.product_variant_id ?? null) === variantId &&
-        (f.product_batch_id ?? null) === batchId
-    );
+    const existingIndex = fields.findIndex((f: any) => isSameInvoiceLine(f, candidate));
 
     if (existingIndex >= 0) {
       const currentQty = Number(items[existingIndex]?.quantity || 0);
       setValue(`items.${existingIndex}.quantity`, currentQty + payload.quantity, { shouldValidate: true, shouldDirty: true });
     } else {
       append({
-        product_id: prod.id,
-        product_variant_id: variantId,
-        variant_name: variantName,
-        product_batch_id: batchId,
-        batch_number: batchNumber,
-        unit_name: payload.unit_name,
+        ...candidate,
+        product_name: prod.name,
         is_sub_unit: payload.is_sub_unit,
         quantity: payload.quantity,
         unit_price: payload.unit_price,
-      });
+      } as any);
     }
     setVariantModalProduct(null);
   };
 
   const addParentItemToReturn = (item: any) => {
-    const existingIndex = fields.findIndex((f: any) => f.product_id === item.product_id);
+    const candidate = {
+      product_id: item.product_id,
+      product_variant_id: item.product_variant_id ?? null,
+      variant_name: item.variant_name ?? null,
+      product_batch_id: item.product_batch_id ?? null,
+      batch_number: item.batch_number ?? null,
+      expiry_date: item.expiry_date ?? null,
+      unit_name: item.unit_name ?? null,
+    };
+    const existingIndex = fields.findIndex((f: any) => isSameInvoiceLine(f, candidate));
+    const maxQty = Number(item.quantity || 0);
+
     if (existingIndex >= 0) {
       const currentQty = Number(items[existingIndex]?.quantity || 0);
+      if (maxQty > 0 && currentQty >= maxQty) {
+        setErrorMessage(`الكمية المسترجعة من "${item.product_name}" لا يمكن أن تتجاوز الكمية الأصلية (${maxQty}).`);
+        return;
+      }
       setValue(`items.${existingIndex}.quantity`, currentQty + 1, { shouldValidate: true, shouldDirty: true });
     } else {
+      setErrorMessage(null);
       append({
-        product_id: item.product_id,
+        ...candidate,
+        product_name: item.product_name,
         quantity: 1,
         unit_price: item.unit_price,
-      });
+      } as any);
     }
   };
 
@@ -463,7 +496,7 @@ export const InvoiceFormPage: React.FC = () => {
           isPurchaseReturn={isPurchaseReturn}
           partyType={partyType}
           selectedPartyId={watch('party_id')}
-          selectedPartyName={parentInvoice?.party?.name || null}
+          selectedPartyName={parentInvoice?.party_name || parentInvoice?.party?.name || null}
           onPartyChange={(partyId) => setValue('party_id', partyId, { shouldValidate: true })}
           couriersData={couriersData}
           branchesData={branchesData}

@@ -177,6 +177,7 @@ export interface Invoice extends BaseEntity {
   invoice_number: string;
   type: InvoiceType;
   party_id?: number | null;
+  party_name?: string | null;
   party?: Party | null;
   courier_party_id?: number | null;
   courier_party?: Party | null;
@@ -187,6 +188,7 @@ export interface Invoice extends BaseEntity {
   total: number;
   paid_amount: number;
   remaining_amount: number;
+  due_amount?: number;
   payment_method: PaymentMethod;
   split_payments?: SplitPaymentItem[];
   notes?: string | null;

@@ -248,4 +248,79 @@ class ShopifyOrderLifecycleAndDiscountsTest extends TestCase
         // Courier collected 440, shipping fee credited 40 -> net balance due from courier = 400
         $this->assertSame(400.0, (float) $this->courier->fresh()->balance);
     }
+
+    public function test_webhook_null_location_enriches_via_graphql_with_tax_and_partial_refund_updates(): void
+    {
+        $gqlOrder = [
+            'id' => 'gid://shopify/Order/6009009',
+            'name' => '#1090',
+            'createdAt' => '2026-11-18T10:00:00Z',
+            'displayFinancialStatus' => 'PENDING',
+            'taxesIncluded' => false,
+            'currencyCode' => 'EGP',
+            'paymentGatewayNames' => ['Cash on Delivery (COD)'],
+            'currentTotalPriceSet' => ['shopMoney' => ['amount' => '456.00', 'currencyCode' => 'EGP']],
+            'totalShippingPriceSet' => ['shopMoney' => ['amount' => '0.00']],
+            'currentTotalTaxSet' => ['shopMoney' => ['amount' => '56.00']],
+            'customer' => ['id' => 'gid://shopify/Customer/7771', 'firstName' => 'نهى', 'lastName' => 'طارق'],
+            'shippingAddress' => ['phone' => '+201099887766', 'city' => 'مدينة نصر', 'province' => 'القاهرة'],
+            'lineItems' => ['edges' => [[
+                'node' => [
+                    'id' => 'gid://shopify/LineItem/1', 'title' => 'هودي قطن', 'sku' => 'HOOD-1',
+                    'quantity' => 2, 'currentQuantity' => 1,
+                    'originalUnitPriceSet' => ['shopMoney' => ['amount' => '400.00']],
+                    'product' => ['id' => 'gid://shopify/Product/90001'],
+                    'variant' => ['id' => 'gid://shopify/ProductVariant/91001', 'title' => 'Default'],
+                ],
+            ]]],
+            'fulfillmentOrders' => ['edges' => [[
+                'node' => ['id' => 'gid://shopify/FulfillmentOrder/881', 'assignedLocation' => ['location' => ['id' => 'gid://shopify/Location/991']]],
+            ]]],
+        ];
+
+        $mock = Mockery::mock(ShopifyGraphqlClientInterface::class);
+        $mock->shouldReceive('getOrderById')->once()->withArgs(fn ($i, $gid) => $gid === 'gid://shopify/Order/6009009')->andReturn($gqlOrder);
+        $mock->shouldReceive('getOrderFulfillmentOrders')->once()->andReturn([]);
+        $this->app->instance(ShopifyGraphqlClientInterface::class, $mock);
+
+        // Webhook with null location_id resolves via GraphQL assignedLocation (991 -> nasrBranch)
+        $restPayload = json_encode(['id' => 6009009, 'name' => '#1090', 'location_id' => null, 'line_items' => []]);
+        $hmac = base64_encode(hash_hmac('sha256', $restPayload, 'whsec_test_123', true));
+
+        $this->call('POST', '/api/webhooks/shopify/' . $this->owner->id, [], [], [], [
+            'HTTP_X-Shopify-Hmac-Sha256' => $hmac,
+            'HTTP_X-Shopify-Topic' => 'orders/create',
+            'CONTENT_TYPE' => 'application/json',
+        ], $restPayload)->assertStatus(202);
+
+        $order = OnlineOrder::where('external_order_id', '6009009')->firstOrFail();
+        $this->assertSame($this->nasrBranch->id, $order->branch_id);
+        $this->assertSame(56.0, (float) $order->tax_total);
+        $this->assertSame(456.0, (float) $order->total);
+        $this->assertSame(1.0, (float) $order->items()->firstOrFail()->quantity);
+
+        $this->actingAs($this->owner)->postJson("/api/online-orders/{$order->id}/confirm", ['branch_id' => $this->nasrBranch->id])->assertOk();
+        $this->actingAs($this->owner)->postJson("/api/online-orders/{$order->id}/dispatch-courier", [
+            'courier_party_id' => $this->courier->id,
+            'tracking_number' => 'SHP-TAX-1',
+        ])->assertOk();
+        $this->actingAs($this->owner)->postJson("/api/online-orders/{$order->id}/deliver", ['collected_amount' => 456])->assertOk();
+
+        $invoice = $order->fresh()->invoice;
+        $this->assertSame(56.0, (float) $invoice->tax);
+        $this->assertSame(456.0, (float) $invoice->total);
+        $this->assertSame(9, (int) $this->product->fresh()->quantity); // 10 - 1 (currentQuantity, NOT 2)
+    }
+
+    public function test_fetch_recent_payloads_filters_open_unfulfilled_and_caps_limit(): void
+    {
+        $mock = Mockery::mock(ShopifyGraphqlClientInterface::class);
+        $mock->shouldReceive('getOrdersPage')->once()->withArgs(
+            fn ($int, $cursor, $first, $queryFilter) => $first === 10 && $queryFilter === 'status:open -fulfillment_status:fulfilled'
+        )->andReturn(['orders' => [], 'has_next_page' => false, 'end_cursor' => null]);
+        $this->app->instance(ShopifyGraphqlClientInterface::class, $mock);
+
+        $res = app(\App\Services\OnlineOrders\Adapters\ShopifyOrderAdapter::class)->fetchRecentPayloads($this->owner, 10);
+        $this->assertSame([], $res);
+    }
 }

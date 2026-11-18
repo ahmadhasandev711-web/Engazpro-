@@ -6,6 +6,7 @@ use App\Contracts\ShopifyGraphqlClientInterface;
 use App\Enums\ProductType;
 use App\Enums\StockMovementSource;
 use App\Enums\StockMovementType;
+use App\Exceptions\ShopifyConnectionException;
 use App\Models\BranchStock;
 use App\Models\Category;
 use App\Models\Product;
@@ -34,7 +35,7 @@ class ShopifyProductImportService
         $totals = ['imported' => 0, 'updated' => 0, 'errors' => []];
 
         do {
-            $res = $this->importPage($user, $integration, $cursor, 50, $importStock);
+            $res = $this->importPage($user, $integration, $cursor, 25, $importStock);
             $totals['imported'] += $res['imported'];
             $totals['updated'] += $res['updated'];
             $totals['errors'] = array_merge($totals['errors'], $res['errors']);
@@ -44,7 +45,7 @@ class ShopifyProductImportService
         return $totals;
     }
 
-    public function importPage(User $user, ShopifyIntegration $integration, ?string $cursor = null, int $first = 50, bool $importStock = false): array
+    public function importPage(User $user, ShopifyIntegration $integration, ?string $cursor = null, int $first = 25, bool $importStock = false): array
     {
         return ShopifyStockSyncGate::suppressDuring($integration->user_id, function () use ($user, $integration, $cursor, $first, $importStock) {
             return $this->processImportPage($user, $integration, $cursor, $first, $importStock);
@@ -69,7 +70,10 @@ class ShopifyProductImportService
                 $summary['errors'][] = ($node['title'] ?? 'Product') . ': ' . $e->getMessage();
             }
         }
-        $integration->update(['last_synced_at' => now(), 'last_error' => null]);
+        $integration->update([
+            'last_synced_at' => now(),
+            'last_error' => !empty($summary['errors']) ? $summary['errors'][0] : null,
+        ]);
 
         return $summary;
     }
@@ -78,11 +82,11 @@ class ShopifyProductImportService
     {
         $title = trim((string) ($node['title'] ?? ''));
         $shopifyProductId = ShopifyGid::extractId($node['id'] ?? null);
-        if ($title === '' || !$shopifyProductId) {
+        if ($title === '' || !$shopifyProductId || (isset($node['status']) && strtoupper((string) $node['status']) === 'ARCHIVED')) {
             return 'skipped';
         }
 
-        $variants = collect($node['variants']['edges'] ?? [])->pluck('node')->filter()->values()->all();
+        $variants = $this->collectAllVariants($integration, $node);
         if (empty($variants)) {
             return 'skipped';
         }
@@ -96,6 +100,23 @@ class ShopifyProductImportService
         return $isVariable
             ? $this->upsertVariableProduct($user, $integration, $shopifyProductId, $title, $categoryId, $imageUrl, $variants, $importStock, $locationMap)
             : $this->upsertSimpleProduct($user, $integration, $shopifyProductId, $title, $categoryId, $imageUrl, $variants[0], $importStock, $locationMap);
+    }
+
+    private function collectAllVariants(ShopifyIntegration $integration, array $node): array
+    {
+        $variants = collect($node['variants']['edges'] ?? [])->pluck('node')->filter()->values()->all();
+        $pageInfo = $node['variants']['pageInfo'] ?? [];
+        $hasMore = (bool) ($pageInfo['hasNextPage'] ?? false);
+        $cursor = $pageInfo['endCursor'] ?? null;
+
+        while ($hasMore && $cursor && !empty($node['id'])) {
+            $next = $this->graphqlClient->getProductVariantsPage($integration, (string) $node['id'], $cursor);
+            $variants = array_merge($variants, $next['variants']);
+            $hasMore = $next['has_next_page'];
+            $cursor = $next['end_cursor'];
+        }
+
+        return $variants;
     }
 
     private function isMultiVariantProduct(array $node, array $variants): bool
@@ -132,10 +153,15 @@ class ShopifyProductImportService
         $prices = $this->resolveVariantPrices($var);
         $sku = !empty($var['sku']) ? trim((string) $var['sku']) : null;
         $barcode = !empty($var['barcode']) ? trim((string) $var['barcode']) : $sku;
-        $ids = ['shopify_product_id' => $shopifyProductId, 'shopify_variant_id' => ShopifyGid::extractId($var['id'] ?? null), 'shopify_inventory_item_id' => ShopifyGid::extractId($var['inventoryItem']['id'] ?? null)];
+        $ids = [
+            'shopify_product_id' => $shopifyProductId,
+            'shopify_variant_id' => ShopifyGid::extractId($var['id'] ?? null),
+            'shopify_inventory_item_id' => ShopifyGid::extractId($var['inventoryItem']['id'] ?? null),
+            'shopify_tracked' => (bool) ($var['inventoryItem']['tracked'] ?? true),
+        ];
         $product = $this->findExistingProduct($user->getAccountId(), $shopifyProductId, [$var]);
         $action = $product ? 'updated' : 'created';
-        $img = $var['image']['url'] ?? $imageUrl;
+        $img = ShopifyGraphqlQueries::extractVariantMediaUrl($var) ?? $imageUrl;
 
         if ($product) {
             $product->update(array_filter(['name' => $title, ...$ids, 'regular_price' => $prices['regular_price'], 'sale_price' => $prices['sale_price'], 'category_id' => $categoryId, 'image_url' => $img, 'barcode' => empty($product->barcode) ? $barcode : null], fn ($v) => $v !== null));
@@ -154,9 +180,11 @@ class ShopifyProductImportService
         $action = $product ? 'updated' : 'created';
 
         if ($product) {
+            $this->assertSafeVariableUpgrade($product, $title);
             $product->update(array_filter([
                 'name' => $title, 'shopify_product_id' => $shopifyProductId, 'category_id' => $categoryId,
                 'image_url' => $imageUrl, 'regular_price' => $firstPrices['regular_price'], 'sale_price' => $firstPrices['sale_price'],
+                'type' => ProductType::VARIABLE->value, 'has_variants' => true,
             ], fn ($v) => $v !== null));
         } else {
             $product = $this->productService->createProduct($user, [
@@ -174,30 +202,48 @@ class ShopifyProductImportService
         return $action;
     }
 
+    private function assertSafeVariableUpgrade(Product $product, string $title): void
+    {
+        if ($product->isVariable()) {
+            return;
+        }
+        $hasOrphanedStock = BranchStock::withoutGlobalScopes()
+            ->where('product_id', $product->id)
+            ->whereNull('product_variant_id')
+            ->where('quantity', '>', 0)
+            ->exists();
+
+        if ($hasOrphanedStock) {
+            throw new ShopifyConnectionException("تعذر تحويل الصنف البسيط '{$title}' إلى متعدد المتغيرات تلقائياً لوجود رصيد حالي غير موزّع على متغيرات.");
+        }
+    }
+
     private function syncSingleVariation(User $user, ShopifyIntegration $integration, Product $product, array $var, ?string $parentImage, bool $importStock, array $locationMap): void
     {
         $varId = ShopifyGid::extractId($var['id'] ?? null);
         $invItemId = ShopifyGid::extractId($var['inventoryItem']['id'] ?? null);
+        $tracked = (bool) ($var['inventoryItem']['tracked'] ?? true);
         $sku = !empty($var['sku']) ? trim((string) $var['sku']) : null;
         $barcode = !empty($var['barcode']) ? trim((string) $var['barcode']) : $sku;
         $prices = $this->resolveVariantPrices($var);
         $opts = $this->extractVariantOptions($var);
+        $img = ShopifyGraphqlQueries::extractVariantMediaUrl($var) ?? $parentImage;
         $variant = $this->findExistingVariant($product, $varId, $sku, $barcode);
 
         if ($variant) {
             $variant->update(array_filter([
-                'shopify_variant_id' => $varId, 'shopify_inventory_item_id' => $invItemId,
+                'shopify_variant_id' => $varId, 'shopify_inventory_item_id' => $invItemId, 'shopify_tracked' => $tracked,
                 'name' => $opts['name'] ?: $variant->name, 'size' => $opts['size'] ?: $variant->size,
                 'color' => $opts['color'] ?: $variant->color, 'regular_price' => $prices['regular_price'],
                 'sale_price' => $prices['sale_price'], 'barcode' => empty($variant->barcode) ? $barcode : null,
-                'image_url' => $var['image']['url'] ?? $parentImage,
+                'image_url' => $img,
             ], fn ($v) => $v !== null));
         } else {
             $variant = $product->variants()->create([
-                'user_id' => $user->getAccountId(), 'shopify_variant_id' => $varId, 'shopify_inventory_item_id' => $invItemId,
+                'user_id' => $user->getAccountId(), 'shopify_variant_id' => $varId, 'shopify_inventory_item_id' => $invItemId, 'shopify_tracked' => $tracked,
                 'name' => $opts['name'] ?: "متغير #{$varId}", 'size' => $opts['size'], 'color' => $opts['color'],
                 'barcode' => $barcode, 'code' => $sku, 'purchase_price' => 0, 'quantity' => 0, 'min_quantity' => 2,
-                'regular_price' => $prices['regular_price'], 'sale_price' => $prices['sale_price'], 'image_url' => $var['image']['url'] ?? $parentImage,
+                'regular_price' => $prices['regular_price'], 'sale_price' => $prices['sale_price'], 'image_url' => $img,
             ]);
         }
         $this->applyLocationInitialStock($user, $integration, $product, $variant, $var, $importStock, $locationMap);
@@ -264,8 +310,8 @@ class ShopifyProductImportService
         }
         foreach ($var['inventoryItem']['inventoryLevels']['nodes'] ?? [] as $level) {
             $locId = ShopifyGid::extractId($level['location']['id'] ?? null);
-            $branchId = $locationMap[$locId] ?? $integration->default_branch_id;
-            $qty = Quantity::of($level['quantities'][0]['quantity'] ?? 0);
+            $branchId = array_key_exists($locId, $locationMap) ? $locationMap[$locId] : $integration->default_branch_id;
+            $qty = $this->extractAvailableLevelQuantity($level);
             if (!$branchId || !$qty->isPositive()) {
                 continue;
             }
@@ -277,6 +323,17 @@ class ShopifyProductImportService
                 $this->stockService->recordMovement($user, $product, StockMovementType::IN->value, StockMovementSource::INITIAL->value, $product->id, $qty->toFloat(), $cost, 'رصيد أول المدة مستورد من Shopify', variant: $variant, branchId: $branchId);
             }
         }
+    }
+
+    private function extractAvailableLevelQuantity(array $level): Quantity
+    {
+        foreach ($level['quantities'] ?? [] as $q) {
+            if (($q['name'] ?? 'available') === 'available') {
+                return Quantity::of($q['quantity'] ?? 0);
+            }
+        }
+
+        return Quantity::of($level['quantities'][0]['quantity'] ?? 0);
     }
 
     /**

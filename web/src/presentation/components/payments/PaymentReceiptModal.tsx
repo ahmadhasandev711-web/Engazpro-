@@ -1,9 +1,8 @@
 import React, { useRef } from 'react';
 import { Printer, X, Share2, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
-import { formatCurrency } from '@pos-mandob/shared';
+import { formatCurrency, getPaymentMethodLabel } from '@pos-mandob/shared';
 import { useAuthStore } from '../../../data/store/useAuthStore';
 import { webShareService } from '../../../infrastructure/pwa/webShareService';
-import { getPaymentMethodLabel } from '../../utils/paymentMethodLabels';
 import { Button } from '../ui';
 
 export interface PaymentReceiptData {

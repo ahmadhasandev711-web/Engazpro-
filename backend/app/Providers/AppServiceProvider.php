@@ -19,8 +19,7 @@ use App\Models\Product;
 use App\Models\StockTransfer;
 use App\Models\Treasury;
 use App\Models\User;
-use App\Observers\BranchStockShopifyObserver;
-use App\Observers\BranchStockWooCommerceObserver;
+use App\Observers\BranchStockEcommerceSyncObserver;
 use App\Observers\OnlineOrderStockSyncObserver;
 use App\Observers\PartyWooCommerceObserver;
 use App\Policies\BranchPolicy;
@@ -122,8 +121,7 @@ class AppServiceProvider extends ServiceProvider
 
     private function registerObservers(): void
     {
-        BranchStock::observe(BranchStockWooCommerceObserver::class);
-        BranchStock::observe(BranchStockShopifyObserver::class);
+        BranchStock::observe(BranchStockEcommerceSyncObserver::class);
         Party::observe(PartyWooCommerceObserver::class);
         OnlineOrder::observe(OnlineOrderStockSyncObserver::class);
     }

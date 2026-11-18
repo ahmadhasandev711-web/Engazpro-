@@ -5,7 +5,7 @@ import { FilterChipOption } from '../presentation/components/mobile/MobileFilter
 import { useDebouncedValue } from './useDebouncedValue';
 import { usePermissions } from './usePermissions';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Product, ProductSchema, ProductInput } from '@pos-mandob/shared';
+import { EcommercePlatform, Product, ProductSchema, ProductInput } from '@pos-mandob/shared';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, Layers, Calendar, Clock } from 'lucide-react';
 import { useState, useEffect, useMemo, useRef } from 'react';
@@ -25,6 +25,7 @@ export const useProductsPage = () => {
     canDeleteProduct,
     canImportProducts,
     canViewPurchasePrice,
+    activeEcommercePlatform,
   } = usePermissions();
 
   const [search, setSearch] = useState('');
@@ -86,12 +87,15 @@ export const useProductsPage = () => {
 
   const handlePushStock = async (product: Product) => {
     setSyncingProductId(product.id);
+    const isShopify = activeEcommercePlatform === EcommercePlatform.SHOPIFY || (activeEcommercePlatform !== EcommercePlatform.WOOCOMMERCE && Boolean((product as any).shopify_product_id));
+    const endpoint = isShopify ? `/shopify/products/${product.id}/push-stock` : `/woocommerce/products/${product.id}/push-stock`;
+    const label = isShopify ? 'Shopify' : 'ووكومرس';
     try {
-      const res = await apiClient.post(`/woocommerce/products/${product.id}/push-stock`);
-      setSuccessMessage(res.data?.message || 'تم تحديث رصيد الصنف في ووكومرس فورياً 🟢');
+      const res = await apiClient.post(endpoint);
+      setSuccessMessage(res.data?.message || `تم تحديث رصيد الصنف في ${label} فورياً 🟢`);
       setTimeout(() => setSuccessMessage(null), 4000);
     } catch (err: any) {
-      setErrorMessage(err.response?.data?.message || 'فشلت مزامنة الرصيد مع ووكومرس');
+      setErrorMessage(err.response?.data?.message || `فشلت مزامنة الرصيد مع ${label}`);
       setTimeout(() => setErrorMessage(null), 6000);
     } finally {
       setSyncingProductId(null);

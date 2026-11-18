@@ -2,7 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Enums\InvoiceType;
+use App\Enums\PaymentMethod;
+use App\Enums\ProductType;
+use App\Enums\TreasuryType;
 use App\Enums\UserRole;
+use App\Models\Branch;
+use App\Models\BranchStock;
+use App\Models\Invoice;
 use App\Models\Product;
 use App\Models\ProductBatch;
 use App\Models\ProductVariant;
@@ -368,5 +375,76 @@ class ProductVariantAndBatchTest extends TestCase
         $cashierRes->assertStatus(200)
             ->assertJsonPath('data.purchase_price', null)
             ->assertJsonPath('data.variants.0.purchase_price', null);
+    }
+
+    public function test_variable_product_invoice_exposure_returns_purchases_and_branch_reversal(): void
+    {
+        $branch = Branch::create(['user_id' => $this->owner->id, 'name' => 'فرع الملابس', 'code' => 'BR-CLO', 'is_main' => true, 'is_active' => true]);
+        $createRes = $this->withHeader('Authorization', "Bearer {$this->ownerToken}")->postJson('/api/products', [
+            'name' => 'تيشيرت كاجوال قطن', 'type' => ProductType::VARIABLE->value,
+            'purchase_price' => 100, 'sale_price' => 220, 'branch_id' => $branch->id,
+            'variants' => [
+                ['name' => 'أبيض / L', 'color' => 'أبيض', 'size' => 'L', 'quantity' => 5, 'purchase_price' => 100, 'sale_price' => 220],
+                ['name' => 'أسود / M', 'color' => 'أسود', 'size' => 'M', 'quantity' => 8, 'purchase_price' => 100, 'sale_price' => 220],
+            ],
+        ]);
+        $createRes->assertStatus(201);
+        $product = Product::findOrFail($createRes->json('data.id'));
+        $varL = $product->variants()->where('name', 'أبيض / L')->firstOrFail();
+        $varM = $product->variants()->where('name', 'أسود / M')->firstOrFail();
+
+        BranchStock::updateOrCreate(['branch_id' => $branch->id, 'product_id' => $product->id, 'product_variant_id' => $varL->id], ['quantity' => 5]);
+        BranchStock::updateOrCreate(['branch_id' => $branch->id, 'product_id' => $product->id, 'product_variant_id' => $varM->id], ['quantity' => 8]);
+
+        // 1. Sell both variants on a single cash invoice
+        $saleRes = $this->withHeader('Authorization', "Bearer {$this->ownerToken}")->postJson('/api/invoices', [
+            'type' => InvoiceType::SALE->value, 'branch_id' => $branch->id,
+            'date' => now()->toDateString(), 'payment_method' => PaymentMethod::CASH->value, 'paid_amount' => 660,
+            'items' => [
+                ['product_id' => $product->id, 'product_variant_id' => $varL->id, 'variant_name' => $varL->name, 'quantity' => 2, 'unit_price' => 220],
+                ['product_id' => $product->id, 'product_variant_id' => $varM->id, 'variant_name' => $varM->name, 'quantity' => 1, 'unit_price' => 220],
+            ],
+        ]);
+        $saleRes->assertStatus(201);
+        $invId = $saleRes->json('data.id');
+        $invNumber = $saleRes->json('data.invoice_number');
+
+        // Resource & by-number lookup expose product_variant_id and variant_name
+        $this->withHeader('Authorization', "Bearer {$this->ownerToken}")->getJson("/api/invoices/by-number/{$invNumber}")
+            ->assertStatus(200)
+            ->assertJsonPath('data.items.0.product_variant_id', $varL->id)
+            ->assertJsonPath('data.items.0.variant_name', 'أبيض / L')
+            ->assertJsonPath('data.items.1.product_variant_id', $varM->id)
+            ->assertJsonPath('data.items.1.variant_name', 'أسود / M');
+
+        $this->assertEquals(3, (float) $varL->fresh()->quantity);
+        $this->assertEquals(7, (float) $varM->fresh()->quantity);
+
+        // 2. Sale return on specific variant restores that variant + branch stock cleanly
+        $this->withHeader('Authorization', "Bearer {$this->ownerToken}")->postJson('/api/invoices', [
+            'type' => InvoiceType::SALE_RETURN->value, 'branch_id' => $branch->id, 'parent_invoice_id' => $invId,
+            'date' => now()->toDateString(), 'payment_method' => PaymentMethod::CASH->value, 'paid_amount' => 220,
+            'items' => [['product_id' => $product->id, 'product_variant_id' => $varL->id, 'variant_name' => $varL->name, 'quantity' => 1, 'unit_price' => 220]],
+        ])->assertStatus(201);
+        $this->assertEquals(4, (float) $varL->fresh()->quantity);
+        $this->assertEquals(4, (float) BranchStock::where('branch_id', $branch->id)->where('product_variant_id', $varL->id)->value('quantity'));
+
+        // 3. Purchase increments specific variant & branch stock
+        $this->withHeader('Authorization', "Bearer {$this->ownerToken}")->postJson('/api/invoices', [
+            'type' => InvoiceType::PURCHASE->value, 'branch_id' => $branch->id,
+            'date' => now()->toDateString(), 'payment_method' => PaymentMethod::CASH->value, 'paid_amount' => 440,
+            'items' => [['product_id' => $product->id, 'product_variant_id' => $varM->id, 'variant_name' => $varM->name, 'quantity' => 4, 'unit_price' => 110]],
+        ])->assertStatus(201);
+        $this->assertEquals(11, (float) $varM->fresh()->quantity);
+        $this->assertEquals(11, (float) BranchStock::where('branch_id', $branch->id)->where('product_variant_id', $varM->id)->value('quantity'));
+
+        // 4. Delete cash sale invoice reverses variant + branch stock + main treasury balance
+        $invTreasury = Treasury::findOrFail(Invoice::findOrFail($invId)->treasury_id);
+        $balanceBeforeDelete = (float) $invTreasury->balance;
+        $this->withHeader('Authorization', "Bearer {$this->ownerToken}")->deleteJson("/api/invoices/{$invId}")->assertStatus(200);
+        $this->assertEquals(6, (float) $varL->fresh()->quantity);
+        $this->assertEquals(12, (float) $varM->fresh()->quantity);
+        $this->assertEquals(6, (float) BranchStock::where('branch_id', $branch->id)->where('product_variant_id', $varL->id)->value('quantity'));
+        $this->assertEquals($balanceBeforeDelete - 660, (float) $invTreasury->fresh()->balance);
     }
 }

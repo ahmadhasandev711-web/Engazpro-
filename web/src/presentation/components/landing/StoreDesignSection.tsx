@@ -1,226 +1,96 @@
 import React from 'react';
 import {
+  ArrowLeft,
   CheckCircle2,
-  CreditCard,
+  Globe,
   MessageCircle,
-  Printer,
-  Repeat,
-  ShieldCheck,
-  ShoppingBag,
-  Smartphone,
   Sparkles,
-  Store,
 } from 'lucide-react';
 import { Badge, Button, Card } from '../ui';
+import { STORE_ADVANTAGES } from './landingContent';
 
 interface StoreDesignSectionProps {
-  onOpenInquiryModal: () => void;
+  onOpenInquiry: () => void;
   onWhatsApp: (text: string) => void;
 }
 
-const STORE_ADVANTAGES = [
-  {
-    title: 'تصميم بهوية براندك وتجربة شراء بلمسة',
-    desc: 'واجهة متجر عصرية متجاوبة تماماً مع شاشات الموبايل؛ مصممة لرفع معدل التحويل وإتمام الطلبات بدون خطوات معقدة.',
-    icon: Smartphone,
-    toneClass: 'bg-brand-soft text-brand-ink border-brand/20',
-  },
-  {
-    title: 'مزامنة ثنائية 100% مع الكاشير والمخزن',
-    desc: 'الصنف المضاف في المحل يظهر فوراً في متجرك، وأي مبيعة أونلاين تخصم رصيدها من مخزن الفرع تلقائياً بدون إدخال مزدوج.',
-    icon: Repeat,
-    toneClass: 'bg-ok-soft text-ok-ink border-ok/20',
-  },
-  {
-    title: 'بوابات دفع إلكتروني وشركات شحن',
-    desc: 'دعم فيزا وماستركارد، إنستاباي، والمحافظ الإلكترونية مع إصدار بوليصة الشحن وتجهيزها للمندوب مباشرة.',
-    icon: CreditCard,
-    toneClass: 'bg-info-soft text-info-ink border-info/20',
-  },
-  {
-    title: 'صفر عمولة على المبيعات والملكية لك',
-    desc: 'لا نقتطع أي نسبة من أرباحك اليومية؛ متجرك وقاعدة عملائك ونطاقك الخاص ملك لك بالكامل.',
-    icon: ShieldCheck,
-    toneClass: 'bg-warn-soft text-warn-ink border-warn/20',
-  },
-] as const;
-
 /**
- * Custom e-commerce storefront design service synchronized natively with EngazPRO POS & inventory.
+ * Custom WordPress (WooCommerce) & Shopify store design service banner connected to EBMS stock and orders.
  */
 export const StoreDesignSection: React.FC<StoreDesignSectionProps> = ({
-  onOpenInquiryModal,
+  onOpenInquiry,
   onWhatsApp,
 }) => {
   return (
-    <section
-      id="custom-store"
-      className="scroll-mt-24 relative z-10 py-16 sm:py-20 bg-panel/60 border-y border-line"
-    >
+    <section id="custom-store" className="scroll-mt-24 relative z-20 py-16 sm:py-20 bg-surface-2/60 border-b border-line">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 space-y-12">
-        {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto space-y-3">
-          <Badge tone="brand">خدمة اختيارية مستقلة لمتجرك الإلكتروني</Badge>
+          <Badge tone="brand">تصميم وتجهيز المتاجر الإلكترونية (WordPress & Shopify)</Badge>
           <h2 className="text-2xl sm:text-4xl font-black text-ink leading-tight">
-            تحتاج متجر إلكتروني خاصاً بك؟{' '}
-            <span className="text-brand">نصممه ونربطه مباشرة بالكاشير والمخزن</span>
+            نُصمم لك متجر Shopify أو WordPress احترافياً
+            <span className="text-brand"> ونربطه مباشرة بالكاشير والمخازن</span>
           </h2>
           <p className="text-sm sm:text-base text-muted leading-relaxed">
-            نصمم ونطور متجرك الإلكتروني بهوية براندك الخاصة ونربطه لحظياً بمنظومة إنجاز برو: عميلك يطلب أونلاين، والطلب ينزل تلقائياً على شاشة الكاشير مع خصم المخزون وتجهيز الشحنة.
+            سواء كنت تبدأ بيعاً أونلاين من الصفر أو تطور متجرك الحالي: فريقنا ينفذ متجرك على <strong>WordPress / WooCommerce</strong> أو <strong>Shopify</strong> بتصميم حديث، ويفعّل عليه بوابات الدفع الإلكتروني وشركات الشحن، مع ربطه بمخزون إنجاز برو فوراً.
           </p>
         </div>
 
-        {/* Dual Device Showcase: Mobile Storefront <-> Cashier & Printer */}
-        <Card className="relative overflow-hidden">
+        <Card className="p-5 sm:p-8 shadow-xl bg-panel border-brand/25">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
-            {/* Customer Mobile Storefront Mockup */}
-            <div className="lg:col-span-5 flex flex-col items-center">
-              <div className="text-xs font-bold text-muted mb-3 flex items-center gap-1.5">
-                <Smartphone className="w-4 h-4 text-brand" />
-                <span>واجهة متجرك على موبايل العميل</span>
+            <div className="lg:col-span-6 space-y-3 text-right">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge tone="info">WordPress / WooCommerce</Badge>
+                <Badge tone="ok">Shopify</Badge>
               </div>
+              <h3 className="text-lg sm:text-2xl font-black text-ink">
+                كل طلب من متجرك ينزل في شاشة الكاشير جاهزاً للشحن
+              </h3>
+              <p className="text-xs sm:text-sm text-muted leading-relaxed">
+                بمجرد استلام طلب جديد على متجرك الإلكتروني (سواء الدفع أونلاين عبر الفيزا والمحافظ على المتجر أو الدفع عند الاستلام)، يتم حجز المقاس واللون تلقائياً من فرعك وإرسال الطلب لشاشة الكاشير والشحن.
+              </p>
 
-              <div className="w-full max-w-[320px] rounded-3xl border border-line bg-canvas p-4 space-y-3 shadow-sm text-right">
-                <div className="flex items-center justify-between border-b border-line pb-2.5">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-brand text-on-brand flex items-center justify-center font-black text-xs">
-                      E
-                    </div>
-                    <span className="font-black text-xs text-ink">براند ستور</span>
-                  </div>
-                  <Badge tone="brand">سلة (1)</Badge>
-                </div>
-
-                <div className="rounded-2xl bg-panel border border-line p-3 space-y-2.5">
-                  <div className="h-24 rounded-xl bg-brand-soft border border-brand/20 flex items-center justify-center relative">
-                    <ShoppingBag className="w-8 h-8 text-brand" />
-                    <span className="absolute top-2 right-2">
-                      <Badge tone="ok">خصم 20%</Badge>
-                    </span>
-                  </div>
-
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <div className="font-black text-xs text-ink">سنيكرز كاجوال مريح</div>
-                      <div className="text-[11px] text-muted">كود: SNK-809 | مقاس 42</div>
-                    </div>
-                    <div className="text-left shrink-0">
-                      <div className="text-xs font-black text-brand tabular-nums">680 ج.م</div>
-                      <div className="text-[11px] text-muted line-through tabular-nums">850 ج.م</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-2xl bg-surface-2 border border-line p-3 space-y-2">
-                  <div className="flex items-center justify-between text-[11px] font-bold text-ink">
-                    <span>الدفع السريع المتاح:</span>
-                    <span className="text-muted tabular-nums" dir="ltr">
-                      0109988****
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    <Badge tone="neutral">فيزا / ماستركارد</Badge>
-                    <Badge tone="brand">إنستاباي</Badge>
-                    <Badge tone="ok">فودافون كاش</Badge>
-                  </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="w-full"
-                    leftIcon={<ShoppingBag className="w-3.5 h-3.5 shrink-0" />}
-                    onClick={onOpenInquiryModal}
-                  >
-                    تأكيد الطلب الآن
-                  </Button>
-                </div>
-
-                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-ok-soft border border-ok/20 text-[11px] font-bold text-ok-ink">
-                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                  <span>تم تأكيد الطلب رقم 8942 وتحويله للكاشير</span>
-                </div>
-              </div>
+              <ul className="space-y-2 pt-1 text-xs sm:text-sm font-semibold text-ink">
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-ok shrink-0" />
+                  <span>تهيئة بوابات الدفع الإلكتروني على متجرك (Paymob، Fawry، البطاقات)</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-ok shrink-0" />
+                  <span>مزامنة الأسعار والمقاسات والألوان بين المحل والأونلاين أوتوماتيك</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-ok shrink-0" />
+                  <span>سرعة تصفح ممتازة على الموبايل وتهيئة كاملة للظهور في جوجل (SEO)</span>
+                </li>
+              </ul>
             </div>
 
-            {/* Center Sync Conduit */}
-            <div className="lg:col-span-2 flex flex-col items-center justify-center gap-2.5 text-center py-2">
-              <div className="w-12 h-12 rounded-2xl bg-brand-soft border border-brand/25 text-brand flex items-center justify-center">
-                <Repeat className="w-6 h-6" />
-              </div>
-              <div className="space-y-1">
-                <span className="text-xs font-black text-ink block">مزامنة فورية 100%</span>
-                <span className="text-[11px] text-muted leading-relaxed block">
-                  الطلب يظهر على شاشة الكاشير ويُخصم من المخزون لحظياً
-                </span>
-              </div>
-              <Badge tone="info">Webhook API</Badge>
-            </div>
-
-            {/* Branch POS Terminal Mockup */}
-            <div className="lg:col-span-5 flex flex-col items-center">
-              <div className="text-xs font-bold text-muted mb-3 flex items-center gap-1.5">
-                <Store className="w-4 h-4 text-info" />
-                <span>شاشة كاشير ومخازن إنجاز برو في الفرع</span>
-              </div>
-
-              <div className="w-full max-w-[350px] rounded-3xl border border-line bg-canvas p-4 space-y-3 shadow-sm text-right">
-                <div className="flex items-center justify-between border-b border-line pb-2.5">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-ok" />
-                    <span className="text-xs font-black text-ink">نقطة بيع الفرع الرئيسي</span>
-                  </div>
-                  <Badge tone="info">أوردر متجر وارد</Badge>
+            <div className="lg:col-span-6">
+              <div className="rounded-2xl overflow-hidden border border-line bg-canvas shadow-md">
+                <div className="bg-surface-2 border-b border-line px-3.5 py-2 flex items-center justify-between text-xs">
+                  <span className="font-bold text-ink flex items-center gap-1.5">
+                    <Globe className="w-3.5 h-3.5 text-brand" />
+                    شاشة طلبات المتجر داخل EBMS
+                  </span>
+                  <Badge tone="ok">مزامنة حية</Badge>
                 </div>
-
-                <div className="rounded-2xl bg-panel border border-line p-3 space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-black text-ink">أوردر أونلاين #OR-8942</span>
-                    <Badge tone="ok">مدفوع</Badge>
-                  </div>
-                  <div className="text-[11px] text-muted">
-                    العميل: كريم السعيد — المعادي
-                  </div>
-                  <div className="p-2 rounded-xl bg-surface-2 border border-line flex items-center justify-between text-[11px]">
-                    <span className="font-bold text-ink">سنيكرز كاجوال (42)</span>
-                    <span className="font-bold text-ok tabular-nums">المخزون: 19 (-1)</span>
-                  </div>
-                </div>
-
-                <div className="rounded-2xl bg-warn-soft border border-dashed border-warn/40 p-3 space-y-1.5 text-[11px]">
-                  <div className="flex items-center justify-between font-bold text-warn-ink">
-                    <span className="flex items-center gap-1">
-                      <Printer className="w-3.5 h-3.5" />
-                      <span>إيصال التجهيز والشحن الحراري</span>
-                    </span>
-                    <span>80mm</span>
-                  </div>
-                  <div className="border-t border-warn/25 pt-1 text-ink space-y-0.5 leading-relaxed">
-                    <div>بوليصة الشحن: SHP-2026-8942</div>
-                    <div>الإجمالي المسدد: 680 ج.م</div>
-                  </div>
-                </div>
-
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  className="w-full"
-                  leftIcon={<CheckCircle2 className="w-3.5 h-3.5 text-ok shrink-0" />}
-                  onClick={onOpenInquiryModal}
-                >
-                  جاهز للتسليم لمندوب الشحن
-                </Button>
+                <img
+                  src="/screenshots/store-orders.webp"
+                  alt="لقطة حقيقية لشاشة استلام وإدارة طلبات متاجر WordPress و Shopify داخل إنجاز برو"
+                  loading="lazy"
+                  className="w-full h-auto block"
+                />
               </div>
             </div>
           </div>
         </Card>
 
-        {/* 4 Key Advantages */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 text-right">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {STORE_ADVANTAGES.map((adv) => {
             const Icon = adv.icon;
             return (
-              <Card key={adv.title} className="space-y-3">
-                <div className={`w-11 h-11 rounded-xl border flex items-center justify-center ${adv.toneClass}`}>
+              <Card key={adv.title} className="space-y-2.5 bg-panel">
+                <div className="w-10 h-10 rounded-xl bg-brand-soft text-brand flex items-center justify-center">
                   <Icon className="w-5 h-5" />
                 </div>
                 <h3 className="text-sm font-black text-ink">{adv.title}</h3>
@@ -230,58 +100,53 @@ export const StoreDesignSection: React.FC<StoreDesignSectionProps> = ({
           })}
         </div>
 
-        {/* Service CTA Strip */}
-        <Card className="bg-surface-2 border-brand/25">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6 text-right">
-            <div className="space-y-1.5">
-              <h3 className="text-lg sm:text-2xl font-black text-ink">
-                جاهز لإطلاق متجرك الإلكتروني المربوط بالكاشير والمخزن؟
-              </h3>
-              <p className="text-xs sm:text-sm text-muted">
-                احصل على استشارة مجانية لدراسة نشاطك، مع عرض نماذج المتاجر وخطة الربط الكاملة.
-              </p>
+        <Card className="p-6 sm:p-8 bg-panel border-brand/30 flex flex-col lg:flex-row items-center justify-between gap-6 shadow-md">
+          <div className="text-right space-y-2 max-w-2xl">
+            <div className="inline-flex items-center gap-2 text-brand font-bold text-xs">
+              <Sparkles className="w-4 h-4" />
+              <span>التكلفة تُحدد حسب تفاصيل المتجر ونوع المنصة (Shopify أو WordPress)</span>
             </div>
-
-            <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto shrink-0">
-              <Button
-                type="button"
-                size="lg"
-                className="w-full sm:w-auto font-black"
-                leftIcon={<Sparkles className="w-4 h-4 shrink-0" />}
-                onClick={onOpenInquiryModal}
-              >
-                اطلب تصميم متجرك الآن
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                size="lg"
-                className="w-full sm:w-auto font-bold"
-                leftIcon={<MessageCircle className="w-4 h-4 text-ok shrink-0" />}
-                onClick={() =>
-                  onWhatsApp(
-                    'مرحباً، أود الاستفسار عن خدمة تصميم وتطوير متجر إلكتروني متكامل وربطه مع كاشير ومخازن إنجاز برو.'
-                  )
-                }
-              >
-                تواصل واتساب
-              </Button>
+            <h3 className="text-lg sm:text-xl font-black text-ink">
+              هل تريد تصميم متجر إلكتروني خاص بك مربوط بمخازنك؟
+            </h3>
+            <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-muted">
+              <span className="inline-flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-ok shrink-0" />
+                معاينة نماذج متاجر فعلية قبل البدء
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-ok shrink-0" />
+                عرض سعر واضح ومفصل حسب احتياجات نشاطك
+              </span>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 sm:gap-6 text-xs font-semibold text-muted mt-6 pt-5 border-t border-line">
-            <span className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4 text-ok" />
-              استشارة مجانية لدراسة نشاطك التجاري
-            </span>
-            <span className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4 text-ok" />
-              تسليم وتدريب متكامل للفريق
-            </span>
-            <span className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4 text-ok" />
-              دعم فني ومزامنة مستمرة
-            </span>
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto shrink-0">
+            <Button
+              type="button"
+              variant="primary"
+              size="lg"
+              className="w-full sm:w-auto shadow-md"
+              onClick={onOpenInquiry}
+              rightIcon={<ArrowLeft className="w-4 h-4 shrink-0" />}
+            >
+              اطلب تصميم متجرك الآن
+            </Button>
+
+            <Button
+              type="button"
+              variant="secondary"
+              size="lg"
+              className="w-full sm:w-auto"
+              leftIcon={<MessageCircle className="w-4 h-4 text-ok shrink-0" />}
+              onClick={() =>
+                onWhatsApp(
+                  'مرحباً، أرغب في الحصول على عرض سعر لتصميم متجر إلكتروني (WordPress أو Shopify) مربوط بنظام إنجاز برو EBMS.'
+                )
+              }
+            >
+              اطلب عرض سعر واتساب
+            </Button>
           </div>
         </Card>
       </div>

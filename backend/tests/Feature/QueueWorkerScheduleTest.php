@@ -20,11 +20,11 @@ class QueueWorkerScheduleTest extends TestCase
 
         $this->assertCount(2, $events, 'يجب جدولة عاملين مستقلين لطابوري realtime و bulk');
 
-        $realtimeEvent = $events->first(fn ($e) => str_contains((string) $e->command, '--queue=woo-realtime,default'));
-        $bulkEvent = $events->first(fn ($e) => str_contains((string) $e->command, '--queue=woo-bulk'));
+        $realtimeEvent = $events->first(fn ($e) => str_contains((string) $e->command, '--queue=woo-realtime,shopify-realtime,default'));
+        $bulkEvent = $events->first(fn ($e) => str_contains((string) $e->command, '--queue=woo-bulk,shopify-bulk'));
 
-        $this->assertNotNull($realtimeEvent, 'عامل woo-realtime,default غير موجود في الجدولة');
-        $this->assertNotNull($bulkEvent, 'عامل woo-bulk غير موجود في الجدولة');
+        $this->assertNotNull($realtimeEvent, 'عامل woo-realtime,shopify-realtime,default غير موجود في الجدولة');
+        $this->assertNotNull($bulkEvent, 'عامل woo-bulk,shopify-bulk غير موجود في الجدولة');
 
         $this->assertTrue($realtimeEvent->withoutOverlapping);
         $this->assertSame(2, $realtimeEvent->expiresAt);

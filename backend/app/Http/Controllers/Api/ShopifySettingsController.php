@@ -131,6 +131,8 @@ class ShopifySettingsController extends Controller
             'is_active' => $integration->is_active,
             'webhook_url' => url("/api/webhooks/shopify/{$integration->user_id}"),
             'webhook_secret' => $integration->webhook_secret,
+            'webhook_registered_at' => $integration->webhook_registered_at?->toIso8601String(),
+            'webhook_topics' => $integration->webhook_topics ?? [],
             'last_synced_at' => $integration->last_synced_at?->toIso8601String(),
             'last_error' => $integration->last_error,
             'linked_products_count' => $this->settingsService->countLinkedProducts($integration->user_id),

@@ -1,5 +1,5 @@
 // Service Worker for Engaz Pro (إنجاز برو) PWA
-const CACHE_NAME = 'engaz-pro-pwa-v3';
+const CACHE_NAME = 'engaz-pro-pwa-v4';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

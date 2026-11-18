@@ -43,5 +43,6 @@ final readonly class ParsedOnlineOrder
         public array $rawLineItems,
         public array $platformMeta = [],
         public array $customerContext = [],
+        public ?Money $taxTotal = null,
     ) {}
 }

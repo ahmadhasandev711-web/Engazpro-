@@ -95,9 +95,7 @@ class ShopifyCustomerSyncService
             return $p;
         }
 
-        return (!empty($profile['name']) && $profile['name'] !== 'عميل شوبيفاي')
-            ? $base()->where('name', $profile['name'])->first()
-            : null;
+        return null;
     }
 
     private function enrichParty(Party $party, array $profile): Party

@@ -27,6 +27,9 @@ import {
   useToggleUserStatus,
   useToggleUserEcommerce,
   useResetUserPassword,
+  useAdminPricing,
+  useUpdateAdminPricing,
+  type UpdatePlatformPricingPayload,
 } from '../../hooks/useAdmin';
 import { AdminKPICards } from '../components/admin/AdminKPICards';
 import { LicenseGeneratorTab } from '../components/admin/LicenseGeneratorTab';
@@ -88,6 +91,18 @@ export const AdminDashboardPage: React.FC = () => {
   const revokeLicenseMutation = useRevokeLicense();
   const toggleStatusMutation = useToggleUserStatus();
   const toggleEcommerceMutation = useToggleUserEcommerce();
+  const { data: adminPricing, refetch: refetchPricing } = useAdminPricing();
+  const updatePricingMutation = useUpdateAdminPricing();
+
+  const handleSavePricing = async (payload: UpdatePlatformPricingPayload) => {
+    try {
+      const res = await updatePricingMutation.mutateAsync(payload);
+      toast.success(res.message || 'تم تحديث تسعير المنصة والموقع العام بنجاح.');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'تعذر حفظ أسعار المنصة');
+      throw err;
+    }
+  };
   const resetPasswordMutation = useResetUserPassword();
 
   const handleGenerate = (payload: {
@@ -211,6 +226,7 @@ export const AdminDashboardPage: React.FC = () => {
                 refetchLicenses();
                 refetchUsers();
                 refetchAudit();
+                refetchPricing();
               }}
               leftIcon={<RefreshCw className={isLoadingStats ? 'w-4 h-4 animate-spin' : 'w-4 h-4'} />}
             >
@@ -291,6 +307,9 @@ export const AdminDashboardPage: React.FC = () => {
             onGenerate={handleGenerate}
             onRevokeLicense={handleRevokeLicense}
             isGenerating={generateMutation.isPending}
+            pricing={adminPricing}
+            isSavingPricing={updatePricingMutation.isPending}
+            onSavePricing={handleSavePricing}
           />
         )}
 

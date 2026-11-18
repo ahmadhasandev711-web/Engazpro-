@@ -1,6 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../data/api/client';
 
+export interface TierPricingData {
+  annual_price: number;
+  monthly_price: number;
+  yearly_monthly_equivalent: number;
+  annual_savings: number;
+}
+
 export interface PublicPricingData {
   annual_price: number;
   monthly_price: number;
@@ -8,15 +15,29 @@ export interface PublicPricingData {
   annual_savings: number;
   trial_days: number;
   currency: string;
+  basic: TierPricingData;
+  pro: TierPricingData;
 }
 
-const DEFAULT_PUBLIC_PRICING: PublicPricingData = {
+export const DEFAULT_PUBLIC_PRICING: PublicPricingData = {
   annual_price: 3000,
-  monthly_price: 300,
+  monthly_price: 299,
   yearly_monthly_equivalent: 250,
-  annual_savings: 600,
+  annual_savings: 588,
   trial_days: 14,
   currency: 'EGP',
+  basic: {
+    annual_price: 3000,
+    monthly_price: 299,
+    yearly_monthly_equivalent: 250,
+    annual_savings: 588,
+  },
+  pro: {
+    annual_price: 5000,
+    monthly_price: 499,
+    yearly_monthly_equivalent: 416.67,
+    annual_savings: 988,
+  },
 };
 
 /**

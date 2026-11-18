@@ -37,6 +37,7 @@ class Product extends Model
         'shopify_product_id',
         'shopify_variant_id',
         'shopify_inventory_item_id',
+        'shopify_tracked',
         'image_url',
     ];
 
@@ -45,6 +46,7 @@ class Product extends Model
         'shopify_product_id' => 'integer',
         'shopify_variant_id' => 'integer',
         'shopify_inventory_item_id' => 'integer',
+        'shopify_tracked' => 'boolean',
         'has_expiry' => 'boolean',
         'has_variants' => 'boolean',
         'sub_unit_factor' => 'decimal:2',

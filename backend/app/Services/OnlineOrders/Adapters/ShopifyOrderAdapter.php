@@ -53,13 +53,15 @@ class ShopifyOrderAdapter implements StorePlatformOrderAdapterInterface
 
         $cursor = null;
         $collected = [];
+        $cap = max(1, min($limit, 250));
         do {
-            $page = $this->graphqlClient->getOrdersPage($integration, $cursor, $limit);
+            $batchSize = min(25, $cap - count($collected));
+            $page = $this->graphqlClient->getOrdersPage($integration, $cursor, $batchSize, 'status:open -fulfillment_status:fulfilled');
             $collected = array_merge($collected, $page['orders']);
             $cursor = $page['end_cursor'];
-        } while ($page['has_next_page'] && $cursor);
+        } while ($page['has_next_page'] && $cursor && count($collected) < $cap);
 
-        return $collected;
+        return array_slice($collected, 0, $cap);
     }
 
     public function parsePayload(array $rawPayload): ParsedOnlineOrder
@@ -90,7 +92,11 @@ class ShopifyOrderAdapter implements StorePlatformOrderAdapterInterface
             'platformMeta' => array_filter([
                 'shopify_location_id' => $parsed['shopify_location_id'],
                 'fulfillment_order_id' => $parsed['fulfillment_order_id'],
+                'split_fulfillment_locations' => !empty($parsed['split_fulfillment_locations']) ? $parsed['split_fulfillment_locations'] : null,
+                'shopify_currency' => $parsed['currency'],
             ], fn ($v) => $v !== null),
+            'customerContext' => [],
+            'taxTotal' => Money::of($parsed['tax_total'] ?? 0),
         ];
     }
 
@@ -179,6 +185,17 @@ class ShopifyOrderAdapter implements StorePlatformOrderAdapterInterface
 
     public function dispatchStockPush(int $accountId, int $productId, ?int $variantId, ?int $branchId): void
     {
+        if ($branchId !== null) {
+            $isMapped = ShopifyLocationMapping::withoutGlobalScopes()
+                ->where('user_id', $accountId)
+                ->where('branch_id', $branchId)
+                ->where('is_active', true)
+                ->where('auto_sync_stock', true)
+                ->exists();
+            if (!$isMapped) {
+                return;
+            }
+        }
         PushStockToShopifyJob::dispatch($accountId, $productId, $variantId, $branchId)->afterCommit();
     }
 }

@@ -54,6 +54,8 @@ export const ProductMobileCard: React.FC<ProductMobileCardProps> = ({
   const isOutOfStock = product.quantity <= 0;
   const isSyncing = syncingProductId === product.id;
   const isWcConnected = Boolean((product as any).wc_product_id);
+  const isShopifyConnected = Boolean((product as any).shopify_product_id);
+  const isStoreConnected = isWcConnected || isShopifyConnected;
 
   // Status color stripe
   let statusColor: 'rose' | 'amber' | 'emerald' = 'emerald';
@@ -98,10 +100,10 @@ export const ProductMobileCard: React.FC<ProductMobileCardProps> = ({
               </Badge>
             )}
 
-            {isWcConnected && (
+            {(isWcConnected || isShopifyConnected) && (
               <Badge tone="brand" className="text-2xs shrink-0 gap-0.5">
                 <Globe className="w-2.5 h-2.5" />
-                ووكومرس
+                {isShopifyConnected ? 'Shopify' : 'ووكومرس'}
               </Badge>
             )}
           </div>
@@ -258,8 +260,8 @@ export const ProductMobileCard: React.FC<ProductMobileCardProps> = ({
 
       {/* 6. Quick Action Buttons Row (Touch Targets >= 44px) */}
       <div className="flex items-center justify-end gap-1.5 pt-2 border-t border-line">
-        {/* WooCommerce Live Push */}
-        {isWcConnected && (
+        {/* E-Commerce Live Push */}
+        {isStoreConnected && (
           <Button
             type="button"
             variant="secondary"
@@ -271,9 +273,9 @@ export const ProductMobileCard: React.FC<ProductMobileCardProps> = ({
             disabled={isSyncing}
             leftIcon={<RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />}
             className="px-3 text-xs text-brand-ink bg-brand-soft hover:bg-brand-soft/80 border-brand/25"
-            title="مزامنة المخزون مع ووكومرس فورياً"
+            title={isShopifyConnected ? 'مزامنة المخزون مع Shopify فورياً' : 'مزامنة المخزون مع ووكومرس فورياً'}
           >
-            <span>ووكومرس</span>
+            <span>{isShopifyConnected ? 'Shopify' : 'ووكومرس'}</span>
           </Button>
         )}
 

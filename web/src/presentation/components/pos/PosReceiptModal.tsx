@@ -1,8 +1,9 @@
 import React, { useRef } from 'react';
 import { Printer, X, CheckCircle2, RotateCcw, Share2 } from 'lucide-react';
-import { formatCurrency } from '@pos-mandob/shared';
+import { formatCurrency, getPaymentMethodLabel } from '@pos-mandob/shared';
 import { useAuthStore } from '../../../data/store/useAuthStore';
 import { webShareService, formatInvoiceWhatsAppText } from '../../../infrastructure/pwa/webShareService';
+import { InvoiceItemMeta } from '../common/InvoiceItemMeta';
 import { Button } from '../ui/Button';
 
 interface PosReceiptModalProps {
@@ -155,6 +156,13 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
                     <tr key={idx} className="py-1">
                       <td className="py-1 font-bold">
                         <div className="line-clamp-1">{item.product_name}</div>
+                        <InvoiceItemMeta
+                          variantName={item.variant_name}
+                          batchNumber={item.batch_number}
+                          unitName={item.unit_name}
+                          mode="inline"
+                          className="text-paper-muted"
+                        />
                         <div className="text-2xs text-paper-muted font-normal">
                           <span className="font-mono">{formatCurrency(item.unit_price, currencySymbol)}</span> للقطعة
                         </div>
@@ -196,21 +204,7 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
               <div className="flex justify-between">
                 <span className="text-paper-muted">طريقة الدفع:</span>
                 <span className="font-bold">
-                  {invoice.payment_method === 'CASH'
-                    ? 'نقدي (كاش)'
-                    : invoice.payment_method === 'CARD'
-                      ? 'بطاقة بنكية / فيزا'
-                      : invoice.payment_method === 'INSTAPAY'
-                        ? 'إنستاباي (InstaPay)'
-                        : invoice.payment_method === 'VODAFONE_CASH'
-                          ? 'فودافون كاش ومحافظ'
-                          : invoice.payment_method === 'COURIER_COD'
-                            ? 'تحصيل شركة الشحن (COD)'
-                            : invoice.payment_method === 'SPLIT'
-                              ? 'دفع مجزأ'
-                              : invoice.payment_method === 'TRANSFER'
-                                ? 'تحويل بنكي'
-                                : 'آجل على الحساب'}
+                  {getPaymentMethodLabel(invoice.payment_method)}
                 </span>
               </div>
               <div className="flex justify-between">

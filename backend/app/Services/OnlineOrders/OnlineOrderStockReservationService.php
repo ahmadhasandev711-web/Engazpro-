@@ -3,11 +3,41 @@
 namespace App\Services\OnlineOrders;
 
 use App\Enums\WcOrderStatus;
+use App\Models\BranchStock;
 use App\Models\OnlineOrderItem;
 use App\Support\Quantity;
 
 class OnlineOrderStockReservationService
 {
+    /**
+     * Compute net sellable quantity across branches (physical minus active online reservations).
+     *
+     * @param  array<int>  $branchIds
+     */
+    public function netAvailableForBranches(
+        int $accountId,
+        int $productId,
+        ?int $variantId,
+        array $branchIds,
+        ?int $excludeOrderId = null
+    ): Quantity {
+        if (empty($branchIds)) {
+            return Quantity::zero();
+        }
+
+        $query = BranchStock::withoutGlobalScopes()
+            ->whereIn('branch_id', $branchIds)
+            ->where('product_id', $productId);
+
+        $variantId !== null
+            ? $query->where('product_variant_id', $variantId)
+            : $query->whereNull('product_variant_id');
+
+        $raw = $query->sum('quantity') ?? 0;
+        $reserved = $this->reservedQuantity($accountId, $productId, $variantId, $branchIds, $excludeOrderId);
+
+        return Quantity::of($raw)->subtract($reserved)->maxZero();
+    }
     /**
      * Compute total reserved stock across specified branches in one unified query.
      *
