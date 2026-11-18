@@ -321,4 +321,42 @@ class ReturnsPaymentsExpensesTest extends TestCase
 
         $this->assertSoftDeleted('expenses', ['id' => $expenseId]);
     }
+
+    /**
+     * السندات المستقلة فقط تظهر في قائمة السندات، ومدفوعات الفواتير محمية من الحذف المباشر
+     */
+    public function test_payment_vouchers_listing_excludes_invoice_payments_and_blocks_direct_deletion(): void
+    {
+        $invoiceRes = $this->actingAs($this->user)->postJson('/api/invoices', [
+            'type' => 'SALE',
+            'date' => now()->toDateString(),
+            'party_id' => $this->customer->id,
+            'payment_method' => 'COURIER_COD',
+            'paid_amount' => 190.00,
+            'items' => [['product_id' => $this->product->id, 'quantity' => 5, 'unit_price' => 38.00]],
+        ]);
+        $invoiceRes->assertStatus(201);
+        $invoicePayment = Payment::where('invoice_id', $invoiceRes->json('data.id'))->firstOrFail();
+
+        $voucher = Payment::create([
+            'user_id' => $this->user->id,
+            'party_id' => $this->customer->id,
+            'type' => 'RECEIPT',
+            'amount' => 100.00,
+            'method' => 'CASH',
+            'date' => now()->toDateString(),
+            'notes' => 'سند تحصيل مستقل',
+        ]);
+
+        $listRes = $this->actingAs($this->user)->getJson('/api/payments');
+        $listRes->assertStatus(200)
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $voucher->id)
+            ->assertJsonPath('summary.total_receipts', 100);
+
+        $deleteRes = $this->actingAs($this->user)->deleteJson("/api/payments/{$invoicePayment->id}");
+        $deleteRes->assertStatus(422)
+            ->assertJsonPath('error_code', 'INVOICE_PAYMENT_LOCKED');
+        $this->assertNotSoftDeleted('payments', ['id' => $invoicePayment->id]);
+    }
 }

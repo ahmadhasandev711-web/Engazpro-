@@ -13,6 +13,8 @@ use App\Models\Product;
 use App\Models\User;
 use App\Support\Money;
 use App\Support\Quantity;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class ReportService
@@ -96,8 +98,89 @@ class ReportService
             'total_purchase_returns' => Money::of($purchaseReturnRow?->total_amount ?? 0)->getAmount(),
             'sales_paid' => Money::of($saleRow?->paid_amount ?? 0)->getAmount(),
             'sales_remaining' => Money::of($saleRow?->remaining_amount ?? 0)->getAmount(),
-            'payment_methods' => (clone $query)->where('type', InvoiceType::SALE->value)->select('payment_method', DB::raw('COALESCE(SUM(total), 0) as total_amount'), DB::raw('COUNT(*) as count'))->groupBy('payment_method')->get(),
+            'payment_methods' => $this->aggregateSalesByPaymentMethod($query),
         ];
+    }
+
+    private function aggregateSalesByPaymentMethod(Builder $baseQuery): Collection
+    {
+        $saleQuery = (clone $baseQuery)->where('type', InvoiceType::SALE->value);
+        $directRows = (clone $saleQuery)
+            ->where(fn ($q) => $q->where('payment_method', '!=', PaymentMethod::SPLIT->value)->orWhereNull('payment_method'))
+            ->select('payment_method', DB::raw('COALESCE(SUM(total), 0) as total_amount'), DB::raw('COUNT(*) as count'))
+            ->groupBy('payment_method')
+            ->get();
+
+        $buckets = [];
+        foreach ($directRows as $row) {
+            $key = $row->payment_method instanceof PaymentMethod ? $row->payment_method->value : ($row->payment_method ?: PaymentMethod::CASH->value);
+            $buckets = $this->addPaymentMethodBucket($buckets, $key, Money::of($row->total_amount ?? 0), (int) $row->count);
+        }
+
+        $splitQuery = (clone $saleQuery)->where('payment_method', PaymentMethod::SPLIT->value);
+        $buckets = $this->mergeSplitSalesIntoBuckets($buckets, $splitQuery);
+
+        return collect($buckets)->map(fn ($b) => [
+            'payment_method' => $b['payment_method'],
+            'total_amount' => $b['amount']->getAmount(),
+            'count' => $b['count'],
+        ])->values();
+    }
+
+    private function mergeSplitSalesIntoBuckets(array $buckets, Builder $splitQuery): array
+    {
+        $splitInvoices = $splitQuery->get(['id', 'total', 'remaining_amount']);
+        if ($splitInvoices->isEmpty()) {
+            return $buckets;
+        }
+
+        $paidByInvoice = Payment::query()
+            ->where('type', PaymentType::RECEIPT->value)
+            ->whereIn('invoice_id', $splitInvoices->pluck('id')->all())
+            ->select('invoice_id', 'method', DB::raw('COALESCE(SUM(amount), 0) as total_amount'))
+            ->groupBy('invoice_id', 'method')
+            ->get();
+
+        $paidTotalPerInvoice = [];
+        $seenChannelPerInvoice = [];
+        foreach ($paidByInvoice as $row) {
+            $method = $row->method instanceof PaymentMethod ? $row->method->value : (string) $row->method;
+            $amt = Money::of($row->total_amount ?? 0);
+            $countInc = empty($seenChannelPerInvoice[$row->invoice_id][$method]) ? 1 : 0;
+            $seenChannelPerInvoice[$row->invoice_id][$method] = true;
+            $paidTotalPerInvoice[$row->invoice_id] = ($paidTotalPerInvoice[$row->invoice_id] ?? Money::zero())->add($amt);
+            $buckets = $this->addPaymentMethodBucket($buckets, $method, $amt, $countInc);
+        }
+
+        return $this->mergeSplitRemainders($buckets, $splitInvoices, $paidTotalPerInvoice);
+    }
+
+    private function mergeSplitRemainders(array $buckets, Collection $splitInvoices, array $paidTotalPerInvoice): array
+    {
+        foreach ($splitInvoices as $inv) {
+            $paid = $paidTotalPerInvoice[$inv->id] ?? Money::zero();
+            $rem = Money::of($inv->remaining_amount ?? 0);
+            if ($rem->isPositive()) {
+                $buckets = $this->addPaymentMethodBucket($buckets, PaymentMethod::CREDIT->value, $rem, 1);
+            }
+            $uncovered = Money::of($inv->total ?? 0)->subtract($paid)->subtract($rem);
+            if ($uncovered->isPositive()) {
+                $buckets = $this->addPaymentMethodBucket($buckets, PaymentMethod::SPLIT->value, $uncovered, 1);
+            }
+        }
+
+        return $buckets;
+    }
+
+    private function addPaymentMethodBucket(array $buckets, string $method, Money $amount, int $count): array
+    {
+        if (!isset($buckets[$method])) {
+            $buckets[$method] = ['payment_method' => $method, 'amount' => Money::zero(), 'count' => 0];
+        }
+        $buckets[$method]['amount'] = $buckets[$method]['amount']->add($amount);
+        $buckets[$method]['count'] += $count;
+
+        return $buckets;
     }
 
     /**

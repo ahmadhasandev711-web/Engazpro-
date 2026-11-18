@@ -3,6 +3,7 @@ import { Printer, X, Share2, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import { formatCurrency } from '@pos-mandob/shared';
 import { useAuthStore } from '../../../data/store/useAuthStore';
 import { webShareService } from '../../../infrastructure/pwa/webShareService';
+import { getPaymentMethodLabel } from '../../utils/paymentMethodLabels';
 import { Button } from '../ui';
 
 export interface PaymentReceiptData {
@@ -52,18 +53,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
     ? new Date(payment.created_at).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })
     : '';
 
-  const methodLabel =
-    payment.method === 'CASH'
-      ? 'نقدية (كاش)'
-      : payment.method === 'CARD'
-      ? 'بطاقة دفع / فيزا'
-      : payment.method === 'INSTAPAY'
-      ? 'إنستاباي (InstaPay)'
-      : payment.method === 'VODAFONE_CASH'
-      ? 'فودافون كاش (Vodafone Cash)'
-      : payment.method === 'TRANSFER'
-      ? 'تحويل بنكي'
-      : payment.method;
+  const methodLabel = getPaymentMethodLabel(payment.method);
 
   const roleLabel =
     payment.created_by_role === 'MANDOB'

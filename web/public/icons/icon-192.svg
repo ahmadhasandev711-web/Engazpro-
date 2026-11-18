@@ -1,78 +1,25 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
   <defs>
-    <linearGradient id="bgGrad192" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#1e293b" />
-      <stop offset="50%" stop-color="#0f172a" />
-      <stop offset="100%" stop-color="#020617" />
+    <linearGradient id="purpleBg192" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8B5CF6" />
+      <stop offset="50%" stop-color="#5B3CC4" />
+      <stop offset="100%" stop-color="#3B2196" />
     </linearGradient>
-
-    <linearGradient id="emeraldNeon192" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#34d399" />
-      <stop offset="50%" stop-color="#10b981" />
-      <stop offset="100%" stop-color="#059669" />
+    <linearGradient id="gloss192" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.28" />
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0" />
     </linearGradient>
-
-    <linearGradient id="boltGrad192" x1="0%" y1="100%" x2="0%" y2="0%">
-      <stop offset="0%" stop-color="#10b981" />
-      <stop offset="50%" stop-color="#34d399" />
-      <stop offset="100%" stop-color="#a7f3d0" />
-    </linearGradient>
-
-    <filter id="neonGlow192" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="5" result="blur" />
-      <feMerge>
-        <feMergeNode in="blur" />
-        <feMergeNode in="SourceGraphic" />
-      </feMerge>
-    </filter>
   </defs>
 
-  <!-- Base App Background with Rounded Corners -->
-  <rect width="192" height="192" rx="44" fill="url(#bgGrad192)" />
-  <rect x="3" y="3" width="186" height="186" rx="41" fill="none" stroke="rgba(255, 255, 255, 0.08)" stroke-width="1.5" />
-  <rect x="5" y="5" width="182" height="182" rx="39" fill="none" stroke="rgba(16, 185, 129, 0.2)" stroke-width="1" />
+  <rect width="192" height="192" rx="46" fill="url(#purpleBg192)" />
+  <path d="M 46 4 H 146 A 42 42 0 0 1 188 46 V 82 C 138 98, 54 98, 4 72 V 46 A 42 42 0 0 1 46 4 Z" fill="url(#gloss192)" />
+  <rect x="3" y="3" width="186" height="186" rx="43" fill="none" stroke="#FFFFFF" stroke-opacity="0.22" stroke-width="2" />
 
-  <!-- Central Monogram Symbol -->
-  <g transform="translate(96, 96)">
-    <!-- Ambient Green Backing Glow -->
-    <circle cx="0" cy="0" r="50" fill="#10b981" opacity="0.15" filter="blur(15px)" />
-
-    <!-- Letter 'E' Ribbon (Left Side) -->
-    <path d="M -7 -32 
-             C -36 -32, -50 -18, -50 0 
-             C -50 18, -36 32, -7 32 
-             M -7 0 L -45 0" 
-          fill="none" 
-          stroke="url(#emeraldNeon192)" 
-          stroke-width="10" 
-          stroke-linecap="round" 
-          stroke-linejoin="round" />
-
-    <!-- Letter 'P' Ribbon (Right Side) -->
-    <path d="M 7 -32 
-             C 36 -32, 50 -17, 50 0 
-             C 50 17, 36 32, 7 32 
-             L 7 44" 
-          fill="none" 
-          stroke="url(#emeraldNeon192)" 
-          stroke-width="10" 
-          stroke-linecap="round" 
-          stroke-linejoin="round" />
-
-    <!-- Center Upward Lightning Bolt Arrow -->
-    <g filter="url(#neonGlow192)">
-      <polygon points="
-        0,-52  
-        14,-25  
-        4,-25  
-        12,6   
-        -7,-11 
-        -1,-11  
-        -11,-38
-      " fill="url(#boltGrad192)" />
-      
-      <!-- Arrowhead Accent -->
-      <polygon points="0,-56 -16,-30 16,-30" fill="url(#boltGrad192)" />
-    </g>
+  <!-- Crisp Shopping Cart Silhouette -->
+  <g fill="none" stroke="#FFFFFF" stroke-width="11" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 40 54 H 60 L 76 118 H 136 L 152 68 H 66" fill="#FFFFFF" fill-opacity="0.16" />
+    <path d="M 40 54 H 60 L 76 118 H 136 L 152 68 H 66" />
   </g>
+  <circle cx="82" cy="142" r="10" fill="#FFFFFF" />
+  <circle cx="130" cy="142" r="10" fill="#FFFFFF" />
 </svg>

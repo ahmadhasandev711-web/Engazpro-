@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Menu, Moon, Sun, X, Zap } from 'lucide-react';
+import { ArrowLeft, Menu, Moon, Sun, X } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
-import { Badge, Button } from '../ui';
+import { BrandLogo } from '../common/BrandLogo';
+import { Button } from '../ui';
 
 interface LandingNavbarProps {
   isAuthenticated: boolean;
@@ -27,14 +28,8 @@ export const LandingNavbar: React.FC<LandingNavbarProps> = ({ isAuthenticated, t
     <div className="sticky top-3 z-40 max-w-6xl mx-auto px-4 sm:px-6 pt-3">
       <header className="rounded-full bg-panel/90 backdrop-blur-md border border-line px-4 sm:px-6 py-2.5 flex items-center justify-between gap-3 shadow-lg">
         {/* Brand Wordmark (LTR isolated so Engaz.PRO never reverses in RTL) */}
-        <Link to="/" className="flex items-center gap-2.5 shrink-0">
-          <div className="w-9 h-9 rounded-xl bg-brand text-on-brand flex items-center justify-center shadow-xs">
-            <Zap className="w-5 h-5" />
-          </div>
-          <div className="flex items-center gap-1.5 font-black text-lg sm:text-xl tracking-tight text-ink" dir="ltr">
-            <span>Engaz</span>
-            <Badge tone="brand">PRO</Badge>
-          </div>
+        <Link to="/" className="flex items-center shrink-0">
+          <BrandLogo size="md" showArabic={false} />
         </Link>
 
         {/* Desktop Nav Links */}

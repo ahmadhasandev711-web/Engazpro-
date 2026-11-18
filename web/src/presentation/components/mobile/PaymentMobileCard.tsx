@@ -2,6 +2,7 @@ import React from 'react';
 import { ArrowDownLeft, ArrowUpRight, Trash2, User, FileText, CreditCard, Printer } from 'lucide-react';
 import { formatCurrency } from '@pos-mandob/shared';
 import { Badge, Button, Card } from '../ui';
+import { getPaymentMethodLabel } from '../../utils/paymentMethodLabels';
 
 interface PaymentMobileCardProps {
   payment: any;
@@ -20,18 +21,7 @@ export const PaymentMobileCard: React.FC<PaymentMobileCardProps> = ({
 }) => {
   const isReceipt = payment.type === 'RECEIPT';
 
-  const methodLabel =
-    payment.method === 'CASH'
-      ? 'كاش (نقدية)'
-      : payment.method === 'CARD'
-      ? 'بطاقة / فيزا'
-      : payment.method === 'INSTAPAY'
-      ? 'إنستاباي'
-      : payment.method === 'VODAFONE_CASH'
-      ? 'فودافون كاش'
-      : payment.method === 'TRANSFER'
-      ? 'تحويل بنكي'
-      : payment.method;
+  const methodLabel = getPaymentMethodLabel(payment.method);
 
   const roleLabel =
     payment.created_by_role === 'MANDOB'

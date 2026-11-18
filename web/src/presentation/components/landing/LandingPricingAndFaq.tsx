@@ -5,9 +5,9 @@ import {
   CheckCircle2,
   ChevronDown,
   MessageCircle,
-  Zap,
 } from 'lucide-react';
 import type { PublicPricingData } from '../../../hooks/usePublicPricing';
+import { BrandLogo } from '../common/BrandLogo';
 import { Badge, Button, Card } from '../ui';
 
 interface LandingPricingAndFaqProps {
@@ -316,13 +316,7 @@ export const LandingPricingAndFaq: React.FC<LandingPricingAndFaqProps> = ({
       <footer className="relative z-10 border-t border-line bg-panel py-8">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-brand text-on-brand flex items-center justify-center">
-              <Zap className="w-4 h-4" />
-            </div>
-            <div className="flex items-center gap-1 font-black text-base text-ink" dir="ltr">
-              <span>Engaz</span>
-              <span className="text-brand">PRO</span>
-            </div>
+            <BrandLogo size="sm" showArabic={false} />
             <span>— منظومة نقاط البيع والمخازن والمناديب</span>
           </div>
 

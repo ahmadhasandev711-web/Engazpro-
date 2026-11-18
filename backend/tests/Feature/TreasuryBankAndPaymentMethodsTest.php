@@ -225,6 +225,34 @@ class TreasuryBankAndPaymentMethodsTest extends TestCase
         $drawer->refresh();
         $this->assertEquals(300, (float) $drawer->balance);
 
+        // Electronic split slices must be deposited into their real wallet/bank treasuries
+        $instaWallet = Treasury::withoutGlobalScopes()
+            ->where('user_id', $this->owner->id)
+            ->where('type', TreasuryType::WALLET)
+            ->where('name', 'حساب إنستاباي (InstaPay)')
+            ->first();
+        $vfWallet = Treasury::withoutGlobalScopes()
+            ->where('user_id', $this->owner->id)
+            ->where('type', TreasuryType::WALLET)
+            ->where('name', 'محفظة فودافون كاش')
+            ->first();
+        $this->assertNotNull($instaWallet);
+        $this->assertNotNull($vfWallet);
+        $this->assertEquals(200, (float) $instaWallet->balance);
+        $this->assertEquals(100, (float) $vfWallet->balance);
+        $this->assertEquals($drawer->id, $payments->firstWhere('method', PaymentMethod::CASH)->treasury_id);
+        $this->assertEquals($instaWallet->id, $payments->firstWhere('method', PaymentMethod::INSTAPAY)->treasury_id);
+        $this->assertEquals($vfWallet->id, $payments->firstWhere('method', PaymentMethod::VODAFONE_CASH)->treasury_id);
+
+        // Sales report must dissolve SPLIT into real channels without a standalone SPLIT bucket
+        $reportRes = $this->actingAs($this->owner)->getJson('/api/reports/sales');
+        $reportRes->assertStatus(200);
+        $pm = collect($reportRes->json('data.payment_methods'))->keyBy('payment_method');
+        $this->assertFalse($pm->has(PaymentMethod::SPLIT->value));
+        $this->assertEquals(200, $pm->get(PaymentMethod::CASH->value)['total_amount']);
+        $this->assertEquals(200, $pm->get(PaymentMethod::INSTAPAY->value)['total_amount']);
+        $this->assertEquals(100, $pm->get(PaymentMethod::VODAFONE_CASH->value)['total_amount']);
+
         // Active shift should reflect:
         // cash_sales = 200, electronic_sales = 300 (200 + 100), expected_cash = 300 (100 + 200)
         $activeShiftRes = $this->actingAs($this->cashier)->getJson('/api/shifts/active');
@@ -232,5 +260,56 @@ class TreasuryBankAndPaymentMethodsTest extends TestCase
         $this->assertEquals(200, $activeShiftRes->json('data.cash_sales'));
         $this->assertEquals(300, $activeShiftRes->json('data.electronic_sales'));
         $this->assertEquals(300, $activeShiftRes->json('data.expected_cash'));
+
+        // Deleting split invoice reverses ALL treasuries (Cash + InstaPay + Vodafone Cash)
+        $party = Party::create(['user_id' => $this->owner->id, 'type' => 'CUSTOMER', 'name' => 'عميل تجربة', 'balance' => 0]);
+        $splitForDeleteRes = $this->actingAs($this->cashier)->postJson('/api/invoices', [
+            'type' => 'SALE',
+            'date' => now()->toDateString(),
+            'party_id' => $party->id,
+            'payment_method' => PaymentMethod::SPLIT->value,
+            'items' => [['product_id' => $this->product->id, 'quantity' => 4, 'unit_price' => 50]],
+            'split_payments' => [
+                ['method' => PaymentMethod::CASH->value, 'amount' => 50],
+                ['method' => PaymentMethod::INSTAPAY->value, 'amount' => 150],
+            ],
+        ]);
+        $splitForDeleteRes->assertStatus(201);
+        $this->assertEquals(350, (float) $drawer->fresh()->balance);
+        $this->assertEquals(350, (float) $instaWallet->fresh()->balance);
+
+        $this->actingAs($this->owner)->deleteJson('/api/invoices/' . $splitForDeleteRes->json('data.id'))->assertStatus(200);
+        $this->assertEquals(300, (float) $drawer->fresh()->balance);
+        $this->assertEquals(200, (float) $instaWallet->fresh()->balance);
+    }
+
+    public function test_sales_report_conserves_partial_split_plus_credit_totals(): void
+    {
+        $party = Party::create(['user_id' => $this->owner->id, 'type' => 'CUSTOMER', 'name' => 'عميل آجل ومجزأ', 'balance' => 0]);
+
+        // Invoice total = 500 -> paid 150 CASH + 200 CARD, remaining 150 CREDIT
+        $res = $this->actingAs($this->owner)->postJson('/api/invoices', [
+            'type' => 'SALE',
+            'date' => now()->toDateString(),
+            'party_id' => $party->id,
+            'payment_method' => PaymentMethod::SPLIT->value,
+            'items' => [['product_id' => $this->product->id, 'quantity' => 10, 'unit_price' => 50]],
+            'split_payments' => [
+                ['method' => PaymentMethod::CASH->value, 'amount' => 150],
+                ['method' => PaymentMethod::CARD->value, 'amount' => 200],
+            ],
+        ]);
+        $res->assertStatus(201);
+        $this->assertEquals(150, $res->json('data.due_amount'));
+
+        $reportRes = $this->actingAs($this->owner)->getJson('/api/reports/sales');
+        $reportRes->assertStatus(200);
+        $pm = collect($reportRes->json('data.payment_methods'))->keyBy('payment_method');
+
+        $this->assertEquals(500, $reportRes->json('data.total_sales'));
+        $this->assertFalse($pm->has(PaymentMethod::SPLIT->value));
+        $this->assertEquals(150, $pm->get(PaymentMethod::CASH->value)['total_amount']);
+        $this->assertEquals(200, $pm->get(PaymentMethod::CARD->value)['total_amount']);
+        $this->assertEquals(150, $pm->get(PaymentMethod::CREDIT->value)['total_amount']);
     }
 }

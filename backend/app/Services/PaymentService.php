@@ -7,6 +7,7 @@ use App\Enums\LedgerSource;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentType;
 use App\Enums\TreasuryTransactionType;
+use App\Exceptions\PosDomainException;
 use App\Models\Party;
 use App\Models\Payment;
 use App\Models\TreasuryTransaction;
@@ -127,6 +128,13 @@ class PaymentService
     {
         DB::transaction(function () use ($user, $id) {
             $payment = Payment::where('user_id', $user->getAccountId())->findOrFail($id);
+            if ($payment->invoice_id !== null) {
+                throw new PosDomainException(
+                    'لا يمكن إلغاء سداد مرتبط بفاتورة من شاشة السندات؛ يرجى إلغاء الفاتورة نفسها للحفاظ على اتزان الحسابات.',
+                    'INVOICE_PAYMENT_LOCKED',
+                    422
+                );
+            }
             $party = Party::where('user_id', $user->getAccountId())->findOrFail($payment->party_id);
 
             $this->reversePaymentLedgerEntry($user, $party, $payment);
@@ -187,7 +195,9 @@ class PaymentService
     protected function buildFilteredPaymentsQuery(User $user, array $filters = []): \Illuminate\Database\Eloquent\Builder
     {
         $isEmployee = $user->isMandob() || $user->isCashier();
-        $query = Payment::query()->when($isEmployee, fn($q) => $q->where('created_by', $user->id));
+        $query = Payment::query()
+            ->whereNull('invoice_id')
+            ->when($isEmployee, fn($q) => $q->where('created_by', $user->id));
 
         if (!empty($filters['type'])) {
             $query->where('type', $filters['type']);

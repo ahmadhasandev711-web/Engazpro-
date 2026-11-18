@@ -15,6 +15,7 @@ import { PaymentMobileCard } from '../components/mobile/PaymentMobileCard';
 import { PaymentReceiptModal, PaymentReceiptData } from '../components/payments/PaymentReceiptModal';
 import { nativeBackButton } from '../../platform/nativeBackButton';
 import { useConfirm } from '../context/ConfirmContext';
+import { getPaymentMethodLabel } from '../utils/paymentMethodLabels';
 import { AsyncSearchSelect, Badge, Button, Card, DataTable, EmptyState, Input, PageHeader, Select, Tabs, Textarea, TabItem } from '../components/ui';
 
 export const PaymentsPage: React.FC = () => {
@@ -391,11 +392,7 @@ export const PaymentsPage: React.FC = () => {
                           {formatCurrency(p.amount)}
                         </td>
                         <td className="py-3.5 px-4 text-muted">
-                          {p.method === 'CASH' ? 'كاش' :
-                           p.method === 'CARD' ? 'بطاقة / فيزا' :
-                           p.method === 'INSTAPAY' ? 'إنستاباي' :
-                           p.method === 'VODAFONE_CASH' ? 'فودافون كاش' :
-                           p.method === 'TRANSFER' ? 'تحويل بنكي' : p.method}
+                          {getPaymentMethodLabel(p.method)}
                         </td>
                         <td className="py-3.5 px-4 text-muted max-w-xs truncate">{p.notes || '-'}</td>
                         <td className="py-3.5 px-4 text-center">

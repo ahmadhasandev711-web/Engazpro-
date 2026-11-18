@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { CheckCircle2, MessageCircle, Moon, Sparkles, Sun } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { cn } from '../../utils/cn';
+import { BrandLogo } from '../common/BrandLogo';
 
 export interface AuthShellProps {
   badgeText: string;
@@ -27,15 +28,7 @@ const AuthBrandMark: React.FC = () => (
     to="/"
     className="inline-flex items-center gap-2 min-h-[44px] focus:outline-none focus:ring-2 focus:ring-brand rounded-xl px-1"
   >
-    <span className="font-black text-2xl sm:text-3xl tracking-tight text-ink flex items-center">
-      Engaz<span className="text-brand">.</span>
-      <span className="mr-1.5 text-xs font-black bg-brand-soft text-brand border border-brand/30 px-2 py-0.5 rounded-lg">
-        PRO
-      </span>
-    </span>
-    <span className="text-xs font-bold text-muted border-r border-line pr-2 mr-1">
-      إنجاز برو
-    </span>
+    <BrandLogo size="lg" />
   </Link>
 );
 

@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Background Gradient (Obsidian Slate to Deep Carbon) -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b" />
+      <stop offset="50%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+
+    <!-- Neon Emerald Gradient for Monogram -->
+    <linearGradient id="emeraldNeon" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34d399" />
+      <stop offset="50%" stop-color="#10b981" />
+      <stop offset="100%" stop-color="#059669" />
+    </linearGradient>
+
+    <!-- Bolt Arrow Bright Gradient -->
+    <linearGradient id="boltGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#10b981" />
+      <stop offset="50%" stop-color="#34d399" />
+      <stop offset="100%" stop-color="#a7f3d0" />
+    </linearGradient>
+
+    <!-- Soft Glow Filter -->
+    <filter id="neonGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="12" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <!-- Outer Ambient Glow Filter -->
+    <filter id="ambientGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="24" result="ambient" />
+      <feComponentTransfer in="ambient" result="glowAlpha">
+        <feFuncA type="linear" slope="0.6" />
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode in="glowAlpha" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Base App Background with Rounded Corners -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)" />
+
+  <!-- Subtle Rim Highlight -->
+  <rect x="8" y="8" width="496" height="496" rx="104" fill="none" stroke="rgba(255, 255, 255, 0.08)" stroke-width="3" />
+  <rect x="12" y="12" width="488" height="488" rx="100" fill="none" stroke="rgba(16, 185, 129, 0.15)" stroke-width="1.5" />
+
+  <!-- Central Monogram Symbol (EP + Upward Lightning Arrow) -->
+  <g transform="translate(256, 256)" filter="url(#ambientGlow)">
+    <!-- Ambient Green Backing Glow -->
+    <circle cx="0" cy="0" r="140" fill="#10b981" opacity="0.12" filter="blur(35px)" />
+
+    <!-- Letter 'E' Ribbon (Left Side) -->
+    <path d="M -18 -85 
+             C -95 -85, -135 -48, -135 0 
+             C -135 48, -95 85, -18 85 
+             M -18 0 L -120 0" 
+          fill="none" 
+          stroke="url(#emeraldNeon)" 
+          stroke-width="26" 
+          stroke-linecap="round" 
+          stroke-linejoin="round" />
+
+    <!-- Letter 'P' Ribbon (Right Side) -->
+    <path d="M 18 -85 
+             C 95 -85, 135 -45, 135 0 
+             C 135 45, 95 85, 18 85 
+             L 18 115" 
+          fill="none" 
+          stroke="url(#emeraldNeon)" 
+          stroke-width="26" 
+          stroke-linecap="round" 
+          stroke-linejoin="round" />
+
+    <!-- Center Upward Lightning Bolt / Growth Arrow (Engaz Speed) -->
+    <g filter="url(#neonGlow)">
+      <polygon points="
+        0,-135  
+        38,-65  
+        10,-65  
+        32,15   
+        -18,-30 
+        -4,-30  
+        -30,-100
+      " fill="url(#boltGrad)" />
+      
+      <!-- Arrowhead Accent -->
+      <polygon points="0,-145 -42,-80 42,-80" fill="url(#boltGrad)" />
+    </g>
+  </g>
+</svg>

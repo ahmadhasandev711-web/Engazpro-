@@ -1,0 +1,1 @@
+import{r}from"./index-CL1hH0pF.js";function s({title:n,description:e}){r.useEffect(()=>{const u=document.title;document.title=n;const t=document.querySelector('meta[name="description"]'),o=(t==null?void 0:t.getAttribute("content"))??null;return e&&t&&t.setAttribute("content",e),()=>{document.title=u,t&&o!==null&&t.setAttribute("content",o)}},[n,e])}export{s as u};

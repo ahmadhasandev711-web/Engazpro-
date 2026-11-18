@@ -36,6 +36,7 @@ import { OfflineBanner } from './pwa/OfflineBanner';
 import { PWAInstallButton } from './pwa/PWAInstallButton';
 import { MobileBottomNav } from './MobileBottomNav';
 import { AppErrorBoundary } from './common/AppErrorBoundary';
+import { BrandLogo } from './common/BrandLogo';
 
 interface NavItemDef {
   to: string;
@@ -235,17 +236,9 @@ export const Layout: React.FC = () => {
         {/* Desktop Sidebar (lg and above) */}
         <aside className="hidden lg:flex w-64 bg-panel border-l border-line flex-col shadow-2xs select-none">
           {/* App Branding */}
-          <div className="h-16 flex items-center px-6 border-b border-line flex-shrink-0">
-            <Link to="/dashboard" className="flex items-center gap-1.5 group">
-              <span className="font-black text-xl tracking-tighter text-ink font-sans flex items-center">
-                Engaz<span className="text-brand">.</span>
-                <span className="mr-1.5 text-2xs font-black bg-brand-soft text-brand-ink border border-brand/20 px-1.5 py-0.5 rounded-md shadow-2xs">
-                  PRO
-                </span>
-              </span>
-              <span className="text-xs font-bold text-muted border-r border-line pr-2 mr-1">
-                إنجاز برو
-              </span>
+          <div className="h-16 flex items-center px-5 border-b border-line flex-shrink-0">
+            <Link to="/dashboard" className="flex items-center group">
+              <BrandLogo size="md" />
             </Link>
           </div>
 
@@ -306,17 +299,9 @@ export const Layout: React.FC = () => {
             {/* Slide Panel */}
             <aside className="fixed inset-y-0 right-0 w-72 max-w-[85vw] bg-panel border-l border-line shadow-2xl flex flex-col z-10 animate-in slide-in-from-right duration-200">
               {/* Drawer Header */}
-              <div className="h-16 flex items-center justify-between px-5 border-b border-line bg-surface-2/50 flex-shrink-0">
-                <Link to="/dashboard" onClick={() => setIsMobileDrawerOpen(false)} className="flex items-center gap-1.5">
-                  <span className="font-black text-lg tracking-tighter text-ink font-sans flex items-center">
-                    Engaz<span className="text-brand">.</span>
-                    <span className="mr-1 text-2xs font-black bg-brand-soft text-brand-ink border border-brand/20 px-1.5 py-0.5 rounded-md">
-                      PRO
-                    </span>
-                  </span>
-                  <span className="text-xs font-bold text-muted border-r border-line pr-1.5 mr-1">
-                    إنجاز برو
-                  </span>
+              <div className="h-16 flex items-center justify-between px-4 border-b border-line bg-surface-2/50 flex-shrink-0">
+                <Link to="/dashboard" onClick={() => setIsMobileDrawerOpen(false)} className="flex items-center">
+                  <BrandLogo size="sm" />
                 </Link>
                 <button
                   type="button"
@@ -389,13 +374,8 @@ export const Layout: React.FC = () => {
               </button>
 
               {/* Mobile App Branding */}
-              <Link to="/dashboard" className="flex items-center gap-1.5 lg:hidden">
-                <span className="font-black text-base tracking-tighter text-ink font-sans flex items-center">
-                  Engaz<span className="text-brand">.</span>
-                  <span className="mr-1 text-2xs font-black bg-brand-soft text-brand-ink border border-brand/20 px-1.5 py-0.5 rounded-md">
-                    PRO
-                  </span>
-                </span>
+              <Link to="/dashboard" className="flex items-center lg:hidden">
+                <BrandLogo size="sm" showArabic={false} />
               </Link>
 
               {/* Greeting & Role on Tablet & Desktop */}

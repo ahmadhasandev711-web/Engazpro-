@@ -19,6 +19,7 @@ use App\Models\InvoiceItem;
 use App\Models\Party;
 use App\Models\Payment;
 use App\Models\Product;
+use App\Models\Treasury;
 use App\Models\TreasuryTransaction;
 use App\Models\User;
 use App\Services\DocumentSequenceService;
@@ -385,8 +386,7 @@ class InvoiceService
             return;
         }
 
-        $this->persistInvoicePaymentRow($user, $invoice, $partyId, $context, $paymentType, $totals['paid_amount'], $totals['payment_method'], "سداد مرتبط بالفاتورة {$invoice->invoice_number}");
-        $this->applyInvoiceTreasuryImpact($user, $type, $totals['payment_method'], $totals['paid_amount_money'], $invoice, $context);
+        $this->recordChannelAllocation($user, $invoice, $type, $paymentType, $partyId, $context, $totals['paid_amount_money'], $totals['payment_method'], "سداد مرتبط بالفاتورة {$invoice->invoice_number}");
     }
 
     private function processSplitInvoicePayments(User $user, Invoice $invoice, string $type, string $paymentType, ?int $partyId, array $context, array $splitPayments): void
@@ -398,28 +398,38 @@ class InvoiceService
             }
             $spMethod = $sp['method'] ?? PaymentMethod::CASH->value;
             $spNotes = $sp['notes'] ?? "سداد مجزأ ({$spMethod}) - {$invoice->invoice_number}";
-            $this->persistInvoicePaymentRow($user, $invoice, $partyId, $context, $paymentType, $spAmountMoney->getAmount(), $spMethod, $spNotes);
-
-            if ($spMethod === PaymentMethod::CASH->value && in_array($type, [InvoiceType::SALE->value, InvoiceType::SALE_RETURN->value], true)) {
-                $note = $type === InvoiceType::SALE->value
-                    ? "مبيعات نقدية (سداد مجزأ) فاتورة {$invoice->invoice_number}"
-                    : "مرتجع مبيعات نقدي (سداد مجزأ) فاتورة {$invoice->invoice_number}";
-                $this->recordInvoiceTreasuryMovement($user, $type, $context['treasury'], $spAmountMoney, $invoice, $context['creator_user'], $context['active_shift']?->id, $note);
-            }
+            $this->recordChannelAllocation($user, $invoice, $type, $paymentType, $partyId, $context, $spAmountMoney, $spMethod, $spNotes);
         }
     }
 
-    private function persistInvoicePaymentRow(User $user, Invoice $invoice, ?int $partyId, array $context, string $paymentType, float $amount, string $method, string $notes): void
+    private function recordChannelAllocation(User $user, Invoice $invoice, string $type, string $paymentType, ?int $partyId, array $context, Money $amount, string $method, string $notes): void
+    {
+        $targetTreasury = $this->resolveChannelTreasury($user, $method, $context);
+        $this->persistInvoicePaymentRow($user, $invoice, $partyId, $context, $targetTreasury, $paymentType, $amount->getAmount(), $method, $notes);
+        $this->applyInvoiceTreasuryImpact($user, $type, $method, $amount, $invoice, $context, $targetTreasury);
+    }
+
+    private function resolveChannelTreasury(User $user, string $method, array $context): Treasury
+    {
+        $electronicMethods = [PaymentMethod::CARD->value, PaymentMethod::INSTAPAY->value, PaymentMethod::VODAFONE_CASH->value, PaymentMethod::TRANSFER->value, TreasuryType::BANK->value, TreasuryType::WALLET->value];
+        if (in_array($method, $electronicMethods, true)) {
+            return $this->treasuryService->getTreasuryForPaymentMethod($user, $method);
+        }
+
+        return $context['treasury'];
+    }
+
+    private function persistInvoicePaymentRow(User $user, Invoice $invoice, ?int $partyId, array $context, Treasury $treasury, string $paymentType, float $amount, string $method, string $notes): void
     {
         Payment::create([
             'user_id' => $user->getAccountId(), 'created_by' => $context['created_by'], 'party_id' => $partyId,
-            'invoice_id' => $invoice->id, 'treasury_id' => $context['treasury']->id,
+            'invoice_id' => $invoice->id, 'treasury_id' => $treasury->id,
             'shift_id' => $context['active_shift']?->id, 'type' => $paymentType, 'amount' => $amount,
             'method' => $method, 'date' => $invoice->date->format('Y-m-d'), 'notes' => $notes,
         ]);
     }
 
-    private function applyInvoiceTreasuryImpact(User $user, string $type, string $paymentMethod, Money $amount, Invoice $invoice, array $context): void
+    private function applyInvoiceTreasuryImpact(User $user, string $type, string $paymentMethod, Money $amount, Invoice $invoice, array $context, ?Treasury $targetTreasury = null): void
     {
         if (!$amount->isPositive()) {
             return;
@@ -428,11 +438,11 @@ class InvoiceService
 
         if ($paymentMethod === PaymentMethod::CASH->value) {
             $note = $this->resolveCashTreasuryNote($type, $invoice->invoice_number);
-            $this->recordInvoiceTreasuryMovement($user, $type, $context['treasury'], $amount, $invoice, $context['creator_user'], $context['active_shift']?->id, $note);
+            $this->recordInvoiceTreasuryMovement($user, $type, $targetTreasury ?? $context['treasury'], $amount, $invoice, $context['creator_user'], $context['active_shift']?->id, $note);
         } elseif (in_array($paymentMethod, $electronicMethods, true) && $type !== InvoiceType::PURCHASE_RETURN->value) {
-            $targetTreasury = $this->treasuryService->getTreasuryForPaymentMethod($user, $paymentMethod);
+            $treasury = $targetTreasury ?? $this->treasuryService->getTreasuryForPaymentMethod($user, $paymentMethod);
             $note = $this->resolveElectronicTreasuryNote($type, $paymentMethod, $invoice->invoice_number);
-            $this->recordInvoiceTreasuryMovement($user, $type, $targetTreasury, $amount, $invoice, $context['creator_user'], $context['active_shift']?->id, $note);
+            $this->recordInvoiceTreasuryMovement($user, $type, $treasury, $amount, $invoice, $context['creator_user'], $context['active_shift']?->id, $note);
         }
     }
 
