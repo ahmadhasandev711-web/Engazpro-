@@ -3,12 +3,14 @@ import { Search, Package, X, ScanBarcode } from 'lucide-react';
 import { formatCurrency } from '@pos-mandob/shared';
 import { Badge, BadgeTone } from '../ui/Badge';
 import { EmptyState } from '../ui/EmptyState';
+import { ProductThumbnail } from '../common/ProductThumbnail';
 
 export interface ProductItem {
   id: number;
   name: string;
   code: string;
   barcode?: string;
+  image_url?: string | null;
   category_id?: number | null;
   type?: string;
   has_expiry?: boolean;
@@ -53,14 +55,13 @@ interface PosProductCatalogProps {
   onOpenCameraScanner?: () => void;
 }
 
-const ROW_HEIGHT = 172;
-const ROW_GAP = 12;
-const ROW_STRIDE = ROW_HEIGHT + ROW_GAP;
+const DESKTOP_ROW_HEIGHT = 166;
+const MOBILE_ROW_HEIGHT = 88;
 
 const columnCount = (width: number): number => {
   if (width >= 900) return 4;
   if (width >= 520) return 3;
-  return 2;
+  return 1;
 };
 
 const stockOf = (product: ProductItem): number => {
@@ -70,22 +71,113 @@ const stockOf = (product: ProductItem): number => {
   return product.variants?.length ? variantStockSum : (product.quantity ?? 0);
 };
 
-const getCategoryColorClass = (categoryId?: number | null): string => {
-  if (categoryId === null || categoryId === undefined) {
-    return 'bg-surface-2 text-muted';
+const getStockTone = (stock: number): BadgeTone => {
+  if (stock <= 0) return 'bad';
+  if (stock <= 3) return 'warn';
+  return 'neutral';
+};
+
+const getDiscountPercent = (product: ProductItem): number => {
+  const reg = Number(product.regular_price || 0);
+  const sale = Number(product.sale_price || 0);
+  if (reg <= sale || reg <= 0) return 0;
+  return Math.round(((reg - sale) / reg) * 100);
+};
+
+const PosProductBadges: React.FC<{ product: ProductItem; compact?: boolean }> = ({ product, compact }) => {
+  const discountPct = getDiscountPercent(product);
+  const hasVariants = Boolean(product.has_variants || product.variants?.length);
+  const hasExpiry = Boolean(product.has_expiry || product.batches?.length);
+
+  if (!discountPct && !hasVariants && !hasExpiry && !product.sub_unit) {
+    return null;
   }
-  const rem = Math.abs(categoryId) % 4;
-  switch (rem) {
-    case 0:
-      return 'bg-brand-soft text-brand-ink';
-    case 1:
-      return 'bg-ok-soft text-ok';
-    case 2:
-      return 'bg-warn-soft text-warn';
-    case 3:
-    default:
-      return 'bg-info-soft text-info';
-  }
+
+  return (
+    <div className={compact ? 'flex items-center gap-1 overflow-hidden' : 'flex flex-wrap items-center gap-1 mt-1'}>
+      {discountPct > 0 && (
+        <Badge tone="bad" className="text-2xs px-1.5 py-0.5 rounded-md font-bold shrink-0">
+          خصم {discountPct}%
+        </Badge>
+      )}
+      {hasVariants && (
+        <Badge tone="info" className="text-2xs px-1.5 py-0.5 rounded-md font-bold shrink-0">
+          {product.variants?.length ? `${product.variants.length} مقاس/لون` : 'متغيرات'}
+        </Badge>
+      )}
+      {hasExpiry && (
+        <Badge tone="warn" className="text-2xs px-1.5 py-0.5 rounded-md font-bold shrink-0">
+          صلاحية
+        </Badge>
+      )}
+      {Boolean(product.sub_unit) && !compact && (
+        <Badge tone="neutral" className="text-2xs px-1.5 py-0.5 rounded-md font-bold shrink-0">
+          {product.sub_unit}
+        </Badge>
+      )}
+    </div>
+  );
+};
+
+const PosProductMobileRow: React.FC<{ product: ProductItem; onAddToCart: (product: ProductItem) => void }> = ({
+  product,
+  onAddToCart,
+}) => {
+  const stock = stockOf(product);
+  const isOutOfStock = stock <= 0;
+  const hasDiscount = getDiscountPercent(product) > 0;
+  const stockTone = getStockTone(stock);
+
+  return (
+    <button
+      onClick={() => onAddToCart(product)}
+      type="button"
+      style={{ height: MOBILE_ROW_HEIGHT }}
+      className={`w-full px-3 py-2 bg-panel hover:bg-surface-2 active:scale-[0.99] border border-line hover:border-brand-soft rounded-2xl transition-all text-right flex items-center justify-between gap-2.5 shadow-2xs group focus:outline-none focus:ring-2 focus:ring-brand overflow-hidden cursor-pointer ${
+        isOutOfStock ? 'opacity-70' : ''
+      }`}
+    >
+      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+        <ProductThumbnail
+          src={product.image_url}
+          alt={product.name}
+          className="w-12 h-12 rounded-xl"
+        />
+        <div className="min-w-0 flex-1 space-y-1">
+          <h4 className="text-sm font-bold text-ink group-hover:text-brand truncate leading-tight">
+            {product.name}
+          </h4>
+          <div className="flex items-center gap-1.5 overflow-hidden">
+            <Badge tone={stockTone} className="text-2xs px-1.5 py-0.5 shrink-0">
+              {isOutOfStock ? 'نفذ' : `${stock} ${product.unit || 'قطعة'}`}
+            </Badge>
+            {product.code && (
+              <span className="truncate max-w-[84px] bg-surface-2 text-muted px-1.5 py-0.5 rounded-md text-2xs font-medium tabular-nums shrink-0">
+                {product.code}
+              </span>
+            )}
+            <PosProductBadges product={product} compact />
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2.5 shrink-0">
+        <div className="text-left">
+          <span className="text-sm font-black text-brand tabular-nums block leading-tight">
+            {formatCurrency(product.sale_price)}
+          </span>
+          {hasDiscount && (
+            <span className="line-through text-muted text-2xs tabular-nums block">
+              {formatCurrency(Number(product.regular_price))}
+            </span>
+          )}
+        </div>
+        <div className="w-8 h-8 rounded-xl bg-brand-soft text-brand-ink flex items-center justify-center text-sm font-bold group-hover:bg-brand group-hover:text-on-brand transition-colors shrink-0">
+          +
+        </div>
+      </div>
+    </button>
+  );
 };
 
 const PosProductCard: React.FC<{ product: ProductItem; onAddToCart: (product: ProductItem) => void }> = ({
@@ -94,74 +186,57 @@ const PosProductCard: React.FC<{ product: ProductItem; onAddToCart: (product: Pr
 }) => {
   const stock = stockOf(product);
   const isOutOfStock = stock <= 0;
-  const hasDiscount = Boolean(product.regular_price && Number(product.regular_price) > Number(product.sale_price));
-  const stockTone: BadgeTone = isOutOfStock ? 'bad' : stock <= 3 ? 'warn' : 'neutral';
+  const hasDiscount = getDiscountPercent(product) > 0;
+  const stockTone = getStockTone(stock);
 
   return (
     <button
       onClick={() => onAddToCart(product)}
       type="button"
-      style={{ height: ROW_HEIGHT }}
-      className="relative flex flex-col justify-between p-3.5 bg-panel hover:bg-surface-2 active:scale-[0.98] border border-line hover:border-brand-soft rounded-2xl transition-all text-right shadow-xs hover:shadow-md group focus:outline-none focus:ring-2 focus:ring-brand overflow-hidden"
+      style={{ height: DESKTOP_ROW_HEIGHT }}
+      className={`relative flex flex-col justify-between p-3.5 bg-panel hover:bg-surface-2 active:scale-[0.98] border border-line hover:border-brand-soft rounded-2xl transition-all text-right shadow-xs hover:shadow-md group focus:outline-none focus:ring-2 focus:ring-brand overflow-hidden cursor-pointer ${
+        isOutOfStock ? 'opacity-70' : ''
+      }`}
     >
-      <div className="flex items-center justify-between gap-1 w-full text-2xs mb-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <div
-            className={`w-[34px] h-[34px] rounded-xl flex items-center justify-center font-bold text-sm shrink-0 ${getCategoryColorClass(
-              product.category_id
-            )}`}
-          >
-            {product.name ? product.name.trim().charAt(0) : 'ص'}
-          </div>
-          <span className="truncate max-w-[80px] bg-surface-2 text-muted px-1.5 py-0.5 rounded-md font-medium">
+      <div className="flex items-center justify-between gap-1.5 w-full text-2xs mb-2">
+        {product.code ? (
+          <span className="truncate max-w-[96px] bg-surface-2 text-muted px-1.5 py-0.5 rounded-md font-medium tabular-nums">
             {product.code}
           </span>
-        </div>
+        ) : (
+          <span />
+        )}
         <Badge tone={stockTone} className="text-2xs px-2 py-0.5 shrink-0">
           {isOutOfStock ? 'نفذ' : `${stock} ${product.unit || 'قطعة'}`}
         </Badge>
       </div>
 
-      <div className="my-1 min-h-0">
-        <h4 className="text-xs sm:text-sm font-black text-ink group-hover:text-brand line-clamp-2 leading-tight">
-          {product.name}
-        </h4>
-        <div className="flex flex-wrap items-center gap-1 mt-1">
-          {hasDiscount && (
-            <Badge tone="bad" className="text-2xs px-1.5 py-0.5 rounded-md font-bold">
-              خصم {Math.round(((Number(product.regular_price) - Number(product.sale_price)) / Number(product.regular_price)) * 100)}%
-            </Badge>
-          )}
-          {Boolean(product.has_variants || product.variants?.length) && (
-            <Badge tone="info" className="text-2xs px-1.5 py-0.5 rounded-md font-bold">
-              {product.variants?.length ? `${product.variants.length} مقاس/لون` : 'متغيرات'}
-            </Badge>
-          )}
-          {Boolean(product.has_expiry || product.batches?.length) && (
-            <Badge tone="warn" className="text-2xs px-1.5 py-0.5 rounded-md font-bold">
-              صلاحية
-            </Badge>
-          )}
-          {Boolean(product.sub_unit) && (
-            <Badge tone="neutral" className="text-2xs px-1.5 py-0.5 rounded-md font-bold">
-              {product.sub_unit}
-            </Badge>
-          )}
+      <div className="flex items-start gap-2.5 my-1 min-h-0 flex-1">
+        <ProductThumbnail
+          src={product.image_url}
+          alt={product.name}
+          className="w-10 h-10 rounded-xl mt-0.5"
+        />
+        <div className="min-w-0 flex-1">
+          <h4 className="text-xs sm:text-sm font-black text-ink group-hover:text-brand line-clamp-2 leading-tight">
+            {product.name}
+          </h4>
+          <PosProductBadges product={product} />
         </div>
       </div>
 
-      <div className="mt-3 pt-2 border-t border-line flex items-center justify-between w-full">
+      <div className="mt-2 pt-2 border-t border-line flex items-center justify-between w-full">
         <div className="flex items-baseline gap-1.5 overflow-hidden">
-          <span className="text-xs sm:text-sm font-black text-brand">
+          <span className="text-xs sm:text-sm font-black text-brand tabular-nums">
             {formatCurrency(product.sale_price)}
           </span>
           {hasDiscount && (
-            <span className="line-through text-muted text-2xs">
+            <span className="line-through text-muted text-2xs tabular-nums">
               {formatCurrency(Number(product.regular_price))}
             </span>
           )}
         </div>
-        <div className="w-6 h-6 rounded-lg bg-brand-soft text-brand-ink flex items-center justify-center text-xs font-bold group-hover:bg-brand group-hover:text-on-brand transition-colors">
+        <div className="w-6 h-6 rounded-lg bg-brand-soft text-brand-ink flex items-center justify-center text-xs font-bold group-hover:bg-brand group-hover:text-on-brand transition-colors shrink-0">
           +
         </div>
       </div>
@@ -232,13 +307,17 @@ export const PosProductCatalog: React.FC<PosProductCatalogProps> = ({
   }, [listKey]);
 
   const cols = columnCount(metrics.width);
+  const isMobileList = cols === 1;
+  const rowHeight = isMobileList ? 88 : 166;
+  const rowGap = isMobileList ? 8 : 12;
+  const rowStride = rowHeight + rowGap;
   const rowCount = Math.ceil(shownProducts.length / cols);
-  const startRow = Math.max(0, Math.floor(metrics.scrollTop / ROW_STRIDE) - 1);
-  const visibleRows = Math.ceil(metrics.height / ROW_STRIDE) + 3;
+  const startRow = Math.max(0, Math.floor(metrics.scrollTop / rowStride) - 1);
+  const visibleRows = Math.ceil(metrics.height / rowStride) + 3;
   const endRow = Math.min(rowCount, startRow + visibleRows);
   const slice = shownProducts.slice(startRow * cols, endRow * cols);
-  const offset = startRow * ROW_STRIDE;
-  const totalHeight = rowCount * ROW_STRIDE;
+  const offset = startRow * rowStride;
+  const totalHeight = rowCount * rowStride;
 
   const onScroll = () => {
     const element = scrollRef.current;
@@ -372,15 +451,19 @@ export const PosProductCatalog: React.FC<PosProductCatalogProps> = ({
         ) : (
           <div style={{ height: totalHeight, position: 'relative' }}>
             <div
-              className="absolute inset-x-0 grid gap-3"
+              className={isMobileList ? 'absolute inset-x-0 grid gap-2' : 'absolute inset-x-0 grid gap-3'}
               style={{
                 top: offset,
                 gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
               }}
             >
-              {slice.map((product) => (
-                <PosProductCard key={product.id} product={product} onAddToCart={onAddToCart} />
-              ))}
+              {slice.map((product) =>
+                isMobileList ? (
+                  <PosProductMobileRow key={product.id} product={product} onAddToCart={onAddToCart} />
+                ) : (
+                  <PosProductCard key={product.id} product={product} onAddToCart={onAddToCart} />
+                )
+              )}
             </div>
           </div>
         )}

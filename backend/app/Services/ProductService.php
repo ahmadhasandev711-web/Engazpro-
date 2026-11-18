@@ -17,7 +17,8 @@ class ProductService
 {
     public function __construct(
         protected StockService $stockService,
-        protected BarcodeService $barcodeService
+        protected BarcodeService $barcodeService,
+        protected ProductImageService $productImageService
     ) {}
 
     /**
@@ -203,7 +204,13 @@ class ProductService
             );
         }
 
-        return (bool) $product->delete();
+        $product->loadMissing('variants');
+        $deleted = (bool) $product->delete();
+        if ($deleted) {
+            $this->productImageService->deleteLocalImagesForProduct($product);
+        }
+
+        return $deleted;
     }
 
     /**

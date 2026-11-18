@@ -41,6 +41,7 @@ export const ProductVariantSchema = z.object({
   sale_price: z.coerce.number().min(0).optional().nullable(),
   quantity: z.coerce.number().min(0, 'الكمية لا يمكن أن تكون سالبة').default(0),
   min_quantity: z.coerce.number().min(0).optional().nullable(),
+  image_url: z.string().max(2048).optional().nullable(),
 });
 
 // Barcode Print Item & Request Schemas
@@ -86,6 +87,7 @@ export const ProductSchema = z.object({
   min_sale_price: z.coerce.number().min(0).optional().nullable(),
   quantity: z.coerce.number().min(0, 'الكمية لا يمكن أن تكون سالبة').default(0),
   min_quantity: z.coerce.number().min(0).optional().nullable(),
+  image_url: z.string().max(2048).optional().nullable(),
   notes: z.string().optional().nullable(),
   variants: z.array(ProductVariantSchema).optional().nullable(),
   batches: z.array(z.any()).optional().nullable(),

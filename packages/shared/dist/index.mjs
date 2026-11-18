@@ -232,7 +232,8 @@ var ProductVariantSchema = z.object({
   regular_price: z.coerce.number().min(0).optional().nullable(),
   sale_price: z.coerce.number().min(0).optional().nullable(),
   quantity: z.coerce.number().min(0, "\u0627\u0644\u0643\u0645\u064A\u0629 \u0644\u0627 \u064A\u0645\u0643\u0646 \u0623\u0646 \u062A\u0643\u0648\u0646 \u0633\u0627\u0644\u0628\u0629").default(0),
-  min_quantity: z.coerce.number().min(0).optional().nullable()
+  min_quantity: z.coerce.number().min(0).optional().nullable(),
+  image_url: z.string().max(2048).optional().nullable()
 });
 var BarcodePrintItemSchema = z.object({
   product_id: z.number().optional().nullable(),
@@ -273,6 +274,7 @@ var ProductSchema = z.object({
   min_sale_price: z.coerce.number().min(0).optional().nullable(),
   quantity: z.coerce.number().min(0, "\u0627\u0644\u0643\u0645\u064A\u0629 \u0644\u0627 \u064A\u0645\u0643\u0646 \u0623\u0646 \u062A\u0643\u0648\u0646 \u0633\u0627\u0644\u0628\u0629").default(0),
   min_quantity: z.coerce.number().min(0).optional().nullable(),
+  image_url: z.string().max(2048).optional().nullable(),
   notes: z.string().optional().nullable(),
   variants: z.array(ProductVariantSchema).optional().nullable(),
   batches: z.array(z.any()).optional().nullable()

@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use App\Enums\ProductType;
 use App\Enums\StockMovementSource;
+use App\Services\ProductImageService;
 use App\Support\Money;
 use App\Support\Quantity;
 use Illuminate\Http\Request;
@@ -50,6 +51,7 @@ class ProductResource extends JsonResource
             'min_quantity' => $this->min_quantity !== null ? Quantity::of($this->min_quantity)->toFloat() : null,
             'is_low_stock' => $this->isLowStock(),
             'wc_product_id' => $this->wc_product_id,
+            'image_url' => ProductImageService::toPublicUrl($this->image_url),
             'notes' => $this->notes,
         ];
     }
@@ -95,6 +97,7 @@ class ProductResource extends JsonResource
             'min_quantity' => $v->min_quantity !== null ? Quantity::of($v->min_quantity)->toFloat() : null,
             'is_low_stock' => $v->isLowStock(),
             'wc_variation_id' => $v->wc_variation_id,
+            'image_url' => ProductImageService::toPublicUrl($v->image_url),
         ]);
     }
 

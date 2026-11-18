@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ProductImageRequest;
 use App\Http\Requests\ProductRequest;
 use App\Http\Requests\RecordOpeningBalanceRequest;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
+use App\Services\ProductImageService;
 use App\Services\ProductService;
 use App\Services\StockService;
 use Illuminate\Http\JsonResponse;
@@ -17,7 +19,8 @@ class ProductController extends Controller
 {
     public function __construct(
         protected ProductService $productService,
-        protected StockService $stockService
+        protected StockService $stockService,
+        protected ProductImageService $productImageService
     ) {}
 
     /**
@@ -195,6 +198,44 @@ class ProductController extends Controller
             'success' => true,
             'message' => "تم تسجيل رصيد أول المدة بنجاح لـ {$result['updated_count']} صنف في فرع {$result['branch_name']}",
             'data' => $result,
+        ]);
+    }
+
+    /**
+     * رفع أو تحديث صورة الصنف
+     */
+    public function uploadImage(ProductImageRequest $request, int $id): JsonResponse
+    {
+        $product = $this->productService->findOrFail($id);
+        Gate::authorize('update', $product);
+
+        $updated = $this->productImageService->uploadProductImage(
+            $request->user(),
+            $product,
+            $request->file('image')
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم تحديث صورة الصنف بنجاح',
+            'data' => new ProductResource($updated),
+        ]);
+    }
+
+    /**
+     * إزالة صورة الصنف
+     */
+    public function deleteImage(int $id): JsonResponse
+    {
+        $product = $this->productService->findOrFail($id);
+        Gate::authorize('update', $product);
+
+        $updated = $this->productImageService->removeProductImage($product);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم إزالة صورة الصنف بنجاح',
+            'data' => new ProductResource($updated),
         ]);
     }
 }

@@ -241,6 +241,7 @@ interface ProductVariant extends BaseEntity {
     quantity: number;
     min_quantity?: number | null;
     is_low_stock?: boolean;
+    image_url?: string | null;
 }
 interface ProductBatch extends BaseEntity {
     product_id: number;
@@ -280,6 +281,7 @@ interface Product extends BaseEntity {
     min_quantity?: number | null;
     is_low_stock?: boolean;
     has_movements?: boolean;
+    image_url?: string | null;
     notes?: string | null;
     variants?: ProductVariant[];
     batches?: ProductBatch[];
@@ -492,6 +494,7 @@ interface StockReportItem {
     retail_value: number;
     min_quantity?: number | null;
     is_low_stock?: boolean;
+    image_url?: string | null;
 }
 interface StockReportData {
     summary: {
@@ -938,6 +941,7 @@ declare const ProductVariantSchema: z.ZodObject<{
     sale_price: z.ZodNullable<z.ZodOptional<z.ZodNumber>>;
     quantity: z.ZodDefault<z.ZodNumber>;
     min_quantity: z.ZodNullable<z.ZodOptional<z.ZodNumber>>;
+    image_url: z.ZodNullable<z.ZodOptional<z.ZodString>>;
 }, "strip", z.ZodTypeAny, {
     name: string;
     quantity: number;
@@ -951,6 +955,7 @@ declare const ProductVariantSchema: z.ZodObject<{
     regular_price?: number | null | undefined;
     sale_price?: number | null | undefined;
     min_quantity?: number | null | undefined;
+    image_url?: string | null | undefined;
 }, {
     name: string;
     code?: string | null | undefined;
@@ -964,6 +969,7 @@ declare const ProductVariantSchema: z.ZodObject<{
     sale_price?: number | null | undefined;
     quantity?: number | undefined;
     min_quantity?: number | null | undefined;
+    image_url?: string | null | undefined;
 }>;
 declare const BarcodePrintItemSchema: z.ZodObject<{
     product_id: z.ZodNullable<z.ZodOptional<z.ZodNumber>>;
@@ -1092,6 +1098,7 @@ declare const ProductSchema: z.ZodObject<{
     min_sale_price: z.ZodNullable<z.ZodOptional<z.ZodNumber>>;
     quantity: z.ZodDefault<z.ZodNumber>;
     min_quantity: z.ZodNullable<z.ZodOptional<z.ZodNumber>>;
+    image_url: z.ZodNullable<z.ZodOptional<z.ZodString>>;
     notes: z.ZodNullable<z.ZodOptional<z.ZodString>>;
     variants: z.ZodNullable<z.ZodOptional<z.ZodArray<z.ZodObject<{
         id: z.ZodNullable<z.ZodOptional<z.ZodNumber>>;
@@ -1106,6 +1113,7 @@ declare const ProductSchema: z.ZodObject<{
         sale_price: z.ZodNullable<z.ZodOptional<z.ZodNumber>>;
         quantity: z.ZodDefault<z.ZodNumber>;
         min_quantity: z.ZodNullable<z.ZodOptional<z.ZodNumber>>;
+        image_url: z.ZodNullable<z.ZodOptional<z.ZodString>>;
     }, "strip", z.ZodTypeAny, {
         name: string;
         quantity: number;
@@ -1119,6 +1127,7 @@ declare const ProductSchema: z.ZodObject<{
         regular_price?: number | null | undefined;
         sale_price?: number | null | undefined;
         min_quantity?: number | null | undefined;
+        image_url?: string | null | undefined;
     }, {
         name: string;
         code?: string | null | undefined;
@@ -1132,6 +1141,7 @@ declare const ProductSchema: z.ZodObject<{
         sale_price?: number | null | undefined;
         quantity?: number | undefined;
         min_quantity?: number | null | undefined;
+        image_url?: string | null | undefined;
     }>, "many">>>;
     batches: z.ZodNullable<z.ZodOptional<z.ZodArray<z.ZodAny, "many">>>;
 }, "strip", z.ZodTypeAny, {
@@ -1144,6 +1154,7 @@ declare const ProductSchema: z.ZodObject<{
     barcode?: string | null | undefined;
     regular_price?: number | null | undefined;
     min_quantity?: number | null | undefined;
+    image_url?: string | null | undefined;
     has_expiry?: boolean | undefined;
     has_variants?: boolean | undefined;
     category_id?: number | null | undefined;
@@ -1166,6 +1177,7 @@ declare const ProductSchema: z.ZodObject<{
         regular_price?: number | null | undefined;
         sale_price?: number | null | undefined;
         min_quantity?: number | null | undefined;
+        image_url?: string | null | undefined;
     }[] | null | undefined;
     batches?: any[] | null | undefined;
 }, {
@@ -1178,6 +1190,7 @@ declare const ProductSchema: z.ZodObject<{
     regular_price?: number | null | undefined;
     quantity?: number | undefined;
     min_quantity?: number | null | undefined;
+    image_url?: string | null | undefined;
     has_expiry?: boolean | undefined;
     has_variants?: boolean | undefined;
     category_id?: number | null | undefined;
@@ -1200,6 +1213,7 @@ declare const ProductSchema: z.ZodObject<{
         sale_price?: number | null | undefined;
         quantity?: number | undefined;
         min_quantity?: number | null | undefined;
+        image_url?: string | null | undefined;
     }[] | null | undefined;
     batches?: any[] | null | undefined;
 }>;

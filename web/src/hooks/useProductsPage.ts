@@ -8,10 +8,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Product, ProductSchema, ProductInput } from '@pos-mandob/shared';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, Layers, Calendar, Clock } from 'lucide-react';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { useConfirm } from '../presentation/context/ConfirmContext';
+import { compressProductImage } from '../utils/imageCompression';
 
 export const useProductsPage = () => {
   const navigate = useNavigate();
@@ -40,6 +41,48 @@ export const useProductsPage = () => {
   const [selectedPrintProduct, setSelectedPrintProduct] = useState<Product | null>(null);
   const [isOpeningStockOpen, setIsOpeningStockOpen] = useState(false);
   const [syncingProductId, setSyncingProductId] = useState<number | null>(null);
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const [removeExistingImage, setRemoveExistingImage] = useState<boolean>(false);
+  const [compressedSizeKb, setCompressedSizeKb] = useState<number | null>(null);
+  const [isCompressingImage, setIsCompressingImage] = useState<boolean>(false);
+  const tempBlobUrlRef = useRef<string | null>(null);
+
+  const revokeTempPreview = () => {
+    if (tempBlobUrlRef.current) {
+      URL.revokeObjectURL(tempBlobUrlRef.current);
+      tempBlobUrlRef.current = null;
+    }
+  };
+
+  useEffect(() => () => revokeTempPreview(), []);
+
+  const handleSelectImage = async (file: File | null) => {
+    if (!file) return;
+    setIsCompressingImage(true);
+    setErrorMessage(null);
+    try {
+      const compressed = await compressProductImage(file);
+      revokeTempPreview();
+      tempBlobUrlRef.current = compressed.previewUrl;
+      setSelectedImageFile(compressed.file);
+      setImagePreviewUrl(compressed.previewUrl);
+      setCompressedSizeKb(compressed.compressedKb);
+      setRemoveExistingImage(false);
+    } catch (err: any) {
+      setErrorMessage(err?.message || 'تعذر معالجة الصورة المختارة');
+    } finally {
+      setIsCompressingImage(false);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    revokeTempPreview();
+    setSelectedImageFile(null);
+    setCompressedSizeKb(null);
+    setImagePreviewUrl(null);
+    setRemoveExistingImage(Boolean(editingProduct?.image_url));
+  };
 
   const handlePushStock = async (product: Product) => {
     setSyncingProductId(product.id);
@@ -176,6 +219,11 @@ export const useProductsPage = () => {
       sub_unit_price: null,
       notes: '',
     });
+    revokeTempPreview();
+    setSelectedImageFile(null);
+    setCompressedSizeKb(null);
+    setImagePreviewUrl(null);
+    setRemoveExistingImage(false);
     setErrorMessage(null);
     setIsModalOpen(true);
   };
@@ -201,6 +249,11 @@ export const useProductsPage = () => {
     setValue('sub_unit_factor', p.sub_unit_factor || null);
     setValue('sub_unit_price', p.sub_unit_price || null);
     setValue('notes', p.notes || '');
+    revokeTempPreview();
+    setSelectedImageFile(null);
+    setCompressedSizeKb(null);
+    setImagePreviewUrl(p.image_url || null);
+    setRemoveExistingImage(false);
     setErrorMessage(null);
     setIsModalOpen(true);
   };
@@ -237,14 +290,27 @@ export const useProductsPage = () => {
         ];
       }
 
-      if (editingProduct) {
-        return apiClient.put(`/products/${editingProduct.id}`, payload);
-      } else {
-        return apiClient.post('/products', payload);
+      const res = editingProduct
+        ? await apiClient.put(`/products/${editingProduct.id}`, payload)
+        : await apiClient.post('/products', payload);
+
+      const savedId = editingProduct?.id ?? res.data?.data?.id;
+      if (savedId && selectedImageFile) {
+        const formData = new FormData();
+        formData.append('image', selectedImageFile);
+        await apiClient.post(`/products/${savedId}/image`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+      } else if (editingProduct && removeExistingImage) {
+        await apiClient.delete(`/products/${editingProduct.id}/image`);
       }
+
+      return res;
     },
     onSuccess: (res) => {
+      revokeTempPreview();
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['pos-catalog'] });
       setIsModalOpen(false);
       setSuccessMessage(res.data.message || 'تم حفظ الصنف بنجاح');
       setTimeout(() => setSuccessMessage(null), 3500);
@@ -261,6 +327,7 @@ export const useProductsPage = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['pos-catalog'] });
       setSuccessMessage('تم حذف الصنف بنجاح');
       setTimeout(() => setSuccessMessage(null), 3500);
     },
@@ -404,5 +471,10 @@ export const useProductsPage = () => {
     totalStock,
     lowStockCount,
     filterOptions,
+    imagePreviewUrl,
+    compressedSizeKb,
+    isCompressingImage,
+    handleSelectImage,
+    handleRemoveImage,
   };
 };

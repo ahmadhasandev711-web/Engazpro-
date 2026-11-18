@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Product, formatCurrency, formatNumber } from '@pos-mandob/shared';
 import { Badge, Button, Card } from '../ui';
+import { ProductThumbnail } from '../common/ProductThumbnail';
 import { useHaptic } from '../../hooks/useHaptic';
 
 interface ProductMobileCardProps {
@@ -71,9 +72,15 @@ export const ProductMobileCard: React.FC<ProductMobileCardProps> = ({
 
   return (
     <Card className={`p-4 sm:p-4 space-y-3 ${stripeClass}`}>
-      {/* 1. Header: Name, Badges & Sale Price */}
+      {/* 1. Header: Thumbnail (optional), Name, Badges & Sale Price */}
       <div className="flex items-start justify-between gap-2.5">
-        <div className="min-w-0 flex-1">
+        <div className="flex items-start gap-2.5 min-w-0 flex-1">
+          <ProductThumbnail
+            src={product.image_url}
+            alt={product.name}
+            className="w-10 h-10 rounded-xl mt-0.5"
+          />
+          <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 flex-wrap">
             <h4 className="font-black text-ink text-sm leading-tight break-words">
               {product.name}
@@ -104,6 +111,7 @@ export const ProductMobileCard: React.FC<ProductMobileCardProps> = ({
               {product.category_name}
             </span>
           )}
+          </div>
         </div>
 
         {/* Pricing Box */}

@@ -76,6 +76,8 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
         Route::get('products/pos-catalog', [ProductController::class, 'posCatalog']);
         Route::post('products/opening-balance', [ProductController::class, 'recordOpeningBalance']);
         Route::post('products/{id}/batches', [ProductController::class, 'addBatch']);
+        Route::post('products/{id}/image', [ProductController::class, 'uploadImage']);
+        Route::delete('products/{id}/image', [ProductController::class, 'deleteImage']);
         Route::apiResource('products', ProductController::class);
 
         // Barcode Generation & Validation

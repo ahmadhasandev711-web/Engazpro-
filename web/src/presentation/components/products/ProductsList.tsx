@@ -7,6 +7,7 @@ import { DataTable } from '../ui/DataTable';
 import { EmptyState } from '../ui/EmptyState';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
+import { ProductThumbnail } from '../common/ProductThumbnail';
 import type { ProductsViewModel } from './types';
 
 export const ProductsList: React.FC<{ vm: ProductsViewModel }> = ({ vm }) => {
@@ -73,22 +74,31 @@ export const ProductsList: React.FC<{ vm: ProductsViewModel }> = ({ vm }) => {
                   <tr key={p.id} className="hover:bg-surface-2/50 transition-colors">
                     {/* Product Name & Type Tag */}
                     <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold text-ink">{p.name}</span>
-                        {p.has_variants && (
-                          <Badge tone="brand" className="text-2xs px-2 py-0.5">
-                            {p.variants?.length ? `${p.variants.length} مقاس/لون` : 'متغيرات'}
-                          </Badge>
-                        )}
-                        {p.has_expiry && (
-                          <Badge tone="ok" className="text-2xs px-2 py-0.5">
-                            صلاحية
-                          </Badge>
-                        )}
+                      <div className="flex items-start gap-2.5">
+                        <ProductThumbnail
+                          src={p.image_url}
+                          alt={p.name}
+                          className="w-9 h-9 rounded-lg mt-0.5"
+                        />
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-ink">{p.name}</span>
+                            {p.has_variants && (
+                              <Badge tone="brand" className="text-2xs px-2 py-0.5">
+                                {p.variants?.length ? `${p.variants.length} مقاس/لون` : 'متغيرات'}
+                              </Badge>
+                            )}
+                            {p.has_expiry && (
+                              <Badge tone="ok" className="text-2xs px-2 py-0.5">
+                                صلاحية
+                              </Badge>
+                            )}
+                          </div>
+                          {p.category_name && (
+                            <span className="text-xs text-muted block mt-0.5">{p.category_name}</span>
+                          )}
+                        </div>
                       </div>
-                      {p.category_name && (
-                        <span className="text-xs text-muted block mt-0.5">{p.category_name}</span>
-                      )}
                       {p.has_variants && p.variants && p.variants.length > 0 && (
                         <div className="flex flex-wrap items-center gap-1 mt-1.5">
                           {p.variants.slice(0, 4).map((v: any, vi: number) => (

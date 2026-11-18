@@ -46,6 +46,7 @@ class ProductRequest extends FormRequest
             'min_sale_price' => ['nullable', 'numeric', 'min:0'],
             'quantity' => ['nullable', 'numeric', 'min:0'],
             'min_quantity' => ['nullable', 'numeric', 'min:0'],
+            'image_url' => ['nullable', 'string', 'max:2048'],
             'notes' => ['nullable', 'string'],
             ...$this->variantRules(),
             ...$this->batchRules(),

@@ -87,6 +87,7 @@ export interface ProductVariant extends BaseEntity {
   quantity: number;
   min_quantity?: number | null;
   is_low_stock?: boolean;
+  image_url?: string | null;
 }
 
 export interface ProductBatch extends BaseEntity {
@@ -128,6 +129,7 @@ export interface Product extends BaseEntity {
   min_quantity?: number | null;
   is_low_stock?: boolean;
   has_movements?: boolean;
+  image_url?: string | null;
   notes?: string | null;
   variants?: ProductVariant[];
   batches?: ProductBatch[];
@@ -354,6 +356,7 @@ export interface StockReportItem {
   retail_value: number;
   min_quantity?: number | null;
   is_low_stock?: boolean;
+  image_url?: string | null;
 }
 
 export interface StockReportData {

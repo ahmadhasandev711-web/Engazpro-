@@ -1,6 +1,6 @@
 import React from 'react';
 import { VariantMatrixGenerator } from './VariantMatrixGenerator';
-import { Package, X, Layers, Calendar, Tag } from 'lucide-react';
+import { Package, X, Layers, Calendar, Tag, ImagePlus, Trash2 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Textarea } from '../ui/Textarea';
@@ -27,6 +27,11 @@ export const ProductFormModal: React.FC<{ vm: ProductsViewModel }> = ({ vm }) =>
     errors,
     saveMutation,
     onSubmit,
+    imagePreviewUrl,
+    compressedSizeKb,
+    isCompressingImage,
+    handleSelectImage,
+    handleRemoveImage,
   } = vm;
 
   return (
@@ -115,6 +120,58 @@ export const ProductFormModal: React.FC<{ vm: ProductsViewModel }> = ({ vm }) =>
               )}
 
               {/* Basic Fields */}
+              <div className="p-3.5 bg-surface-2/70 border border-line rounded-2xl flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-center gap-3 min-w-0">
+                  {imagePreviewUrl ? (
+                    <img
+                      src={imagePreviewUrl}
+                      alt="معاينة صورة الصنف"
+                      className="w-14 h-14 rounded-xl object-cover border border-line bg-panel shrink-0"
+                    />
+                  ) : null}
+                  <div className="min-w-0">
+                    <span className="text-xs font-black text-ink block">صورة الصنف (اختيارية)</span>
+                    <span className="text-2xs text-muted block">
+                      {isCompressingImage
+                        ? 'جاري ضغط الصورة تلقائياً...'
+                        : compressedSizeKb !== null
+                        ? `جاهزة للرفع بحجم خفيف (${compressedSizeKb} KB)`
+                        : 'تُضغط تلقائياً إلى WebP خفيف لتحافظ على سرعة الكاشير'}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <label className="min-h-[38px] px-3 py-1.5 rounded-xl bg-brand-soft text-brand-ink hover:bg-brand hover:text-on-brand border border-brand/20 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors">
+                    <ImagePlus className="w-4 h-4" />
+                    <span>{imagePreviewUrl ? 'تغيير' : 'اختيار صورة'}</span>
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="hidden"
+                      disabled={isCompressingImage || saveMutation.isPending}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null;
+                        e.target.value = '';
+                        void handleSelectImage(file);
+                      }}
+                    />
+                  </label>
+                  {imagePreviewUrl && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleRemoveImage}
+                      disabled={isCompressingImage || saveMutation.isPending}
+                      className="text-bad hover:bg-bad-soft text-xs font-bold gap-1"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      إزالة
+                    </Button>
+                  )}
+                </div>
+              </div>
+
               <Input
                 {...register('name')}
                 label="اسم الصنف *"
