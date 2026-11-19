@@ -149,15 +149,20 @@ class ShopifyOrderAdapter implements StorePlatformOrderAdapterInterface
             $mapped = ShopifyLocationMapping::withoutGlobalScopes()
                 ->where('user_id', $accountId)
                 ->where('shopify_location_id', $locationId)
+                ->where('is_active', true)
                 ->value('branch_id');
-            if ($mapped) {
+            if ($mapped && Branch::where('user_id', $accountId)->where('id', $mapped)->where('is_active', true)->exists()) {
                 return (int) $mapped;
             }
         }
 
-        return ShopifyIntegration::where('user_id', $accountId)->value('default_branch_id')
-            ?? Branch::where('user_id', $accountId)->where('is_main', true)->value('id')
-            ?? Branch::where('user_id', $accountId)->value('id');
+        $defaultId = ShopifyIntegration::where('user_id', $accountId)->value('default_branch_id');
+        if ($defaultId && Branch::where('user_id', $accountId)->where('id', $defaultId)->where('is_active', true)->exists()) {
+            return (int) $defaultId;
+        }
+
+        return Branch::where('user_id', $accountId)->where('is_main', true)->where('is_active', true)->value('id')
+            ?? Branch::where('user_id', $accountId)->where('is_active', true)->value('id');
     }
 
     public function invoiceReferencePayload(OnlineOrder $order): array

@@ -126,7 +126,9 @@ class WooCommerceSettingsService
             $integration->webhook_secret = Str::random(32);
         }
 
-        $integration->online_branch_id = $validated['online_branch_id'] ?? $integration->online_branch_id;
+        if (array_key_exists('online_branch_id', $validated)) {
+            $integration->online_branch_id = $validated['online_branch_id'] ? (int) $validated['online_branch_id'] : null;
+        }
         $integration->auto_sync_stock = $validated['auto_sync_stock'] ?? $integration->auto_sync_stock ?? true;
         $integration->is_active = $validated['is_active'] ?? true;
     }

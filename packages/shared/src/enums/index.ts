@@ -189,3 +189,26 @@ export enum OrderCancelReason {
   NO_ANSWER = 'NO_ANSWER',
   OTHER = 'OTHER',
 }
+
+export enum CustomerTier {
+  VIP = 'VIP',
+  REPEAT = 'REPEAT',
+  REGULAR = 'REGULAR',
+  HIGH_CANCELLATION = 'HIGH_CANCELLATION',
+  BLACKLISTED = 'BLACKLISTED',
+}
+
+export enum CustomerInteractionChannel {
+  CALL = 'CALL',
+  WHATSAPP = 'WHATSAPP',
+  NOTE = 'NOTE',
+  COMPLAINT = 'COMPLAINT',
+  FOLLOW_UP = 'FOLLOW_UP',
+}
+
+export enum CrmRiskLevel {
+  NONE = 'NONE',
+  LOW = 'LOW',
+  MEDIUM = 'MEDIUM',
+  HIGH = 'HIGH',
+}

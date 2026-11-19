@@ -75,6 +75,7 @@ class OnlineOrderController extends Controller
     public function confirm(ConfirmOnlineOrderRequest $request, int $id): JsonResponse
     {
         $order = $this->orderQueryService->findForAccountOrFail($request->user(), $id);
+        Gate::authorize('operate-online-order', $order);
         $updated = $this->orderSyncService->confirmOrder($request->user(), $order, $request->resolvedBranchId(), $request->boolean('force'));
 
         return response()->json(['success' => true, 'message' => 'تم تأكيد الطلب وتحديد فرع التجهيز بنجاح', 'data' => new OnlineOrderResource($updated)]);
@@ -83,6 +84,7 @@ class OnlineOrderController extends Controller
     public function dispatchToMandob(DispatchMandobRequest $request, int $id): JsonResponse
     {
         $order = $this->orderQueryService->findForAccountOrFail($request->user(), $id);
+        Gate::authorize('operate-online-order', $order);
         $updated = $this->orderSyncService->dispatchToMandob($request->user(), $order, (int) $request->validated('mandob_id'));
 
         return response()->json(['success' => true, 'message' => 'تم إسناد الطلب للمندوب بنجاح ونقل البضاعة لسيارة التوصيل', 'data' => new OnlineOrderResource($updated)]);
@@ -91,6 +93,7 @@ class OnlineOrderController extends Controller
     public function dispatchCourier(DispatchCourierRequest $request, int $id): JsonResponse
     {
         $order = $this->orderQueryService->findForAccountOrFail($request->user(), $id);
+        Gate::authorize('operate-online-order', $order);
         $updated = $this->orderSyncService->dispatchToCourier($request->user(), $order, $request->validated());
 
         return response()->json(['success' => true, 'message' => 'تم إسناد الطلب لشركة الشحن بنجاح وتحديث بيانات التتبع', 'data' => new OnlineOrderResource($updated)]);
@@ -121,6 +124,7 @@ class OnlineOrderController extends Controller
     public function logCall(LogOnlineOrderCallRequest $request, int $id): JsonResponse
     {
         $order = $this->orderQueryService->findForAccountOrFail($request->user(), $id);
+        Gate::authorize('operate-online-order', $order);
         $updated = $this->orderSyncService->logCallAttempt(
             $request->user(),
             $order,
@@ -139,6 +143,7 @@ class OnlineOrderController extends Controller
     public function cancel(CancelOnlineOrderRequest $request, int $id): JsonResponse
     {
         $order = $this->orderQueryService->findForAccountOrFail($request->user(), $id);
+        Gate::authorize('operate-online-order', $order);
         $cancelled = $this->orderSyncService->cancelOrder(
             $request->user(),
             $order,

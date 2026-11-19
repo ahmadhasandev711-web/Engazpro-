@@ -43,8 +43,10 @@ class CourierService
             ->get();
 
         $courierIds = $couriers->pluck('id')->all();
-        $wcStats = $this->fetchCourierWcStats($accountId, $courierIds);
-        $invoiceStats = $this->fetchCourierDirectInvoiceStats($accountId, $courierIds);
+        $scope = app(BranchScopeService::class);
+        $branchId = $scope->shouldFailClosedWithoutBranch($user) ? -1 : $scope->resolveQueryBranchId($user);
+        $wcStats = $this->fetchCourierWcStats($accountId, $courierIds, $branchId);
+        $invoiceStats = $this->fetchCourierDirectInvoiceStats($accountId, $courierIds, $branchId);
 
         $couriersWithStats = $couriers->map(fn(Party $courier) => $this->buildCourierMetricRow($courier, $wcStats->get($courier->id), $invoiceStats->get($courier->id)));
 
@@ -54,10 +56,11 @@ class CourierService
         ];
     }
 
-    private function fetchCourierWcStats(int $accountId, array $courierIds)
+    private function fetchCourierWcStats(int $accountId, array $courierIds, ?int $branchId = null)
     {
         return OnlineOrder::where('user_id', $accountId)
             ->whereIn('courier_party_id', $courierIds)
+            ->when($branchId !== null, fn ($q) => $q->where('branch_id', $branchId))
             ->selectRaw('courier_party_id, COUNT(*) as total_orders_count, COALESCE(SUM(CASE WHEN status = ? THEN 1 ELSE 0 END), 0) as active_orders_count, COALESCE(SUM(CASE WHEN status = ? THEN 1 ELSE 0 END), 0) as delivered_orders_count, COALESCE(SUM(CASE WHEN status = ? AND payment_status != ? THEN total ELSE 0 END), 0) as pending_cod_amount', [
                 WcOrderStatus::SHIPPED_VIA_COURIER->value,
                 WcOrderStatus::DELIVERED->value,
@@ -69,10 +72,11 @@ class CourierService
             ->keyBy('courier_party_id');
     }
 
-    private function fetchCourierDirectInvoiceStats(int $accountId, array $courierIds)
+    private function fetchCourierDirectInvoiceStats(int $accountId, array $courierIds, ?int $branchId = null)
     {
         return Invoice::where('user_id', $accountId)
             ->whereIn('courier_party_id', $courierIds)
+            ->when($branchId !== null, fn ($q) => $q->where('branch_id', $branchId))
             ->whereNull('online_order_id')
             ->whereNull('wc_order_id')
             ->whereNull('shopify_order_id')
@@ -132,11 +136,12 @@ class CourierService
 
     private function resolveManifestBranchId(User $user, ?int $branchId): ?int
     {
-        if ($user->isManager() && $user->branch_id) {
-            return (int) $user->branch_id;
+        $scope = app(BranchScopeService::class);
+        if ($scope->shouldFailClosedWithoutBranch($user)) {
+            return -1;
         }
 
-        return ($branchId && $user->isOwnerOrAdmin()) ? (int) $branchId : null;
+        return $scope->resolveQueryBranchId($user, $branchId);
     }
 
     private function buildManifestBaseQueries(int $accountId, int $courierId, ?int $branchId): array

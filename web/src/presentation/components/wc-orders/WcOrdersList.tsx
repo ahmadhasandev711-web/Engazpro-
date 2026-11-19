@@ -17,6 +17,7 @@ import {
 import { Button } from '../ui/Button';
 import { EmptyState } from '../ui/EmptyState';
 import { Badge } from '../ui/Badge';
+import { CustomerRiskBadge } from '../crm/CustomerRiskBadge';
 import { cn } from '../../utils/cn';
 import type { WcOrdersViewModel } from './types';
 
@@ -165,7 +166,13 @@ export const WcOrdersList: React.FC<{ vm: WcOrdersViewModel }> = ({ vm }) => {
 
                       return (
                         <div>
-                          <h3 className="text-sm font-black text-ink">{order.customer_name}</h3>
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
+                            <h3 className="text-sm font-black text-ink">{order.customer_name}</h3>
+                            <CustomerRiskBadge metrics={order.customer_crm} variant="compact" />
+                          </div>
+                          {order.customer_crm?.show_warning && (
+                            <CustomerRiskBadge metrics={order.customer_crm} variant="banner" className="mt-2" />
+                          )}
                           <div className="flex flex-wrap items-center gap-2 text-2xs text-muted mt-1.5">
                             {phone && telUrl ? (
                               <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>

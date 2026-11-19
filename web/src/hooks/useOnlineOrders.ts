@@ -5,6 +5,7 @@ import { apiClient } from '../data/api/client';
 import { REFERENCE_QUERY_OPTIONS } from '../data/api/queryPresets';
 import { useDebouncedValue } from './useDebouncedValue';
 import { usePermissions } from './usePermissions';
+import { useBranchScope } from './useBranchScope';
 import { useAuthStore } from '../data/store/useAuthStore';
 import { calculatePresetDates } from '../presentation/components/common/DateRangeFilter';
 import { nativeBackButton } from '../platform/nativeBackButton';
@@ -139,6 +140,18 @@ export function useOnlineOrders(config?: OrdersChannelConfig) {
   }, [viewingOrder, confirmModalOrder, courierModalOrder, dispatchModalOrder, deliverModalOrder, callModalOrder, cancelModalOrder, printOrder]);
 
   const user = useAuthStore((state) => state.user);
+  const { hasGlobalBranchAccess, lockedBranchId, canAccessBranchId } = useBranchScope();
+
+  useEffect(() => {
+    if (!hasGlobalBranchAccess && lockedBranchId) {
+      if (selectedBranchId !== lockedBranchId) {
+        setSelectedBranchId(lockedBranchId);
+      }
+      if (courierBranchId !== lockedBranchId) {
+        setCourierBranchId(lockedBranchId);
+      }
+    }
+  }, [hasGlobalBranchAccess, lockedBranchId, selectedBranchId, courierBranchId]);
 
   const { data: branchesData } = useQuery({
     queryKey: ['branches'],
@@ -172,8 +185,8 @@ export function useOnlineOrders(config?: OrdersChannelConfig) {
   const employees = Array.isArray(employeesData) ? employeesData : [];
   const mandobs = employees.filter((e: any) => {
     const isMandobRole = e.role === 'MANDOB' || e.role === 'MANAGER';
-    if (isManager && user?.branch_id) {
-      return isMandobRole && e.branch_id === user.branch_id;
+    if (!hasGlobalBranchAccess) {
+      return isMandobRole && (canAccessBranchId(e.branch_id) || e.branch_type === 'VAN');
     }
     return isMandobRole;
   });
@@ -201,7 +214,7 @@ export function useOnlineOrders(config?: OrdersChannelConfig) {
     setCourierName(matchedParty?.name || order.courier_name || '');
     setCourierTrackingNumber(order.tracking_number || '');
     const mainBranch = branches.find((b: any) => b.is_main) || branches[0];
-    setCourierBranchId(order.branch_id || (mainBranch?.id ?? ''));
+    setCourierBranchId((!hasGlobalBranchAccess && lockedBranchId) ? lockedBranchId : (order.branch_id || (mainBranch?.id ?? '')));
     setShowAddCourier(false);
     setNewCourierName('');
     setNewCourierPhone('');

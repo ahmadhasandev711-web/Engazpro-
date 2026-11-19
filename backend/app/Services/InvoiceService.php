@@ -563,12 +563,12 @@ class InvoiceService
         $isEmployee = $user->isMandob() || $user->isCashier();
         $query = Invoice::query()
             ->when($isEmployee, fn($q) => $q->where('created_by', $user->id))
-            ->when($user->isManager() && $user->branch_id, fn($q) => $q->where('branch_id', $user->branch_id))
-            ->when(!empty($filters['branch_id']) && $user->isOwnerOrAdmin(), fn($q) => $q->where('branch_id', $filters['branch_id']))
             ->when(!empty($filters['type']), fn($q) => $q->where('type', $filters['type']))
             ->when(!empty($filters['created_by']) && !$isEmployee, fn($q) => $q->where('created_by', $filters['created_by']))
             ->when(!empty($filters['date_from']), fn($q) => $q->where('date', '>=', $filters['date_from']))
             ->when(!empty($filters['date_to']), fn($q) => $q->where('date', '<=', $filters['date_to'] . ' 23:59:59'));
+
+        app(BranchScopeService::class)->applyBranchFilter($query, $user, 'branch_id', !empty($filters['branch_id']) ? (int) $filters['branch_id'] : null);
 
         if (!empty($filters['search'])) {
             $search = $filters['search'];

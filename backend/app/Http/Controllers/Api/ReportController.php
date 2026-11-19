@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CashFlowTransactionsRequest;
 use App\Http\Resources\CashFlowTransactionResource;
+use App\Services\FinancialClosingService;
 use App\Services\PurchaseReportService;
+use App\Services\ReceivablesPayablesService;
 use App\Services\ReportService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -42,7 +44,8 @@ class ReportController extends Controller
         $data = $this->reportService->getSalesReport(
             user: $request->user(),
             fromDate: $request->input('from_date'),
-            toDate: $request->input('to_date')
+            toDate: $request->input('to_date'),
+            branchId: $request->filled('branch_id') ? (int) $request->input('branch_id') : null
         );
 
         return response()->json(['data' => $data]);
@@ -59,7 +62,8 @@ class ReportController extends Controller
             user: $request->user(),
             search: $request->input('search'),
             perPage: (int) $request->input('per_page', 50),
-            page: (int) $request->input('page', 1)
+            page: (int) $request->input('page', 1),
+            branchId: $request->filled('branch_id') ? (int) $request->input('branch_id') : null
         );
 
         return response()->json(['data' => $data]);
@@ -90,8 +94,10 @@ class ReportController extends Controller
         Gate::authorize('view-cash-flow');
 
         $data = $this->reportService->getCashFlowReport(
+            user: $request->user(),
             fromDate: $request->input('from_date'),
-            toDate: $request->input('to_date')
+            toDate: $request->input('to_date'),
+            branchId: $request->filled('branch_id') ? (int) $request->input('branch_id') : null
         );
 
         return response()->json(['data' => $data]);
@@ -107,7 +113,8 @@ class ReportController extends Controller
         $validated = $request->validated();
         $paginator = $this->reportService->getCashFlowTransactions(
             channel: strtoupper($validated['channel']),
-            filters: $validated
+            filters: $validated,
+            user: $request->user()
         );
 
         return response()->json([
@@ -120,5 +127,26 @@ class ReportController extends Controller
                 'total' => $paginator->total(),
             ],
         ]);
+    }
+
+    public function financialClosing(Request $request, FinancialClosingService $closingService): JsonResponse
+    {
+        Gate::authorize('view-profit');
+
+        $data = $closingService->getClosingStatements(
+            user: $request->user(),
+            fromDate: $request->input('from_date'),
+            toDate: $request->input('to_date'),
+            branchId: $request->filled('branch_id') ? (int) $request->input('branch_id') : null
+        );
+
+        return response()->json(['data' => $data]);
+    }
+
+    public function receivablesPayables(Request $request, ReceivablesPayablesService $agingService): JsonResponse
+    {
+        Gate::authorize('view-receivables-payables');
+
+        return response()->json(['data' => $agingService->getSummary($request->user())]);
     }
 }

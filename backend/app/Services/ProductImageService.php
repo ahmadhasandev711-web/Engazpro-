@@ -34,7 +34,7 @@ class ProductImageService
             throw $e;
         }
 
-        $this->deleteLocalImageIfOwned($previousImageUrl);
+        $this->deleteLocalImageIfOwned($previousImageUrl, $product->user_id);
 
         return $updated;
     }
@@ -49,25 +49,29 @@ class ProductImageService
             return $product->fresh(['category', 'variants', 'batches']);
         });
 
-        $this->deleteLocalImageIfOwned($previousImageUrl);
+        $this->deleteLocalImageIfOwned($previousImageUrl, $product->user_id);
 
         return $updated;
     }
 
     public function deleteLocalImagesForProduct(Product $product): void
     {
-        $this->deleteLocalImageIfOwned($product->image_url);
+        $this->deleteLocalImageIfOwned($product->image_url, $product->user_id);
 
         if ($product->relationLoaded('variants')) {
             foreach ($product->variants as $variant) {
-                $this->deleteLocalImageIfOwned($variant->image_url);
+                $this->deleteLocalImageIfOwned($variant->image_url, $product->user_id);
             }
         }
     }
 
-    public function deleteLocalImageIfOwned(?string $imageUrl): void
+    public function deleteLocalImageIfOwned(?string $imageUrl, ?int $expectedTenantId = null): void
     {
-        if (!$imageUrl || !str_starts_with($imageUrl, self::TENANT_PREFIX)) {
+        $prefix = $expectedTenantId !== null
+            ? self::TENANT_PREFIX . $expectedTenantId . '/products/'
+            : self::TENANT_PREFIX;
+
+        if (!$imageUrl || !str_starts_with($imageUrl, $prefix)) {
             return;
         }
 

@@ -7,6 +7,8 @@ import {
   Wallet,
   Download,
   ShoppingBag,
+  Landmark,
+  Scale,
 } from 'lucide-react';
 
 import {
@@ -15,6 +17,8 @@ import {
   usePurchaseReport,
   useStockReport,
   useCashFlowReport,
+  useFinancialClosingReport,
+  useReceivablesPayablesReport,
   fetchAllCashFlowTransactions,
 } from '../../hooks/useReports';
 import { useAuthStore } from '../../data/store/useAuthStore';
@@ -26,11 +30,13 @@ import { SalesReportTab } from '../components/reports/SalesReportTab';
 import { PurchaseReportTab } from '../components/reports/PurchaseReportTab';
 import { CashFlowTab, CashFlowPrintData } from '../components/reports/CashFlowTab';
 import { StockReportTab } from '../components/reports/StockReportTab';
+import { FinancialClosingTab } from '../components/reports/FinancialClosingTab';
+import { ReceivablesPayablesTab } from '../components/reports/ReceivablesPayablesTab';
 import { DateRangeFilter, DatePreset, calculatePresetDates } from '../components/common/DateRangeFilter';
 import { useToast } from '../context/ToastContext';
 import { Button, Card, PageHeader, Tabs } from '../components/ui';
 
-type ActiveTab = 'profit' | 'sales' | 'purchases' | 'cash-flow' | 'stock';
+type ActiveTab = 'profit' | 'financial-closing' | 'receivables-payables' | 'sales' | 'purchases' | 'cash-flow' | 'stock';
 
 const getTreasuryLabel = (t: string) => {
   switch (t) {
@@ -71,7 +77,7 @@ const getPresetLabel = (p: DatePreset | string) => {
 export const ReportsPage: React.FC = () => {
   const toast = useToast();
   const user = useAuthStore((state) => state.user);
-  const { canViewProfitReport, canViewPurchaseReport } = usePermissions();
+  const { canViewProfitReport, canViewPurchaseReport, canViewReceivablesPayablesReport } = usePermissions();
   const storeIdentity = user?.store_identity;
   const storeName = storeIdentity?.business_name || (user as any)?.store_name || user?.name || 'متجر إنجاز برو';
   const storePhone = storeIdentity?.store_phone || user?.phone;
@@ -103,6 +109,14 @@ export const ReportsPage: React.FC = () => {
     activeTab === 'stock'
   );
   const { data: cashFlowData, isLoading: isCashFlowLoading } = useCashFlowReport(fromDate, toDate, activeTab === 'cash-flow');
+  const { data: closingData, isLoading: isClosingLoading } = useFinancialClosingReport(
+    fromDate,
+    toDate,
+    canViewProfitReport && activeTab === 'financial-closing'
+  );
+  const { data: agingData, isLoading: isAgingLoading } = useReceivablesPayablesReport(
+    canViewReceivablesPayablesReport && activeTab === 'receivables-payables'
+  );
 
   const [cashFlowPrintData, setCashFlowPrintData] = useState<CashFlowPrintData | null>(null);
   const [isTopPrinting, setIsTopPrinting] = useState(false);
@@ -149,17 +163,48 @@ export const ReportsPage: React.FC = () => {
     } else if (activeTab === 'stock' && stockData?.products) {
       exportProductsToExcel(stockData.products);
     } else if (activeTab === 'profit' && canViewProfitReport && profitData) {
-      const summary = profitData.summary || {};
       const rows = [
-        { 'البند': 'إجمالي المبيعات', 'المبلغ': summary.gross_sales || 0 },
-        { 'البند': 'مرتجعات المبيعات', 'المبلغ': summary.sales_returns || 0 },
-        { 'البند': 'صافي المبيعات', 'المبلغ': summary.net_sales || 0 },
-        { 'البند': 'تكلفة البضاعة المباعة (COGS)', 'المبلغ': summary.cost_of_goods_sold || 0 },
-        { 'البند': 'إجمالي الربح التجاري', 'المبلغ': summary.gross_profit || 0 },
-        { 'البند': 'إجمالي المصروفات', 'المبلغ': summary.total_expenses || 0 },
-        { 'البند': 'صافي الربح النهائي', 'المبلغ': summary.net_profit || 0 },
+        { 'البند': 'إجمالي المبيعات', 'المبلغ': profitData.sales?.gross_sales || 0 },
+        { 'البند': 'مرتجعات المبيعات', 'المبلغ': profitData.sales?.sale_returns || 0 },
+        { 'البند': 'صافي المبيعات', 'المبلغ': profitData.sales?.net_sales || 0 },
+        { 'البند': 'تكلفة البضاعة المباعة (COGS)', 'المبلغ': profitData.cogs?.net_cogs || 0 },
+        { 'البند': 'إجمالي الربح التجاري', 'المبلغ': profitData.profit?.gross_profit || 0 },
+        { 'البند': 'إجمالي المصروفات', 'المبلغ': profitData.profit?.total_expenses || 0 },
+        { 'البند': 'صافي الربح النهائي', 'المبلغ': profitData.profit?.net_profit || 0 },
       ];
       exportJsonToExcel(rows, `تقرير_الأرباح_${fromDate}_${toDate}`, 'الأرباح والخسائر');
+    } else if (activeTab === 'financial-closing' && canViewProfitReport && closingData) {
+      const pnl = closingData.income_statement;
+      const bal = closingData.balance_snapshot;
+      const rows = [
+        { 'القسم': 'الدخل الختامي', 'البند': 'صافي المبيعات', 'المبلغ': pnl.net_sales },
+        { 'القسم': 'الدخل الختامي', 'البند': 'صافي تكلفة البضاعة (COGS)', 'المبلغ': pnl.net_cogs },
+        { 'القسم': 'الدخل الختامي', 'البند': 'مجمل الربح التجاري', 'المبلغ': pnl.gross_profit },
+        ...pnl.expenses_by_category.map((c) => ({ 'القسم': 'المصروفات', 'البند': c.category, 'المبلغ': c.total_amount })),
+        { 'القسم': 'الدخل الختامي', 'البند': 'صافي الربح النهائي', 'المبلغ': pnl.net_profit },
+        { 'القسم': 'الأصول', 'البند': 'السيولة والبنوك والمحافظ', 'المبلغ': bal.assets.total_cash_and_banks },
+        { 'القسم': 'الأصول', 'البند': 'المخزون بالتكلفة', 'المبلغ': bal.assets.inventory_cost_value },
+        { 'القسم': 'الأصول', 'البند': 'بضاعة بالطريق', 'المبلغ': bal.assets.in_transit_inventory_value },
+        { 'القسم': 'الأصول', 'البند': 'ذمم العملاء المدينة', 'المبلغ': bal.assets.customer_receivables },
+        { 'القسم': 'الأصول', 'البند': 'مستحقات شركات الشحن', 'المبلغ': bal.assets.courier_receivables },
+        { 'القسم': 'الالتزامات', 'البند': 'مستحقات الموردين', 'المبلغ': bal.liabilities.supplier_payables },
+        { 'القسم': 'المركز المالي', 'البند': 'صافي رأس المال العامل', 'المبلغ': bal.net_working_capital },
+      ];
+      exportJsonToExcel(rows, `القوائم_الختامية_${fromDate}_${toDate}`, 'القوائم الختامية');
+    } else if (activeTab === 'receivables-payables' && canViewReceivablesPayablesReport && agingData) {
+      const rows = [
+        ...agingData.top_customers,
+        ...agingData.top_suppliers,
+        ...agingData.top_couriers,
+      ].map((p) => ({
+        'النوع': p.type,
+        'الاسم': p.name,
+        'الهاتف': p.phone || '-',
+        'آخر حركة': p.last_activity_date || '-',
+        'العمر': p.aging_bucket,
+        'الرصيد': p.balance,
+      }));
+      exportJsonToExcel(rows, `كشف_الذمم_والأعمار_${new Date().toISOString().slice(0, 10)}`, 'الذمم والأرصدة');
     } else if (activeTab === 'sales' && salesData?.top_selling_products) {
       const rows = (salesData.top_selling_products || []).map((p: any, idx: number) => ({
         'م': idx + 1,
@@ -187,7 +232,13 @@ export const ReportsPage: React.FC = () => {
 
   const reportTabs = [
     ...(canViewProfitReport
-      ? [{ id: 'profit', label: 'الأرباح والخسائر', icon: <TrendingUp className="w-4 h-4" /> }]
+      ? [
+          { id: 'profit', label: 'الأرباح والخسائر', icon: <TrendingUp className="w-4 h-4" /> },
+          { id: 'financial-closing', label: 'القوائم الختامية', icon: <Landmark className="w-4 h-4" /> },
+        ]
+      : []),
+    ...(canViewReceivablesPayablesReport
+      ? [{ id: 'receivables-payables', label: 'الذمم والأرصدة', icon: <Scale className="w-4 h-4" /> }]
       : []),
     { id: 'sales', label: 'المبيعات', icon: <Receipt className="w-4 h-4" /> },
     ...(canViewPurchaseReport
@@ -289,8 +340,8 @@ export const ReportsPage: React.FC = () => {
         onChange={(id) => setActiveTab(id as ActiveTab)}
       />
 
-      {/* Date Filter Bar (Shown for Profit, Sales, CashFlow) */}
-      {activeTab !== 'stock' && (
+      {/* Date Filter Bar (Shown for period-based reports) */}
+      {activeTab !== 'stock' && activeTab !== 'receivables-payables' && (
         <Card className="p-2.5 sm:p-4 w-full min-w-0 max-w-full overflow-hidden">
           <DateRangeFilter
             fromDate={fromDate}
@@ -307,6 +358,12 @@ export const ReportsPage: React.FC = () => {
 
       {/* Tab Panels */}
       {activeTab === 'profit' && canViewProfitReport && <ProfitReportTab data={profitData} isLoading={isProfitLoading} />}
+      {activeTab === 'financial-closing' && canViewProfitReport && (
+        <FinancialClosingTab data={closingData} isLoading={isClosingLoading} />
+      )}
+      {activeTab === 'receivables-payables' && canViewReceivablesPayablesReport && (
+        <ReceivablesPayablesTab data={agingData} isLoading={isAgingLoading} />
+      )}
       {activeTab === 'sales' && <SalesReportTab data={salesData} isLoading={isSalesLoading} />}
       {activeTab === 'purchases' && canViewPurchaseReport && (
         <PurchaseReportTab data={purchaseData} isLoading={isPurchaseLoading} />
@@ -355,12 +412,14 @@ export const ReportsPage: React.FC = () => {
           <div className="text-left space-y-1">
             <div className="inline-block bg-paper-ink text-paper font-black px-3 py-1 rounded text-sm">
               {activeTab === 'profit' && 'تقرير الأرباح والخسائر الشامل'}
+              {activeTab === 'financial-closing' && 'القوائم المالية الختامية (قائمة الدخل والمركز المالي)'}
+              {activeTab === 'receivables-payables' && 'كشف الذمم والأرصدة وأعمار الديون'}
               {activeTab === 'sales' && 'كشف حركة المبيعات والمتحصلات'}
               {activeTab === 'purchases' && 'تقرير المشتريات والموردين'}
               {activeTab === 'cash-flow' && `كشف حركة ${cashFlowPrintData?.treasuryName || getTreasuryLabel(selectedTreasury)}`}
               {activeTab === 'stock' && 'تقرير جرد وتقييم المخزون'}
             </div>
-            {activeTab !== 'stock' && (
+            {activeTab !== 'stock' && activeTab !== 'receivables-payables' && (
               <p className="text-[11px] text-paper-muted font-mono">
                 الفترة: {getPresetLabel(preset)} ({fromDate || 'البداية'} إلى {toDate || 'اليوم'})
               </p>
@@ -427,6 +486,76 @@ export const ReportsPage: React.FC = () => {
                 <tr className="border-b border-paper-line font-bold bg-paper-soft">
                   <td className="p-2 border border-paper-line">نسبة هامش صافي الربح (%)</td>
                   <td className="p-2 border border-paper-line font-mono text-left font-bold">{profitData.profit?.profit_margin || 0}%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Tab 1B: Financial Closing Print View */}
+        {activeTab === 'financial-closing' && closingData && (
+          <div className="space-y-4">
+            <h2 className="text-sm font-black text-paper-ink border-b border-paper-line pb-1">
+              ملخص القوائم المالية الختامية (قائمة الدخل والمركز المالي)
+            </h2>
+            <table className="w-full text-right border-collapse border border-paper-line text-xs">
+              <tbody>
+                <tr className="border-b border-paper-line bg-paper-soft font-black">
+                  <td className="p-2 border border-paper-line">صافي المبيعات</td>
+                  <td className="p-2 border border-paper-line font-mono text-left">{formatCurrency(closingData.income_statement.net_sales)}</td>
+                </tr>
+                <tr className="border-b border-paper-line">
+                  <td className="p-2 border border-paper-line">تكلفة البضاعة المباعة (-)</td>
+                  <td className="p-2 border border-paper-line font-mono text-left">-{formatCurrency(closingData.income_statement.net_cogs)}</td>
+                </tr>
+                <tr className="border-b border-paper-line">
+                  <td className="p-2 border border-paper-line">إجمالي المصروفات التشغيلية (-)</td>
+                  <td className="p-2 border border-paper-line font-mono text-left">-{formatCurrency(closingData.income_statement.total_expenses)}</td>
+                </tr>
+                <tr className="border-b border-paper-line bg-paper-soft font-black">
+                  <td className="p-2 border border-paper-line">صافي الربح النهائي</td>
+                  <td className="p-2 border border-paper-line font-mono text-left">{formatCurrency(closingData.income_statement.net_profit)}</td>
+                </tr>
+                <tr className="border-b border-paper-line">
+                  <td className="p-2 border border-paper-line">إجمالي الأصول (سيولة + مخزون + بضاعة بالطريق + ذمم)</td>
+                  <td className="p-2 border border-paper-line font-mono text-left">{formatCurrency(closingData.balance_snapshot.assets.total_assets)}</td>
+                </tr>
+                <tr className="border-b border-paper-line">
+                  <td className="p-2 border border-paper-line">إجمالي الالتزامات (موردين + دائنون)</td>
+                  <td className="p-2 border border-paper-line font-mono text-left">{formatCurrency(closingData.balance_snapshot.liabilities.total_liabilities)}</td>
+                </tr>
+                <tr className="border-2 border-paper-ink bg-paper-soft font-black">
+                  <td className="p-2 border border-paper-ink">صافي رأس المال العامل</td>
+                  <td className="p-2 border border-paper-ink font-mono text-left">{formatCurrency(closingData.balance_snapshot.net_working_capital)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Tab 1C: Receivables & Payables Print View */}
+        {activeTab === 'receivables-payables' && agingData && (
+          <div className="space-y-4">
+            <h2 className="text-sm font-black text-paper-ink border-b border-paper-line pb-1">
+              ملخص الذمم والأرصدة وأعمار الديون
+            </h2>
+            <table className="w-full text-right border-collapse border border-paper-line text-xs">
+              <tbody>
+                <tr className="border-b border-paper-line">
+                  <td className="p-2 border border-paper-line font-bold">ذمم العملاء المدينة</td>
+                  <td className="p-2 border border-paper-line font-mono text-left font-black">{formatCurrency(agingData.summary.customer_receivables_total)}</td>
+                </tr>
+                <tr className="border-b border-paper-line">
+                  <td className="p-2 border border-paper-line font-bold">مستحقات شركات الشحن (COD)</td>
+                  <td className="p-2 border border-paper-line font-mono text-left font-black">{formatCurrency(agingData.summary.courier_receivables_total)}</td>
+                </tr>
+                <tr className="border-b border-paper-line">
+                  <td className="p-2 border border-paper-line font-bold">مستحقات للموردين</td>
+                  <td className="p-2 border border-paper-line font-mono text-left font-black">{formatCurrency(agingData.summary.supplier_payables_total)}</td>
+                </tr>
+                <tr className="border-2 border-paper-ink bg-paper-soft font-black">
+                  <td className="p-2 border border-paper-ink">صافي الموقف التجاري للذمم</td>
+                  <td className="p-2 border border-paper-ink font-mono text-left">{formatCurrency(agingData.summary.net_trade_position)}</td>
                 </tr>
               </tbody>
             </table>

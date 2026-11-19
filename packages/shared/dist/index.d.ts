@@ -176,6 +176,26 @@ declare enum OrderCancelReason {
     NO_ANSWER = "NO_ANSWER",
     OTHER = "OTHER"
 }
+declare enum CustomerTier {
+    VIP = "VIP",
+    REPEAT = "REPEAT",
+    REGULAR = "REGULAR",
+    HIGH_CANCELLATION = "HIGH_CANCELLATION",
+    BLACKLISTED = "BLACKLISTED"
+}
+declare enum CustomerInteractionChannel {
+    CALL = "CALL",
+    WHATSAPP = "WHATSAPP",
+    NOTE = "NOTE",
+    COMPLAINT = "COMPLAINT",
+    FOLLOW_UP = "FOLLOW_UP"
+}
+declare enum CrmRiskLevel {
+    NONE = "NONE",
+    LOW = "LOW",
+    MEDIUM = "MEDIUM",
+    HIGH = "HIGH"
+}
 
 interface BaseEntity {
     id: number;
@@ -286,6 +306,33 @@ interface Product extends BaseEntity {
     variants?: ProductVariant[];
     batches?: ProductBatch[];
 }
+interface PartyCrmMetrics {
+    auto_tier: CustomerTier;
+    effective_tier: CustomerTier;
+    tier_label: string;
+    is_manual_override: boolean;
+    risk_level: CrmRiskLevel;
+    delivered_orders_count: number;
+    cancelled_or_returned_count: number;
+    active_orders_count: number;
+    total_orders_count: number;
+    cancellation_rate: number;
+    total_spent: number;
+    last_order_at?: string | null;
+    show_warning: boolean;
+    warning_message?: string | null;
+}
+interface PartyInteraction {
+    id: number;
+    party_id: number;
+    created_by: number;
+    creator_name?: string | null;
+    channel: CustomerInteractionChannel;
+    channel_label: string;
+    notes: string;
+    follow_up_at?: string | null;
+    created_at: string;
+}
 interface Party extends BaseEntity {
     type: PartyType;
     name: string;
@@ -295,7 +342,10 @@ interface Party extends BaseEntity {
     balance: number;
     notes?: string | null;
     invoices_count?: number;
+    interactions_count?: number;
     has_transactions?: boolean;
+    crm_tier_override?: CustomerTier | null;
+    crm_metrics?: PartyCrmMetrics | null;
 }
 interface InvoiceItem {
     id?: number;
@@ -791,6 +841,7 @@ interface OnlineOrder extends BaseEntity {
     items_snapshot?: any[];
     platform_meta?: Record<string, any>;
     items?: OnlineOrderItem[];
+    customer_crm?: PartyCrmMetrics | null;
 }
 type WcOrderItem = OnlineOrderItem;
 type WcOrder = OnlineOrder;
@@ -895,6 +946,96 @@ interface PurchaseReportData {
         total_cost: number;
         avg_unit_cost: number;
     }>;
+}
+interface FinancialClosingReportData {
+    period: {
+        from_date?: string | null;
+        to_date?: string | null;
+        branch_id?: number | null;
+    };
+    income_statement: {
+        gross_sales: number;
+        sales_discounts: number;
+        sale_returns: number;
+        net_sales: number;
+        shipping_revenue: number;
+        cogs_sales: number;
+        cogs_returns: number;
+        net_cogs: number;
+        gross_profit: number;
+        gross_margin: number;
+        expenses_by_category: Array<{
+            category: string;
+            count: number;
+            total_amount: number;
+        }>;
+        total_expenses: number;
+        net_profit: number;
+        net_margin: number;
+        pending_payroll_reference?: {
+            month: string;
+            disbursed_this_month: number;
+        };
+    };
+    balance_snapshot: {
+        as_of: string;
+        assets: {
+            treasuries_by_type: Array<{
+                type: string;
+                label: string;
+                balance: number;
+            }>;
+            total_cash_and_banks: number;
+            inventory_cost_value: number;
+            in_transit_inventory_value: number;
+            customer_receivables: number;
+            courier_receivables: number;
+            total_assets: number;
+        };
+        liabilities: {
+            supplier_payables: number;
+            customer_credits: number;
+            courier_payables: number;
+            total_liabilities: number;
+        };
+        net_working_capital: number;
+        owner_drawings_total: number;
+    };
+}
+interface ReceivablesPayablesBucketParty {
+    id: number;
+    name: string;
+    phone?: string | null;
+    type: PartyType;
+    balance: number;
+    last_activity_date?: string | null;
+    days_since_activity?: number | null;
+    aging_bucket: 'CURRENT' | 'DAYS_31_60' | 'DAYS_60_PLUS';
+}
+interface ReceivablesPayablesAgingBuckets {
+    current_0_30: number;
+    days_31_60: number;
+    days_60_plus: number;
+}
+interface ReceivablesPayablesReportData {
+    as_of: string;
+    summary: {
+        customer_receivables_total: number;
+        customer_credits_total: number;
+        supplier_payables_total: number;
+        supplier_advances_total: number;
+        courier_receivables_total: number;
+        courier_payables_total: number;
+        net_trade_position: number;
+    };
+    aging: {
+        customers: ReceivablesPayablesAgingBuckets;
+        suppliers: ReceivablesPayablesAgingBuckets;
+        couriers: ReceivablesPayablesAgingBuckets;
+    };
+    top_customers: ReceivablesPayablesBucketParty[];
+    top_suppliers: ReceivablesPayablesBucketParty[];
+    top_couriers: ReceivablesPayablesBucketParty[];
 }
 
 declare const LoginSchema: z.ZodObject<{
@@ -1721,4 +1862,4 @@ declare class Money {
     toString(): string;
 }
 
-export { type AdminAuditLogItem, type AdminStatsData, type ApiResponse, BarcodeFormat, BarcodeLabelSize, type BarcodePrintItemInput, BarcodePrintItemSchema, type BarcodePrintRequestInput, BarcodePrintRequestSchema, type BaseEntity, type Branch, type BranchInput, BranchSchema, type BranchStock, BranchType, type CalculationItem, type CashFlowReportData, type CashFlowTransaction, type CashFlowTransactionsResponse, type Category, CategorySchema, CommissionType, type DashboardSummary, EcommercePlatform, EmployeeAdjustmentType, type EmployeeInput, EmployeeSchema, type Expense, type ExpenseInput, ExpenseSchema, type ExpiringBatchAlertItem, ExpiryStatus, type Invoice, type InvoiceCalculations, type InvoiceInput, type InvoiceItem, type InvoiceItemInput, InvoiceItemSchema, InvoiceSchema, InvoiceType, type LedgerEntry, LedgerSource, type LicenseKey, type LoginInput, LoginSchema, type LowStockAlertItem, Money, type OnlineOrder, OnlineOrderCallStatus, type OnlineOrderItem, OrderCancelReason, type PaginatedResponse, type Party, type PartyInput, PartySchema, PartyType, type Payment, type PaymentInput, PaymentMethod, PaymentSchema, type Product, type ProductBatch, type ProductInput, ProductSchema, ProductType, type ProductVariant, type ProductVariantInput, ProductVariantSchema, type ProfitReportData, type PurchaseReportData, type RegisterInput, RegisterSchema, type SalesReportData, ShiftStatus, ShopifyAuthMode, type SplitPaymentItem, StockAdjustmentMode, type StockAlertsResponse, type StockAlertsSummary, type StockMovement, type StockMovementRecord, StockMovementSource, StockMovementType, type StockReportData, type StockReportItem, type StockTransfer, type StockTransferInput, type StockTransferItem, type StockTransferItemInput, StockTransferItemSchema, StockTransferSchema, StockTransferStatus, type StoreIdentity, type Subscription, SubscriptionPlan, SubscriptionStatus, type Treasury, type TreasuryBreakdown, TreasuryTransactionSource, TreasuryTransactionType, TreasuryType, type Unit, type User, UserRole, UserStatus, type WcOrder, type WcOrderItem, WcOrderStatus, WcPaymentStatus, calculateInvoiceTotals, calculateNetProfit, calculatePartyBalanceImpact, formatCurrency, formatDate, formatDateTime, formatNumber, getPaymentMethodLabel };
+export { type AdminAuditLogItem, type AdminStatsData, type ApiResponse, BarcodeFormat, BarcodeLabelSize, type BarcodePrintItemInput, BarcodePrintItemSchema, type BarcodePrintRequestInput, BarcodePrintRequestSchema, type BaseEntity, type Branch, type BranchInput, BranchSchema, type BranchStock, BranchType, type CalculationItem, type CashFlowReportData, type CashFlowTransaction, type CashFlowTransactionsResponse, type Category, CategorySchema, CommissionType, CrmRiskLevel, CustomerInteractionChannel, CustomerTier, type DashboardSummary, EcommercePlatform, EmployeeAdjustmentType, type EmployeeInput, EmployeeSchema, type Expense, type ExpenseInput, ExpenseSchema, type ExpiringBatchAlertItem, ExpiryStatus, type FinancialClosingReportData, type Invoice, type InvoiceCalculations, type InvoiceInput, type InvoiceItem, type InvoiceItemInput, InvoiceItemSchema, InvoiceSchema, InvoiceType, type LedgerEntry, LedgerSource, type LicenseKey, type LoginInput, LoginSchema, type LowStockAlertItem, Money, type OnlineOrder, OnlineOrderCallStatus, type OnlineOrderItem, OrderCancelReason, type PaginatedResponse, type Party, type PartyCrmMetrics, type PartyInput, type PartyInteraction, PartySchema, PartyType, type Payment, type PaymentInput, PaymentMethod, PaymentSchema, type Product, type ProductBatch, type ProductInput, ProductSchema, ProductType, type ProductVariant, type ProductVariantInput, ProductVariantSchema, type ProfitReportData, type PurchaseReportData, type ReceivablesPayablesAgingBuckets, type ReceivablesPayablesBucketParty, type ReceivablesPayablesReportData, type RegisterInput, RegisterSchema, type SalesReportData, ShiftStatus, ShopifyAuthMode, type SplitPaymentItem, StockAdjustmentMode, type StockAlertsResponse, type StockAlertsSummary, type StockMovement, type StockMovementRecord, StockMovementSource, StockMovementType, type StockReportData, type StockReportItem, type StockTransfer, type StockTransferInput, type StockTransferItem, type StockTransferItemInput, StockTransferItemSchema, StockTransferSchema, StockTransferStatus, type StoreIdentity, type Subscription, SubscriptionPlan, SubscriptionStatus, type Treasury, type TreasuryBreakdown, TreasuryTransactionSource, TreasuryTransactionType, TreasuryType, type Unit, type User, UserRole, UserStatus, type WcOrder, type WcOrderItem, WcOrderStatus, WcPaymentStatus, calculateInvoiceTotals, calculateNetProfit, calculatePartyBalanceImpact, formatCurrency, formatDate, formatDateTime, formatNumber, getPaymentMethodLabel };

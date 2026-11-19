@@ -86,7 +86,11 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
             Route::post('validate', [BarcodeController::class, 'validateBarcode']);
         });
 
-        // Parties (Customers & Suppliers & Couriers)
+        // Parties (Customers & Suppliers & Couriers) & CRM Interactions
+        Route::get('parties/{party}/crm', [\App\Http\Controllers\Api\PartyCrmController::class, 'show']);
+        Route::post('parties/{party}/interactions', [\App\Http\Controllers\Api\PartyCrmController::class, 'storeInteraction']);
+        Route::delete('parties/{party}/interactions/{interaction}', [\App\Http\Controllers\Api\PartyCrmController::class, 'destroyInteraction']);
+        Route::patch('parties/{party}/tier', [\App\Http\Controllers\Api\PartyCrmController::class, 'updateTier']);
         Route::apiResource('parties', PartyController::class);
 
         // Couriers Management & Shipment Manifest (إدارة شركات الشحن وكشف البوالص والتسويات)
@@ -170,6 +174,8 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
             Route::get('purchases', [ReportController::class, 'purchases']);
             Route::get('cash-flow', [ReportController::class, 'cashFlow']);
             Route::get('cash-flow/transactions', [ReportController::class, 'cashFlowTransactions']);
+            Route::get('financial-closing', [ReportController::class, 'financialClosing']);
+            Route::get('receivables-payables', [ReportController::class, 'receivablesPayables']);
         });
 
         // Import & Export (الاستيراد والتصدير)

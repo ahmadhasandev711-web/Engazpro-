@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\ShopifyAuthMode;
 use App\Models\Concerns\BelongsToStore;
 use App\Services\EcommerceAccessService;
+use App\Services\Shopify\ShopifyStockSyncGate;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -16,8 +17,12 @@ class ShopifyIntegration extends Model
 
     protected static function booted(): void
     {
-        static::saved(fn (self $integration) => EcommerceAccessService::clearPlatformCache((int) $integration->user_id));
-        static::deleted(fn (self $integration) => EcommerceAccessService::clearPlatformCache((int) $integration->user_id));
+        $flush = static function (self $integration): void {
+            EcommerceAccessService::clearPlatformCache((int) $integration->user_id);
+            ShopifyStockSyncGate::forget((int) $integration->user_id);
+        };
+        static::saved($flush);
+        static::deleted($flush);
     }
 
     protected $table = 'shopify_integrations';

@@ -55,6 +55,7 @@ export const usePermissions = () => {
     canViewProfitReport: isOwnerOrAdmin,
     canViewPurchaseReport: isOwnerOrAdmin || isManager,
     canViewCashFlowReport: isOwnerOrAdmin || isManager,
+    canViewReceivablesPayablesReport: isOwnerOrAdmin || (isManager && !user?.branch_id),
     canManageStockOperations: isOwnerOrAdmin || isManager,
     canManageEmployees: isOwnerOrAdmin || isManager,
     canManageBranches: isOwnerOrAdmin,

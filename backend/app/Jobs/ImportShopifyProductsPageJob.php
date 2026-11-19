@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Enums\QueueName;
+use App\Jobs\Middleware\WithTenantContext;
 use App\Models\ShopifyIntegration;
 use App\Models\User;
 use App\Services\Shopify\ShopifyProductImportService;
@@ -28,6 +29,11 @@ class ImportShopifyProductsPageJob implements ShouldQueue
         public bool $importStock = false
     ) {
         $this->onQueue(QueueName::SHOPIFY_BULK->value);
+    }
+
+    public function middleware(): array
+    {
+        return [new WithTenantContext($this->actingUserId)];
     }
 
     public function handle(ShopifyProductImportService $importService): array

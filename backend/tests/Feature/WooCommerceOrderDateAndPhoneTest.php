@@ -103,6 +103,10 @@ class WooCommerceOrderDateAndPhoneTest extends TestCase
 
     public function test_order_date_updated_unconditionally_and_items_enriched_with_images_and_attributes(): void
     {
+        \Illuminate\Support\Facades\Queue::fake([
+            \App\Jobs\PushStockToWooCommerceJob::class,
+        ]);
+
         $user = User::factory()->create(['role' => UserRole::OWNER->value, 'ecommerce_enabled' => true]);
         \App\Models\Subscription::create([
             'user_id' => $user->id,

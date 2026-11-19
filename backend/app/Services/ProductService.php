@@ -218,15 +218,17 @@ class ProductService
      */
     public function getProductsPaginated(?User $user, array $filters = []): \Illuminate\Contracts\Pagination\LengthAwarePaginator
     {
-        $branchId = ($user && ($user->isCashier() || $user->isMandob()))
-            ? $user->branch_id
-            : (!empty($filters['branch_id']) ? (int) $filters['branch_id'] : null);
+        $scope = app(BranchScopeService::class);
+        $requestedBranchId = !empty($filters['branch_id']) ? (int) $filters['branch_id'] : null;
+        $branchId = $user ? $scope->resolveQueryBranchId($user, $requestedBranchId) : $requestedBranchId;
+        $failClosed = $user && $scope->shouldFailClosedWithoutBranch($user);
 
         $query = Product::with(['category', 'variants', 'batches'])
             ->withExists([
                 'invoiceItems',
                 'stockMovements as non_initial_stock_movements_exists' => fn($smq) => $smq->where('source_type', '!=', StockMovementSource::INITIAL->value),
             ])
+            ->when($failClosed, fn($q) => $q->whereRaw('1 = 0'))
             ->when($branchId, fn($q) => $q->with(['branchStocks' => fn($bsq) => $bsq->where('branch_id', $branchId)]));
 
         $this->applyProductFilters($query, $filters);
@@ -296,8 +298,12 @@ class ProductService
 
     public function getPosCatalog(?User $user, array $filters = []): \Illuminate\Contracts\Pagination\LengthAwarePaginator
     {
+        $scope = app(BranchScopeService::class);
         $branchId = $this->resolveCatalogBranchId($user, $filters);
         $query = Product::query()->with($this->posCatalogRelations($branchId));
+        if ($user && $scope->shouldFailClosedWithoutBranch($user)) {
+            $query->whereRaw('1 = 0');
+        }
         $this->applyPosCatalogFilters($query, $filters);
         $perPage = min(max((int) ($filters['per_page'] ?? 48), 1), 60);
 
@@ -307,7 +313,7 @@ class ProductService
     public function findByScanCode(User $user, string $code, ?int $branchId): ?array
     {
         $code = trim($code);
-        if ($code === '') {
+        if ($code === '' || app(BranchScopeService::class)->shouldFailClosedWithoutBranch($user)) {
             return null;
         }
 
@@ -336,11 +342,9 @@ class ProductService
 
     private function resolveCatalogBranchId(?User $user, array $filters): ?int
     {
-        if ($user && ($user->isCashier() || $user->isMandob())) {
-            return $user->branch_id ? (int) $user->branch_id : null;
-        }
+        $requested = !empty($filters['branch_id']) ? (int) $filters['branch_id'] : null;
 
-        return !empty($filters['branch_id']) ? (int) $filters['branch_id'] : null;
+        return $user ? app(BranchScopeService::class)->resolveQueryBranchId($user, $requested) : $requested;
     }
 
     private function posCatalogRelations(?int $branchId): array

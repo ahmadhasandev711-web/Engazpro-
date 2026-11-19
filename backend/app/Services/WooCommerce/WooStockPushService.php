@@ -10,6 +10,7 @@ use App\Exceptions\WooCommerceConnectionException;
 use App\Models\Branch;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\Scopes\StoreScope;
 use App\Models\WooCommerceIntegration;
 use App\Services\OnlineOrders\OnlineOrderStockReservationService;
 use App\Support\Quantity;
@@ -28,7 +29,7 @@ class WooStockPushService
     public function targetBranchIds(WooCommerceIntegration $integration): array
     {
         if (!empty($integration->online_branch_id)) {
-            return Branch::withoutGlobalScopes()
+            return Branch::withoutGlobalScope(StoreScope::class)
                 ->where('user_id', $integration->user_id)
                 ->where('id', $integration->online_branch_id)
                 ->where('is_active', true)
@@ -36,7 +37,7 @@ class WooStockPushService
                 ->all();
         }
 
-        return Branch::withoutGlobalScopes()
+        return Branch::withoutGlobalScope(StoreScope::class)
             ->where('user_id', $integration->user_id)
             ->whereIn('type', [BranchType::STORE->value, BranchType::WAREHOUSE->value])
             ->where('is_active', true)

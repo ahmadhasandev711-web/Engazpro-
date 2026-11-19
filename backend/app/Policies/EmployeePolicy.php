@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Enums\UserRole;
 use App\Models\User;
+use App\Services\BranchScopeService;
 use Illuminate\Auth\Access\Response;
 
 class EmployeePolicy
@@ -33,7 +34,7 @@ class EmployeePolicy
             if ($employee->owner_id !== $user->getAccountId()) {
                 return Response::deny('هذا الموظف لا يتبع لمنشأتك');
             }
-            if ($employee->branch_id !== $user->branch_id) {
+            if (!app(BranchScopeService::class)->canAccessBranch($user, $employee->branch_id ? (int) $employee->branch_id : null)) {
                 return Response::deny('عذراً، يمكنك تعديل بيانات موظفي فرعك فقط');
             }
             $roleVal = $employee->role instanceof \BackedEnum ? $employee->role->value : (string) $employee->role;
@@ -52,8 +53,8 @@ class EmployeePolicy
             return Response::deny('عذراً، لا تملك صلاحية حذف الموظفين');
         }
 
-        if ($user->isOwner() && $employee->owner_id !== $user->id) {
-            return Response::deny('هذا الموظف لا يتبع لمنشأتك');
+        if ((int) $employee->owner_id !== $user->getAccountId() || $employee->isOwner()) {
+            return Response::deny('هذا الموظف لا يتبع لمنشأتك أو لا يمكن حذفه');
         }
 
         return Response::allow();

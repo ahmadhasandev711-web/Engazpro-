@@ -3,22 +3,34 @@
 namespace App\Http\Requests;
 
 use App\Enums\PartyType;
+use App\Services\BranchScopeService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class DispatchCourierRequest extends FormRequest
 {
+    private string $denyMessage = 'عذراً، إسناد الطلبات لشركات الشحن متاح للمشرف والكاشير والإدارة فقط.';
+
     public function authorize(): bool
     {
-        return !($this->user()?->isMandob() ?? true);
+        $user = $this->user();
+        if (!$user || $user->isMandob()) {
+            return false;
+        }
+
+        if ($this->filled('branch_id') && !app(BranchScopeService::class)->canAccessBranch($user, (int) $this->input('branch_id'))) {
+            $this->denyMessage = 'عذراً، يمكنك شحن الطلبات من فرعك المعين فقط.';
+
+            return false;
+        }
+
+        return true;
     }
 
     protected function failedAuthorization(): void
     {
-        throw new AuthorizationException(
-            'عذراً، إسناد الطلبات لشركات الشحن متاح للمشرف والكاشير والإدارة فقط.'
-        );
+        throw new AuthorizationException($this->denyMessage);
     }
 
     public function rules(): array
@@ -38,7 +50,7 @@ class DispatchCourierRequest extends FormRequest
             'branch_id' => [
                 'nullable',
                 'integer',
-                Rule::exists('branches', 'id')->where('user_id', $accountId),
+                Rule::exists('branches', 'id')->where(fn ($q) => $q->where('user_id', $accountId)->whereNull('deleted_at')),
             ],
         ];
     }

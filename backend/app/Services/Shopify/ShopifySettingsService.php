@@ -240,7 +240,9 @@ class ShopifySettingsService
         } elseif (empty($integration->webhook_secret)) {
             $integration->webhook_secret = Str::random(32);
         }
-        $integration->default_branch_id = $validated['default_branch_id'] ?? $integration->default_branch_id;
+        if (array_key_exists('default_branch_id', $validated)) {
+            $integration->default_branch_id = $validated['default_branch_id'] ? (int) $validated['default_branch_id'] : null;
+        }
         $integration->auto_sync_stock = (bool) ($validated['auto_sync_stock'] ?? true);
         $integration->is_active = (bool) ($validated['is_active'] ?? true);
     }

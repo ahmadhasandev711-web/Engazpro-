@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Http\Requests\Concerns\HasScopedValidation;
+use App\Services\BranchScopeService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -19,8 +20,9 @@ class ConfirmOnlineOrderRequest extends FormRequest
             return false;
         }
 
-        if ($user->isManager() && $user->branch_id && (int) $this->input('branch_id') !== (int) $user->branch_id) {
-            $this->denyMessage = 'عذراً، كمدير فرع يمكنك تأكيد وتجهيز الطلبات من مخزن فرعك فقط.';
+        $requestedBranchId = $this->filled('branch_id') ? (int) $this->input('branch_id') : null;
+        if (!app(BranchScopeService::class)->canAccessBranch($user, $requestedBranchId)) {
+            $this->denyMessage = 'عذراً، يمكنك تأكيد وتجهيز الطلبات من مخزن فرعك فقط.';
 
             return false;
         }

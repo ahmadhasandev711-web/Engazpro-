@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\Expense;
 use App\Models\User;
+use App\Services\BranchScopeService;
 use Illuminate\Auth\Access\Response;
 
 class ExpensePolicy
@@ -13,9 +14,22 @@ class ExpensePolicy
         return true;
     }
 
-    public function view(User $user, Expense $expense): bool
+    public function view(User $user, Expense $expense): Response
     {
-        return true;
+        if ($user->hasGlobalBranchAccess()) {
+            return Response::allow();
+        }
+
+        if ($user->isManager() || $user->isSupervisor()) {
+            $branchId = $expense->treasury?->branch_id ?? $expense->creator?->branch_id;
+            return app(BranchScopeService::class)->canAccessBranch($user, $branchId)
+                ? Response::allow()
+                : Response::deny('عذراً، لا تملك صلاحية الاطلاع على مصروفات فروع أخرى');
+        }
+
+        return $expense->created_by === $user->id
+            ? Response::allow()
+            : Response::deny('عذراً، لا تملك صلاحية الاطلاع على هذا المصروف');
     }
 
     public function create(User $user): bool

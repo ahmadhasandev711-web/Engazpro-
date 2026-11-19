@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Http\Requests\Concerns\HasScopedValidation;
 use App\Models\Product;
+use App\Services\BranchScopeService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -13,7 +14,14 @@ class RecordOpeningBalanceRequest extends FormRequest
 
     public function authorize(): bool
     {
-        return $this->user()?->can('create', Product::class) ?? false;
+        $user = $this->user();
+        if (!$user || !$user->can('create', Product::class)) {
+            return false;
+        }
+
+        $requestedBranchId = $this->filled('branch_id') ? (int) $this->input('branch_id') : null;
+
+        return app(BranchScopeService::class)->canAccessBranch($user, $requestedBranchId);
     }
 
     protected function failedAuthorization(): void

@@ -155,6 +155,10 @@ export const EmployeesPage: React.FC = () => {
   const saveMutation = useMutation({
     mutationFn: async (payload: typeof formData) => {
       const cleanBranchId = payload.branch_id !== '' && payload.branch_id !== null ? Number(payload.branch_id) : null;
+      const requiresSpecificBranch = payload.role === 'CASHIER' || payload.role === 'SALES';
+      if (requiresSpecificBranch && cleanBranchId === null && branches.length > 0) {
+        throw new Error('يجب تحديد فرع معين لدور الكاشير أو بائع الصالة عند وجود فروع بالمنشأة.');
+      }
       if (editingEmployee) {
         const updatePayload: any = {
           name: payload.name,
@@ -983,7 +987,7 @@ export const EmployeesPage: React.FC = () => {
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-xs font-bold text-ink">الفرع أو المخزن التابع له الموظف</span>
                   <span className="text-xs font-normal text-muted">
-                    {formData.role === 'CASHIER' ? '(مهم جداً لنقطة البيع)' : '(اختياري)'}
+                    {(formData.role === 'CASHIER' || formData.role === 'SALES') ? '(إلزامي لفرع محدد)' : '(اختياري — أو عام لكل الفروع)'}
                   </span>
                 </div>
                 {isManager ? (

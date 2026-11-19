@@ -71,12 +71,11 @@ class DashboardService
             return ['expenses' => $profitData['today_expenses'], 'profit' => $profitData['today_net_profit']];
         }
 
-        $expensesSum = Expense::whereBetween('date', [$today, $today . ' 23:59:59'])
-            ->when($user->isManager() && $user->branch_id, fn($q) => $q->where(fn($sub) => $sub->whereHas('treasury', fn($t) => $t->where('branch_id', $user->branch_id))->orWhereHas('creator', fn($c) => $c->where('branch_id', $user->branch_id))))
-            ->when($user->isMandob() || $user->isCashier(), fn($q) => $q->where('created_by', $user->id))
-            ->sum('amount');
+        $expensesQuery = Expense::whereBetween('date', [$today, $today . ' 23:59:59'])
+            ->when($user->isMandob() || $user->isCashier(), fn($q) => $q->where('created_by', $user->id));
+        app(BranchScopeService::class)->applyTreasuryOrCreatorBranchFilter($expensesQuery, $user);
 
-        return ['expenses' => Money::of($expensesSum ?? 0)->getAmount(), 'profit' => null];
+        return ['expenses' => Money::of($expensesQuery->sum('amount') ?? 0)->getAmount(), 'profit' => null];
     }
 
     private function buildKpisPayload(array $todaySales, float $monthNet, ?float $todayProfit, float $todayExpenses, float $netCashFlow): array
@@ -102,11 +101,10 @@ class DashboardService
     protected function calculateSalesBetween(User $user, string $startDate, string $endDate): array
     {
         $isEmployee = $user->isMandob() || $user->isCashier();
+        $query = Invoice::query()->when($isEmployee, fn ($q) => $q->where('created_by', $user->id));
+        app(BranchScopeService::class)->applyBranchFilter($query, $user);
 
-        $row = Invoice::query()
-            ->when($isEmployee, fn ($q) => $q->where('created_by', $user->id))
-            ->when($user->isManager() && $user->branch_id, fn ($q) => $q->where('branch_id', $user->branch_id))
-            ->where('date', '>=', $startDate)
+        $row = $query->where('date', '>=', $startDate)
             ->where('date', '<=', $endDate . ' 23:59:59')
             ->selectRaw($this->buildSalesBetweenSql(), $this->salesBetweenBindings())
             ->first();
@@ -185,18 +183,18 @@ class DashboardService
     protected function calculateTodayCashFlow(User $user, string $today, float $todayExpenses): array
     {
         $isEmployee = $user->isMandob() || $user->isCashier();
-        $isManager = (bool) ($user->isManager() && $user->branch_id);
+        $scopedBranchId = app(BranchScopeService::class)->resolveQueryBranchId($user);
         $dayRange = [$today, $today . ' 23:59:59'];
 
-        $cashSales = $this->sumDailySalesByMethods($user, $isEmployee, $isManager, $dayRange, [PaymentMethod::CASH->value]);
+        $cashSales = $this->sumDailySalesByMethods($user, $isEmployee, $scopedBranchId, $dayRange, [PaymentMethod::CASH->value]);
         $electronicMethods = [TreasuryType::BANK->value, PaymentMethod::CARD->value, TreasuryType::WALLET->value, PaymentMethod::INSTAPAY->value, PaymentMethod::VODAFONE_CASH->value, PaymentMethod::TRANSFER->value];
-        $electronicSales = $this->sumDailySalesByMethods($user, $isEmployee, $isManager, $dayRange, $electronicMethods);
+        $electronicSales = $this->sumDailySalesByMethods($user, $isEmployee, $scopedBranchId, $dayRange, $electronicMethods);
 
-        $cashReceipts = $this->sumDailyCashVouchers($user, $isEmployee, $isManager, $dayRange, PaymentType::RECEIPT->value);
-        $cashByType = $this->sumDailyCashInvoicesByType($user, $isEmployee, $isManager, $dayRange);
+        $cashReceipts = $this->sumDailyCashVouchers($user, $isEmployee, $scopedBranchId, $dayRange, PaymentType::RECEIPT->value);
+        $cashByType = $this->sumDailyCashInvoicesByType($user, $isEmployee, $scopedBranchId, $dayRange);
         $cashPurchaseReturns = $isEmployee ? 0.0 : ($cashByType[InvoiceType::PURCHASE_RETURN->value] ?? 0.0);
         $cashPurchases = $isEmployee ? 0.0 : ($cashByType[InvoiceType::PURCHASE->value] ?? 0.0);
-        $cashPayments = $isEmployee ? 0.0 : $this->sumDailyCashVouchers($user, false, $isManager, $dayRange, PaymentType::PAYMENT->value);
+        $cashPayments = $isEmployee ? 0.0 : $this->sumDailyCashVouchers($user, false, $scopedBranchId, $dayRange, PaymentType::PAYMENT->value);
         $cashSaleReturns = $cashByType[InvoiceType::SALE_RETURN->value] ?? 0.0;
 
         $totalIn = Money::of($cashSales)->add($cashReceipts)->add($cashPurchaseReturns);
@@ -209,25 +207,25 @@ class DashboardService
         ];
     }
 
-    private function sumDailySalesByMethods(User $user, bool $isEmployee, bool $isManager, array $dayRange, array $methods): float
+    private function sumDailySalesByMethods(User $user, bool $isEmployee, ?int $branchId, array $dayRange, array $methods): float
     {
         $direct = Invoice::where('type', InvoiceType::SALE->value)->whereIn('payment_method', $methods)->whereBetween('date', $dayRange)
-            ->when($isEmployee, fn($q) => $q->where('created_by', $user->id))->when($isManager, fn($q) => $q->where('branch_id', $user->branch_id))->sum('paid_amount');
+            ->when($isEmployee, fn($q) => $q->where('created_by', $user->id))->when($branchId !== null, fn($q) => $q->where('branch_id', $branchId))->sum('paid_amount');
 
         $split = Payment::where('type', PaymentType::RECEIPT->value)->whereIn('method', $methods)
-            ->whereHas('invoice', fn($q) => $q->where('payment_method', PaymentMethod::SPLIT->value)->when($isManager, fn($inv) => $inv->where('branch_id', $user->branch_id)))
+            ->whereHas('invoice', fn($q) => $q->where('payment_method', PaymentMethod::SPLIT->value)->when($branchId !== null, fn($inv) => $inv->where('branch_id', $branchId)))
             ->whereBetween('date', $dayRange)->when($isEmployee, fn($q) => $q->where('created_by', $user->id))
-            ->when($isManager, fn($q) => $q->where(fn($sub) => $sub->whereHas('treasury', fn($t) => $t->where('branch_id', $user->branch_id))->orWhereHas('creator', fn($c) => $c->where('branch_id', $user->branch_id))))
+            ->when($branchId !== null, fn($q) => $q->where(fn($sub) => $sub->whereHas('treasury', fn($t) => $t->where('branch_id', $branchId))->orWhereHas('creator', fn($c) => $c->where('branch_id', $branchId))))
             ->sum('amount');
 
         return Money::of($direct ?? 0)->add(Money::of($split ?? 0))->getAmount();
     }
 
-    private function sumDailyCashVouchers(User $user, bool $isEmployee, bool $isManager, array $dayRange, string $type): float
+    private function sumDailyCashVouchers(User $user, bool $isEmployee, ?int $branchId, array $dayRange, string $type): float
     {
         $sum = Payment::where('type', $type)->where('method', PaymentMethod::CASH->value)->whereNull('invoice_id')->whereBetween('date', $dayRange)
             ->when($isEmployee, fn($q) => $q->where('created_by', $user->id))
-            ->when($isManager, fn($q) => $q->where(fn($sub) => $sub->whereHas('treasury', fn($t) => $t->where('branch_id', $user->branch_id))->orWhereHas('creator', fn($c) => $c->where('branch_id', $user->branch_id))))
+            ->when($branchId !== null, fn($q) => $q->where(fn($sub) => $sub->whereHas('treasury', fn($t) => $t->where('branch_id', $branchId))->orWhereHas('creator', fn($c) => $c->where('branch_id', $branchId))))
             ->sum('amount');
 
         return Money::of($sum ?? 0)->getAmount();
@@ -236,13 +234,13 @@ class DashboardService
     /**
      * @return array<string, float>
      */
-    private function sumDailyCashInvoicesByType(User $user, bool $isEmployee, bool $isManager, array $dayRange): array
+    private function sumDailyCashInvoicesByType(User $user, bool $isEmployee, ?int $branchId, array $dayRange): array
     {
         $rows = Invoice::whereIn('type', [InvoiceType::SALE_RETURN->value, InvoiceType::PURCHASE->value, InvoiceType::PURCHASE_RETURN->value])
             ->where('payment_method', PaymentMethod::CASH->value)
             ->whereBetween('date', $dayRange)
             ->when($isEmployee, fn ($q) => $q->where('created_by', $user->id))
-            ->when($isManager, fn ($q) => $q->where('branch_id', $user->branch_id))
+            ->when($branchId !== null, fn ($q) => $q->where('branch_id', $branchId))
             ->selectRaw('type, COALESCE(SUM(paid_amount), 0) as total_paid')
             ->groupBy('type')
             ->pluck('total_paid', 'type');
@@ -256,21 +254,21 @@ class DashboardService
     protected function getRecentActivities(User $user): Collection
     {
         $isEmployee = $user->isMandob() || $user->isCashier();
-        $isManager = (bool) ($user->isManager() && $user->branch_id);
+        $scopedBranchId = app(BranchScopeService::class)->resolveQueryBranchId($user);
 
-        return $this->fetchRecentInvoices($user, $isEmployee, $isManager)
-            ->concat($this->fetchRecentPayments($user, $isEmployee, $isManager))
-            ->concat($this->fetchRecentExpenses($user, $isEmployee, $isManager))
+        return $this->fetchRecentInvoices($user, $isEmployee, $scopedBranchId)
+            ->concat($this->fetchRecentPayments($user, $isEmployee, $scopedBranchId))
+            ->concat($this->fetchRecentExpenses($user, $isEmployee, $scopedBranchId))
             ->sortByDesc('created_at')
             ->values()
             ->take(5);
     }
 
-    private function fetchRecentInvoices(User $user, bool $isEmployee, bool $isManager): Collection
+    private function fetchRecentInvoices(User $user, bool $isEmployee, ?int $branchId): Collection
     {
         $labels = [InvoiceType::SALE->value => 'فاتورة بيع', InvoiceType::PURCHASE->value => 'فاتورة شراء', InvoiceType::SALE_RETURN->value => 'مرتجع بيع', InvoiceType::PURCHASE_RETURN->value => 'مرتجع شراء'];
 
-        return Invoice::with(['party', 'creator'])->when($isEmployee, fn($q) => $q->where('created_by', $user->id))->when($isManager, fn($q) => $q->where('branch_id', $user->branch_id))
+        return Invoice::with(['party', 'creator'])->when($isEmployee, fn($q) => $q->where('created_by', $user->id))->when($branchId !== null, fn($q) => $q->where('branch_id', $branchId))
             ->latest('created_at')->limit(5)->get()->map(function ($inv) use ($labels) {
                 $typeStr = $inv->type instanceof \BackedEnum ? $inv->type->value : (string) $inv->type;
                 $roleStr = $inv->creator?->role instanceof \BackedEnum ? $inv->creator?->role->value : ($inv->creator?->role ?? UserRole::OWNER->value);
@@ -284,10 +282,10 @@ class DashboardService
             });
     }
 
-    private function fetchRecentPayments(User $user, bool $isEmployee, bool $isManager): Collection
+    private function fetchRecentPayments(User $user, bool $isEmployee, ?int $branchId): Collection
     {
         return Payment::with(['party', 'creator'])->whereNull('invoice_id')->when($isEmployee, fn($q) => $q->where('created_by', $user->id))
-            ->when($isManager, fn($q) => $q->where(fn($sub) => $sub->whereHas('treasury', fn($t) => $t->where('branch_id', $user->branch_id))->orWhereHas('creator', fn($c) => $c->where('branch_id', $user->branch_id))))
+            ->when($branchId !== null, fn($q) => $q->where(fn($sub) => $sub->whereHas('treasury', fn($t) => $t->where('branch_id', $branchId))->orWhereHas('creator', fn($c) => $c->where('branch_id', $branchId))))
             ->latest('created_at')->limit(5)->get()->map(function ($pay) {
                 $typeStr = $pay->type instanceof \BackedEnum ? $pay->type->value : (string) $pay->type;
                 $roleStr = $pay->creator?->role instanceof \BackedEnum ? $pay->creator?->role->value : ($pay->creator?->role ?? UserRole::OWNER->value);
@@ -301,10 +299,10 @@ class DashboardService
             });
     }
 
-    private function fetchRecentExpenses(User $user, bool $isEmployee, bool $isManager): Collection
+    private function fetchRecentExpenses(User $user, bool $isEmployee, ?int $branchId): Collection
     {
         return Expense::with('creator')->latest('created_at')->when($isEmployee, fn($q) => $q->where('created_by', $user->id))
-            ->when($isManager, fn($q) => $q->where(fn($sub) => $sub->whereHas('treasury', fn($t) => $t->where('branch_id', $user->branch_id))->orWhereHas('creator', fn($c) => $c->where('branch_id', $user->branch_id))))
+            ->when($branchId !== null, fn($q) => $q->where(fn($sub) => $sub->whereHas('treasury', fn($t) => $t->where('branch_id', $branchId))->orWhereHas('creator', fn($c) => $c->where('branch_id', $branchId))))
             ->limit(5)->get()->map(fn($exp) => [
                 'id' => $exp->id, 'category' => 'EXPENSE', 'type' => 'EXPENSE', 'type_label' => 'مصروف', 'reference' => $exp->title,
                 'party_name' => $exp->category ?? 'مصروفات عامة', 'created_by_name' => $exp->creator?->name ?? 'صاحب المتجر',

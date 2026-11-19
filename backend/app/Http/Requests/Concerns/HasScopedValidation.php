@@ -11,12 +11,17 @@ trait HasScopedValidation
         return $this->user()?->getAccountId();
     }
 
-    protected function scopedExists(string $table, string $column = 'id'): mixed
+    protected function scopedExists(string $table, string $column = 'id', bool $excludeTrashed = false): mixed
     {
         $accountId = $this->accountId();
 
         return $accountId
-            ? Rule::exists($table, $column)->where('user_id', $accountId)
+            ? Rule::exists($table, $column)->where(function ($q) use ($accountId, $table, $excludeTrashed) {
+                $q->where('user_id', $accountId);
+                if ($excludeTrashed || $table === 'branches') {
+                    $q->whereNull('deleted_at');
+                }
+            })
             : "exists:{$table},{$column}";
     }
 

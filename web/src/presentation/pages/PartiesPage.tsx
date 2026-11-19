@@ -18,14 +18,17 @@ import {
   Receipt,
   FileText,
   Download,
+  MessageSquare,
 } from 'lucide-react';
 import { apiClient } from '../../data/api/client';
-import { Party, PartySchema, PartyInput, PartyType, formatCurrency } from '@pos-mandob/shared';
+import { CustomerTier, Party, PartySchema, PartyInput, PartyType, formatCurrency } from '@pos-mandob/shared';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { usePermissions } from '../../hooks/usePermissions';
 import { MobileFilterChips, FilterChipOption } from '../components/mobile/MobileFilterChips';
 import { PartyMobileCard } from '../components/mobile/PartyMobileCard';
 import { PaginationBar } from '../components/common/PaginationBar';
+import { CustomerRiskBadge } from '../components/crm/CustomerRiskBadge';
+import { PartyCrmModal } from '../components/crm/PartyCrmModal';
 import { useConfirm } from '../context/ConfirmContext';
 import { useToast } from '../context/ToastContext';
 import { nativeBackButton } from '../../platform/nativeBackButton';
@@ -59,26 +62,30 @@ export const PartiesPage: React.FC = () => {
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebouncedValue(search.trim(), 250);
   const [balanceFilter, setBalanceFilter] = useState<'ALL' | 'WITH_BALANCE' | 'ZERO_BALANCE'>('ALL');
+  const [crmTierFilter, setCrmTierFilter] = useState<'ALL' | CustomerTier>('ALL');
   const [page, setPage] = useState<number>(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingParty, setEditingParty] = useState<Party | null>(null);
+  const [crmParty, setCrmParty] = useState<Party | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   useEffect(() => {
     setPage(1);
     setBalanceFilter('ALL');
+    setCrmTierFilter('ALL');
   }, [type]);
 
   // Fetch Parties
   const { data, isLoading, isFetching } = useQuery({
-    queryKey: ['parties', type, debouncedSearch, balanceFilter, page],
+    queryKey: ['parties', type, debouncedSearch, balanceFilter, crmTierFilter, page],
     queryFn: async () => {
       const res = await apiClient.get('/parties', {
         params: {
           type,
           search: debouncedSearch || undefined,
           balance_status: balanceFilter === 'ALL' ? undefined : balanceFilter,
+          crm_tier: !isSupplier && crmTierFilter !== 'ALL' ? crmTierFilter : undefined,
           page,
         },
       });
@@ -235,6 +242,7 @@ export const PartiesPage: React.FC = () => {
                       type,
                       search: debouncedSearch || undefined,
                       balance_status: balanceFilter === 'ALL' ? undefined : balanceFilter,
+                      crm_tier: !isSupplier && crmTierFilter !== 'ALL' ? crmTierFilter : undefined,
                       per_page: 500,
                     },
                   });
@@ -356,6 +364,23 @@ export const PartiesPage: React.FC = () => {
         }}
       />
 
+      {!isSupplier && (
+        <MobileFilterChips
+          options={[
+            { id: 'ALL', label: 'كل التصنيفات (CRM)' },
+            { id: CustomerTier.VIP, label: 'VIP مميز' },
+            { id: CustomerTier.REPEAT, label: 'عميل متكرر' },
+            { id: CustomerTier.HIGH_CANCELLATION, label: 'عالي الإلغاء' },
+            { id: CustomerTier.BLACKLISTED, label: 'محظور' },
+          ]}
+          selectedId={crmTierFilter}
+          onSelect={(id) => {
+            setCrmTierFilter(id as 'ALL' | CustomerTier);
+            setPage(1);
+          }}
+        />
+      )}
+
       {/* Table */}
       <Card className="p-0 sm:p-0 overflow-hidden">
         {isLoading ? (
@@ -379,6 +404,7 @@ export const PartiesPage: React.FC = () => {
                 <tr>
                   <th className="py-3.5 px-4">الاسم</th>
                   <th className="py-3.5 px-4">الهاتف</th>
+                  {!isSupplier && <th className="py-3.5 px-4">تصنيف CRM</th>}
                   <th className="py-3.5 px-4">العنوان</th>
                   <th className="py-3.5 px-4">الرصيد الحالي</th>
                   <th className="py-3.5 px-4">الفواتير</th>
@@ -410,6 +436,11 @@ export const PartiesPage: React.FC = () => {
                           '—'
                         )}
                       </td>
+                      {!isSupplier && (
+                        <td className="py-3.5 px-4">
+                          <CustomerRiskBadge metrics={p.crm_metrics} variant="badge" />
+                        </td>
+                      )}
                       <td className="py-3.5 px-4 text-muted text-xs truncate max-w-[200px]">
                         {p.address ? (
                           <span className="inline-flex items-center gap-1">
@@ -439,6 +470,18 @@ export const PartiesPage: React.FC = () => {
                       </td>
                       <td className="py-3.5 px-4 text-center">
                         <div className="flex items-center justify-center gap-1">
+                          {!isSupplier && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="md"
+                              onClick={() => setCrmParty(p)}
+                              className="text-muted hover:text-brand px-2.5"
+                              title="ملف العميل وتفاعلات CRM"
+                            >
+                              <MessageSquare className="w-4 h-4" />
+                            </Button>
+                          )}
                           <Button
                             type="button"
                             variant="ghost"
@@ -488,6 +531,7 @@ export const PartiesPage: React.FC = () => {
                   isSupplier={isSupplier}
                   canDelete={canDeleteParty}
                   onLedger={(party) => navigate(`/ledger/${party.id}`)}
+                  onOpenCrm={!isSupplier ? (party) => setCrmParty(party) : undefined}
                   onEdit={(party) => openEditModal(party)}
                   onDelete={(party) => handleDelete(party)}
                 />
@@ -623,6 +667,11 @@ export const PartiesPage: React.FC = () => {
           </div>
         </div>
       )}
+      <PartyCrmModal
+        partyId={crmParty?.id ?? null}
+        initialParty={crmParty}
+        onClose={() => setCrmParty(null)}
+      />
     </div>
   );
 };

@@ -3,9 +3,11 @@ import { Search } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
+import { useBranchScope } from '../../../hooks/useBranchScope';
 import type { ProductsViewModel } from './types';
 
 export const ProductsSearchBar: React.FC<{ vm: ProductsViewModel }> = ({ vm }) => {
+  const { hasGlobalBranchAccess } = useBranchScope();
   const {
     search,
     setSearch,
@@ -51,7 +53,7 @@ export const ProductsSearchBar: React.FC<{ vm: ProductsViewModel }> = ({ vm }) =
           ))}
         </Select>
 
-        {!isMandob && (
+        {!isMandob && hasGlobalBranchAccess && (
           <Select
             value={selectedBranchId}
             onChange={(e) => {

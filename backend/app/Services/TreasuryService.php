@@ -199,6 +199,10 @@ class TreasuryService
         $first = Treasury::withoutGlobalScopes()->lockForUpdate()->findOrFail(min($fromId, $toId));
         $second = Treasury::withoutGlobalScopes()->lockForUpdate()->findOrFail(max($fromId, $toId));
 
+        if ((int) $first->user_id !== (int) $second->user_id) {
+            throw new PosDomainException('لا يمكن تحويل النقدية بين خزائن منشآت مختلفة.', 'TREASURY_TENANT_MISMATCH', 403);
+        }
+
         return $first->id === $fromId ? [$first, $second] : [$second, $first];
     }
 
@@ -273,7 +277,7 @@ class TreasuryService
         if ($user->isMandob() || $user->isCashier()) {
             return $query->where('assigned_user_id', $user->id)->orderBy('type')->get();
         }
-        if ($user->isManager() || $user->isSupervisor()) {
+        if (!$user->isOwnerOrAdmin()) {
             return $this->getManagerScopedTreasuries($query, $user, $forTransfer);
         }
         if ($branchId) {
@@ -285,17 +289,22 @@ class TreasuryService
 
     private function getManagerScopedTreasuries($query, User $user, bool $forTransfer): Collection
     {
-        if ($forTransfer && $user->isManager()) {
-            return $query->where(fn($q) => $q->where('branch_id', $user->branch_id)->orWhereIn('type', [TreasuryType::MAIN, TreasuryType::BANK]))
-                ->where('type', '!=', TreasuryType::OWNER_DRAWINGS)
-                ->orderBy('type')
-                ->get();
+        $scope = app(BranchScopeService::class);
+        if ($scope->shouldFailClosedWithoutBranch($user)) {
+            return new Collection();
         }
 
-        return $query->where('branch_id', $user->branch_id)
-            ->whereNotIn('type', [TreasuryType::BANK, TreasuryType::WALLET, TreasuryType::OWNER_DRAWINGS])
-            ->orderBy('type')
-            ->get();
+        $excluded = [TreasuryType::MAIN->value, TreasuryType::BANK->value, TreasuryType::WALLET->value, TreasuryType::OWNER_DRAWINGS->value];
+        if ($forTransfer && $user->isManager()) {
+            $query->where('type', '!=', TreasuryType::OWNER_DRAWINGS->value)
+                ->when($user->branch_id, fn ($q) => $q->where(fn ($sub) => $sub->where('branch_id', $user->branch_id)->orWhereIn('type', [TreasuryType::MAIN->value, TreasuryType::BANK->value])));
+
+            return $query->orderBy('type')->get();
+        }
+
+        $scope->applyBranchFilter($query, $user, 'branch_id');
+
+        return $query->whereNotIn('type', $excluded)->orderBy('type')->get();
     }
 
     /**
@@ -354,28 +363,21 @@ class TreasuryService
 
     private function assertManagerCanTransfer(User $actor, Treasury $from, Treasury $to): void
     {
-        if (!$actor->isManager()) {
+        if ($actor->isOwnerOrAdmin()) {
             return;
         }
 
-        if ($from->branch_id !== $actor->branch_id) {
-            throw new PosDomainException(
-                'عذراً، يمكنك التحويل فقط من خزن فرعك التابع له.',
-                'TREASURY_FORBIDDEN',
-                403
-            );
+        $scope = app(BranchScopeService::class);
+        if (!$scope->canAccessTreasury($actor, $from)) {
+            throw new PosDomainException('عذراً، يمكنك التحويل فقط من خزن فرعك التابع له.', 'TREASURY_FORBIDDEN', 403);
         }
 
         $toType = $to->type instanceof \BackedEnum ? $to->type->value : (string) $to->type;
-        $isAllowedDest = ($to->branch_id === $actor->branch_id)
+        $isAllowedDest = $scope->canAccessBranch($actor, $to->branch_id)
             || in_array($toType, [TreasuryType::BANK->value, TreasuryType::MAIN->value], true);
 
-        if (!$isAllowedDest) {
-            throw new PosDomainException(
-                'عذراً، يمكنك التوريد فقط إلى خزن فرعك، أو الحساب البنكي، أو الخزنة المركزية.',
-                'TREASURY_FORBIDDEN',
-                403
-            );
+        if (!$isAllowedDest || $toType === TreasuryType::OWNER_DRAWINGS->value) {
+            throw new PosDomainException('عذراً، يمكنك التوريد فقط إلى خزن فرعك، أو الحساب البنكي، أو الخزنة المركزية.', 'TREASURY_FORBIDDEN', 403);
         }
     }
 }

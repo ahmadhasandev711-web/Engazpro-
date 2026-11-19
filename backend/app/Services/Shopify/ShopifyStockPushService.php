@@ -5,6 +5,7 @@ namespace App\Services\Shopify;
 use App\Contracts\ShopifyGraphqlClientInterface;
 use App\Exceptions\ShopifyConnectionException;
 use App\Models\Product;
+use App\Models\Scopes\StoreScope;
 use App\Models\ShopifyIntegration;
 use App\Models\ShopifyLocationMapping;
 use App\Services\OnlineOrders\OnlineOrderStockReservationService;
@@ -28,7 +29,7 @@ class ShopifyStockPushService
             ->where('is_active', true)
             ->where('auto_sync_stock', true)
             ->whereNotNull('branch_id')
-            ->whereHas('branch', fn ($q) => $q->withoutGlobalScopes()->where('is_active', true))
+            ->whereHas('branch', fn ($q) => $q->withoutGlobalScope(StoreScope::class)->where('is_active', true))
             ->when($onlyBranchId, fn ($q) => $q->where('branch_id', $onlyBranchId))
             ->get();
     }

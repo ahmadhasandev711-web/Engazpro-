@@ -21,6 +21,7 @@ import { apiClient } from '../../data/api/client';
 import { fetchProductSelectOptions } from '../../data/api/asyncOptionLoaders';
 import { REFERENCE_QUERY_OPTIONS } from '../../data/api/queryPresets';
 import { usePermissions } from '../../hooks/usePermissions';
+import { useBranchScope } from '../../hooks/useBranchScope';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { StockTransferStatus, StockTransfer } from '@pos-mandob/shared';
 import { StockTransferMobileCard } from '../components/mobile/StockTransferMobileCard';
@@ -47,6 +48,7 @@ import {
 export const StockTransfersPage: React.FC = () => {
   const queryClient = useQueryClient();
   const { isOwner, isManager } = usePermissions();
+  const { hasGlobalBranchAccess, lockedBranchId, canAccessBranchId } = useBranchScope();
   const toast = useToast();
   const { confirm } = useConfirm();
 
@@ -72,19 +74,27 @@ export const StockTransfersPage: React.FC = () => {
       selected_product?: any;
     }>;
   }>({
-    from_branch_id: '',
+    from_branch_id: lockedBranchId ? String(lockedBranchId) : '',
     to_branch_id: '',
     notes: '',
     items: [{ product_id: '', product_variant_id: '', quantity_sent: 1, selected_product: null }],
   });
 
+  useEffect(() => {
+    if (!hasGlobalBranchAccess && lockedBranchId && formData.from_branch_id !== String(lockedBranchId)) {
+      setFormData((prev) => ({ ...prev, from_branch_id: String(lockedBranchId) }));
+    }
+  }, [hasGlobalBranchAccess, lockedBranchId, formData.from_branch_id]);
+
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  // 1. Fetch Branches for dropdowns
+  // 1. Fetch Branches for dropdowns (managers use lightweight transfer_targets directory)
   const { data: rawBranches = [] } = useQuery({
-    queryKey: ['branches'],
+    queryKey: ['branches', isManager && !hasGlobalBranchAccess ? 'transfer_targets' : 'default'],
     queryFn: async () => {
-      const res = await apiClient.get('/branches');
+      const res = await apiClient.get('/branches', {
+        params: isManager && !hasGlobalBranchAccess ? { purpose: 'transfer_targets' } : undefined,
+      });
       return res.data?.data || [];
     },
     ...REFERENCE_QUERY_OPTIONS,
@@ -569,28 +579,30 @@ export const StockTransfersPage: React.FC = () => {
                       <div className="flex items-center justify-center gap-1.5">
                         {trf.status === StockTransferStatus.IN_TRANSIT && (
                           <>
-                            <Button
-                              variant="primary"
-                              size="md"
-                              onClick={async () => {
-                                const ok = await confirm({
-                                  title: 'تأكيد استلام التحويل',
-                                  message: `هل تؤكد استلام كامل بضاعة الإذن رقم "${trf.transfer_number}"؟`,
-                                  type: 'info',
-                                  confirmText: 'تأكيد الاستلام',
-                                });
-                                if (ok) {
-                                  receiveMutation.mutate(trf.id);
-                                }
-                              }}
-                              leftIcon={<Check className="w-3.5 h-3.5" />}
-                              className="bg-ok hover:bg-ok/90 text-on-brand px-3 text-xs"
-                              title="تأكيد الاستلام"
-                            >
-                              تأكيد الاستلام
-                            </Button>
+                            {canAccessBranchId(trf.to_branch_id) && (
+                              <Button
+                                variant="primary"
+                                size="md"
+                                onClick={async () => {
+                                  const ok = await confirm({
+                                    title: 'تأكيد استلام التحويل',
+                                    message: `هل تؤكد استلام كامل بضاعة الإذن رقم "${trf.transfer_number}"؟`,
+                                    type: 'info',
+                                    confirmText: 'تأكيد الاستلام',
+                                  });
+                                  if (ok) {
+                                    receiveMutation.mutate(trf.id);
+                                  }
+                                }}
+                                leftIcon={<Check className="w-3.5 h-3.5" />}
+                                className="bg-ok hover:bg-ok/90 text-on-brand px-3 text-xs"
+                                title="تأكيد الاستلام"
+                              >
+                                تأكيد الاستلام
+                              </Button>
+                            )}
 
-                            {(isOwner || isManager) && (
+                            {(isOwner || isManager) && (hasGlobalBranchAccess || canAccessBranchId(trf.from_branch_id) || canAccessBranchId(trf.to_branch_id)) && (
                               <Button
                                 variant="danger"
                                 size="md"
@@ -632,7 +644,8 @@ export const StockTransfersPage: React.FC = () => {
                 <StockTransferMobileCard
                   key={trf.id}
                   transfer={trf}
-                  canCancel={isOwner || isManager}
+                  canCancel={(isOwner || isManager) && (hasGlobalBranchAccess || canAccessBranchId(trf.from_branch_id) || canAccessBranchId(trf.to_branch_id))}
+                  canReceive={canAccessBranchId(trf.to_branch_id)}
                   isReceiving={receiveMutation.isPending && (receiveMutation.variables as any) === trf.id}
                   onReceive={async (id) => {
                     const ok = await confirm({
@@ -696,6 +709,7 @@ export const StockTransfersPage: React.FC = () => {
                 <Select
                   label="فرع المصدر (يتم الخصم منه) *"
                   required
+                  disabled={!hasGlobalBranchAccess && Boolean(lockedBranchId)}
                   value={formData.from_branch_id}
                   onChange={(e) => setFormData({ ...formData, from_branch_id: e.target.value })}
                 >

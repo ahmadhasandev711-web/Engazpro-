@@ -143,11 +143,14 @@ class WooCommerceOrderAdapter implements StorePlatformOrderAdapterInterface
             ->value('online_branch_id');
 
         if (!empty($branchId)) {
-            return (int) $branchId;
+            $active = Branch::where('user_id', $accountId)->where('id', $branchId)->where('is_active', true)->value('id');
+            if ($active) {
+                return (int) $active;
+            }
         }
 
-        return Branch::where('user_id', $accountId)->where('is_main', true)->value('id')
-            ?? Branch::where('user_id', $accountId)->value('id');
+        return Branch::where('user_id', $accountId)->where('is_main', true)->where('is_active', true)->value('id')
+            ?? Branch::where('user_id', $accountId)->where('is_active', true)->value('id');
     }
 
     public function invoiceReferencePayload(OnlineOrder $order): array

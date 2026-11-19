@@ -24,6 +24,7 @@ class ExpenseService
             ->with(['treasury', 'creator'])
             ->when($user->isMandob() || $user->isCashier(), fn($q) => $q->where('created_by', $user->id));
 
+        app(BranchScopeService::class)->applyTreasuryOrCreatorBranchFilter($query, $user, 'treasury', 'creator', !empty($filters['branch_id']) ? (int) $filters['branch_id'] : null);
         $this->applyExpenseFilters($query, $filters);
 
         $totalAmount = Money::of((clone $query)->sum('amount') ?? 0)->getAmount();
@@ -63,7 +64,12 @@ class ExpenseService
         $method = !empty($data['payment_method'])
             ? ($data['payment_method'] instanceof PaymentMethod ? $data['payment_method'] : PaymentMethod::from($data['payment_method']))
             : PaymentMethod::CASH;
-        $treasury = $this->treasuryService->getTreasuryForPaymentMethod($user, $method, !empty($data['treasury_id']) ? (int) $data['treasury_id'] : null);
+        $treasury = app(BranchScopeService::class)->resolveExpenseTreasury(
+            $user,
+            $this->treasuryService,
+            $method,
+            !empty($data['treasury_id']) ? (int) $data['treasury_id'] : null
+        );
         $activeShift = ($method === PaymentMethod::CASH) ? $this->shiftService->getActiveShift($user) : null;
 
         return $this->persistExpenseWithWithdrawal($user, $data, $method, $treasury, $activeShift);

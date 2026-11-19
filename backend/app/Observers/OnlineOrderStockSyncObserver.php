@@ -7,9 +7,24 @@ use App\Enums\WcOrderStatus;
 use App\Models\OnlineOrder;
 use App\Services\Anoofy\AnoofyOutboxService;
 use App\Services\OnlineOrders\StoreOrderAdapterRegistry;
+use Illuminate\Support\Facades\DB;
 
 class OnlineOrderStockSyncObserver
 {
+    public function created(OnlineOrder $order): void
+    {
+        if (!$order->branch_id || !in_array($order->status, WcOrderStatus::reservingCases(), true)) {
+            return;
+        }
+
+        DB::afterCommit(function () use ($order) {
+            $fresh = $order->fresh(['items']);
+            if ($fresh) {
+                $this->dispatchPlatformStockSync($fresh);
+            }
+        });
+    }
+
     public function updated(OnlineOrder $order): void
     {
         if (!$order->wasChanged('status') && !$order->wasChanged('branch_id')) {

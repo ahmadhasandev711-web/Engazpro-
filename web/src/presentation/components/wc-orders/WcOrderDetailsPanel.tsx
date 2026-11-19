@@ -19,6 +19,7 @@ import {
   PhoneOff,
   CalendarClock,
   Ban,
+  MessageSquare,
 } from 'lucide-react';
 import {
   cleanItemName,
@@ -37,6 +38,8 @@ import {
 } from './helpers';
 import { Button } from '../ui/Button';
 import { EmptyState } from '../ui/EmptyState';
+import { CustomerRiskBadge } from '../crm/CustomerRiskBadge';
+import { PartyCrmModal } from '../crm/PartyCrmModal';
 import { cn } from '../../utils/cn';
 import type { WcOrdersViewModel } from './types';
 
@@ -47,6 +50,7 @@ interface WcOrderDetailsPanelProps {
 }
 
 export const WcOrderDetailsPanel: React.FC<WcOrderDetailsPanelProps> = ({ vm, onClose, isAside = false }) => {
+  const [crmPartyId, setCrmPartyId] = React.useState<number | null>(null);
   const {
     isManager,
     isMandob,
@@ -97,6 +101,7 @@ export const WcOrderDetailsPanel: React.FC<WcOrderDetailsPanelProps> = ({ vm, on
   const waUrl = buildWhatsAppUrl(phone, buildDefaultOrderWhatsAppMessage(order));
 
   return (
+    <>
     <div
       className={cn(
         'bg-panel border border-line p-5 shadow-xs flex flex-col h-full overflow-hidden text-right',
@@ -218,11 +223,25 @@ export const WcOrderDetailsPanel: React.FC<WcOrderDetailsPanelProps> = ({ vm, on
               <span className="text-2xs font-black text-muted uppercase tracking-wider block">
                 بيانات العميل:
               </span>
-              <h3 className="text-sm font-black text-ink mt-0.5">{order.customer_name}</h3>
+              <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                <h3 className="text-sm font-black text-ink">{order.customer_name}</h3>
+                <CustomerRiskBadge metrics={order.customer_crm} variant="compact" />
+              </div>
             </div>
 
-            {/* Quick Contact Buttons */}
+            {/* Quick Contact & CRM Buttons */}
             <div className="flex items-center gap-2 flex-wrap">
+              {order.party_id && (
+                <button
+                  type="button"
+                  onClick={() => setCrmPartyId(order.party_id)}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-brand-soft border border-brand/30 text-brand rounded-xl text-xs font-black transition-all cursor-pointer min-h-[40px]"
+                  title="سجل تفاعلات وتصنيف العميل"
+                >
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  <span>ملف CRM</span>
+                </button>
+              )}
               {telUrl && (
                 <a
                   href={telUrl}
@@ -249,6 +268,10 @@ export const WcOrderDetailsPanel: React.FC<WcOrderDetailsPanelProps> = ({ vm, on
               )}
             </div>
           </div>
+
+          {order.customer_crm?.show_warning && (
+            <CustomerRiskBadge metrics={order.customer_crm} variant="banner" />
+          )}
 
           {/* Customer Address */}
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted pt-1 border-t border-line">
@@ -643,5 +666,17 @@ export const WcOrderDetailsPanel: React.FC<WcOrderDetailsPanelProps> = ({ vm, on
         )}
       </div>
     </div>
+    <PartyCrmModal
+      partyId={crmPartyId}
+      initialParty={
+        order.party
+          ? { ...order.party, crm_metrics: order.customer_crm }
+          : crmPartyId
+            ? { id: crmPartyId, name: order.customer_name, crm_metrics: order.customer_crm }
+            : null
+      }
+      onClose={() => setCrmPartyId(null)}
+    />
+    </>
   );
 };

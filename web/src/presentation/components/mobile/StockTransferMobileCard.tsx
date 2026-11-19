@@ -23,6 +23,7 @@ interface StockTransferMobileCardProps {
   onView: (transfer: StockTransfer) => void;
   isReceiving?: boolean;
   canCancel?: boolean;
+  canReceive?: boolean;
 }
 
 export const StockTransferMobileCard: React.FC<StockTransferMobileCardProps> = ({
@@ -32,6 +33,7 @@ export const StockTransferMobileCard: React.FC<StockTransferMobileCardProps> = (
   onView,
   isReceiving = false,
   canCancel = false,
+  canReceive = true,
 }) => {
   const [itemsExpanded, setItemsExpanded] = useState(false);
 
@@ -215,7 +217,7 @@ export const StockTransferMobileCard: React.FC<StockTransferMobileCardProps> = (
             </Button>
           )}
 
-          {transfer.status === StockTransferStatus.IN_TRANSIT && (
+          {transfer.status === StockTransferStatus.IN_TRANSIT && canReceive && (
             <Button
               type="button"
               variant="primary"

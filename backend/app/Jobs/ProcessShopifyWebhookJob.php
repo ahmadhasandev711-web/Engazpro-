@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Contracts\ShopifyGraphqlClientInterface;
 use App\Enums\EcommercePlatform;
 use App\Enums\QueueName;
+use App\Jobs\Middleware\WithTenantContext;
 use App\Models\ShopifyIntegration;
 use App\Models\User;
 use App\Services\OnlineOrders\OnlineOrderIngestionService;
@@ -31,6 +32,11 @@ class ProcessShopifyWebhookJob implements ShouldQueue
         public array $payload
     ) {
         $this->onQueue(QueueName::SHOPIFY_REALTIME->value);
+    }
+
+    public function middleware(): array
+    {
+        return [new WithTenantContext($this->userId)];
     }
 
     public function handle(

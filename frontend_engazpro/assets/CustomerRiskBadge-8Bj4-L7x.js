@@ -1,0 +1,16 @@
+import{c as s,aP as x,ae as n,j as a,s as l,B as u,a6 as p,A as m}from"./index-Du8huPYH.js";import{S as c}from"./shield-alert-DCyF0774.js";/**
+ * @license lucide-react v0.453.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */const y=s("CalendarClock",[["path",{d:"M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5",key:"1osxxc"}],["path",{d:"M16 2v4",key:"4m81vk"}],["path",{d:"M8 2v4",key:"1cmpym"}],["path",{d:"M3 10h5",key:"r794hk"}],["path",{d:"M17.5 17.5 16 16.3V14",key:"akvzfd"}],["circle",{cx:"16",cy:"16",r:"6",key:"qoo3c4"}]]);/**
+ * @license lucide-react v0.453.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */const b=s("Crown",[["path",{d:"M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z",key:"1vdc57"}],["path",{d:"M5 21h14",key:"11awu3"}]]);/**
+ * @license lucide-react v0.453.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */const k=s("Repeat",[["path",{d:"m17 2 4 4-4 4",key:"nntrym"}],["path",{d:"M3 11v-1a4 4 0 0 1 4-4h14",key:"84bu3i"}],["path",{d:"m7 22-4-4 4-4",key:"1wqhfi"}],["path",{d:"M21 13v1a4 4 0 0 1-4 4H3",key:"1rx37r"}]]);function f(e){switch(e){case n.BLACKLISTED:return{tone:"bad",label:"محظور / رافض استلام",icon:a.jsx(c,{className:"w-3 h-3"})};case n.HIGH_CANCELLATION:return{tone:"warn",label:"عالي الإلغاء",icon:a.jsx(m,{className:"w-3 h-3"})};case n.VIP:return{tone:"brand",label:"VIP مميز",icon:a.jsx(b,{className:"w-3 h-3"})};case n.REPEAT:return{tone:"ok",label:"عميل متكرر",icon:a.jsx(k,{className:"w-3 h-3"})};case n.REGULAR:default:return{tone:"neutral",label:"عميل عادي",icon:a.jsx(p,{className:"w-3 h-3"})}}}const v=({metrics:e,variant:r="badge",className:t})=>{if(!e)return null;const{tone:o,label:d,icon:i}=f(e.effective_tier);if(r==="banner"){if(!e.show_warning||!e.warning_message)return null;const h=e.risk_level===x.HIGH||e.effective_tier===n.BLACKLISTED;return a.jsxs("div",{className:l("p-2.5 rounded-2xl border text-2xs font-bold flex items-start gap-2 leading-relaxed",h?"bg-bad-soft border-bad/30 text-bad":"bg-warn-soft border-warn/30 text-warn",t),dir:"rtl",children:[a.jsx(c,{className:"w-4 h-4 shrink-0 mt-0.5"}),a.jsxs("div",{className:"space-y-0.5 min-w-0",children:[a.jsx("p",{className:"font-black",children:e.warning_message}),a.jsxs("p",{className:"opacity-85 tabular-nums",children:["ناجح: ",e.delivered_orders_count," • ملغي/مرتجع: ",e.cancelled_or_returned_count," (",e.cancellation_rate,"%)"]})]})]})}return a.jsxs("div",{className:l("inline-flex items-center gap-1.5 flex-wrap",t),children:[a.jsxs(u,{tone:o,className:"text-2xs font-black inline-flex items-center gap-1",children:[i,a.jsx("span",{children:d})]}),r!=="compact"&&e.total_orders_count>0&&a.jsxs("span",{className:"text-2xs text-muted tabular-nums font-medium",children:["(",e.delivered_orders_count," ناجح / ",e.cancelled_or_returned_count," ملغي)"]})]})};export{v as C,y as a,b};

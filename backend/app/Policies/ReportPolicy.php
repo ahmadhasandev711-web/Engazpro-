@@ -41,4 +41,11 @@ class ReportPolicy
             ? Response::deny('عذراً، تقرير المشتريات والموردين متاح للإدارة فقط')
             : Response::allow();
     }
+
+    public function viewReceivablesPayables(User $user): Response
+    {
+        return !($user->isOwnerOrAdmin() || ($user->isManager() && $user->hasGlobalBranchAccess()))
+            ? Response::deny('عذراً، كشف الذمم والأعمار الإجمالي متاح لصاحب العمل والإدارة العامة فقط')
+            : Response::allow();
+    }
 }

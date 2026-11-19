@@ -39,7 +39,7 @@ class AuthService
         });
 
         return [
-            'user' => $user->load('subscription'),
+            'user' => $user->load(['subscription', 'branch:id,name,code,type']),
             'token' => $user->createToken('auth_token')->plainTextToken,
         ];
     }
@@ -57,7 +57,7 @@ class AuthService
         }
 
         return [
-            'user' => $user->load('subscription'),
+            'user' => $user->load(['subscription', 'branch:id,name,code,type']),
             'token' => $user->createToken('auth_token')->plainTextToken,
         ];
     }

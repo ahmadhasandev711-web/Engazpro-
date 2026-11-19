@@ -26,7 +26,7 @@ class SaveShopifyLocationMappingsRequest extends FormRequest
         return [
             'mappings' => ['required', 'array', 'min:1'],
             'mappings.*.id' => ['required', 'integer'],
-            'mappings.*.branch_id' => ['nullable', 'integer', Rule::exists('branches', 'id')->where('user_id', $accountId)],
+            'mappings.*.branch_id' => ['nullable', 'integer', Rule::exists('branches', 'id')->where(fn ($q) => $q->where('user_id', $accountId)->whereNull('deleted_at'))],
             'mappings.*.auto_sync_stock' => ['boolean'],
         ];
     }

@@ -28,6 +28,9 @@ __export(index_exports, {
   BranchType: () => BranchType,
   CategorySchema: () => CategorySchema,
   CommissionType: () => CommissionType,
+  CrmRiskLevel: () => CrmRiskLevel,
+  CustomerInteractionChannel: () => CustomerInteractionChannel,
+  CustomerTier: () => CustomerTier,
   EcommercePlatform: () => EcommercePlatform,
   EmployeeAdjustmentType: () => EmployeeAdjustmentType,
   EmployeeSchema: () => EmployeeSchema,
@@ -283,6 +286,29 @@ var OrderCancelReason = /* @__PURE__ */ ((OrderCancelReason2) => {
   OrderCancelReason2["OTHER"] = "OTHER";
   return OrderCancelReason2;
 })(OrderCancelReason || {});
+var CustomerTier = /* @__PURE__ */ ((CustomerTier2) => {
+  CustomerTier2["VIP"] = "VIP";
+  CustomerTier2["REPEAT"] = "REPEAT";
+  CustomerTier2["REGULAR"] = "REGULAR";
+  CustomerTier2["HIGH_CANCELLATION"] = "HIGH_CANCELLATION";
+  CustomerTier2["BLACKLISTED"] = "BLACKLISTED";
+  return CustomerTier2;
+})(CustomerTier || {});
+var CustomerInteractionChannel = /* @__PURE__ */ ((CustomerInteractionChannel2) => {
+  CustomerInteractionChannel2["CALL"] = "CALL";
+  CustomerInteractionChannel2["WHATSAPP"] = "WHATSAPP";
+  CustomerInteractionChannel2["NOTE"] = "NOTE";
+  CustomerInteractionChannel2["COMPLAINT"] = "COMPLAINT";
+  CustomerInteractionChannel2["FOLLOW_UP"] = "FOLLOW_UP";
+  return CustomerInteractionChannel2;
+})(CustomerInteractionChannel || {});
+var CrmRiskLevel = /* @__PURE__ */ ((CrmRiskLevel2) => {
+  CrmRiskLevel2["NONE"] = "NONE";
+  CrmRiskLevel2["LOW"] = "LOW";
+  CrmRiskLevel2["MEDIUM"] = "MEDIUM";
+  CrmRiskLevel2["HIGH"] = "HIGH";
+  return CrmRiskLevel2;
+})(CrmRiskLevel || {});
 
 // src/schemas/index.ts
 var import_zod = require("zod");
@@ -686,6 +712,9 @@ function formatDateTime(dateString) {
   BranchType,
   CategorySchema,
   CommissionType,
+  CrmRiskLevel,
+  CustomerInteractionChannel,
+  CustomerTier,
   EcommercePlatform,
   EmployeeAdjustmentType,
   EmployeeSchema,

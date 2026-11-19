@@ -26,13 +26,20 @@ class BranchService
      */
     public function getBranches(User $user, array $filters = []): Collection
     {
-        $query = Branch::where('user_id', $user->getAccountId())
-            ->withCount(['users', 'stocks']);
+        $isTransferTargets = ($filters['purpose'] ?? null) === 'transfer_targets' && $user->isManager();
+        $query = Branch::where('user_id', $user->getAccountId());
+
+        if ($isTransferTargets) {
+            $query->select(['id', 'user_id', 'name', 'code', 'type', 'is_main', 'is_active'])
+                ->where('is_active', true);
+        } else {
+            $query->withCount(['users', 'stocks']);
+            app(BranchScopeService::class)->applyBranchFilter($query, $user, 'id');
+        }
 
         if (!empty($filters['type'])) {
             $query->where('type', $filters['type']);
         }
-
         if (isset($filters['is_active'])) {
             $query->where('is_active', filter_var($filters['is_active'], FILTER_VALIDATE_BOOLEAN));
         }
@@ -146,7 +153,19 @@ class BranchService
             throw new BranchDomainException("لا يمكن حذف الفرع لوجود أرصدة بضاعة قائمة فيه. يرجى نقل المخزون لفرع آخر أولاً.", 'BRANCH_HAS_STOCK');
         }
 
-        return (bool) $branch->delete();
+        return DB::transaction(function () use ($branch) {
+            \App\Models\WooCommerceIntegration::withoutGlobalScopes()
+                ->where('user_id', $branch->user_id)->where('online_branch_id', $branch->id)
+                ->update(['online_branch_id' => null]);
+            \App\Models\ShopifyIntegration::withoutGlobalScopes()
+                ->where('user_id', $branch->user_id)->where('default_branch_id', $branch->id)
+                ->update(['default_branch_id' => null]);
+            \App\Models\ShopifyLocationMapping::withoutGlobalScopes()
+                ->where('user_id', $branch->user_id)->where('branch_id', $branch->id)
+                ->update(['branch_id' => null, 'is_active' => false]);
+
+            return (bool) $branch->delete();
+        });
     }
 
     /**

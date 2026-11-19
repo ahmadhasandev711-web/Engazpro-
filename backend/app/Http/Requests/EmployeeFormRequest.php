@@ -4,9 +4,11 @@ namespace App\Http\Requests;
 
 use App\Enums\CommissionType;
 use App\Enums\UserRole;
+use App\Models\Branch;
 use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 abstract class EmployeeFormRequest extends FormRequest
 {
@@ -50,8 +52,35 @@ abstract class EmployeeFormRequest extends FormRequest
             'base_salary' => ['nullable', 'numeric', 'min:0'],
             'commission_type' => ['nullable', 'string', Rule::in(array_column(CommissionType::cases(), 'value'))],
             'commission_rate' => ['nullable', 'numeric', 'min:0'],
-            'branch_id' => ['nullable', 'integer', Rule::exists('branches', 'id')->where(fn ($q) => $q->where('user_id', $accountId))],
+            'branch_id' => ['nullable', 'integer', Rule::exists('branches', 'id')->where(fn ($q) => $q->where('user_id', $accountId)->whereNull('deleted_at'))],
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $actor = $this->user();
+        if ($actor && $actor->isBranchScoped() && $actor->branch_id !== null && !$this->filled('branch_id')) {
+            $this->merge(['branch_id' => $actor->branch_id]);
+        }
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $v) {
+            $actor = $this->user();
+            $role = (string) $this->input('role');
+            $requiresBranch = in_array($role, [UserRole::CASHIER->value, UserRole::SALES->value], true);
+
+            if ($actor && $actor->isBranchScoped() && $actor->branch_id !== null && $this->filled('branch_id')
+                && (int) $this->input('branch_id') !== (int) $actor->branch_id) {
+                $v->errors()->add('branch_id', 'عذراً، لا يمكنك تعيين أو نقل موظف خارج فرعك المحدد.');
+                return;
+            }
+
+            if ($requiresBranch && !$this->filled('branch_id') && $actor && Branch::where('user_id', $actor->getAccountId())->exists()) {
+                $v->errors()->add('branch_id', 'يجب تحديد فرع محدد لدور الكاشير وبائع الصالة عند وجود فروع بالمنشأة.');
+            }
+        });
     }
 
     public function messages(): array

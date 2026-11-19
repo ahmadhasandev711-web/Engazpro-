@@ -199,6 +199,8 @@ class PaymentService
             ->whereNull('invoice_id')
             ->when($isEmployee, fn($q) => $q->where('created_by', $user->id));
 
+        app(BranchScopeService::class)->applyTreasuryOrCreatorBranchFilter($query, $user, 'treasury', 'creator', !empty($filters['branch_id']) ? (int) $filters['branch_id'] : null);
+
         if (!empty($filters['type'])) {
             $query->where('type', $filters['type']);
         }

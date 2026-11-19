@@ -2,31 +2,20 @@
 
 namespace App\Services\WooCommerce;
 
-use App\Models\User;
 use App\Models\WooCommerceIntegration;
-use Illuminate\Support\Facades\Cache;
+use App\Services\Concerns\InteractsWithStockSyncGate;
 
 class WooStockSyncGate
 {
-    public static function isActive(int $userId): bool
+    use InteractsWithStockSyncGate;
+
+    protected static function cachePrefix(): string
     {
-        $cacheKey = "wc_stock_sync_active_{$userId}";
-
-        return Cache::remember($cacheKey, 60, function () use ($userId) {
-            if (!User::withoutGlobalScopes()->whereKey($userId)->where('ecommerce_enabled', true)->exists()) {
-                return false;
-            }
-
-            return WooCommerceIntegration::withoutGlobalScopes()
-                ->where('user_id', $userId)
-                ->where('is_active', true)
-                ->where('auto_sync_stock', true)
-                ->exists();
-        });
+        return 'wc_stock_sync_active_';
     }
 
-    public static function forget(int $userId): void
+    protected static function integrationModelClass(): string
     {
-        Cache::forget("wc_stock_sync_active_{$userId}");
+        return WooCommerceIntegration::class;
     }
 }

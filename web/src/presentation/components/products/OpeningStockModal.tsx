@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { apiClient } from '../../../data/api/client';
 import { Product } from '@pos-mandob/shared';
+import { useBranchScope } from '../../../hooks/useBranchScope';
 import { useToast } from '../../context/ToastContext';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
@@ -54,8 +55,9 @@ export const OpeningStockModal: React.FC<OpeningStockModalProps> = ({
   const toast = useToast();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { hasGlobalBranchAccess, lockedBranchId, resolveEffectiveBranchId } = useBranchScope();
 
-  const [selectedBranchId, setSelectedBranchId] = useState<number | ''>('');
+  const [selectedBranchId, setSelectedBranchId] = useState<number | ''>(lockedBranchId ?? '');
   const [search, setSearch] = useState('');
   const [showZeroOnly, setShowZeroOnly] = useState(false);
   const [stockInputs, setStockInputs] = useState<Record<string, { quantity: number | ''; costPrice: number | '' }>>({});
@@ -72,15 +74,21 @@ export const OpeningStockModal: React.FC<OpeningStockModalProps> = ({
     enabled: isOpen,
   });
 
-  // Default to main branch when loaded
+  // Default to locked branch or main branch when loaded
   useEffect(() => {
-    if (isOpen && branches.length > 0 && selectedBranchId === '') {
+    if (!isOpen) return;
+    const enforced = resolveEffectiveBranchId(selectedBranchId);
+    if (!hasGlobalBranchAccess && lockedBranchId) {
+      if (selectedBranchId !== lockedBranchId) setSelectedBranchId(lockedBranchId);
+      return;
+    }
+    if (branches.length > 0 && !enforced) {
       const main = branches.find((b: any) => b.is_main) || branches[0];
       if (main) {
         setSelectedBranchId(main.id);
       }
     }
-  }, [isOpen, branches, selectedBranchId]);
+  }, [isOpen, branches, selectedBranchId, hasGlobalBranchAccess, lockedBranchId, resolveEffectiveBranchId]);
 
   // Reset states when opening
   useEffect(() => {
@@ -332,6 +340,7 @@ export const OpeningStockModal: React.FC<OpeningStockModalProps> = ({
               </label>
               <Select
                 value={selectedBranchId}
+                disabled={!hasGlobalBranchAccess}
                 onChange={(e) => setSelectedBranchId(Number(e.target.value) || '')}
                 className="text-xs font-bold bg-surface-2/50 focus:bg-panel"
               >

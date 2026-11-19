@@ -5,10 +5,12 @@ namespace App\Services;
 use App\Enums\CommissionType;
 use App\Enums\InvoiceType;
 use App\Enums\PaymentType;
+use App\Enums\ShiftStatus;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Models\Invoice;
 use App\Models\Payment;
+use App\Models\Shift;
 use App\Models\User;
 use App\Exceptions\EmployeeDomainException;
 use App\Support\Money;
@@ -29,11 +31,9 @@ class EmployeeService
     public function getEmployeesWithTodayStats(User $user): Collection
     {
         $dayRange = [Carbon::today()->toDateString(), Carbon::today()->toDateString() . ' 23:59:59'];
-        $employeeList = User::with('branch:id,name,code,type')
-            ->where('owner_id', $user->getAccountId())
-            ->when($user->isManager(), fn($q) => $q->where('branch_id', $user->branch_id))
-            ->orderBy('name')
-            ->get();
+        $query = User::with('branch:id,name,code,type')->where('owner_id', $user->getAccountId());
+        app(BranchScopeService::class)->applyBranchFilter($query, $user);
+        $employeeList = $query->orderBy('name')->get();
 
         $employeeIds = $employeeList->pluck('id');
         $salesStats = $this->fetchTodaySalesStats($employeeIds, $dayRange);
@@ -44,7 +44,7 @@ class EmployeeService
             $emp,
             $salesStats->get($emp->id),
             $collectionsStats->get($emp->id),
-            $isManagement
+            $isManagement || $emp->id === $user->id
         ))->values();
     }
 
@@ -81,9 +81,9 @@ class EmployeeService
             'branch' => $emp->branch ? ['id' => $emp->branch->id, 'name' => $emp->branch->name, 'code' => $emp->branch->code, 'type' => $emp->branch->type] : null,
             'role' => $emp->role,
             'status' => $emp->status,
-            'base_salary' => Money::of($emp->base_salary ?? 0)->getAmount(),
-            'commission_type' => $emp->commission_type?->value ?? ($emp->commission_type ?? CommissionType::NONE->value),
-            'commission_rate' => Money::of($emp->commission_rate ?? 0)->getAmount(),
+            'base_salary' => $isManagement ? Money::of($emp->base_salary ?? 0)->getAmount() : null,
+            'commission_type' => $isManagement ? ($emp->commission_type?->value ?? ($emp->commission_type ?? CommissionType::NONE->value)) : null,
+            'commission_rate' => $isManagement ? Money::of($emp->commission_rate ?? 0)->getAmount() : null,
             'is_eligible_for_payroll' => $emp->isEligibleForPayroll(),
             'created_at' => $emp->created_at->toIso8601String(),
             'today_stats' => $isManagement ? [
@@ -132,12 +132,53 @@ class EmployeeService
     public function updateEmployee(User $employee, array $data): User
     {
         return DB::transaction(function () use ($employee, $data) {
+            $oldBranchId = $employee->branch_id ? (int) $employee->branch_id : null;
+            $oldRole = $employee->role?->value ?? (string) $employee->role;
+            $newBranchId = !empty($data['branch_id']) ? (int) $data['branch_id'] : null;
+            $newRoleEnum = $data['role'] instanceof UserRole ? $data['role'] : UserRole::from($data['role']);
+
+            $this->guardAndSyncBranchTransfer($employee, $oldBranchId, $newBranchId);
             $employee->update($this->extractEmployeeUpdatePayload($data));
-            $employee->role = $data['role'] instanceof UserRole ? $data['role'] : UserRole::from($data['role']);
+            $employee->role = $newRoleEnum;
             $employee->save();
+
+            $this->finalizeEmployeeSecurityState($employee, $oldBranchId !== $newBranchId || $oldRole !== $newRoleEnum->value);
 
             return $employee->fresh()->load('branch:id,name,code,type');
         });
+    }
+
+    private function guardAndSyncBranchTransfer(User $employee, ?int $oldBranchId, ?int $newBranchId): void
+    {
+        if ($oldBranchId === $newBranchId) {
+            return;
+        }
+
+        $hasUnsettledShift = Shift::withoutGlobalScopes()
+            ->where('created_by', $employee->id)
+            ->whereIn('status', [ShiftStatus::OPEN->value, ShiftStatus::CLOSED->value])
+            ->exists();
+
+        if ($hasUnsettledShift) {
+            throw new EmployeeDomainException(
+                'لا يمكن نقل الموظف إلى فرع آخر قبل تقفيل واعتماد تسوية ورديته الحالية بالفرع السابق.',
+                'OPEN_SHIFT_TRANSFER_BLOCKED',
+                422
+            );
+        }
+
+        $employee->assignedTreasury()->update(['branch_id' => $newBranchId]);
+    }
+
+    private function finalizeEmployeeSecurityState(User $employee, bool $accessChanged): void
+    {
+        if ($employee->isCashier() || $employee->isMandob()) {
+            $this->treasuryService->getTreasuryForUser($employee);
+        }
+
+        if ($accessChanged) {
+            $employee->tokens()->delete();
+        }
     }
 
     private function extractEmployeeUpdatePayload(array $data): array

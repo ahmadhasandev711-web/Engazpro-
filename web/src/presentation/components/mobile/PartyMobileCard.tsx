@@ -1,7 +1,8 @@
 import React from 'react';
-import { Phone, MapPin, Receipt, FileText, Edit2, Trash2, User, Truck } from 'lucide-react';
+import { Phone, MapPin, Receipt, FileText, Edit2, Trash2, User, Truck, MessageSquare } from 'lucide-react';
 import { Party, formatCurrency } from '@pos-mandob/shared';
 import { Badge, BadgeTone, Button, Card } from '../ui';
+import { CustomerRiskBadge } from '../crm/CustomerRiskBadge';
 
 interface PartyMobileCardProps {
   party: Party;
@@ -9,6 +10,7 @@ interface PartyMobileCardProps {
   onEdit: (party: Party) => void;
   onDelete: (party: Party) => void;
   onLedger: (party: Party) => void;
+  onOpenCrm?: (party: Party) => void;
   canDelete?: boolean;
 }
 
@@ -18,6 +20,7 @@ export const PartyMobileCard: React.FC<PartyMobileCardProps> = ({
   onEdit,
   onDelete,
   onLedger,
+  onOpenCrm,
   canDelete = false,
 }) => {
   const isPositive = Number(party.balance) > 0;
@@ -69,6 +72,11 @@ export const PartyMobileCard: React.FC<PartyMobileCardProps> = ({
               </p>
             ) : (
               <p className="text-[11px] text-muted mt-0.5">بدون عنوان مسجل</p>
+            )}
+            {!isSupplier && party.crm_metrics && (
+              <div className="mt-1.5">
+                <CustomerRiskBadge metrics={party.crm_metrics} variant="compact" />
+              </div>
             )}
           </div>
         </div>
@@ -159,6 +167,19 @@ export const PartyMobileCard: React.FC<PartyMobileCardProps> = ({
         >
           كشف الحساب
         </Button>
+
+        {!isSupplier && onOpenCrm && (
+          <Button
+            type="button"
+            variant="secondary"
+            size="md"
+            onClick={() => onOpenCrm(party)}
+            leftIcon={<MessageSquare className="w-3.5 h-3.5 text-brand" />}
+            className="bg-panel text-brand border-brand/30 hover:bg-brand-soft text-xs font-bold px-3"
+          >
+            CRM
+          </Button>
+        )}
 
         {/* Edit button */}
         <Button

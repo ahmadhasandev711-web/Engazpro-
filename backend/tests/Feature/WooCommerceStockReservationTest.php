@@ -56,6 +56,10 @@ class WooCommerceStockReservationTest extends TestCase
      */
     public function test_handle_incoming_order_creates_correct_wc_order_items(): void
     {
+        \Illuminate\Support\Facades\Queue::fake([
+            \App\Jobs\PushStockToWooCommerceJob::class,
+        ]);
+
         $simpleProduct = Product::create([
             'user_id' => $this->owner->id,
             'name' => 'صنف بسيط',

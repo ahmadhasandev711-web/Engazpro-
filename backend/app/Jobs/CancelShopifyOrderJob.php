@@ -63,7 +63,23 @@ class CancelShopifyOrderJob implements ShouldQueue
 
     private function shouldRestockOnShopify(ShopifyIntegration $integration, OnlineOrder $order): bool
     {
-        if (!ShopifyStockSyncGate::isActive($this->userId) || !$order->branch_id) {
+        if (!ShopifyStockSyncGate::isActive($this->userId)) {
+            return true;
+        }
+
+        $locationId = $order->platform_meta['shopify_location_id'] ?? null;
+        if ($locationId) {
+            return !ShopifyLocationMapping::withoutGlobalScopes()
+                ->where('user_id', $this->userId)
+                ->where('shopify_integration_id', $integration->id)
+                ->where('shopify_location_id', $locationId)
+                ->where('is_active', true)
+                ->where('auto_sync_stock', true)
+                ->whereNotNull('branch_id')
+                ->exists();
+        }
+
+        if (!$order->branch_id) {
             return true;
         }
 

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Services\CourierService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class CourierController extends Controller
 {
@@ -18,6 +19,7 @@ class CourierController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        Gate::authorize('view-couriers');
         $user = $request->user();
         $search = $request->input('search');
 
@@ -35,6 +37,7 @@ class CourierController extends Controller
      */
     public function manifest(Request $request, int $id): JsonResponse
     {
+        Gate::authorize('view-courier-manifest');
         $user = $request->user();
         $branchId = $request->filled('branch_id') ? (int) $request->input('branch_id') : null;
 
@@ -55,6 +58,7 @@ class CourierController extends Controller
      */
     public function settleNet(Request $request, int $id): JsonResponse
     {
+        Gate::authorize('settle-courier');
         $user = $request->user();
         $validated = $request->validate([
             'amount' => ['nullable', 'numeric', 'min:0.01'],

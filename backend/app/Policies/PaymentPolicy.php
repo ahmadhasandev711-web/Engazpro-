@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\Payment;
 use App\Models\User;
+use App\Services\BranchScopeService;
 use Illuminate\Auth\Access\Response;
 
 class PaymentPolicy
@@ -15,8 +16,15 @@ class PaymentPolicy
 
     public function view(User $user, Payment $payment): Response
     {
-        if ($user->isOwnerOrAdmin() || $user->isManager()) {
+        if ($user->hasGlobalBranchAccess()) {
             return Response::allow();
+        }
+
+        if ($user->isManager() || $user->isSupervisor()) {
+            $branchId = $payment->treasury?->branch_id ?? $payment->creator?->branch_id;
+            return app(BranchScopeService::class)->canAccessBranch($user, $branchId)
+                ? Response::allow()
+                : Response::deny('عذراً، لا تملك صلاحية عرض سندات فروع أخرى');
         }
 
         return $payment->created_by === $user->id

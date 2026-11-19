@@ -15,6 +15,9 @@ import {
   BranchType,
   StockTransferStatus,
   TreasuryType,
+  CustomerTier,
+  CustomerInteractionChannel,
+  CrmRiskLevel,
 } from '../enums';
 
 export interface BaseEntity {
@@ -135,6 +138,35 @@ export interface Product extends BaseEntity {
   batches?: ProductBatch[];
 }
 
+export interface PartyCrmMetrics {
+  auto_tier: CustomerTier;
+  effective_tier: CustomerTier;
+  tier_label: string;
+  is_manual_override: boolean;
+  risk_level: CrmRiskLevel;
+  delivered_orders_count: number;
+  cancelled_or_returned_count: number;
+  active_orders_count: number;
+  total_orders_count: number;
+  cancellation_rate: number;
+  total_spent: number;
+  last_order_at?: string | null;
+  show_warning: boolean;
+  warning_message?: string | null;
+}
+
+export interface PartyInteraction {
+  id: number;
+  party_id: number;
+  created_by: number;
+  creator_name?: string | null;
+  channel: CustomerInteractionChannel;
+  channel_label: string;
+  notes: string;
+  follow_up_at?: string | null;
+  created_at: string;
+}
+
 export interface Party extends BaseEntity {
   type: PartyType;
   name: string;
@@ -144,7 +176,10 @@ export interface Party extends BaseEntity {
   balance: number; // Positive: we owe them (for supplier) or they owe us (for customer)
   notes?: string | null;
   invoices_count?: number;
+  interactions_count?: number;
   has_transactions?: boolean;
+  crm_tier_override?: CustomerTier | null;
+  crm_metrics?: PartyCrmMetrics | null;
 }
 
 export interface InvoiceItem {
@@ -670,6 +705,7 @@ export interface OnlineOrder extends BaseEntity {
   items_snapshot?: any[];
   platform_meta?: Record<string, any>;
   items?: OnlineOrderItem[];
+  customer_crm?: PartyCrmMetrics | null;
 }
 
 export type WcOrderItem = OnlineOrderItem;
@@ -781,4 +817,98 @@ export interface PurchaseReportData {
     total_cost: number;
     avg_unit_cost: number;
   }>;
+}
+
+export interface FinancialClosingReportData {
+  period: {
+    from_date?: string | null;
+    to_date?: string | null;
+    branch_id?: number | null;
+  };
+  income_statement: {
+    gross_sales: number;
+    sales_discounts: number;
+    sale_returns: number;
+    net_sales: number;
+    shipping_revenue: number;
+    cogs_sales: number;
+    cogs_returns: number;
+    net_cogs: number;
+    gross_profit: number;
+    gross_margin: number;
+    expenses_by_category: Array<{
+      category: string;
+      count: number;
+      total_amount: number;
+    }>;
+    total_expenses: number;
+    net_profit: number;
+    net_margin: number;
+    pending_payroll_reference?: {
+      month: string;
+      disbursed_this_month: number;
+    };
+  };
+  balance_snapshot: {
+    as_of: string;
+    assets: {
+      treasuries_by_type: Array<{
+        type: string;
+        label: string;
+        balance: number;
+      }>;
+      total_cash_and_banks: number;
+      inventory_cost_value: number;
+      in_transit_inventory_value: number;
+      customer_receivables: number;
+      courier_receivables: number;
+      total_assets: number;
+    };
+    liabilities: {
+      supplier_payables: number;
+      customer_credits: number;
+      courier_payables: number;
+      total_liabilities: number;
+    };
+    net_working_capital: number;
+    owner_drawings_total: number;
+  };
+}
+
+export interface ReceivablesPayablesBucketParty {
+  id: number;
+  name: string;
+  phone?: string | null;
+  type: PartyType;
+  balance: number;
+  last_activity_date?: string | null;
+  days_since_activity?: number | null;
+  aging_bucket: 'CURRENT' | 'DAYS_31_60' | 'DAYS_60_PLUS';
+}
+
+export interface ReceivablesPayablesAgingBuckets {
+  current_0_30: number;
+  days_31_60: number;
+  days_60_plus: number;
+}
+
+export interface ReceivablesPayablesReportData {
+  as_of: string;
+  summary: {
+    customer_receivables_total: number;
+    customer_credits_total: number;
+    supplier_payables_total: number;
+    supplier_advances_total: number;
+    courier_receivables_total: number;
+    courier_payables_total: number;
+    net_trade_position: number;
+  };
+  aging: {
+    customers: ReceivablesPayablesAgingBuckets;
+    suppliers: ReceivablesPayablesAgingBuckets;
+    couriers: ReceivablesPayablesAgingBuckets;
+  };
+  top_customers: ReceivablesPayablesBucketParty[];
+  top_suppliers: ReceivablesPayablesBucketParty[];
+  top_couriers: ReceivablesPayablesBucketParty[];
 }

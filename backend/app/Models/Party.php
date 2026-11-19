@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\CustomerTier;
 use App\Enums\PartyType;
 use App\Models\Concerns\BelongsToStore;
 use Illuminate\Database\Eloquent\Builder;
@@ -23,6 +24,7 @@ class Party extends Model
         'address',
         'balance',
         'notes',
+        'crm_tier_override',
         'wc_customer_id',
         'wc_email',
         'shopify_customer_id',
@@ -32,6 +34,7 @@ class Party extends Model
         'wc_customer_id' => 'integer',
         'shopify_customer_id' => 'integer',
         'balance' => 'decimal:2',
+        'crm_tier_override' => CustomerTier::class,
     ];
 
     public function user(): BelongsTo
@@ -52,6 +55,11 @@ class Party extends Model
     public function ledgerEntries(): HasMany
     {
         return $this->hasMany(LedgerEntry::class)->orderBy('date', 'desc')->orderBy('id', 'desc');
+    }
+
+    public function interactions(): HasMany
+    {
+        return $this->hasMany(PartyInteraction::class)->latest();
     }
 
     public function courierInvoices(): HasMany

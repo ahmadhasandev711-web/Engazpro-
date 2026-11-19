@@ -30,7 +30,7 @@ class SaveShopifySettingsRequest extends FormRequest
             'client_id' => ['nullable', 'string', 'max:255'],
             'client_secret' => ['nullable', 'string', 'max:500'],
             'webhook_secret' => ['nullable', 'string', 'max:255'],
-            'default_branch_id' => ['nullable', 'integer', Rule::exists('branches', 'id')->where('user_id', $accountId)],
+            'default_branch_id' => ['nullable', 'integer', Rule::exists('branches', 'id')->where(fn ($q) => $q->where('user_id', $accountId)->whereNull('deleted_at'))],
             'auto_sync_stock' => ['boolean'],
             'is_active' => ['boolean'],
         ];

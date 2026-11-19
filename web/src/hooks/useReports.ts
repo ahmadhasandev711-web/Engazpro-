@@ -7,6 +7,8 @@ import {
   StockReportData,
   CashFlowReportData,
   CashFlowTransactionsResponse,
+  FinancialClosingReportData,
+  ReceivablesPayablesReportData,
 } from '@pos-mandob/shared';
 
 export const useProfitReport = (fromDate: string, toDate: string, enabled: boolean = true) => {
@@ -168,4 +170,37 @@ export const fetchAllCashFlowTransactions = async (
     },
   });
   return res.data;
+};
+
+export const useFinancialClosingReport = (
+  fromDate: string,
+  toDate: string,
+  enabled: boolean = true,
+  branchId?: number | null
+) => {
+  return useQuery<FinancialClosingReportData>({
+    queryKey: ['reports', 'financial-closing', fromDate, toDate, branchId],
+    queryFn: async () => {
+      const res = await apiClient.get('/reports/financial-closing', {
+        params: {
+          from_date: fromDate || undefined,
+          to_date: toDate || undefined,
+          branch_id: branchId || undefined,
+        },
+      });
+      return res.data?.data;
+    },
+    enabled,
+  });
+};
+
+export const useReceivablesPayablesReport = (enabled: boolean = true) => {
+  return useQuery<ReceivablesPayablesReportData>({
+    queryKey: ['reports', 'receivables-payables'],
+    queryFn: async () => {
+      const res = await apiClient.get('/reports/receivables-payables');
+      return res.data?.data;
+    },
+    enabled,
+  });
 };

@@ -6,6 +6,8 @@ use App\Contracts\WooCommerceApiClientInterface;
 use App\Enums\ProductType;
 use App\Enums\StockMovementSource;
 use App\Enums\StockMovementType;
+use App\Models\Branch;
+use App\Models\BranchStock;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\User;
@@ -33,20 +35,22 @@ class WooCommerceProductImportService
      */
     public function importPage(User $user, WooCommerceIntegration $integration, int $page = 1, int $perPage = 50, bool $importStock = false): array
     {
-        $imported = 0;
-        $updated = 0;
-        $errors = [];
-        $wcProducts = $this->apiClient->getProducts($integration, $page, $perPage);
+        return WooStockSyncGate::suppressDuring($user->getAccountId(), function () use ($user, $integration, $page, $perPage, $importStock) {
+            $imported = 0;
+            $updated = 0;
+            $errors = [];
+            $wcProducts = $this->apiClient->getProducts($integration, $page, $perPage);
 
-        foreach ($wcProducts as $wcProduct) {
-            $result = $this->syncPageItemSafely($user, $integration, $wcProduct, $importStock, $errors);
-            $result === 'created' ? $imported++ : ($result === 'updated' ? $updated++ : null);
-        }
+            foreach ($wcProducts as $wcProduct) {
+                $result = $this->syncPageItemSafely($user, $integration, $wcProduct, $importStock, $errors);
+                $result === 'created' ? $imported++ : ($result === 'updated' ? $updated++ : null);
+            }
 
-        $integration->update(['last_synced_at' => now(), 'last_error' => !empty($errors) ? implode("\n", array_slice($errors, 0, 5)) : null]);
-        $count = count($wcProducts);
+            $integration->update(['last_synced_at' => now(), 'last_error' => !empty($errors) ? implode("\n", array_slice($errors, 0, 5)) : null]);
+            $count = count($wcProducts);
 
-        return ['imported' => $imported, 'updated' => $updated, 'errors' => $errors, 'count' => $count, 'has_more' => $count === $perPage];
+            return ['imported' => $imported, 'updated' => $updated, 'errors' => $errors, 'count' => $count, 'has_more' => $count === $perPage];
+        });
     }
 
     private function syncPageItemSafely(User $user, WooCommerceIntegration $integration, array $wcProduct, bool $importStock, array &$errors): ?string
@@ -155,10 +159,11 @@ class WooCommerceProductImportService
         ], fn ($v) => $v !== null);
 
         $product->update($updateData);
+        $targetBranchId = $this->resolveTargetBranchId($user, $integration);
 
-        if (!$meta['is_variable'] && Quantity::of($product->quantity ?? 0)->isZero()) {
+        if (!$meta['is_variable'] && $this->isTargetBranchStockZero($product, null, $targetBranchId)) {
             $qty = $this->extractWcStockQty($wcProduct, $importStock);
-            $this->recordWcInitialStock($user, $integration, $product, $qty, Money::of($product->purchase_price ?? 0)->getAmount(), 'رصيد أول المدة مستورد من ووكومرس');
+            $this->recordWcInitialStock($user, $targetBranchId, $product, $qty, Money::of($product->purchase_price ?? 0)->getAmount(), 'رصيد أول المدة مستورد من ووكومرس');
         }
         if ($meta['is_variable']) {
             $this->syncVariations($user, $integration, $product, $meta['wc_id'], $importStock);
@@ -180,7 +185,7 @@ class WooCommerceProductImportService
             $productData['variants'] = $this->buildWcVariantsPayload($integration, $meta['wc_id'], $meta['sale_price'], $meta['image_url'], $importStock);
         }
 
-        $this->productService->createProduct($user, $productData, $integration->online_branch_id);
+        $this->productService->createProduct($user, $productData, $this->resolveTargetBranchId($user, $integration));
     }
 
     private function buildWcVariantsPayload(WooCommerceIntegration $integration, int $wcId, float $fallbackPrice, ?string $defaultImageUrl, bool $importStock): array
@@ -222,15 +227,39 @@ class WooCommerceProductImportService
         ];
     }
 
-    private function recordWcInitialStock(User $user, WooCommerceIntegration $integration, Product $product, float $qty, float $purchasePrice, string $note, $variant = null): void
+    private function recordWcInitialStock(User $user, ?int $branchId, Product $product, float $qty, float $purchasePrice, string $note, $variant = null): void
     {
         if ($qty <= 0) {
             return;
         }
         $this->stockService->recordMovement(
             $user, $product, StockMovementType::IN->value, StockMovementSource::INITIAL->value,
-            $product->id, $qty, $purchasePrice, $note, variant: $variant, branchId: $integration->online_branch_id
+            $product->id, $qty, $purchasePrice, $note, variant: $variant, branchId: $branchId
         );
+    }
+
+    private function resolveTargetBranchId(User $user, WooCommerceIntegration $integration): ?int
+    {
+        $accountId = $user->getAccountId();
+        if (!empty($integration->online_branch_id)) {
+            return (int) $integration->online_branch_id;
+        }
+
+        return Branch::where('user_id', $accountId)->where('is_main', true)->where('is_active', true)->value('id')
+            ?? Branch::where('user_id', $accountId)->where('is_active', true)->value('id');
+    }
+
+    private function isTargetBranchStockZero(Product $product, ?ProductVariant $variant, ?int $branchId): bool
+    {
+        if (!$branchId) {
+            return Quantity::of($variant?->quantity ?? $product->quantity ?? 0)->isZero();
+        }
+        $branchQty = BranchStock::withoutGlobalScopes()
+            ->where('branch_id', $branchId)->where('product_id', $product->id)
+            ->when($variant, fn ($q) => $q->where('product_variant_id', $variant->id), fn ($q) => $q->whereNull('product_variant_id'))
+            ->value('quantity');
+
+        return $branchQty === null || Quantity::of($branchQty)->isZero();
     }
 
     /**
@@ -275,8 +304,9 @@ class WooCommerceProductImportService
         ], fn ($v) => $v !== null);
 
         $variant->update($update);
-        if (Quantity::of($variant->quantity ?? 0)->isZero()) {
-            $this->recordWcInitialStock($user, $integration, $product, $this->extractWcStockQty($var, $importStock), Money::of($variant->purchase_price ?? 0)->getAmount(), 'رصيد أول المدة للمتغير مستورد من ووكومرس', $variant);
+        $targetBranchId = $this->resolveTargetBranchId($user, $integration);
+        if ($this->isTargetBranchStockZero($product, $variant, $targetBranchId)) {
+            $this->recordWcInitialStock($user, $targetBranchId, $product, $this->extractWcStockQty($var, $importStock), Money::of($variant->purchase_price ?? 0)->getAmount(), 'رصيد أول المدة للمتغير مستورد من ووكومرس', $variant);
         }
     }
 
@@ -290,7 +320,7 @@ class WooCommerceProductImportService
             'regular_price' => $varData['regular_price'], 'sale_price' => $varData['sale_price'],
             'quantity' => 0, 'min_quantity' => 2, 'image_url' => $varData['image_url'],
         ]);
-        $this->recordWcInitialStock($user, $integration, $product, $this->extractWcStockQty($var, $importStock), Money::of($newVar->purchase_price ?? 0)->getAmount(), 'رصيد أول المدة للمتغير مستورد من ووكومرس', $newVar);
+        $this->recordWcInitialStock($user, $this->resolveTargetBranchId($user, $integration), $product, $this->extractWcStockQty($var, $importStock), Money::of($newVar->purchase_price ?? 0)->getAmount(), 'رصيد أول المدة للمتغير مستورد من ووكومرس', $newVar);
     }
 
     /**

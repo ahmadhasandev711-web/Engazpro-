@@ -6,13 +6,14 @@ import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { Badge } from '../ui/Badge';
 import { cn } from '../../utils/cn';
+import { useBranchScope } from '../../../hooks/useBranchScope';
 import { CANCEL_REASON_OPTIONS, getOrderDisplayRef, getOrderPlatformLabel, isOrderPrepaid } from './helpers';
 import type { WcOrdersViewModel } from './types';
 
 export const WcOrderActionModals: React.FC<{ vm: WcOrdersViewModel }> = ({ vm }) => {
+  const { hasGlobalBranchAccess, lockedBranchId } = useBranchScope();
   const {
     selection,
-    isManager,
     confirmModalOrder,
     setConfirmModalOrder,
     selectedBranchId,
@@ -68,7 +69,6 @@ export const WcOrderActionModals: React.FC<{ vm: WcOrdersViewModel }> = ({ vm })
     setCancelNotes,
     cancelMutation,
     setFeedback,
-    user,
     branches,
     mandobs,
     couriers,
@@ -108,10 +108,10 @@ export const WcOrderActionModals: React.FC<{ vm: WcOrdersViewModel }> = ({ vm })
 
             <div>
               <label className="block text-xs font-bold text-ink mb-1.5">فرع التجهيز والمخزون:</label>
-              {isManager ? (
+              {!hasGlobalBranchAccess ? (
                 <div className="p-3 bg-brand-soft border border-brand/20 rounded-xl text-xs font-bold text-brand-ink flex items-center gap-2">
                   <Building2 className="w-4 h-4 text-brand shrink-0" />
-                  <span>تجهيز وسحب من فرعك: {branches.find((b: any) => b.id === (user?.branch_id ?? selectedBranchId))?.name || 'فرعك المعين'}</span>
+                  <span>تجهيز وسحب من فرعك: {branches.find((b: any) => b.id === (lockedBranchId ?? selectedBranchId))?.name || 'فرعك المعين'}</span>
                 </div>
               ) : (
                 <Select
@@ -155,14 +155,17 @@ export const WcOrderActionModals: React.FC<{ vm: WcOrdersViewModel }> = ({ vm })
               <Button
                 variant="primary"
                 size="lg"
-                onClick={() =>
+                onClick={() => {
+                  const effectiveBranchId = (!hasGlobalBranchAccess && lockedBranchId)
+                    ? lockedBranchId
+                    : Number(selectedBranchId);
                   confirmMutation.mutate({
                     orderId: confirmModalOrder.id,
-                    branchId: Number(selectedBranchId),
+                    branchId: effectiveBranchId,
                     force: forceConfirm,
-                  })
-                }
-                disabled={confirmMutation.isPending || !selectedBranchId}
+                  });
+                }}
+                disabled={confirmMutation.isPending || ((!hasGlobalBranchAccess && lockedBranchId) ? false : !selectedBranchId)}
                 isLoading={confirmMutation.isPending}
                 className="flex-1 min-h-[44px] font-black text-xs"
               >
@@ -587,16 +590,23 @@ export const WcOrderActionModals: React.FC<{ vm: WcOrdersViewModel }> = ({ vm })
 
               {/* Source Branch */}
               <div>
-                <Select
-                  label="مخزن خروج الشحنة:"
-                  value={courierBranchId}
-                  onChange={(e) => setCourierBranchId(e.target.value ? Number(e.target.value) : '')}
-                  options={branches.map((b: any) => ({
-                    value: b.id,
-                    label: `${b.name} (${b.type || 'فرع'})`,
-                  }))}
-                  className="font-bold"
-                />
+                {!hasGlobalBranchAccess ? (
+                  <div className="p-3 bg-brand-soft border border-brand/20 rounded-xl text-xs font-bold text-brand-ink flex items-center gap-2">
+                    <Building2 className="w-4 h-4 text-brand shrink-0" />
+                    <span>مخزن خروج الشحنة: {branches.find((b: any) => b.id === (lockedBranchId ?? courierBranchId))?.name || 'فرعك المعين'}</span>
+                  </div>
+                ) : (
+                  <Select
+                    label="مخزن خروج الشحنة:"
+                    value={courierBranchId}
+                    onChange={(e) => setCourierBranchId(e.target.value ? Number(e.target.value) : '')}
+                    options={branches.map((b: any) => ({
+                      value: b.id,
+                      label: `${b.name} (${b.type || 'فرع'})`,
+                    }))}
+                    className="font-bold"
+                  />
+                )}
               </div>
             </div>
 
@@ -614,7 +624,7 @@ export const WcOrderActionModals: React.FC<{ vm: WcOrdersViewModel }> = ({ vm })
                     courierName,
                     courierPartyId: Number(courierPartyId),
                     trackingNumber: courierTrackingNumber || undefined,
-                    branchId: courierBranchId ? Number(courierBranchId) : undefined,
+                    branchId: (!hasGlobalBranchAccess && lockedBranchId) ? lockedBranchId : (courierBranchId ? Number(courierBranchId) : undefined),
                   });
                 }}
                 disabled={courierDispatchMutation.isPending || !courierPartyId}

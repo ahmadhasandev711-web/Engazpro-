@@ -21,6 +21,7 @@ import { InvoiceItemsTable } from '../components/invoice/InvoiceItemsTable';
 import { InvoiceSummaryPanel } from '../components/invoice/InvoiceSummaryPanel';
 import { ProductVariantModal, VariantSelectionPayload } from '../components/products/ProductVariantModal';
 import { usePermissions } from '../../hooks/usePermissions';
+import { useBranchScope } from '../../hooks/useBranchScope';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { nativeBackButton } from '../../platform/nativeBackButton';
 import { Badge, Button, Card, Input, PageHeader } from '../components/ui';
@@ -167,6 +168,8 @@ export const InvoiceFormPage: React.FC = () => {
   }, [total, paymentMethod, setValue]);
 
   // Queries
+  const { hasGlobalBranchAccess, lockedBranchId, resolveEffectiveBranchId } = useBranchScope();
+  const effectiveFormBranchId = resolveEffectiveBranchId(selectedBranchId);
   const { data: branchesData } = useQuery({
     queryKey: ['branches'],
     queryFn: async () => {
@@ -175,24 +178,30 @@ export const InvoiceFormPage: React.FC = () => {
     },
   });
 
-  // Auto-select default / main branch
+  // Auto-select locked branch or default / main branch
   React.useEffect(() => {
+    if (!hasGlobalBranchAccess && lockedBranchId) {
+      if (selectedBranchId !== lockedBranchId) {
+        setValue('branch_id', lockedBranchId);
+      }
+      return;
+    }
     if (branchesData && branchesData.length > 0 && !selectedBranchId) {
       const mainBranch = branchesData.find((b: any) => b.is_main) || branchesData[0];
       if (mainBranch) {
         setValue('branch_id', mainBranch.id);
       }
     }
-  }, [branchesData, selectedBranchId, setValue]);
+  }, [branchesData, selectedBranchId, setValue, hasGlobalBranchAccess, lockedBranchId]);
 
   // Queries
   const { data: productsData } = useQuery({
-    queryKey: ['products-form', debouncedSearchProduct, selectedBranchId],
+    queryKey: ['products-form', debouncedSearchProduct, effectiveFormBranchId],
     queryFn: async () => {
       const res = await apiClient.get('/products/pos-catalog', {
         params: {
           search: debouncedSearchProduct || undefined,
-          branch_id: selectedBranchId || undefined,
+          branch_id: effectiveFormBranchId || undefined,
           per_page: 24,
         },
       });
@@ -500,7 +509,7 @@ export const InvoiceFormPage: React.FC = () => {
           onPartyChange={(partyId) => setValue('party_id', partyId, { shouldValidate: true })}
           couriersData={couriersData}
           branchesData={branchesData}
-          canChangeBranch={!isCashier && !isMandob}
+          canChangeBranch={hasGlobalBranchAccess}
           register={register}
           errors={errors}
           subtotal={subtotal}

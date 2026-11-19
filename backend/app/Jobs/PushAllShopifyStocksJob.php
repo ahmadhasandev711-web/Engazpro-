@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Enums\QueueName;
+use App\Jobs\Middleware\WithTenantContext;
 use App\Models\ShopifyIntegration;
 use App\Models\User;
 use App\Services\Shopify\ShopifyBulkStockPushService;
@@ -25,6 +26,11 @@ class PushAllShopifyStocksJob implements ShouldQueue
         public int $actingUserId
     ) {
         $this->onQueue(QueueName::SHOPIFY_BULK->value);
+    }
+
+    public function middleware(): array
+    {
+        return [new WithTenantContext($this->actingUserId)];
     }
 
     public function handle(ShopifyBulkStockPushService $bulkPushService): array

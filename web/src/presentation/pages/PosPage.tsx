@@ -17,6 +17,7 @@ import { apiClient } from '../../data/api/client';
 import { REFERENCE_QUERY_OPTIONS } from '../../data/api/queryPresets';
 import { useAuthStore } from '../../data/store/useAuthStore';
 import { usePermissions } from '../../hooks/usePermissions';
+import { useBranchScope } from '../../hooks/useBranchScope';
 import { useHoldInvoices, HeldCart } from '../../hooks/useHoldInvoices';
 import { usePosCartState } from '../../hooks/usePosCartState';
 import { usePosBarcodeLookup } from '../../hooks/usePosBarcodeLookup';
@@ -37,7 +38,8 @@ import { AppErrorBoundary } from '../components/common/AppErrorBoundary';
 export const PosPage: React.FC = () => {
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
-  const { canOperateShift, isOwner, isOwnerOrAdmin } = usePermissions();
+  const { canOperateShift, isOwner } = usePermissions();
+  const { hasGlobalBranchAccess, lockedBranchId } = useBranchScope();
   const { confirm } = useConfirm();
 
   // References
@@ -180,9 +182,9 @@ export const PosPage: React.FC = () => {
   }, [branches]);
 
   useEffect(() => {
-    if (!isOwnerOrAdmin) {
-      if (user?.branch_id && selectedBranchId !== user.branch_id) {
-        setSelectedBranchId(user.branch_id);
+    if (!hasGlobalBranchAccess) {
+      if (lockedBranchId && selectedBranchId !== lockedBranchId) {
+        setSelectedBranchId(lockedBranchId);
       }
       return;
     }
@@ -196,7 +198,7 @@ export const PosPage: React.FC = () => {
         }
       }
     }
-  }, [branchList, user?.branch_id, selectedBranchId, isOwnerOrAdmin]);
+  }, [branchList, user?.branch_id, selectedBranchId, hasGlobalBranchAccess, lockedBranchId]);
 
   const products: ProductItem[] = catalogPages?.pages.flatMap((page) => page?.data || []) || [];
   const catalogTotal = Number(catalogPages?.pages[0]?.meta?.total || 0);
@@ -567,7 +569,7 @@ export const PosPage: React.FC = () => {
           {/* Branch Badge / Selector */}
           <div className="flex items-center gap-1.5 bg-surface-2 text-ink border border-line px-3 py-1.5 rounded-full font-bold">
             <Building2 className="w-3.5 h-3.5 text-brand" />
-            {isOwnerOrAdmin ? (
+            {hasGlobalBranchAccess ? (
               <select
                 value={selectedBranchId || ''}
                 onChange={(e) => setSelectedBranchId(Number(e.target.value))}

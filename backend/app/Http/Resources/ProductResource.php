@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use App\Enums\ProductType;
 use App\Enums\StockMovementSource;
+use App\Services\BranchScopeService;
 use App\Services\ProductImageService;
 use App\Support\Money;
 use App\Support\Quantity;
@@ -16,11 +17,14 @@ class ProductResource extends JsonResource
     {
         $user = $request->user();
         $canViewProfit = $user && $user->canViewProfits();
-        $branchId = $request->input('branch_id') ?: ($user && ($user->isCashier() || $user->isMandob()) ? $user->branch_id : null);
+        $scope = app(BranchScopeService::class);
+        $requestedBranchId = $request->filled('branch_id') ? (int) $request->input('branch_id') : null;
+        $branchId = $user ? $scope->resolveQueryBranchId($user, $requestedBranchId) : $requestedBranchId;
+        $failClosed = $user && $scope->shouldFailClosedWithoutBranch($user);
 
         return [
-            ...$this->coreAttributes($canViewProfit, $branchId),
-            'variants' => $this->formatVariants($canViewProfit, $branchId),
+            ...$this->coreAttributes($canViewProfit, $failClosed ? -1 : $branchId),
+            'variants' => $this->formatVariants($canViewProfit, $failClosed ? -1 : $branchId),
             'batches' => $this->formatBatches($canViewProfit),
             'has_movements' => $this->hasMovements($request),
             'created_at' => $this->created_at?->toIso8601String(),

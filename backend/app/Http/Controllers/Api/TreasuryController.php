@@ -8,6 +8,7 @@ use App\Http\Requests\TransferTreasuryRequest;
 use App\Http\Requests\UpdateTreasuryRequest;
 use App\Http\Resources\TreasuryResource;
 use App\Http\Resources\TreasuryTransactionResource;
+use App\Models\Treasury;
 use App\Services\TreasuryService;
 use App\Support\Money;
 use Illuminate\Http\JsonResponse;
@@ -25,6 +26,7 @@ class TreasuryController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        Gate::authorize('viewAny', Treasury::class);
         $branchId = $request->filled('branch_id') ? (int) $request->input('branch_id') : null;
         $forTransfer = $request->boolean('for_transfer');
         $treasuries = $this->treasuryService->getTreasuries($request->user(), $branchId, $forTransfer);

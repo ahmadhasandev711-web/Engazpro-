@@ -7,7 +7,7 @@ use App\Jobs\ProcessShopifyWebhookJob;
 use App\Models\ShopifyIntegration;
 use App\Models\User;
 use App\Support\ShopifyGid;
-use Illuminate\Support\Facades\Auth;
+use App\Support\TenantContext;
 use Illuminate\Support\Facades\Cache;
 
 class ShopifyWebhookService
@@ -27,8 +27,17 @@ class ShopifyWebhookService
         ?string $webhookIdHeader = null
     ): array {
         [$owner, $integration] = $this->authenticateWebhookStore($userId, $rawPayload, $hmacHeader, $shopDomainHeader);
-        Auth::setUser($owner);
 
+        return TenantContext::runAs($owner->id, fn () => $this->dispatchAuthorizedWebhook($userId, $integration, $rawPayload, $topic, $webhookIdHeader));
+    }
+
+    private function dispatchAuthorizedWebhook(
+        int $userId,
+        ShopifyIntegration $integration,
+        string $rawPayload,
+        ?string $topic,
+        ?string $webhookIdHeader
+    ): array {
         $normalizedTopic = strtolower(trim((string) $topic));
         if (!$this->isAcceptedTopic($normalizedTopic)) {
             return ['status' => 200, 'body' => ['message' => "Shopify topic '{$normalizedTopic}' ignored"]];
@@ -79,6 +88,9 @@ class ShopifyWebhookService
     private function assertValidShopDomainHeader(ShopifyIntegration $integration, ?string $shopDomainHeader): void
     {
         if (empty($shopDomainHeader)) {
+            if (empty($integration->webhook_secret)) {
+                throw new ShopifyConnectionException('Missing Shopify shop domain header', 401);
+            }
             return;
         }
         $incoming = ShopifyGid::normalizeShopDomain($shopDomainHeader);

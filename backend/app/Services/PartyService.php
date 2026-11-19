@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\CustomerTier;
 use App\Enums\LedgerSource;
 use App\Enums\PartyType;
 use App\Exceptions\PosDomainException;
@@ -9,12 +10,14 @@ use App\Models\Party;
 use App\Models\User;
 use App\Support\Money;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 
 class PartyService
 {
     public function __construct(
-        protected LedgerService $ledgerService
+        protected LedgerService $ledgerService,
+        protected CustomerIntelligenceService $intelligenceService
     ) {}
 
     /**
@@ -100,15 +103,38 @@ class PartyService
     /**
      * استعلام قائمة العملاء والموردين وشركات الشحن مع البحث والتصفح
      */
-    public function getPartiesPaginated(User $user, array $filters = []): \Illuminate\Contracts\Pagination\LengthAwarePaginator
+    public function getPartiesPaginated(User $user, array $filters = []): LengthAwarePaginator
     {
-        $query = $this->buildFilteredQuery($filters, includeBalanceFilter: true)
-            ->withCount('invoices')
-            ->withExists(['invoices', 'payments']);
-
         $perPage = min(max(1, (int) ($filters['per_page'] ?? 50)), 500);
+        $tierFilter = !empty($filters['crm_tier']) ? CustomerTier::tryFrom((string) $filters['crm_tier']) : null;
+        $base = $this->buildFilteredQuery($filters, includeBalanceFilter: true)
+            ->withCount(['invoices', 'interactions'])
+            ->withExists(['invoices', 'payments'])
+            ->orderBy('name');
 
-        return $query->orderBy('name')->paginate($perPage);
+        if ($tierFilter !== null) {
+            return $this->paginateWithCrmTierFilter($user, $base, $tierFilter, $perPage, max(1, (int) ($filters['page'] ?? 1)));
+        }
+
+        $paginator = $base->paginate($perPage);
+        $this->intelligenceService->enrichPartyCollection($user, $paginator->items());
+
+        return $paginator;
+    }
+
+    private function paginateWithCrmTierFilter(User $user, Builder $base, CustomerTier $tier, int $perPage, int $page): LengthAwarePaginator
+    {
+        $all = $base->get();
+        $this->intelligenceService->enrichPartyCollection($user, $all);
+        $filtered = $all->filter(fn (Party $p) => ($p->getAttribute('crm_metrics')['effective_tier'] ?? null) === $tier->value)->values();
+
+        return new LengthAwarePaginator(
+            $filtered->forPage($page, $perPage)->values(),
+            $filtered->count(),
+            $perPage,
+            $page,
+            ['path' => LengthAwarePaginator::resolveCurrentPath()]
+        );
     }
 
     /**
@@ -159,13 +185,20 @@ class PartyService
         return $query;
     }
 
-    public function findForShowOrFail(int $id): Party
+    public function findForShowOrFail(int $id, ?User $actor = null): Party
     {
-        return Party::with(['ledgerEntries' => function ($q) {
+        $party = Party::with(['ledgerEntries' => function ($q) {
             $q->latest()->limit(50);
         }])
+            ->withCount('interactions')
             ->withExists(['invoices', 'payments'])
             ->findOrFail($id);
+
+        if ($actor) {
+            $this->intelligenceService->enrichPartyCollection($actor, [$party]);
+        }
+
+        return $party;
     }
 
     public function findOrFail(int $id): Party

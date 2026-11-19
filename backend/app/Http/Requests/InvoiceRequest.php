@@ -4,8 +4,11 @@ namespace App\Http\Requests;
 
 use App\Enums\PaymentMethod;
 use App\Http\Requests\Concerns\HasScopedValidation;
+use App\Models\Invoice;
+use App\Services\BranchScopeService;
 use App\Support\Money;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Validator;
 
 class InvoiceRequest extends FormRequest
 {
@@ -55,6 +58,20 @@ class InvoiceRequest extends FormRequest
             'notes' => ['nullable', 'string'],
             ...$this->itemRules(),
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $v) {
+            $user = $this->user();
+            if (!$user || $user->hasGlobalBranchAccess() || !$this->filled('parent_invoice_id')) {
+                return;
+            }
+            $parent = Invoice::find((int) $this->input('parent_invoice_id'));
+            if ($parent && !app(BranchScopeService::class)->canAccessBranch($user, $parent->branch_id)) {
+                $v->errors()->add('parent_invoice_id', 'عذراً، لا يمكنك عمل مرتجع على فاتورة تابعة لفرع آخر.');
+            }
+        });
     }
 
     private function itemRules(): array

@@ -66,10 +66,14 @@ class StockTransferService
     private function buildFilteredTransferQuery(User $user, array $filters, bool $includeStatusFilter): Builder
     {
         $query = StockTransfer::where('user_id', $user->getAccountId());
+        $scope = app(BranchScopeService::class);
 
-        if ($user->isManager() && $user->branch_id) {
+        if ($scope->shouldFailClosedWithoutBranch($user)) {
+            $query->whereRaw('1 = 0');
+        } elseif (!$user->hasGlobalBranchAccess() && $user->branch_id) {
             $query->where(fn ($q) => $q->where('from_branch_id', $user->branch_id)->orWhere('to_branch_id', $user->branch_id));
         }
+
         if ($includeStatusFilter && !empty($filters['status'])) {
             $query->where('status', $filters['status']);
         }
@@ -238,12 +242,12 @@ class StockTransferService
 
         $item->update(['quantity_received' => $qtyReceived]);
         $toStock = $this->lockBranchStock($transfer->to_branch_id, $item->product_id, $item->product_variant_id, $item->variant?->min_quantity ?? $item->product?->min_quantity);
-        $toStock->increment('quantity', $qtyReceived);
+        $toStock->adjustQuantity($qtyReceived);
 
         StockMovement::create([
             'user_id' => $user->getAccountId(), 'branch_id' => $transfer->to_branch_id, 'product_id' => $item->product_id,
             'product_variant_id' => $item->product_variant_id, 'type' => StockMovementType::IN->value, 'source_type' => 'TRANSFER_IN',
-            'source_id' => $transfer->id, 'quantity' => $qtyReceived, 'balance_after' => $toStock->fresh()->quantity,
+            'source_id' => $transfer->id, 'quantity' => $qtyReceived, 'balance_after' => $toStock->quantity,
             'notes' => "استلام تحويل بضاعة من {$transfer->fromBranch->name} بموجب إذن {$transfer->transfer_number}",
         ]);
     }
@@ -276,7 +280,7 @@ class StockTransferService
     {
         $qty = Quantity::of($item->quantity_sent)->toFloat();
         $fromStock = $this->lockBranchStock($transfer->from_branch_id, $item->product_id, $item->product_variant_id);
-        $fromStock->increment('quantity', $qty);
+        $fromStock->adjustQuantity($qty);
 
         StockMovement::create([
             'user_id' => $user->getAccountId(),
@@ -287,7 +291,7 @@ class StockTransferService
             'source_type' => StockMovementSource::ADJUSTMENT->value,
             'source_id' => $transfer->id,
             'quantity' => $qty,
-            'balance_after' => $fromStock->fresh()->quantity,
+            'balance_after' => $fromStock->quantity,
             'notes' => "إلغاء أمر تحويل المخزون رقم {$transfer->transfer_number}: " . ($reason ?? 'إلغاء بواسطة المستخدم'),
         ]);
     }

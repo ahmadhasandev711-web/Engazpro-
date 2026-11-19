@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Enums\QueueName;
+use App\Jobs\Middleware\WithTenantContext;
 use App\Models\User;
 use App\Models\WooCommerceIntegration;
 use App\Services\WooCommerce\WooCommerceBulkStockPushService;
@@ -27,6 +28,11 @@ class PushAllWooCommerceStocksJob implements ShouldQueue
         public int $actingUserId
     ) {
         $this->onQueue(QueueName::WOO_BULK->value);
+    }
+
+    public function middleware(): array
+    {
+        return [new WithTenantContext($this->actingUserId)];
     }
 
     /**

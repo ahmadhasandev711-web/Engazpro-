@@ -4,6 +4,7 @@ import { nativeBackButton } from '../platform/nativeBackButton';
 import { FilterChipOption } from '../presentation/components/mobile/MobileFilterChips';
 import { useDebouncedValue } from './useDebouncedValue';
 import { usePermissions } from './usePermissions';
+import { useBranchScope } from './useBranchScope';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { EcommercePlatform, Product, ProductSchema, ProductInput } from '@pos-mandob/shared';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -142,6 +143,9 @@ export const useProductsPage = () => {
     ...REFERENCE_QUERY_OPTIONS,
   });
 
+  const { hasGlobalBranchAccess, resolveEffectiveBranchId } = useBranchScope();
+  const effectiveBranchId = resolveEffectiveBranchId(selectedBranchId);
+
   const { data: branches = [] } = useQuery<any[]>({
     queryKey: ['branches'],
     queryFn: async () => {
@@ -149,18 +153,18 @@ export const useProductsPage = () => {
       const d = res.data?.data;
       return Array.isArray(d) ? d : (d?.data || []);
     },
-    enabled: !isMandob,
+    enabled: !isMandob && hasGlobalBranchAccess,
     ...REFERENCE_QUERY_OPTIONS,
   });
 
   // Fetch Products
   const { data, isLoading, isFetching } = useQuery({
-    queryKey: ['products', debouncedSearch, filterTab, selectedCategoryId, selectedBranchId, page],
+    queryKey: ['products', debouncedSearch, filterTab, selectedCategoryId, effectiveBranchId, page],
     queryFn: async () => {
       const params: any = {
         search: debouncedSearch || undefined,
         category_id: selectedCategoryId || undefined,
-        branch_id: selectedBranchId || undefined,
+        branch_id: effectiveBranchId || undefined,
         page,
       };
       if (filterTab === 'VARIABLE') params.type = 'VARIABLE';

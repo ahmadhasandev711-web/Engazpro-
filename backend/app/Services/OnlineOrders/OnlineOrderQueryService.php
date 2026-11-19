@@ -6,6 +6,7 @@ use App\Enums\OnlineOrderCallStatus;
 use App\Enums\WcOrderStatus;
 use App\Models\OnlineOrder;
 use App\Models\User;
+use App\Services\CustomerIntelligenceService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -26,7 +27,10 @@ class OnlineOrderQueryService
             $query->orderByRaw('COALESCE(order_date, created_at) DESC');
         }
 
-        return $query->orderByDesc('id')->paginate(min(max($perPage, 1), 100));
+        $paginator = $query->orderByDesc('id')->paginate(min(max($perPage, 1), 100));
+        app(CustomerIntelligenceService::class)->enrichOnlineOrderCollection($user, $paginator->items());
+
+        return $paginator;
     }
 
     public function tabCountsForUser(User $user, array $filters): array
@@ -52,7 +56,10 @@ class OnlineOrderQueryService
 
     public function findForShowOrFail(User $user, int $id): OnlineOrder
     {
-        return $this->scopedBaseQuery($user)->with(self::ORDER_RELATIONS)->findOrFail($id);
+        $order = $this->scopedBaseQuery($user)->with(self::ORDER_RELATIONS)->findOrFail($id);
+        app(CustomerIntelligenceService::class)->enrichOnlineOrderCollection($user, [$order]);
+
+        return $order;
     }
 
     public function findForAccountOrFail(User $user, int $id): OnlineOrder
@@ -67,14 +74,8 @@ class OnlineOrderQueryService
         if ($user->isMandob()) {
             return $query->where('mandob_id', $user->id);
         }
-        if ($user->isManager()) {
-            return $user->branch_id ? $query->where('branch_id', $user->branch_id) : $query;
-        }
-        if ($user->isCashier() || $user->isSales()) {
-            return $user->branch_id ? $query->where('branch_id', $user->branch_id) : $query->whereRaw('1 = 0');
-        }
 
-        return $query;
+        return app(\App\Services\BranchScopeService::class)->applyBranchFilter($query, $user);
     }
 
     private function applyFilters(Builder $query, User $user, array $filters): void
@@ -104,7 +105,7 @@ class OnlineOrderQueryService
         if (!$user->isMandob() && !$user->isManager() && !$user->isCashier() && !$user->isSales() && !empty($filters['mandob_id'])) {
             $query->where('mandob_id', $filters['mandob_id']);
         }
-        if (!empty($filters['branch_id']) && !$user->isManager()) {
+        if (!empty($filters['branch_id']) && $user->hasGlobalBranchAccess()) {
             $query->where('branch_id', $filters['branch_id']);
         }
         $this->applySearchAndDateFilters($query, $filters);

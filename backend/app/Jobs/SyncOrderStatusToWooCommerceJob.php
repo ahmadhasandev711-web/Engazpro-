@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Contracts\WooCommerceApiClientInterface;
 use App\Enums\QueueName;
+use App\Jobs\Middleware\WithTenantContext;
 use App\Exceptions\WooCommerceConnectionException;
 use App\Models\WooCommerceIntegration;
 use Illuminate\Bus\Queueable;
@@ -28,6 +29,11 @@ class SyncOrderStatusToWooCommerceJob implements ShouldQueue
         public string $status
     ) {
         $this->onQueue(QueueName::WOO_REALTIME->value);
+    }
+
+    public function middleware(): array
+    {
+        return [new WithTenantContext($this->userId)];
     }
 
     public function handle(WooCommerceApiClientInterface $apiClient): void

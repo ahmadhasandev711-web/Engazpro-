@@ -90,12 +90,13 @@ class WooCommerceAuthService
 
         $this->ecommerceAccess->assertPlatformAllowed($targetAccountId, EcommercePlatform::WOOCOMMERCE);
 
-        \Illuminate\Support\Facades\Auth::setUser($user);
-        $integration = $this->upsertActiveIntegration($targetAccountId, $payload);
-        \App\Services\WooCommerce\WooStockSyncGate::forget($targetAccountId);
-        $this->syncPostCallbackSetup($integration, $user, $targetAccountId);
+        return \App\Support\TenantContext::runAs($user->id, function () use ($targetAccountId, $payload, $user) {
+            $integration = $this->upsertActiveIntegration($targetAccountId, $payload);
+            \App\Services\WooCommerce\WooStockSyncGate::forget($targetAccountId);
+            $this->syncPostCallbackSetup($integration, $user, $targetAccountId);
 
-        return $integration;
+            return $integration;
+        });
     }
 
     private function upsertActiveIntegration(int $accountId, array $payload): WooCommerceIntegration

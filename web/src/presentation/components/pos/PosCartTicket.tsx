@@ -10,11 +10,12 @@ import {
   Truck,
   X,
 } from 'lucide-react';
-import { formatCurrency } from '@pos-mandob/shared';
+import { formatCurrency, PartyCrmMetrics } from '@pos-mandob/shared';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../../../data/api/client';
 import { PosCartItem } from '../../../hooks/useHoldInvoices';
 import { PosCustomerSearch } from './PosCustomerSearch';
+import { CustomerRiskBadge } from '../crm/CustomerRiskBadge';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { EmptyState } from '../ui/EmptyState';
@@ -24,6 +25,7 @@ export interface CustomerParty {
   name: string;
   phone?: string;
   balance?: number;
+  crm_metrics?: PartyCrmMetrics | null;
 }
 
 interface PosCartTicketProps {
@@ -140,6 +142,14 @@ export const PosCartTicket: React.FC<PosCartTicketProps> = ({
             }}
           />
         </div>
+        {selectedCustomer?.crm_metrics && (
+          <div className="space-y-1.5">
+            <CustomerRiskBadge metrics={selectedCustomer.crm_metrics} variant="compact" />
+            {selectedCustomer.crm_metrics.show_warning && (
+              <CustomerRiskBadge metrics={selectedCustomer.crm_metrics} variant="banner" />
+            )}
+          </div>
+        )}
       </div>
 
       {/* Cart Items List */}

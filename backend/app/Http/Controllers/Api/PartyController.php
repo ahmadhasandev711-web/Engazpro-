@@ -63,7 +63,7 @@ class PartyController extends Controller
      */
     public function show(Request $request, int $id): JsonResponse
     {
-        $party = $this->partyService->findForShowOrFail($id);
+        $party = $this->partyService->findForShowOrFail($id, $request->user());
 
         Gate::authorize('view', $party);
 

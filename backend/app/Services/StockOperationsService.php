@@ -47,10 +47,7 @@ class StockOperationsService
     {
         $query = StockMovement::query()->with(['branch:id,name', 'product:id,name,code,barcode,unit', 'variant:id,name', 'batch:id,batch_number']);
 
-        $branchId = ($user->isManager() && $user->branch_id) ? (int) $user->branch_id : (!empty($filters['branch_id']) ? (int) $filters['branch_id'] : null);
-        if ($branchId) {
-            $query->where('branch_id', $branchId);
-        }
+        app(BranchScopeService::class)->applyBranchFilter($query, $user, 'branch_id', !empty($filters['branch_id']) ? (int) $filters['branch_id'] : null);
         $this->applyMovementFilters($query, $filters);
         $perPage = min(max(1, (int) ($filters['per_page'] ?? 30)), 100);
 
@@ -59,11 +56,13 @@ class StockOperationsService
 
     private function resolveAuthorizedBranchId(User $user, int $requestedBranchId): int
     {
-        if ($user->isManager() && $user->branch_id && $requestedBranchId !== (int) $user->branch_id) {
-            throw new PosDomainException('عذراً، كمدير فرع يمكنك تسوية الجرد في فرعك المخصص فقط.', 'UNAUTHORIZED_BRANCH_ADJUSTMENT', 403);
-        }
+        app(BranchScopeService::class)->assertCanAccessBranch(
+            $user,
+            $requestedBranchId,
+            'عذراً، كمدير فرع يمكنك تسوية الجرد في فرعك المخصص فقط.'
+        );
 
-        return ($user->isManager() && $user->branch_id) ? (int) $user->branch_id : $requestedBranchId;
+        return $user->branch_id && !$user->hasGlobalBranchAccess() ? (int) $user->branch_id : $requestedBranchId;
     }
 
     private function applyAdjustment(User $user, Branch $branch, Product $product, ?ProductVariant $variant, ?ProductBatch $batch, array $data): array

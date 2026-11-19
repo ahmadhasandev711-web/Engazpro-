@@ -5,6 +5,7 @@ namespace App\Policies;
 use App\Enums\InvoiceType;
 use App\Models\Invoice;
 use App\Models\User;
+use App\Services\BranchScopeService;
 use Illuminate\Auth\Access\Response;
 
 class InvoicePolicy
@@ -16,17 +17,17 @@ class InvoicePolicy
 
     public function view(User $user, Invoice $invoice): Response
     {
-        if ($user->isOwnerOrAdmin()) {
+        if ($user->hasGlobalBranchAccess()) {
             return Response::allow();
         }
 
-        if ($user->isManager()) {
-            return ($user->branch_id && (int) $invoice->branch_id === (int) $user->branch_id)
+        if ($user->isManager() || $user->isSupervisor()) {
+            return app(BranchScopeService::class)->canAccessBranch($user, $invoice->branch_id)
                 ? Response::allow()
                 : Response::deny('عذراً، لا يمكنك عرض فواتير فروع أخرى');
         }
 
-        return $invoice->created_by === $user->id
+        return ($invoice->created_by === $user->id && app(BranchScopeService::class)->canAccessBranch($user, $invoice->branch_id))
             ? Response::allow()
             : Response::deny('عذراً، لا تملك صلاحية عرض هذه الفاتورة');
     }

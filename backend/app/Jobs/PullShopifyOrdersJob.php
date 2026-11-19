@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Enums\EcommercePlatform;
 use App\Enums\QueueName;
+use App\Jobs\Middleware\WithTenantContext;
 use App\Models\ShopifyIntegration;
 use App\Models\User;
 use App\Services\OnlineOrders\OnlineOrderSyncService;
@@ -26,6 +27,11 @@ class PullShopifyOrdersJob implements ShouldQueue
         public int $limit = 25
     ) {
         $this->onQueue(QueueName::SHOPIFY_BULK->value);
+    }
+
+    public function middleware(): array
+    {
+        return [new WithTenantContext($this->actingUserId)];
     }
 
     public function handle(OnlineOrderSyncService $syncService): int

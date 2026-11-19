@@ -249,7 +249,7 @@ class OnlineOrderSyncService
         }
 
         $transfer = $this->vanTransferService->settleForDelivery($user, $locked);
-        $branchId = $transfer?->to_branch_id ?? $locked->mandob?->branch_id ?? $locked->branch_id;
+        $branchId = $transfer?->to_branch_id ?? $locked->branch_id;
         $settlement = $this->resolvePaymentSettlement($locked, $deliveryData);
         $invoice = $this->invoiceService->createInvoice($user, $this->buildDeliveryInvoicePayload($locked, $accountId, $branchId, $settlement));
 

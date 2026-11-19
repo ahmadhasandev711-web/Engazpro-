@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\StockTransfer;
 use App\Models\User;
+use App\Services\BranchScopeService;
 use Illuminate\Auth\Access\Response;
 
 class StockTransferPolicy
@@ -19,10 +20,11 @@ class StockTransferPolicy
             return Response::deny('غير مصرح لك بالوصول لأمر التحويل هذا.');
         }
 
-        if ($user->isManager() && $user->branch_id) {
-            if ((int) $transfer->from_branch_id !== (int) $user->branch_id && (int) $transfer->to_branch_id !== (int) $user->branch_id) {
-                return Response::deny('عذراً، لا تملك صلاحية عرض أوامر تحويل خاصة بفروع أخرى.');
-            }
+        $scope = app(BranchScopeService::class);
+        if (!$user->hasGlobalBranchAccess()
+            && ($scope->shouldFailClosedWithoutBranch($user)
+                || (!$scope->canAccessBranch($user, $transfer->from_branch_id) && !$scope->canAccessBranch($user, $transfer->to_branch_id)))) {
+            return Response::deny('عذراً، لا تملك صلاحية عرض أوامر تحويل خاصة بفروع أخرى.');
         }
 
         return Response::allow();
@@ -43,7 +45,7 @@ class StockTransferPolicy
             return Response::deny('غير مصرح لك باستلام أمر التحويل هذا.');
         }
 
-        if ($user->isManager() && $user->branch_id && (int) $transfer->to_branch_id !== (int) $user->branch_id) {
+        if (!app(BranchScopeService::class)->canAccessBranch($user, $transfer->to_branch_id)) {
             return Response::deny('عذراً، يمكنك فقط تأكيد استلام البضاعة المحولة إلى فرعك.');
         }
 
@@ -54,6 +56,11 @@ class StockTransferPolicy
     {
         if ($transfer->user_id !== $user->getAccountId()) {
             return Response::deny('غير مصرح لك بإلغاء أمر التحويل هذا.');
+        }
+
+        $scope = app(BranchScopeService::class);
+        if (!$user->hasGlobalBranchAccess() && !$scope->canAccessBranch($user, $transfer->from_branch_id) && !$scope->canAccessBranch($user, $transfer->to_branch_id)) {
+            return Response::deny('عذراً، لا يمكنك إلغاء أمر تحويل خاص بفروع أخرى.');
         }
 
         if (!$user->isOwnerOrAdmin() && !$user->isManager() && $transfer->created_by !== $user->id) {

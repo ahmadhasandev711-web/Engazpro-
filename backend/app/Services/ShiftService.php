@@ -159,17 +159,18 @@ class ShiftService
             throw new ShiftDomainException('يجب أن تكون الوردية مقفلة من قِبل الموظف قبل اعتماد استلامها.', 'SHIFT_NOT_CLOSED');
         }
 
+        app(BranchScopeService::class)->assertCanAccessBranch(
+            $settledBy,
+            $shift->treasury?->branch_id ?? $shift->creator?->branch_id,
+            'عذراً، يمكنك اعتماد واستلام ورديات فرعك فقط.'
+        );
+
         return DB::transaction(fn() => $this->executeShiftHandover($shift, $settledBy, $targetTreasuryId, $settlementNotes));
     }
 
     private function executeShiftHandover(Shift $shift, User $settledBy, ?int $targetTreasuryId, ?string $settlementNotes): TreasuryTransaction
     {
-        $targetTreasury = $targetTreasuryId
-            ? Treasury::withoutGlobalScopes()->findOrFail($targetTreasuryId)
-            : ($shift->creator?->branch_id
-                ? $this->treasuryService->getBranchTreasury($shift->creator->branch_id, $shift->user_id)
-                : $this->treasuryService->getMainTreasury($shift->user_id));
-
+        $targetTreasury = $this->resolveSettlementTargetTreasury($shift, $settledBy, $targetTreasuryId);
         $handoverAmount = Money::of($shift->actual_cash ?? $shift->expected_cash);
         $notes = "توريد عهدة رسمية للوردية {$shift->shift_number} من ({$shift->creator?->name}) إلى ({$targetTreasury->name}). " . ($settlementNotes ?? '');
         $transaction = $this->treasuryService->recordTransfer($shift->treasury, $targetTreasury, $handoverAmount, $settledBy, $notes, $shift->id, TreasuryTransactionType::HANDOVER);
@@ -177,6 +178,24 @@ class ShiftService
         $shift->update(['status' => ShiftStatus::SETTLED, 'settled_at' => Carbon::now(), 'settled_by' => $settledBy->id, 'settlement_notes' => $settlementNotes]);
 
         return $transaction;
+    }
+
+    private function resolveSettlementTargetTreasury(Shift $shift, User $settledBy, ?int $targetTreasuryId): Treasury
+    {
+        if ($targetTreasuryId !== null) {
+            $explicit = Treasury::where('user_id', $shift->user_id)->findOrFail($targetTreasuryId);
+            if (!$settledBy->isOwnerOrAdmin() && !app(BranchScopeService::class)->canAccessTreasury($settledBy, $explicit)) {
+                throw new ShiftDomainException('عذراً، لا تملك صلاحية التوريد إلى هذه الخزينة.', 'UNAUTHORIZED_TARGET_TREASURY', 403);
+            }
+
+            return $explicit;
+        }
+
+        $branchId = $shift->treasury?->branch_id ?? $shift->creator?->branch_id;
+
+        return $branchId
+            ? $this->treasuryService->getBranchTreasury($branchId, $shift->user_id)
+            : $this->treasuryService->getMainTreasury($shift->user_id);
     }
 
     /**
@@ -195,10 +214,17 @@ class ShiftService
             ->when(!empty($filters['created_by']) && !$isEmployee, fn($q) => $q->where('created_by', $filters['created_by']))
             ->latest('id');
 
+        app(BranchScopeService::class)->applyTreasuryOrCreatorBranchFilter($query, $user, 'treasury', 'creator', !empty($filters['branch_id']) ? (int) $filters['branch_id'] : null);
+        $this->applyShiftDateFilters($query, $filters);
+
+        return $query->paginate(min((int) ($filters['per_page'] ?? 20), 100));
+    }
+
+    private function applyShiftDateFilters($query, array $filters): void
+    {
         if (!empty($filters['date'])) {
             $d = $filters['date'];
-            $query->where('opened_at', '>=', "{$d} 00:00:00")
-                  ->where('opened_at', '<=', "{$d} 23:59:59");
+            $query->where('opened_at', '>=', "{$d} 00:00:00")->where('opened_at', '<=', "{$d} 23:59:59");
         }
         if (!empty($filters['date_from'])) {
             $query->where('opened_at', '>=', "{$filters['date_from']} 00:00:00");
@@ -206,17 +232,24 @@ class ShiftService
         if (!empty($filters['date_to'])) {
             $query->where('opened_at', '<=', "{$filters['date_to']} 23:59:59");
         }
-
-        $perPage = min((int) ($filters['per_page'] ?? 20), 100);
-        return $query->paginate($perPage);
     }
 
     public function findForShowOrFail(User $user, int $id): Shift
     {
-        return Shift::withoutGlobalScopes()
+        $shift = Shift::withoutGlobalScopes()
             ->where('user_id', $user->getAccountId())
             ->with(['creator', 'treasury', 'settledByUser', 'invoices.party', 'payments.party', 'expenseRecords'])
             ->findOrFail($id);
+
+        if (!$user->isMandob() && !$user->isCashier()) {
+            app(BranchScopeService::class)->assertCanAccessBranch(
+                $user,
+                $shift->treasury?->branch_id ?? $shift->creator?->branch_id,
+                'غير مصرح لك بالاطلاع على ورديات فروع أخرى'
+            );
+        }
+
+        return $shift;
     }
 
     public function findForSettleOrFail(User $user, int $id): Shift

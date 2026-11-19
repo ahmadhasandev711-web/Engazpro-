@@ -179,6 +179,9 @@ class PayrollService
         }
 
         $treasury = Treasury::where('user_id', $accountId)->findOrFail((int) $data['treasury_id']);
+        if (!$actor->isOwnerOrAdmin() && !app(BranchScopeService::class)->canAccessTreasury($actor, $treasury)) {
+            throw new PayrollDomainException('عذراً، يمكنك صرف الرواتب فقط من خزينة فرعك المصرح بها.', 'UNAUTHORIZED_TREASURY', 403);
+        }
         $paymentMethod = !empty($data['payment_method'])
             ? ($data['payment_method'] instanceof PaymentMethod ? $data['payment_method'] : PaymentMethod::from($data['payment_method']))
             : PaymentMethod::CASH;
@@ -227,12 +230,10 @@ class PayrollService
         }
 
         if ($actor->isManager()) {
-            // المدير لا يستطيع إدارة راتبه الشخصي
             if ($actor->id === $employee->id) {
                 throw new PayrollDomainException('لا يمكنك إدارة أو صرف راتبك الشخصي، يتم صرف راتب المدير بواسطة مالك المنشأة.', 'MANAGER_CANNOT_PAY_SELF', 403);
             }
-            // المدير يدير فقط موظفي فرعه
-            if ($employee->branch_id !== $actor->branch_id) {
+            if ($actor->branch_id !== null && $employee->branch_id !== $actor->branch_id) {
                 throw new PayrollDomainException('ليس لديك صلاحية لإدارة موظفين خارج فرعك.', 'UNAUTHORIZED_BRANCH', 403);
             }
             return;

@@ -27,7 +27,10 @@ class PartyResource extends JsonResource
             'address' => $this->address,
             'balance' => Money::of($this->balance ?? 0)->getAmount(),
             'notes' => $this->notes,
+            'crm_tier_override' => $this->crm_tier_override instanceof \BackedEnum ? $this->crm_tier_override->value : $this->crm_tier_override,
+            'crm_metrics' => $this->resource->getAttribute('crm_metrics'),
             'invoices_count' => $this->whenCounted('invoices', $this->invoices_count),
+            'interactions_count' => $this->whenCounted('interactions', $this->interactions_count),
             'has_transactions' => (bool) ($hasInvoices || $hasPayments || !Money::of($this->balance ?? 0)->isZero()),
             'created_at' => $this->created_at?->toIso8601String(),
         ];

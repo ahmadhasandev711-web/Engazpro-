@@ -143,6 +143,24 @@ class User extends Authenticatable
         return $this->role === UserRole::SALES || $this->role?->value === UserRole::SALES->value;
     }
 
+    /**
+     * هل يمتلك المستخدم صلاحية الوصول العام لجميع الفروع؟
+     * (صاحب العمل، الأدمن، والمدير العام أو المشرف العام غير المقيدين بفرع محدد)
+     */
+    public function hasGlobalBranchAccess(): bool
+    {
+        if ($this->isOwnerOrAdmin()) {
+            return true;
+        }
+
+        return ($this->isManager() || $this->isSupervisor()) && $this->branch_id === null;
+    }
+
+    public function isBranchScoped(): bool
+    {
+        return !$this->hasGlobalBranchAccess();
+    }
+
     public function isEligibleForPayroll(): bool
     {
         return !$this->isOwnerOrAdmin();
@@ -282,7 +300,10 @@ class User extends Authenticatable
     {
         static::saved(function (User $user) {
             if ($user->isDirty(['status', 'ecommerce_enabled'])) {
-                \App\Services\SubscriptionGate::clear((int) ($user->owner_id ?: $user->id));
+                $accountId = (int) ($user->owner_id ?: $user->id);
+                \App\Services\SubscriptionGate::clear($accountId);
+                \App\Services\WooCommerce\WooStockSyncGate::forget($accountId);
+                \App\Services\Shopify\ShopifyStockSyncGate::forget($accountId);
             }
         });
     }

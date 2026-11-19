@@ -111,12 +111,16 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('view-sales', [ReportPolicy::class, 'viewSales']);
         Gate::define('view-stock', [ReportPolicy::class, 'viewStock']);
         Gate::define('view-purchases', [ReportPolicy::class, 'viewPurchases']);
+        Gate::define('view-receivables-payables', [ReportPolicy::class, 'viewReceivablesPayables']);
         Gate::define('stock-alerts', [StockOperationsPolicy::class, 'viewAlerts']);
         Gate::define('stock-movements', [StockOperationsPolicy::class, 'viewMovements']);
         Gate::define('manage-ecommerce', [OnlineOrderPolicy::class, 'manageSettings']);
         Gate::define('pull-online-orders', [OnlineOrderPolicy::class, 'pullOrders']);
         Gate::define('operate-online-order', [OnlineOrderPolicy::class, 'operateOrder']);
         Gate::define('deliver-online-order', [OnlineOrderPolicy::class, 'deliverOrder']);
+        Gate::define('view-couriers', [\App\Policies\CourierPolicy::class, 'viewAny']);
+        Gate::define('view-courier-manifest', [\App\Policies\CourierPolicy::class, 'viewManifest']);
+        Gate::define('settle-courier', [\App\Policies\CourierPolicy::class, 'settle']);
     }
 
     private function registerObservers(): void

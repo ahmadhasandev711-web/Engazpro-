@@ -2,45 +2,25 @@
 
 namespace App\Policies;
 
-use App\Enums\TreasuryType;
 use App\Models\Treasury;
 use App\Models\User;
+use App\Services\BranchScopeService;
 use Illuminate\Auth\Access\Response;
 
 class TreasuryPolicy
 {
-    public function viewAny(User $user): bool
+    public function viewAny(User $user): Response
     {
-        return true;
+        return $user->isSales()
+            ? Response::deny('عذراً، استعراض الخزن غير متاح لدور بائع الصالة.')
+            : Response::allow();
     }
 
     public function view(User $user, Treasury $treasury): Response
     {
-        if ($treasury->user_id !== $user->getAccountId()) {
-            return Response::deny('غير مصرح لك بالاطلاع على هذه الخزينة');
-        }
-
-        // الكاشير والمندوب: لا يريان سوى الخزينة المعينة لهما
-        if (($user->isMandob() || $user->isCashier()) && $treasury->assigned_user_id !== $user->id) {
-            return Response::deny('غير مصرح لك بالاطلاع على هذه الخزينة');
-        }
-
-        // مدير الفرع والمشرف: يريان خزن فرعهما فقط، ومحجوب عنهما البنوك والمسحوبات والخزائن العامة
-        if ($user->isManager() || $user->isSupervisor()) {
-            $typeVal = $treasury->type instanceof \BackedEnum ? $treasury->type->value : (string) $treasury->type;
-            if (in_array($typeVal, [
-                TreasuryType::BANK->value,
-                TreasuryType::WALLET->value,
-                TreasuryType::OWNER_DRAWINGS->value,
-            ])) {
-                return Response::deny('غير مصرح لك بالاطلاع على الحسابات البنكية أو المسحوبات الشخصية');
-            }
-            if ($treasury->branch_id && $treasury->branch_id !== $user->branch_id) {
-                return Response::deny('غير مصرح لك بالاطلاع على خزن فروع أخرى');
-            }
-        }
-
-        return Response::allow();
+        return app(BranchScopeService::class)->canAccessTreasury($user, $treasury)
+            ? Response::allow()
+            : Response::deny('غير مصرح لك بالاطلاع على هذه الخزينة');
     }
 
     public function viewTransactions(User $user, Treasury $treasury): Response

@@ -37,4 +37,14 @@ class BranchStock extends Model
     {
         return $this->belongsTo(ProductVariant::class, 'product_variant_id');
     }
+
+    public function adjustQuantity(\App\Support\Quantity|float|int|string $delta): self
+    {
+        $this->quantity = \App\Support\Quantity::of($this->quantity ?? 0)
+            ->add(\App\Support\Quantity::of($delta))
+            ->toFloat();
+        $this->save();
+
+        return $this;
+    }
 }

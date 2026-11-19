@@ -341,11 +341,16 @@ class ShopifyProductImportService
      */
     private function loadLocationBranchMap(ShopifyIntegration $integration): array
     {
-        return ShopifyLocationMapping::withoutGlobalScopes()
+        $map = [];
+        $rows = ShopifyLocationMapping::withoutGlobalScopes()
             ->where('user_id', $integration->user_id)
             ->where('shopify_integration_id', $integration->id)
-            ->where('is_active', true)
-            ->pluck('branch_id', 'shopify_location_id')
-            ->all();
+            ->get(['shopify_location_id', 'branch_id', 'is_active']);
+
+        foreach ($rows as $row) {
+            $map[(int) $row->shopify_location_id] = $row->is_active ? $row->branch_id : null;
+        }
+
+        return $map;
     }
 }
