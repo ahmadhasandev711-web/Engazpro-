@@ -58,8 +58,8 @@ class PayrollService
         $query = Invoice::where('user_id', $employee->getAccountId())->where('type', $type->value)->whereBetween('date', [$startDate, $endDate]);
 
         return $employee->isManager()
-            ? $query->where('branch_id', $employee->branch_id)->whereNull('wc_order_id')
-            : $query->where(fn($q) => $q->where('salesperson_id', $employee->id)->orWhere(fn($sub) => $sub->whereNull('salesperson_id')->where('created_by', $employee->id)));
+            ? $query->where('branch_id', $employee->branch_id)->nonEcommerce()
+            : $query->where(fn ($q) => $q->where('salesperson_id', $employee->id)->orWhere(fn ($sub) => $sub->whereNull('salesperson_id')->nonEcommerce()->where('created_by', $employee->id)));
     }
 
     private function computeCommissionMoney(CommissionType $type, float $rate, float $totalSales, int $invoicesCount): Money

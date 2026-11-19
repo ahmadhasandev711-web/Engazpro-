@@ -56,6 +56,14 @@ const getRoleLabel = (role?: string): string => {
   }
 };
 
+const isEcommerceInvoice = (invoiceDetails: any): boolean =>
+  Boolean(
+    invoiceDetails?.is_ecommerce_order ||
+      invoiceDetails?.online_order_id ||
+      invoiceDetails?.wc_order_id ||
+      invoiceDetails?.shopify_order_id
+  );
+
 export const InvoiceDetailsModal: React.FC<InvoiceDetailsModalProps> = ({
   selectedInvoiceId,
   invoiceDetails,
@@ -168,9 +176,14 @@ export const InvoiceDetailsModal: React.FC<InvoiceDetailsModalProps> = ({
                 </div>
                 <div className="text-left font-mono text-xs text-paper-muted">
                   <div>التاريخ: {invoiceDetails?.date}</div>
-                  {(invoiceDetails?.wc_order_id || invoiceDetails?.shopify_order_id) && (
+                  {(invoiceDetails?.wc_order_id ||
+                    invoiceDetails?.shopify_order_id ||
+                    invoiceDetails?.online_order_id) && (
                     <div>
-                      طلب المتجر: #{invoiceDetails.wc_order_id || invoiceDetails.shopify_order_id}
+                      طلب المتجر: #
+                      {invoiceDetails.wc_order_id ||
+                        invoiceDetails.shopify_order_id ||
+                        invoiceDetails.online_order_id}
                     </div>
                   )}
                 </div>
@@ -233,26 +246,39 @@ export const InvoiceDetailsModal: React.FC<InvoiceDetailsModalProps> = ({
                         </span>
                         {!isEditingSalesperson ? (
                           <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                            <span className="font-black text-ink text-sm">
-                              {invoiceDetails.salesperson_name ||
-                                invoiceDetails.created_by_name ||
-                                'المالك / المنشئ'}
-                            </span>
-                            {invoiceDetails.salesperson_role ? (
-                              <Badge tone="info" className="text-[11px]">
-                                {getRoleLabel(invoiceDetails.salesperson_role)}
-                              </Badge>
-                            ) : (
-                              invoiceDetails.created_by_role && (
+                            {isEcommerceInvoice(invoiceDetails) && !invoiceDetails.salesperson_id ? (
+                              <>
+                                <span className="font-black text-ink text-sm">
+                                  بدون عمولة مبيعات
+                                </span>
                                 <Badge tone="neutral" className="text-[11px]">
-                                  {getRoleLabel(invoiceDetails.created_by_role)}
+                                  طلب متجر إلكتروني
                                 </Badge>
-                              )
-                            )}
-                            {!invoiceDetails.salesperson_id && invoiceDetails.created_by_name && (
-                              <span className="text-[11px] text-muted font-normal">
-                                (تلقائياً حسب منشئ الفاتورة)
-                              </span>
+                              </>
+                            ) : (
+                              <>
+                                <span className="font-black text-ink text-sm">
+                                  {invoiceDetails.salesperson_name ||
+                                    invoiceDetails.created_by_name ||
+                                    'المالك / المنشئ'}
+                                </span>
+                                {invoiceDetails.salesperson_role ? (
+                                  <Badge tone="info" className="text-[11px]">
+                                    {getRoleLabel(invoiceDetails.salesperson_role)}
+                                  </Badge>
+                                ) : (
+                                  invoiceDetails.created_by_role && (
+                                    <Badge tone="neutral" className="text-[11px]">
+                                      {getRoleLabel(invoiceDetails.created_by_role)}
+                                    </Badge>
+                                  )
+                                )}
+                                {!invoiceDetails.salesperson_id && invoiceDetails.created_by_name && (
+                                  <span className="text-[11px] text-muted font-normal">
+                                    (تلقائياً حسب منشئ الفاتورة)
+                                  </span>
+                                )}
+                              </>
                             )}
                           </div>
                         ) : (
@@ -312,7 +338,7 @@ export const InvoiceDetailsModal: React.FC<InvoiceDetailsModalProps> = ({
                               setSelectedSalespersonId(
                                 invoiceDetails.salesperson_id
                                   ? String(invoiceDetails.salesperson_id)
-                                  : invoiceDetails.created_by
+                                  : !isEcommerceInvoice(invoiceDetails) && invoiceDetails.created_by
                                     ? String(invoiceDetails.created_by)
                                     : ''
                               );

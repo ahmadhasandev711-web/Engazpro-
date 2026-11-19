@@ -143,4 +143,25 @@ class Invoice extends Model
     {
         return $query->where('type', InvoiceType::PURCHASE->value);
     }
+
+    public function scopeNonEcommerce(Builder $query): Builder
+    {
+        return $query->whereNull('online_order_id')
+            ->whereNull('wc_order_id')
+            ->whereNull('shopify_order_id')
+            ->whereDoesntHave('parentInvoice', function (Builder $p): void {
+                $p->whereNotNull('online_order_id')
+                    ->orWhereNotNull('wc_order_id')
+                    ->orWhereNotNull('shopify_order_id');
+            });
+    }
+
+    public function isEcommerceOrder(): bool
+    {
+        if ($this->online_order_id !== null || $this->wc_order_id !== null || $this->shopify_order_id !== null) {
+            return true;
+        }
+
+        return $this->parent_invoice_id !== null && (bool) $this->parentInvoice?->isEcommerceOrder();
+    }
 }

@@ -30,11 +30,22 @@ class InvoiceResource extends JsonResource
             'salesperson_id' => $this->salesperson_id,
             'salesperson_name' => $this->salesperson?->name,
             'salesperson_role' => $this->enumValue($this->salesperson?->role),
+            ...$this->ecommerceOrderFields(),
             'branch_id' => $this->branch_id,
             'shift_id' => $this->shift_id,
             'notes' => $this->notes,
             'items' => InvoiceItemResource::collection($this->whenLoaded('items')),
             'created_at' => $this->created_at?->toIso8601String(),
+        ];
+    }
+
+    private function ecommerceOrderFields(): array
+    {
+        return [
+            'online_order_id' => $this->online_order_id,
+            'wc_order_id' => $this->wc_order_id,
+            'shopify_order_id' => $this->shopify_order_id,
+            'is_ecommerce_order' => $this->resource->isEcommerceOrder(),
         ];
     }
 

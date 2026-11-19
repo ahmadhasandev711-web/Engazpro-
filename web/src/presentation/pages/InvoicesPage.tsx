@@ -157,10 +157,16 @@ export const InvoicesPage: React.FC = () => {
 
   useEffect(() => {
     if (invoiceDetails) {
+      const isEcommerce = Boolean(
+        invoiceDetails.is_ecommerce_order ||
+          invoiceDetails.online_order_id ||
+          invoiceDetails.wc_order_id ||
+          invoiceDetails.shopify_order_id
+      );
       setSelectedSalespersonId(
         invoiceDetails.salesperson_id
           ? String(invoiceDetails.salesperson_id)
-          : invoiceDetails.created_by
+          : !isEcommerce && invoiceDetails.created_by
             ? String(invoiceDetails.created_by)
             : ''
       );
@@ -509,27 +515,33 @@ export const InvoicesPage: React.FC = () => {
                               {inv.salesperson_name || inv.created_by_name}
                             </span>
                             <span className="text-[11px] text-muted font-medium">
-                              {inv.salesperson_role
-                                ? inv.salesperson_role === 'SALES'
-                                  ? 'بائع / سيلز'
-                                  : inv.salesperson_role === 'MANDOB'
+                              {(inv.is_ecommerce_order ||
+                                inv.online_order_id ||
+                                inv.wc_order_id ||
+                                inv.shopify_order_id) &&
+                              !inv.salesperson_id
+                                ? 'مؤكد / منشئ الطلب (بدون عمولة)'
+                                : inv.salesperson_role
+                                  ? inv.salesperson_role === 'SALES'
+                                    ? 'بائع / سيلز'
+                                    : inv.salesperson_role === 'MANDOB'
+                                      ? 'مندوب مبيعات'
+                                      : inv.salesperson_role === 'CASHIER'
+                                        ? 'كاشير'
+                                        : inv.salesperson_role === 'MANAGER'
+                                          ? 'مدير'
+                                          : inv.salesperson_role
+                                  : inv.created_by_role === 'MANDOB'
                                     ? 'مندوب مبيعات'
-                                    : inv.salesperson_role === 'CASHIER'
+                                    : inv.created_by_role === 'CASHIER'
                                       ? 'كاشير'
-                                      : inv.salesperson_role === 'MANAGER'
-                                        ? 'مدير'
-                                        : inv.salesperson_role
-                                : inv.created_by_role === 'MANDOB'
-                                  ? 'مندوب مبيعات'
-                                  : inv.created_by_role === 'CASHIER'
-                                    ? 'كاشير'
-                                    : inv.created_by_role === 'SALES'
-                                      ? 'بائع / سيلز'
-                                      : inv.created_by_role === 'MANAGER'
-                                        ? 'مدير'
-                                        : inv.created_by_role === 'SUPERVISOR'
-                                          ? 'مشرف'
-                                          : 'المالك'}
+                                      : inv.created_by_role === 'SALES'
+                                        ? 'بائع / سيلز'
+                                        : inv.created_by_role === 'MANAGER'
+                                          ? 'مدير'
+                                          : inv.created_by_role === 'SUPERVISOR'
+                                            ? 'مشرف'
+                                            : 'المالك'}
                             </span>
                             {inv.salesperson_name &&
                               inv.created_by_name &&

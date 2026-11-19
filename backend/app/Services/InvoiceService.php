@@ -355,14 +355,15 @@ class InvoiceService
     private function persistInvoiceHeader(User $user, array $data, string $invoiceNumber, $idempotencyKey, array $totals, array $context, ?Invoice $parentInvoice = null): Invoice
     {
         $type = $data['type'];
-        $isSaleType = in_array($type, [InvoiceType::SALE->value, InvoiceType::SALE_RETURN->value], true);
-        $defaultSalespersonId = $parentInvoice?->salesperson_id ?? $parentInvoice?->created_by ?? $context['created_by'];
 
         return Invoice::create([
             'user_id' => $user->getAccountId(), 'branch_id' => $context['branch_id'], 'created_by' => $context['created_by'],
-            'salesperson_id' => $isSaleType ? (!empty($data['salesperson_id']) ? (int) $data['salesperson_id'] : $defaultSalespersonId) : null,
+            'salesperson_id' => $this->resolveInitialSalespersonId($data, $context, $parentInvoice, $type),
             'treasury_id' => $context['treasury']->id, 'shift_id' => $context['active_shift']?->id,
-            'invoice_number' => $invoiceNumber, 'idempotency_key' => $idempotencyKey, 'online_order_id' => $data['online_order_id'] ?? null, 'wc_order_id' => $data['wc_order_id'] ?? null, 'shopify_order_id' => $data['shopify_order_id'] ?? null,
+            'invoice_number' => $invoiceNumber, 'idempotency_key' => $idempotencyKey,
+            'online_order_id' => $data['online_order_id'] ?? null,
+            'wc_order_id' => $data['wc_order_id'] ?? null,
+            'shopify_order_id' => $data['shopify_order_id'] ?? null,
             'type' => $type, 'party_id' => $data['party_id'] ?? null,
             'courier_party_id' => !empty($data['courier_party_id']) ? (int) $data['courier_party_id'] : null,
             'parent_invoice_id' => $data['parent_invoice_id'] ?? null, 'promotion_id' => $totals['promotion_id'] ?? null,
@@ -373,6 +374,29 @@ class InvoiceService
             'paid_amount' => $totals['paid_amount'], 'remaining_amount' => $totals['remaining_amount'],
             'payment_method' => $totals['payment_method'], 'notes' => $data['notes'] ?? null,
         ]);
+    }
+
+    private function resolveInitialSalespersonId(array $data, array $context, ?Invoice $parentInvoice, string $type): ?int
+    {
+        if (!in_array($type, [InvoiceType::SALE->value, InvoiceType::SALE_RETURN->value], true)) {
+            return null;
+        }
+        if (!empty($data['salesperson_id'])) {
+            return (int) $data['salesperson_id'];
+        }
+        if ($this->isEcommercePayload($data, $parentInvoice)) {
+            return null;
+        }
+
+        return $parentInvoice?->salesperson_id ?? $parentInvoice?->created_by ?? $context['created_by'];
+    }
+
+    private function isEcommercePayload(array $data, ?Invoice $parentInvoice = null): bool
+    {
+        return !empty($data['online_order_id'])
+            || !empty($data['wc_order_id'])
+            || !empty($data['shopify_order_id'])
+            || ($parentInvoice?->isEcommerceOrder() ?? false);
     }
 
     private function persistInvoiceItemsAndStock(User $user, Invoice $invoice, string $type, array $preparedItems, ?int $branchId): void
@@ -655,7 +679,7 @@ class InvoiceService
         $perPage = min((int) ($filters['per_page'] ?? 20), 100);
 
         return $this->buildFilteredInvoicesQuery($user, $filters)
-            ->with(['party', 'creator', 'salesperson', 'parentInvoice:id,invoice_number'])
+            ->with(['party', 'creator', 'salesperson', 'parentInvoice:id,invoice_number,online_order_id,wc_order_id,shopify_order_id'])
             ->withSum('returnInvoices as returned_total', 'total')
             ->withCount('returnInvoices as returns_count')
             ->latest()
@@ -681,7 +705,7 @@ class InvoiceService
 
     public function findForShowOrFail(int $id): Invoice
     {
-        return Invoice::with(['party', 'items', 'creator', 'salesperson', 'parentInvoice:id,invoice_number'])
+        return Invoice::with(['party', 'items', 'creator', 'salesperson', 'parentInvoice:id,invoice_number,online_order_id,wc_order_id,shopify_order_id'])
             ->withSum('returnInvoices as returned_total', 'total')
             ->withCount('returnInvoices as returns_count')
             ->findOrFail($id);

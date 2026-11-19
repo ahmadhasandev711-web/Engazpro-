@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="purpleBg512" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8B5CF6" />
+      <stop offset="50%" stop-color="#5B3CC4" />
+      <stop offset="100%" stop-color="#3B2196" />
+    </linearGradient>
+    <linearGradient id="gloss512" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.28" />
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0" />
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="122" fill="url(#purpleBg512)" />
+  <path d="M 122 10 H 390 A 112 112 0 0 1 502 122 V 218 C 368 262, 144 262, 10 192 V 122 A 112 112 0 0 1 122 10 Z" fill="url(#gloss512)" />
+  <rect x="8" y="8" width="496" height="496" rx="114" fill="none" stroke="#FFFFFF" stroke-opacity="0.22" stroke-width="5" />
+
+  <!-- Crisp Shopping Cart Silhouette -->
+  <g fill="none" stroke="#FFFFFF" stroke-width="28" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 108 144 H 160 L 202 314 H 362 L 404 182 H 176" fill="#FFFFFF" fill-opacity="0.16" />
+    <path d="M 108 144 H 160 L 202 314 H 362 L 404 182 H 176" />
+  </g>
+  <circle cx="218" cy="378" r="26" fill="#FFFFFF" />
+  <circle cx="346" cy="378" r="26" fill="#FFFFFF" />
+</svg>
