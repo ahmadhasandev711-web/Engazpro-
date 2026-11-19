@@ -1,1 +1,0 @@
-import{j as r,s}from"./index-Du8huPYH.js";const n=({className:e,tableClassName:l,children:o,...t})=>r.jsx("div",{className:s("w-full overflow-x-auto border border-line rounded-xl bg-panel shadow-2xs transition-colors",e),...t,children:r.jsx("table",{className:s("w-full text-right text-sm border-collapse",l),dir:"rtl",children:o})});export{n as D};

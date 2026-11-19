@@ -1,0 +1,1 @@
+import{r}from"./index-DuSapF_x.js";function s({title:n,description:e}){r.useEffect(()=>{const u=document.title;document.title=n;const t=document.querySelector('meta[name="description"]'),o=(t==null?void 0:t.getAttribute("content"))??null;return e&&t&&t.setAttribute("content",e),()=>{document.title=u,t&&o!==null&&t.setAttribute("content",o)}},[n,e])}export{s as u};

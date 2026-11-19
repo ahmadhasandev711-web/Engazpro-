@@ -1,0 +1,1 @@
+import{r as o}from"./index-DuSapF_x.js";function s(e,t=250){const[r,n]=o.useState(e);return o.useEffect(()=>{const u=window.setTimeout(()=>n(e),t);return()=>window.clearTimeout(u)},[e,t]),r}export{s as u};
