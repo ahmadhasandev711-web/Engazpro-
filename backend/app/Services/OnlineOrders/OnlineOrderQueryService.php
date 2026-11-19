@@ -70,12 +70,23 @@ class OnlineOrderQueryService
     private function scopedBaseQuery(User $user): Builder
     {
         $query = OnlineOrder::where('user_id', $user->getAccountId());
-
         if ($user->isMandob()) {
             return $query->where('mandob_id', $user->id);
         }
 
-        return app(\App\Services\BranchScopeService::class)->applyBranchFilter($query, $user);
+        $scope = app(\App\Services\BranchScopeService::class);
+        if ($scope->shouldFailClosedWithoutBranch($user)) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        $branchId = $scope->resolveQueryBranchId($user);
+        if ($branchId === null) {
+            return $query;
+        }
+
+        return $query->where(function (Builder $q) use ($branchId) {
+            $q->where('branch_id', $branchId)->orWhere(fn (Builder $sub) => $sub->whereNull('branch_id')->where('status', WcOrderStatus::PENDING_CONFIRMATION->value));
+        });
     }
 
     private function applyFilters(Builder $query, User $user, array $filters): void

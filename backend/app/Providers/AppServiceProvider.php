@@ -118,6 +118,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('pull-online-orders', [OnlineOrderPolicy::class, 'pullOrders']);
         Gate::define('operate-online-order', [OnlineOrderPolicy::class, 'operateOrder']);
         Gate::define('deliver-online-order', [OnlineOrderPolicy::class, 'deliverOrder']);
+        Gate::define('transfer-online-order-branch', [OnlineOrderPolicy::class, 'transferBranch']);
         Gate::define('view-couriers', [\App\Policies\CourierPolicy::class, 'viewAny']);
         Gate::define('view-courier-manifest', [\App\Policies\CourierPolicy::class, 'viewManifest']);
         Gate::define('settle-courier', [\App\Policies\CourierPolicy::class, 'settle']);

@@ -194,7 +194,7 @@ class DashboardService
         $cashByType = $this->sumDailyCashInvoicesByType($user, $isEmployee, $scopedBranchId, $dayRange);
         $cashPurchaseReturns = $isEmployee ? 0.0 : ($cashByType[InvoiceType::PURCHASE_RETURN->value] ?? 0.0);
         $cashPurchases = $isEmployee ? 0.0 : ($cashByType[InvoiceType::PURCHASE->value] ?? 0.0);
-        $cashPayments = $isEmployee ? 0.0 : $this->sumDailyCashVouchers($user, false, $scopedBranchId, $dayRange, PaymentType::PAYMENT->value);
+        $cashPayments = $this->sumDailyCashVouchers($user, $isEmployee, $scopedBranchId, $dayRange, PaymentType::PAYMENT->value);
         $cashSaleReturns = $cashByType[InvoiceType::SALE_RETURN->value] ?? 0.0;
 
         $totalIn = Money::of($cashSales)->add($cashReceipts)->add($cashPurchaseReturns);

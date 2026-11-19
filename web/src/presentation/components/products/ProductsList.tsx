@@ -2,7 +2,7 @@ import React from 'react';
 import { PaginationBar } from '../common/PaginationBar';
 import { ProductMobileCard } from '../mobile/ProductMobileCard';
 import { formatCurrency, formatNumber } from '@pos-mandob/shared';
-import { Package, AlertTriangle, Trash2, Edit2, Barcode, PlusCircle, RefreshCw } from 'lucide-react';
+import { Package, AlertTriangle, Trash2, Edit2, Barcode, PlusCircle, RefreshCw, Building2 } from 'lucide-react';
 import { DataTable } from '../ui/DataTable';
 import { EmptyState } from '../ui/EmptyState';
 import { Badge } from '../ui/Badge';
@@ -17,6 +17,7 @@ export const ProductsList: React.FC<{ vm: ProductsViewModel }> = ({ vm }) => {
     setPage,
     setSelectedBatchProduct,
     setSelectedPrintProduct,
+    setAvailabilityProduct,
     syncingProductId,
     canAddProduct,
     canEditProduct,
@@ -60,9 +61,7 @@ export const ProductsList: React.FC<{ vm: ProductsViewModel }> = ({ vm }) => {
                 <th className="py-3.5 px-4">سعر البيع</th>
                 <th className="py-3.5 px-4">الكمية والمخزون</th>
                 <th className="py-3.5 px-4">حالة الصلاحية / الوحدة</th>
-                {(canEditProduct || canDeleteProduct) && (
-                  <th className="py-3.5 px-4 text-center">الإجراءات</th>
-                )}
+                <th className="py-3.5 px-4 text-center">الإجراءات</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
@@ -230,59 +229,69 @@ export const ProductsList: React.FC<{ vm: ProductsViewModel }> = ({ vm }) => {
                     </td>
 
                     {/* Actions */}
-                    {(canEditProduct || canDeleteProduct) && (
-                      <td className="py-3.5 px-4 text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          {/* Direct E-Commerce Stock Push */}
-                          {(Boolean((p as any).wc_product_id) || Boolean((p as any).shopify_product_id)) && (
-                            <Button
-                              variant="ghost"
-                              size="md"
-                              onClick={() => handlePushStock(p)}
-                              disabled={syncingProductId === p.id}
-                              className="min-w-[44px] px-0 text-brand hover:bg-brand-soft"
-                              title={Boolean((p as any).shopify_product_id) ? 'مزامنة الرصيد مع Shopify فورياً' : 'مزامنة الرصيد مع ووكومرس فورياً'}
-                            >
-                              <RefreshCw className={`w-4 h-4 ${syncingProductId === p.id ? 'animate-spin' : ''}`} />
-                            </Button>
-                          )}
+                    <td className="py-3.5 px-4 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        {/* Branch Stock Availability (Read-only across fixed branches) */}
+                        <Button
+                          variant="ghost"
+                          size="md"
+                          onClick={() => setAvailabilityProduct(p)}
+                          className="min-w-[44px] px-0 text-info hover:bg-info-soft"
+                          title="توافر الصنف في باقي الفروع"
+                          aria-label="توافر الصنف في باقي الفروع"
+                        >
+                          <Building2 className="w-4 h-4" />
+                        </Button>
 
-                          {/* Barcode Print Action */}
+                        {/* Direct E-Commerce Stock Push */}
+                        {canEditProduct && (Boolean((p as any).wc_product_id) || Boolean((p as any).shopify_product_id)) && (
                           <Button
                             variant="ghost"
                             size="md"
-                            onClick={() => setSelectedPrintProduct(p)}
+                            onClick={() => handlePushStock(p)}
+                            disabled={syncingProductId === p.id}
                             className="min-w-[44px] px-0 text-brand hover:bg-brand-soft"
-                            title="طباعة ملصقات الباركود"
+                            title={Boolean((p as any).shopify_product_id) ? 'مزامنة الرصيد مع Shopify فورياً' : 'مزامنة الرصيد مع ووكومرس فورياً'}
                           >
-                            <Barcode className="w-4 h-4" />
+                            <RefreshCw className={`w-4 h-4 ${syncingProductId === p.id ? 'animate-spin' : ''}`} />
                           </Button>
+                        )}
 
-                          {canEditProduct && (
-                            <Button
-                              variant="ghost"
-                              size="md"
-                              onClick={() => openEditModal(p)}
-                              className="min-w-[44px] px-0 text-muted hover:text-brand hover:bg-brand-soft"
-                              title="تعديل الصنف"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </Button>
-                          )}
-                          {canDeleteProduct && (
-                            <Button
-                              variant="ghost"
-                              size="md"
-                              onClick={() => handleDelete(p)}
-                              className="min-w-[44px] px-0 text-muted hover:text-bad hover:bg-bad-soft"
-                              title="حذف الصنف"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </td>
-                    )}
+                        {/* Barcode Print Action */}
+                        <Button
+                          variant="ghost"
+                          size="md"
+                          onClick={() => setSelectedPrintProduct(p)}
+                          className="min-w-[44px] px-0 text-brand hover:bg-brand-soft"
+                          title="طباعة ملصقات الباركود"
+                        >
+                          <Barcode className="w-4 h-4" />
+                        </Button>
+
+                        {canEditProduct && (
+                          <Button
+                            variant="ghost"
+                            size="md"
+                            onClick={() => openEditModal(p)}
+                            className="min-w-[44px] px-0 text-muted hover:text-brand hover:bg-brand-soft"
+                            title="تعديل الصنف"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                        {canDeleteProduct && (
+                          <Button
+                            variant="ghost"
+                            size="md"
+                            onClick={() => handleDelete(p)}
+                            className="min-w-[44px] px-0 text-muted hover:text-bad hover:bg-bad-soft"
+                            title="حذف الصنف"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 );
               })}
@@ -301,6 +310,7 @@ export const ProductsList: React.FC<{ vm: ProductsViewModel }> = ({ vm }) => {
                 syncingProductId={syncingProductId}
                 onPushStock={handlePushStock}
                 onPrintBarcode={(prod) => setSelectedPrintProduct(prod)}
+                onCheckAvailability={(prod) => setAvailabilityProduct(prod)}
                 onEditProduct={(prod) => openEditModal(prod)}
                 onDeleteProduct={(prod) => handleDelete(prod)}
                 onAddBatch={(prod) => setSelectedBatchProduct(prod)}

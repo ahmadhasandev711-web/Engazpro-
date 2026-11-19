@@ -20,6 +20,7 @@ import {
   CalendarClock,
   Ban,
   MessageSquare,
+  ArrowLeftRight,
 } from 'lucide-react';
 import {
   cleanItemName,
@@ -54,8 +55,10 @@ export const WcOrderDetailsPanel: React.FC<WcOrderDetailsPanelProps> = ({ vm, on
   const {
     isManager,
     isMandob,
+    canTransferOnlineOrderBranch,
     viewingOrder,
     setViewingOrder,
+    setTransferBranchModalOrder,
     setSelectedBranchId,
     setConfirmError,
     setForceConfirm,
@@ -589,6 +592,21 @@ export const WcOrderDetailsPanel: React.FC<WcOrderDetailsPanelProps> = ({ vm, on
             </Button>
           </div>
         )}
+
+        {canTransferOnlineOrderBranch &&
+          (order.status === WcOrderStatus.PENDING_CONFIRMATION ||
+            order.status === WcOrderStatus.CONFIRMED ||
+            order.status === WcOrderStatus.PREPARING) && (
+            <Button
+              variant="secondary"
+              size="md"
+              onClick={() => setTransferBranchModalOrder(order)}
+              leftIcon={<ArrowLeftRight className="w-4 h-4 text-brand-ink" />}
+              className="w-full min-h-[40px] font-bold text-xs text-brand-ink border-brand-soft hover:bg-brand-soft/60"
+            >
+              تحويل الطلب لفرع آخر (فحص المخزون)
+            </Button>
+          )}
 
         {order.status === WcOrderStatus.DISPATCHED && (
           <div className="grid grid-cols-2 gap-2">

@@ -73,7 +73,7 @@ class PartyCrmController extends Controller
     public function updateTier(UpdatePartyTierRequest $request, int $partyId): JsonResponse
     {
         $party = $this->partyService->findOrFail($partyId);
-        Gate::authorize('update', $party);
+        Gate::authorize('updateTier', $party);
 
         $tierVal = $request->validated('tier');
         $updated = $this->crmService->updateTierOverride($request->user(), $party, $tierVal ? CustomerTier::from($tierVal) : null);

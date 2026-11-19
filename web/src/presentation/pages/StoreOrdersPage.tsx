@@ -6,6 +6,7 @@ import { WcOrderDetailsPanel } from '../components/wc-orders/WcOrderDetailsPanel
 import { WcOrderDetailsModal } from '../components/wc-orders/WcOrderDetailsModal';
 import { WcOrderActionModals } from '../components/wc-orders/WcOrderActionModals';
 import { WcOrderReceipt } from '../components/wc-orders/WcOrderReceipt';
+import { TransferOrderBranchModal } from '../components/wc-orders/TransferOrderBranchModal';
 
 export const StoreOrdersPage: React.FC = () => {
   const vm = useOnlineOrders();
@@ -26,6 +27,15 @@ export const StoreOrdersPage: React.FC = () => {
       <WcOrderDetailsModal vm={vm} />
       <WcOrderActionModals vm={vm} />
       <WcOrderReceipt vm={vm} />
+      <TransferOrderBranchModal
+        order={vm.transferBranchModalOrder}
+        orderQueryKey={vm.orderQueryKey}
+        onClose={() => vm.setTransferBranchModalOrder(null)}
+        onTransferred={(updatedOrder, message) => {
+          vm.setViewingOrder(updatedOrder);
+          vm.setFeedback({ type: 'success', message });
+        }}
+      />
     </div>
   );
 };

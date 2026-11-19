@@ -44,7 +44,7 @@ class PartyController extends Controller
      */
     public function store(PartyRequest $request): JsonResponse
     {
-        Gate::authorize('create', Party::class);
+        Gate::authorize('create', [Party::class, $request->validated('type')]);
 
         $party = $this->partyService->createParty($request->user(), $request->validated());
         $party->loadExists(['invoices', 'payments']);
@@ -70,7 +70,7 @@ class PartyController extends Controller
         return response()->json([
             'success' => true,
             'data' => new PartyResource($party),
-            'ledger' => $party->ledgerEntries,
+            'ledger' => Gate::allows('viewLedger', $party) ? $party->ledgerEntries : [],
         ]);
     }
 

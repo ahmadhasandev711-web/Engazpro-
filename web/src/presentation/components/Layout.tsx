@@ -122,6 +122,7 @@ export const Layout: React.FC = () => {
     isOwnerOrAdmin,
     isMandob,
     isCashier,
+    isSales,
     isManager,
     isSupervisor,
     canViewTreasuries,
@@ -131,6 +132,7 @@ export const Layout: React.FC = () => {
     canManageSettings,
     canViewProfitReport,
     canManageStockOperations,
+    canViewStockTransfers,
     canManageEcommerceSettings,
     canViewStoreOrders,
   } = usePermissions();
@@ -150,7 +152,7 @@ export const Layout: React.FC = () => {
           },
         ]
       : []),
-    { to: '/couriers', label: 'شركات الشحن', icon: Truck },
+    ...(!isSales ? [{ to: '/couriers', label: 'شركات الشحن', icon: Truck }] : []),
   ];
 
   // Group 2: المخزون (الأصناف، العمليات والنواقص، التحويلات، الفروع)
@@ -166,8 +168,8 @@ export const Layout: React.FC = () => {
           },
         ]
       : []),
-    ...(isOwner || isManager
-      ? [{ to: '/transfers', label: 'تحويلات المخزون', icon: ArrowLeftRight }]
+    ...(canViewStockTransfers
+      ? [{ to: '/transfers', label: isCashier ? 'استلام التحويلات' : 'تحويلات المخزون', icon: ArrowLeftRight }]
       : []),
     ...(isOwnerOrAdmin
       ? [{ to: '/branches', label: 'الفروع والمخازن', icon: Building2 }]
@@ -181,7 +183,7 @@ export const Layout: React.FC = () => {
     ...(canManageSuppliers ? [{ to: '/suppliers', label: 'الموردين', icon: Building2 }] : []),
     { to: '/sales', label: 'المبيعات', icon: Receipt },
     ...(canCreatePurchases ? [{ to: '/purchases', label: 'المشتريات', icon: Receipt }] : []),
-    { to: '/payments', label: isOwner ? 'السندات (قبض وصرف)' : 'سندات القبض (التحصيل)', icon: Wallet },
+    { to: '/payments', label: 'السندات (قبض وصرف)', icon: Wallet },
     {
       to: '/expenses',
       label: isMandob ? 'مصاريف خط السير' : isCashier ? 'مصروفات الدرج' : 'المصروفات',

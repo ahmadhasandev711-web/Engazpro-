@@ -13,12 +13,12 @@ class AdjustStockRequest extends FormRequest
     {
         $user = $this->user();
 
-        return $user !== null && ($user->isOwnerOrAdmin() || $user->isManager());
+        return $user !== null && ($user->isOwnerOrAdmin() || $user->isManager() || $user->isSupervisor());
     }
 
     protected function failedAuthorization(): void
     {
-        throw new AuthorizationException('عذراً، تسوية الجرد والتالف متاحة للمالك والإدارة ومديري الفروع فقط.');
+        throw new AuthorizationException('عذراً، تسوية الجرد والتالف متاحة للمالك والإدارة ومديري الفروع والمشرفين فقط.');
     }
 
     public function rules(): array

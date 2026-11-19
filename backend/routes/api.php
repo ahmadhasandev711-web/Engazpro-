@@ -74,6 +74,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
         Route::apiResource('categories', CategoryController::class);
         Route::get('products/lookup', [ProductController::class, 'lookup']);
         Route::get('products/pos-catalog', [ProductController::class, 'posCatalog']);
+        Route::get('products/{id}/branch-availability', [ProductController::class, 'branchAvailability']);
         Route::post('products/opening-balance', [ProductController::class, 'recordOpeningBalance']);
         Route::post('products/{id}/batches', [ProductController::class, 'addBatch']);
         Route::post('products/{id}/image', [ProductController::class, 'uploadImage']);
@@ -216,6 +217,8 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
                 Route::post('/{id}/return', [\App\Http\Controllers\Api\OnlineOrderController::class, 'returnOrder']);
                 Route::post('/{id}/log-call', [\App\Http\Controllers\Api\OnlineOrderController::class, 'logCall']);
                 Route::post('/{id}/cancel', [\App\Http\Controllers\Api\OnlineOrderController::class, 'cancel']);
+                Route::get('/{id}/branch-availability', [\App\Http\Controllers\Api\OnlineOrderController::class, 'branchAvailability']);
+                Route::post('/{id}/transfer-branch', [\App\Http\Controllers\Api\OnlineOrderController::class, 'transferBranch']);
             });
 
             // Shopify Integration (ربط ومزامنة متجر شوبيفاي)

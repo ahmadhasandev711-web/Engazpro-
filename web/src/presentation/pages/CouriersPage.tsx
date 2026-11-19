@@ -39,7 +39,7 @@ import { nativeBackButton } from '../../platform/nativeBackButton';
 export const CouriersPage: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { canDeleteParty } = usePermissions();
+  const { canDeleteParty, canSettleCouriers, canManageCouriers } = usePermissions();
   const { confirm } = useConfirm();
   const toast = useToast();
 
@@ -310,15 +310,17 @@ export const CouriersPage: React.FC = () => {
           </Badge>
         }
         actions={
-          <Button
-            type="button"
-            variant="primary"
-            size="md"
-            onClick={openCreateModal}
-            leftIcon={<Plus className="w-4 h-4" />}
-          >
-            إضافة شركة شحن جديدة
-          </Button>
+          canSettleCouriers ? (
+            <Button
+              type="button"
+              variant="primary"
+              size="md"
+              onClick={openCreateModal}
+              leftIcon={<Plus className="w-4 h-4" />}
+            >
+              إضافة شركة شحن جديدة
+            </Button>
+          ) : undefined
         }
         className="mb-0"
       />
@@ -386,15 +388,17 @@ export const CouriersPage: React.FC = () => {
               title="لا توجد شركات شحن مسجلة حتى الآن"
               description='اضغط على "إضافة شركة شحن جديدة" لتسجيل شركات الشحن المحلية أو الخارجية وبدء متابعة الشحنات وتسوية الكاش.'
               action={
-                <Button
-                  type="button"
-                  variant="primary"
-                  size="md"
-                  onClick={openCreateModal}
-                  leftIcon={<Plus className="w-4 h-4" />}
-                >
-                  إضافة شركة شحن جديدة
-                </Button>
+                canSettleCouriers ? (
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="md"
+                    onClick={openCreateModal}
+                    leftIcon={<Plus className="w-4 h-4" />}
+                  >
+                    إضافة شركة شحن جديدة
+                  </Button>
+                ) : undefined
               }
               className="border-0 py-10"
             />
@@ -501,29 +505,33 @@ export const CouriersPage: React.FC = () => {
                             <span className="hidden sm:inline">كشف الحساب</span>
                           </Button>
 
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => openSettleModal(c)}
-                            leftIcon={<Wallet className="w-3.5 h-3.5 text-ok" />}
-                            className="bg-ok-soft text-ok border-ok/30 hover:bg-ok-soft/80 font-black"
-                            title="تصفية واستلام صافي المستحقات"
-                          >
-                            <span>تصفية واستلام</span>
-                          </Button>
+                          {canSettleCouriers && (
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => openSettleModal(c)}
+                              leftIcon={<Wallet className="w-3.5 h-3.5 text-ok" />}
+                              className="bg-ok-soft text-ok border-ok/30 hover:bg-ok-soft/80 font-black"
+                              title="تصفية واستلام صافي المستحقات"
+                            >
+                              <span>تصفية واستلام</span>
+                            </Button>
+                          )}
 
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openEditModal(c)}
-                            title="تعديل"
-                            aria-label="تعديل"
-                            className="px-2"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </Button>
+                          {canManageCouriers && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openEditModal(c)}
+                              title="تعديل"
+                              aria-label="تعديل"
+                              className="px-2"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
 
                           {canDeleteParty && (
                             <Button
@@ -562,6 +570,8 @@ export const CouriersPage: React.FC = () => {
                   key={c.id}
                   courier={c}
                   canDeleteParty={canDeleteParty}
+                  canSettle={canSettleCouriers}
+                  canEdit={canManageCouriers}
                   onOpenManifest={(cour) => setManifestCourier(cour)}
                   onOpenSettle={(cour) => openSettleModal(cour)}
                   onOpenLedger={(id) => navigate(`/ledger/${id}`)}

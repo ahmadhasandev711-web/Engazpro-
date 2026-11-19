@@ -2,6 +2,7 @@
 
 namespace App\Services\OnlineOrders;
 
+use App\Enums\BranchType;
 use App\Enums\EcommercePlatform;
 use App\Enums\InvoiceType;
 use App\Enums\OnlineOrderCallStatus;
@@ -413,5 +414,38 @@ class OnlineOrderSyncService
         ]);
 
         return $locked->fresh(['party', 'branch', 'mandob', 'courierParty', 'cancelledByUser']);
+    }
+
+    public function transferOrderBranch(User $actor, OnlineOrder $order, int $targetBranchId, ?string $reason = null): OnlineOrder
+    {
+        $accountId = $actor->getAccountId();
+        $targetBranch = Branch::where('user_id', $accountId)
+            ->whereIn('type', BranchType::fixedValues())
+            ->where('is_active', true)
+            ->findOrFail($targetBranchId);
+
+        return DB::transaction(fn () => $this->executeTransferBranch($actor, $accountId, $order, $targetBranch, $reason));
+    }
+
+    private function executeTransferBranch(User $actor, int $accountId, OnlineOrder $order, Branch $targetBranch, ?string $reason): OnlineOrder
+    {
+        $locked = OnlineOrder::where('user_id', $accountId)->with('branch')->lockForUpdate()->findOrFail($order->id);
+        $allowed = [WcOrderStatus::PENDING_CONFIRMATION, WcOrderStatus::CONFIRMED, WcOrderStatus::PREPARING];
+        if (!in_array($locked->status, $allowed, true)) {
+            throw new PosDomainException("لا يمكن تحويل الطلب لفرع آخر وهو بحالة '{$locked->status->label()}'.", 'INVALID_ORDER_STATUS_TRANSITION', 422);
+        }
+        if ((int) $locked->branch_id === (int) $targetBranch->id) {
+            throw new PosDomainException('الطلب موجّه بالفعل إلى هذا الفرع.', 'SAME_TARGET_BRANCH', 422);
+        }
+        $fromName = $locked->branch?->name ?? 'غير محدد';
+        $cleanReason = $reason !== null && trim($reason) !== '' ? ' - السبب: ' . trim($reason) : '';
+        $tag = "[تحويل فرع: من ({$fromName}) إلى ({$targetBranch->name}) بواسطة {$actor->name}{$cleanReason}]";
+        $locked->update([
+            'branch_id' => $targetBranch->id,
+            'status' => WcOrderStatus::PENDING_CONFIRMATION,
+            'notes' => $locked->notes ? "{$locked->notes}\n{$tag}" : $tag,
+        ]);
+
+        return $locked->fresh(['party', 'branch', 'mandob', 'courierParty']);
     }
 }

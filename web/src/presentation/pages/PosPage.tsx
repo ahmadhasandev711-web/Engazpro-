@@ -28,6 +28,7 @@ import { PosReceiptModal } from '../components/pos/PosReceiptModal';
 import { HeldCartsModal } from '../components/pos/HeldCartsModal';
 import { OpenShiftModal } from '../components/shifts/OpenShiftModal';
 import { ProductVariantModal } from '../components/products/ProductVariantModal';
+import { ProductBranchAvailabilityModal } from '../components/common/ProductBranchAvailabilityModal';
 import { MobileBottomSheet } from '../components/mobile/MobileBottomSheet';
 import { MobileCameraScannerModal } from '../components/mobile/MobileCameraScannerModal';
 import { nativeBackButton } from '../../platform/nativeBackButton';
@@ -63,6 +64,7 @@ export const PosPage: React.FC = () => {
   const [isCameraScannerOpen, setIsCameraScannerOpen] = useState<boolean>(false);
   const { selection: hapticSelection } = useHaptic();
   const [completedInvoice, setCompletedInvoice] = useState<any | null>(null);
+  const [availabilityProduct, setAvailabilityProduct] = useState<ProductItem | null>(null);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [notification, setNotification] = useState<string | null>(null);
 
@@ -681,6 +683,7 @@ export const PosPage: React.FC = () => {
               setSearchQuery={setSearchQuery}
               onScanBarcode={handleScanOrInputBarcode}
               onOpenCameraScanner={() => setIsCameraScannerOpen(true)}
+              onCheckBranchAvailability={setAvailabilityProduct}
             />
           </AppErrorBoundary>
         </div>
@@ -782,6 +785,12 @@ export const PosPage: React.FC = () => {
         isOpen={Boolean(variantModalProduct)}
         onClose={() => setVariantModalProduct(null)}
         onSelect={addCustomSelectionToCart}
+      />
+
+      <ProductBranchAvailabilityModal
+        productId={availabilityProduct?.id ?? null}
+        productName={availabilityProduct?.name}
+        onClose={() => setAvailabilityProduct(null)}
       />
 
       {/* Payment Modal */}

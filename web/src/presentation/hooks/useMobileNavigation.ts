@@ -42,7 +42,7 @@ export const useMobileNavigation = () => {
       return [
         { to: '/dashboard', label: 'دفتري', icon: LayoutDashboard },
         { to: '/pos', label: 'بيع جديد', icon: Store },
-        { to: '/payments', label: 'التحصيل', icon: Wallet },
+        { to: '/payments', label: 'السندات', icon: Wallet },
         { to: '/customers', label: 'العملاء', icon: Users },
       ];
     }
@@ -60,7 +60,7 @@ export const useMobileNavigation = () => {
     return [
       { to: '/dashboard', label: 'الرئيسية', icon: LayoutDashboard },
       { to: '/sales', label: 'المبيعات', icon: Receipt },
-      { to: '/payments', label: 'التحصيل', icon: Wallet },
+      { to: '/payments', label: 'السندات', icon: Wallet },
       { to: '/expenses', label: 'المصروفات', icon: Coins },
     ];
   }, [isCashier, isMandob, isOwnerOrAdmin, isManager]);

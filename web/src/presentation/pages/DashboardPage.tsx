@@ -7,7 +7,7 @@ import { MandobDashboard } from '../components/dashboard/MandobDashboard';
 import { CashierDashboard } from '../components/dashboard/CashierDashboard';
 
 export const DashboardPage: React.FC = () => {
-  const { user, isMandob, isCashier } = usePermissions();
+  const { user, isMandob, isCashier, isSales } = usePermissions();
 
   const { data, isLoading, refetch, isFetching } = useQuery<DashboardData>({
     queryKey: ['dashboard'],
@@ -31,7 +31,7 @@ export const DashboardPage: React.FC = () => {
     );
   }
 
-  if (isCashier) {
+  if (isCashier || isSales) {
     return (
       <CashierDashboard
         data={data}

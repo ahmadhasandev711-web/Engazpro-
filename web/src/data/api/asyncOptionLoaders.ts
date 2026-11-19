@@ -22,27 +22,39 @@ export const fetchProductSelectOptions = async (
   }));
 };
 
+const PARTY_TYPE_LABELS: Record<string, string> = {
+  CUSTOMER: 'عميل',
+  SUPPLIER: 'مورد',
+  COURIER: 'شركة شحن',
+};
+
 export const fetchPartySelectOptions = async (
-  partyType: string,
+  partyType: string | string[],
   search: string,
   includeBalanceSublabel = false
 ): Promise<AsyncSearchOption<Party>[]> => {
+  const normalizedType = Array.isArray(partyType) ? partyType.join(',') : partyType;
+  const isMultiType = Array.isArray(partyType) ? partyType.length > 1 : normalizedType.includes(',');
+
   const res = await apiClient.get('/parties', {
     params: {
-      type: partyType,
+      type: normalizedType,
       search: search || undefined,
       per_page: 25,
     },
   });
   const list: Party[] = res.data?.data?.data || res.data?.data || [];
-  return list.map((p) => ({
-    value: p.id,
-    label: p.phone ? `${p.name} (${p.phone})` : p.name,
-    sublabel: includeBalanceSublabel
-      ? Number(p.balance) !== 0
-        ? `الرصيد الحالي: ${formatCurrency(p.balance)}`
-        : 'رصيد خالص (0)'
-      : undefined,
-    raw: p,
-  }));
+  return list.map((p) => {
+    const typeTag = isMultiType && p.type ? `[${PARTY_TYPE_LABELS[p.type] || p.type}] ` : '';
+    const balanceText = Number(p.balance) !== 0
+      ? `الرصيد الحالي: ${formatCurrency(p.balance)}`
+      : 'رصيد خالص (0)';
+
+    return {
+      value: p.id,
+      label: p.phone ? `${p.name} (${p.phone})` : p.name,
+      sublabel: includeBalanceSublabel ? `${typeTag}${balanceText}` : (typeTag ? typeTag.trim() : undefined),
+      raw: p,
+    };
+  });
 };

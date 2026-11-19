@@ -19,8 +19,8 @@ class CourierPolicy
 
     public function settle(User $user): Response
     {
-        return ($user->isOwnerOrAdmin() || $user->isManager() || $user->isCashier())
+        return ($user->isOwnerOrAdmin() || $user->isManager() || $user->isSupervisor() || $user->isCashier())
             ? Response::allow()
-            : Response::deny('عذراً، تسوية حسابات شركات الشحن مقتصرة على المالك والإدارة ومديري الفروع والكاشير فقط.');
+            : Response::deny('عذراً، تسوية حسابات شركات الشحن مقتصرة على المالك والإدارة والمشرف والكاشير فقط.');
     }
 }

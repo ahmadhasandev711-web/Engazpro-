@@ -10,6 +10,7 @@ import { ProductFormModal } from '../components/products/ProductFormModal';
 import { ProductsAddBatchModal } from '../components/products/ProductsAddBatchModal';
 import { ProductsBarcodePrint } from '../components/products/ProductsBarcodePrint';
 import { ProductsOpeningStock } from '../components/products/ProductsOpeningStock';
+import { ProductBranchAvailabilityModal } from '../components/common/ProductBranchAvailabilityModal';
 
 export const ProductsPage: React.FC = () => {
   const vm = useProductsPage();
@@ -26,6 +27,11 @@ export const ProductsPage: React.FC = () => {
       <ProductsAddBatchModal vm={vm} />
       <ProductsBarcodePrint vm={vm} />
       <ProductsOpeningStock vm={vm} />
+      <ProductBranchAvailabilityModal
+        productId={vm.availabilityProduct?.id ?? null}
+        productName={vm.availabilityProduct?.name}
+        onClose={() => vm.setAvailabilityProduct(null)}
+      />
     </div>
   );
 };

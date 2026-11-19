@@ -21,6 +21,7 @@ import { apiClient } from '../../data/api/client';
 import { fetchProductSelectOptions } from '../../data/api/asyncOptionLoaders';
 import { REFERENCE_QUERY_OPTIONS } from '../../data/api/queryPresets';
 import { usePermissions } from '../../hooks/usePermissions';
+import { useAuthStore } from '../../data/store/useAuthStore';
 import { useBranchScope } from '../../hooks/useBranchScope';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { StockTransferStatus, StockTransfer } from '@pos-mandob/shared';
@@ -47,8 +48,12 @@ import {
 
 export const StockTransfersPage: React.FC = () => {
   const queryClient = useQueryClient();
-  const { isOwner, isManager } = usePermissions();
+  const { user } = useAuthStore();
+  const { isOwnerOrAdmin, isManager, canCreateStockTransfer } = usePermissions();
   const { hasGlobalBranchAccess, lockedBranchId, canAccessBranchId } = useBranchScope();
+  const canCancelTransfer = (trf: any) =>
+    (isOwnerOrAdmin || isManager || (canCreateStockTransfer && trf.created_by === user?.id)) &&
+    (hasGlobalBranchAccess || canAccessBranchId(trf.from_branch_id) || canAccessBranchId(trf.to_branch_id));
   const toast = useToast();
   const { confirm } = useConfirm();
 
@@ -88,12 +93,12 @@ export const StockTransfersPage: React.FC = () => {
 
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  // 1. Fetch Branches for dropdowns (managers use lightweight transfer_targets directory)
+  // 1. Fetch Branches for dropdowns (branch-scoped managers/supervisors use lightweight transfer_targets directory)
   const { data: rawBranches = [] } = useQuery({
-    queryKey: ['branches', isManager && !hasGlobalBranchAccess ? 'transfer_targets' : 'default'],
+    queryKey: ['branches', canCreateStockTransfer && !hasGlobalBranchAccess ? 'transfer_targets' : 'default'],
     queryFn: async () => {
       const res = await apiClient.get('/branches', {
-        params: isManager && !hasGlobalBranchAccess ? { purpose: 'transfer_targets' } : undefined,
+        params: canCreateStockTransfer && !hasGlobalBranchAccess ? { purpose: 'transfer_targets' } : undefined,
       });
       return res.data?.data || [];
     },
@@ -329,7 +334,7 @@ export const StockTransfersPage: React.FC = () => {
         }
         description="نقل البضاعة بين المخزن الرئيسي والمعارض وسيارات المناديب مع تأكيد الاستلام الميداني"
         actions={
-          (isOwner || isManager) ? (
+          canCreateStockTransfer ? (
             <Button
               variant="primary"
               size="md"
@@ -370,7 +375,7 @@ export const StockTransfersPage: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
-          {(isOwner || isManager) && (
+          {canCreateStockTransfer && (
             <Button
               variant="primary"
               size="md"
@@ -602,7 +607,7 @@ export const StockTransfersPage: React.FC = () => {
                               </Button>
                             )}
 
-                            {(isOwner || isManager) && (hasGlobalBranchAccess || canAccessBranchId(trf.from_branch_id) || canAccessBranchId(trf.to_branch_id)) && (
+                            {canCancelTransfer(trf) && (
                               <Button
                                 variant="danger"
                                 size="md"
@@ -644,7 +649,7 @@ export const StockTransfersPage: React.FC = () => {
                 <StockTransferMobileCard
                   key={trf.id}
                   transfer={trf}
-                  canCancel={(isOwner || isManager) && (hasGlobalBranchAccess || canAccessBranchId(trf.from_branch_id) || canAccessBranchId(trf.to_branch_id))}
+                  canCancel={canCancelTransfer(trf)}
                   canReceive={canAccessBranchId(trf.to_branch_id)}
                   isReceiving={receiveMutation.isPending && (receiveMutation.variables as any) === trf.id}
                   onReceive={async (id) => {

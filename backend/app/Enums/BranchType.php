@@ -16,4 +16,12 @@ enum BranchType: string
             self::VAN => 'سيارة مندوب / مخزن متنقل',
         };
     }
+
+    /**
+     * @return list<string>
+     */
+    public static function fixedValues(): array
+    {
+        return [self::STORE->value, self::WAREHOUSE->value];
+    }
 }

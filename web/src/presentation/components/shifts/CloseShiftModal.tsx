@@ -4,6 +4,7 @@ import { CheckCircle2, X, AlertCircle, Coins, Calculator, AlertTriangle } from '
 import { formatCurrency } from '@pos-mandob/shared';
 import { apiClient } from '../../../data/api/client';
 import { ShiftZReportModal, ShiftZReportData } from './ShiftZReportModal';
+import { ShiftFinancialGrid } from './ShiftFinancialGrid';
 import { Badge, Button, Textarea } from '../ui';
 
 interface ShiftData {
@@ -14,6 +15,7 @@ interface ShiftData {
   electronic_sales: number;
   credit_sales: number;
   cash_receipts: number;
+  cash_payments?: number;
   cash_returns: number;
   expenses: number;
   expected_cash: number;
@@ -134,24 +136,7 @@ export const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
               <span>بيان النقدية المحسوبة بالنظام أثناء الوردية</span>
             </h4>
 
-            <div className="grid grid-cols-2 gap-2.5 text-xs">
-              <div className="bg-panel p-2.5 rounded-xl border border-line flex justify-between items-center">
-                <span className="text-muted">رصيد الافتتاح:</span>
-                <span className="font-bold text-ink tabular-nums">{formatCurrency(shift.opening_balance)}</span>
-              </div>
-              <div className="bg-panel p-2.5 rounded-xl border border-line flex justify-between items-center">
-                <span className="text-muted">مبيعات كاش:</span>
-                <span className="font-bold text-ok tabular-nums">+{formatCurrency(shift.cash_sales)}</span>
-              </div>
-              <div className="bg-panel p-2.5 rounded-xl border border-line flex justify-between items-center">
-                <span className="text-muted">تحصيلات عملاء:</span>
-                <span className="font-bold text-ok tabular-nums">+{formatCurrency(shift.cash_receipts)}</span>
-              </div>
-              <div className="bg-panel p-2.5 rounded-xl border border-line flex justify-between items-center">
-                <span className="text-muted">مصروفات ونثريات:</span>
-                <span className="font-bold text-bad tabular-nums">-{formatCurrency(shift.expenses)}</span>
-              </div>
-            </div>
+            <ShiftFinancialGrid shift={shift} variant="modal" />
 
             <div className="bg-brand-soft border border-brand/20 p-3 rounded-xl flex items-center justify-between">
               <span className="text-xs font-black text-brand-ink">النقدية المتوقعة في الدرج (المحسوبة):</span>

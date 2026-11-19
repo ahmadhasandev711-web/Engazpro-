@@ -217,6 +217,12 @@ export const CashierDashboard: React.FC<CashierDashboardProps> = ({
               </div>
               <div className="space-y-1.5 text-xs text-muted">
                 <div className="flex justify-between">
+                  <span>سندات صرف نقدية (موردين / شحن):</span>
+                  <span className="font-bold text-ink tabular-nums">
+                    {formatCurrency(cashFlow?.outflow.payment_vouchers ?? 0)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
                   <span>مرتجعات بيع كاش مردودة للعملاء:</span>
                   <span className="font-bold text-ink tabular-nums">
                     {formatCurrency(cashFlow?.outflow.sale_returns ?? 0)}
@@ -241,7 +247,7 @@ export const CashierDashboard: React.FC<CashierDashboardProps> = ({
                   صافي النقدية الواجب توفرها في الدرج عند التسليم:
                 </div>
                 <div className="text-[11px] text-muted">
-                  (مبيعات الكاش + المقبوضات - المرتجعات - نثريات الدرج)
+                  (مبيعات الكاش + المقبوضات - سندات الصرف - المرتجعات - نثريات الدرج)
                 </div>
               </div>
             </div>

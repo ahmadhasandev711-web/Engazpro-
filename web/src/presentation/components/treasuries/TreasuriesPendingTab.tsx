@@ -2,6 +2,7 @@ import React from 'react';
 import { formatCurrency, UserRole } from '@pos-mandob/shared';
 import { CheckCircle2, Clock, ShieldCheck, TrendingDown, TrendingUp, Printer } from 'lucide-react';
 import type { TreasuriesViewModel } from './types';
+import { ShiftFinancialGrid } from '../shifts/ShiftFinancialGrid';
 import { Badge, Button, Card, EmptyState, Tabs } from '../ui';
 
 export const TreasuriesPendingTab: React.FC<{ vm: TreasuriesViewModel }> = ({ vm }) => {
@@ -64,32 +65,7 @@ export const TreasuriesPendingTab: React.FC<{ vm: TreasuriesViewModel }> = ({ vm
                       </div>
 
                       {/* Financial Breakdown Grid */}
-                      <div className="grid grid-cols-2 gap-2 my-4 text-xs">
-                        <div className="p-2.5 bg-surface-2 rounded-xl border border-line/60">
-                          <span className="text-muted text-[11px] block">رصيد الافتتاح:</span>
-                          <span className="font-bold text-ink tabular-nums">
-                            {formatCurrency(shift.opening_balance)}
-                          </span>
-                        </div>
-                        <div className="p-2.5 bg-surface-2 rounded-xl border border-line/60">
-                          <span className="text-muted text-[11px] block">مبيعات كاش:</span>
-                          <span className="font-bold text-ok tabular-nums">
-                            +{formatCurrency(shift.cash_sales)}
-                          </span>
-                        </div>
-                        <div className="p-2.5 bg-surface-2 rounded-xl border border-line/60">
-                          <span className="text-muted text-[11px] block">تحصيلات عملاء:</span>
-                          <span className="font-bold text-ok tabular-nums">
-                            +{formatCurrency(shift.cash_receipts)}
-                          </span>
-                        </div>
-                        <div className="p-2.5 bg-surface-2 rounded-xl border border-line/60">
-                          <span className="text-muted text-[11px] block">مصروفات:</span>
-                          <span className="font-bold text-bad tabular-nums">
-                            -{formatCurrency(shift.expenses)}
-                          </span>
-                        </div>
-                      </div>
+                      <ShiftFinancialGrid shift={shift} variant="card" />
 
                       {/* Expected vs Actual */}
                       <div className="p-3.5 bg-surface-2 border border-line rounded-2xl space-y-2">

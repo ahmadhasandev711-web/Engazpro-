@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Search, Package, X, ScanBarcode } from 'lucide-react';
+import { Search, Package, X, ScanBarcode, Building2 } from 'lucide-react';
 import { formatCurrency } from '@pos-mandob/shared';
 import { Badge, BadgeTone } from '../ui/Badge';
 import { EmptyState } from '../ui/EmptyState';
@@ -48,6 +48,7 @@ interface PosProductCatalogProps {
   listKey: string;
   searchMs: number | null;
   onAddToCart: (product: ProductItem) => void;
+  onCheckBranchAvailability?: (product: ProductItem) => void;
   searchInputRef: React.RefObject<HTMLInputElement | null>;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
@@ -119,9 +120,14 @@ const PosProductBadges: React.FC<{ product: ProductItem; compact?: boolean }> = 
   );
 };
 
-const PosProductMobileRow: React.FC<{ product: ProductItem; onAddToCart: (product: ProductItem) => void }> = ({
+const PosProductMobileRow: React.FC<{
+  product: ProductItem;
+  onAddToCart: (product: ProductItem) => void;
+  onCheckBranchAvailability?: (product: ProductItem) => void;
+}> = ({
   product,
   onAddToCart,
+  onCheckBranchAvailability,
 }) => {
   const stock = stockOf(product);
   const isOutOfStock = stock <= 0;
@@ -129,9 +135,16 @@ const PosProductMobileRow: React.FC<{ product: ProductItem; onAddToCart: (produc
   const stockTone = getStockTone(stock);
 
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={() => onAddToCart(product)}
-      type="button"
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onAddToCart(product);
+        }
+      }}
       style={{ height: MOBILE_ROW_HEIGHT }}
       className={`w-full px-3 py-2 bg-panel hover:bg-surface-2 active:scale-[0.99] border border-line hover:border-brand-soft rounded-2xl transition-all text-right flex items-center justify-between gap-2.5 shadow-2xs group focus:outline-none focus:ring-2 focus:ring-brand overflow-hidden cursor-pointer ${
         isOutOfStock ? 'opacity-70' : ''
@@ -172,17 +185,38 @@ const PosProductMobileRow: React.FC<{ product: ProductItem; onAddToCart: (produc
             </span>
           )}
         </div>
-        <div className="w-8 h-8 rounded-xl bg-brand-soft text-brand-ink flex items-center justify-center text-sm font-bold group-hover:bg-brand group-hover:text-on-brand transition-colors shrink-0">
-          +
+        <div className="flex items-center gap-1.5 shrink-0">
+          {onCheckBranchAvailability && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onCheckBranchAvailability(product);
+              }}
+              className="w-8 h-8 rounded-xl bg-surface-2 text-muted hover:text-brand-ink hover:bg-brand-soft border border-line flex items-center justify-center transition-colors shrink-0"
+              title="الرصيد في باقي الفروع"
+              aria-label={`الرصيد في باقي الفروع - ${product.name}`}
+            >
+              <Building2 className="w-3.5 h-3.5" />
+            </button>
+          )}
+          <div className="w-8 h-8 rounded-xl bg-brand-soft text-brand-ink flex items-center justify-center text-sm font-bold group-hover:bg-brand group-hover:text-on-brand transition-colors shrink-0">
+            +
+          </div>
         </div>
       </div>
-    </button>
+    </div>
   );
 };
 
-const PosProductCard: React.FC<{ product: ProductItem; onAddToCart: (product: ProductItem) => void }> = ({
+const PosProductCard: React.FC<{
+  product: ProductItem;
+  onAddToCart: (product: ProductItem) => void;
+  onCheckBranchAvailability?: (product: ProductItem) => void;
+}> = ({
   product,
   onAddToCart,
+  onCheckBranchAvailability,
 }) => {
   const stock = stockOf(product);
   const isOutOfStock = stock <= 0;
@@ -190,9 +224,16 @@ const PosProductCard: React.FC<{ product: ProductItem; onAddToCart: (product: Pr
   const stockTone = getStockTone(stock);
 
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={() => onAddToCart(product)}
-      type="button"
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onAddToCart(product);
+        }
+      }}
       style={{ height: DESKTOP_ROW_HEIGHT }}
       className={`relative flex flex-col justify-between p-3.5 bg-panel hover:bg-surface-2 active:scale-[0.98] border border-line hover:border-brand-soft rounded-2xl transition-all text-right shadow-xs hover:shadow-md group focus:outline-none focus:ring-2 focus:ring-brand overflow-hidden cursor-pointer ${
         isOutOfStock ? 'opacity-70' : ''
@@ -236,11 +277,27 @@ const PosProductCard: React.FC<{ product: ProductItem; onAddToCart: (product: Pr
             </span>
           )}
         </div>
-        <div className="w-6 h-6 rounded-lg bg-brand-soft text-brand-ink flex items-center justify-center text-xs font-bold group-hover:bg-brand group-hover:text-on-brand transition-colors shrink-0">
-          +
+        <div className="flex items-center gap-1 shrink-0">
+          {onCheckBranchAvailability && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onCheckBranchAvailability(product);
+              }}
+              className="w-6 h-6 rounded-lg bg-surface-2 text-muted hover:text-brand-ink hover:bg-brand-soft border border-line flex items-center justify-center transition-colors shrink-0"
+              title="الرصيد في باقي الفروع"
+              aria-label={`الرصيد في باقي الفروع - ${product.name}`}
+            >
+              <Building2 className="w-3.5 h-3.5" />
+            </button>
+          )}
+          <div className="w-6 h-6 rounded-lg bg-brand-soft text-brand-ink flex items-center justify-center text-xs font-bold group-hover:bg-brand group-hover:text-on-brand transition-colors shrink-0">
+            +
+          </div>
         </div>
       </div>
-    </button>
+    </div>
   );
 };
 
@@ -258,6 +315,7 @@ export const PosProductCatalog: React.FC<PosProductCatalogProps> = ({
   listKey,
   searchMs,
   onAddToCart,
+  onCheckBranchAvailability,
   searchInputRef,
   searchQuery,
   setSearchQuery,
@@ -459,9 +517,19 @@ export const PosProductCatalog: React.FC<PosProductCatalogProps> = ({
             >
               {slice.map((product) =>
                 isMobileList ? (
-                  <PosProductMobileRow key={product.id} product={product} onAddToCart={onAddToCart} />
+                  <PosProductMobileRow
+                    key={product.id}
+                    product={product}
+                    onAddToCart={onAddToCart}
+                    onCheckBranchAvailability={onCheckBranchAvailability}
+                  />
                 ) : (
-                  <PosProductCard key={product.id} product={product} onAddToCart={onAddToCart} />
+                  <PosProductCard
+                    key={product.id}
+                    product={product}
+                    onAddToCart={onAddToCart}
+                    onCheckBranchAvailability={onCheckBranchAvailability}
+                  />
                 )
               )}
             </div>

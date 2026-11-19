@@ -26,6 +26,7 @@ export interface ShiftZReportData {
   electronic_sales: number;
   credit_sales?: number;
   cash_receipts: number;
+  cash_payments?: number;
   cash_returns: number;
   expenses: number;
   expected_cash: number;
@@ -107,6 +108,9 @@ export const ShiftZReportModal: React.FC<ShiftZReportModalProps> = ({
     }
     if (Number(shift.cash_receipts) > 0) {
       text += `📥 تحصيلات عملاء: +${formatCurrency(shift.cash_receipts)}\n`;
+    }
+    if (Number(shift.cash_payments) > 0) {
+      text += `💸 سندات صرف نقدية: -${formatCurrency(shift.cash_payments ?? 0)}\n`;
     }
     if (Number(shift.expenses) > 0) {
       text += `📤 مصروفات: -${formatCurrency(shift.expenses)}\n`;
@@ -240,6 +244,13 @@ export const ShiftZReportModal: React.FC<ShiftZReportModalProps> = ({
                 <div className="flex justify-between items-center text-ok">
                   <span className="font-sans">تحصيلات وسندات قبض:</span>
                   <span className="font-mono font-bold">+{formatCurrency(shift.cash_receipts)}</span>
+                </div>
+              )}
+
+              {Number(shift.cash_payments) > 0 && (
+                <div className="flex justify-between items-center text-bad">
+                  <span className="font-sans">سندات صرف نقدية:</span>
+                  <span className="font-mono font-bold">-{formatCurrency(shift.cash_payments ?? 0)}</span>
                 </div>
               )}
 

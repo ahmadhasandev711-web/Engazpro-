@@ -20,9 +20,11 @@ import { AsyncSearchSelect, Badge, Button, Card, DataTable, EmptyState, Input, P
 export const PaymentsPage: React.FC = () => {
   const { confirm } = useConfirm();
   const queryClient = useQueryClient();
-  const { canDeletePayment, isOwner } = usePermissions();
+  const { canDeletePayment, canViewEmployeePaymentsScope, isCashier, isMandob } = usePermissions();
+  const isCashRestrictedEmployee = isCashier || isMandob;
   const initialDates = calculatePresetDates('today');
-  const [activeTab, setActiveTab] = useState<'ALL' | 'RECEIPT' | 'PAYMENT'>(isOwner ? 'ALL' : 'RECEIPT');
+  const [activeTab, setActiveTab] = useState<'ALL' | 'RECEIPT' | 'PAYMENT'>('ALL');
+  const [paymentPartyScope, setPaymentPartyScope] = useState<'SUPPLIER,COURIER' | 'SUPPLIER' | 'COURIER'>('SUPPLIER,COURIER');
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebouncedValue(search.trim(), 250);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
@@ -52,7 +54,7 @@ export const PaymentsPage: React.FC = () => {
       const res = await apiClient.get('/employees');
       return res.data?.data || [];
     },
-    enabled: isOwner,
+    enabled: canViewEmployeePaymentsScope,
     ...REFERENCE_QUERY_OPTIONS,
   });
 
@@ -96,7 +98,8 @@ export const PaymentsPage: React.FC = () => {
     placeholderData: (previousData) => previousData,
   });
 
-  const targetPartyType = selectedType === 'RECEIPT' ? 'CUSTOMER' : 'SUPPLIER';
+  const targetPartyType = selectedType === 'RECEIPT' ? 'CUSTOMER' : paymentPartyScope;
+  const isEmployeeCashOnlyPayment = isCashRestrictedEmployee && selectedType === 'PAYMENT';
   const selectedPartyId = watch('party_id');
 
   const payments = paymentsData?.data || [];
@@ -111,6 +114,9 @@ export const PaymentsPage: React.FC = () => {
     onSuccess: (res: any) => {
       queryClient.invalidateQueries({ queryKey: ['payments'] });
       queryClient.invalidateQueries({ queryKey: ['parties'] });
+      queryClient.invalidateQueries({ queryKey: ['active-shift'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['treasuries'] });
       setIsModalOpen(false);
       reset();
       if (res?.data?.data) {
@@ -129,6 +135,9 @@ export const PaymentsPage: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payments'] });
       queryClient.invalidateQueries({ queryKey: ['parties'] });
+      queryClient.invalidateQueries({ queryKey: ['active-shift'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['treasuries'] });
     },
     onError: (err: any) => {
       setErrorMessage(err.response?.data?.message || 'تعذر إلغاء السند');
@@ -173,12 +182,8 @@ export const PaymentsPage: React.FC = () => {
       {/* Desktop Header (hidden on mobile) */}
       <div className="hidden md:block">
         <PageHeader
-          title={isOwner ? 'سندات القبض والدفع' : 'سندات القبض (التحصيل)'}
-          description={
-            isOwner
-              ? 'إدارة المقبوضات النقدية من العملاء والمدفوعات للموردين لتسوية الأرصدة والمديونيات'
-              : 'إدارة المقبوضات والتحصيلات النقدية من العملاء وتحديث حساباتهم بدقة'
-          }
+          title="سندات القبض والدفع"
+          description="إدارة المقبوضات النقدية من العملاء والمدفوعات للموردين وشركات الشحن لتسوية الأرصدة"
           className="mb-0"
           actions={
             <Button
@@ -186,6 +191,7 @@ export const PaymentsPage: React.FC = () => {
               size="md"
               leftIcon={<Plus className="w-4 h-4" />}
               onClick={() => {
+                setErrorMessage(null);
                 reset({
                   type: 'RECEIPT',
                   amount: 0,
@@ -197,7 +203,7 @@ export const PaymentsPage: React.FC = () => {
               }}
               className="text-sm font-bold"
             >
-              {!isOwner ? 'إضافة سند قبض جديد' : 'إضافة سند جديد'}
+              إضافة سند جديد
             </Button>
           }
         />
@@ -217,14 +223,12 @@ export const PaymentsPage: React.FC = () => {
                 {formatCurrency(totalReceiptsAmount)}
               </span>
             </div>
-            {isOwner && (
-              <div className="border-r border-line pr-3">
-                <span className="text-[10px] text-muted block">المنصرف</span>
-                <span className="text-base font-bold tabular-nums text-bad">
-                  {formatCurrency(totalPaymentsAmount)}
-                </span>
-              </div>
-            )}
+            <div className="border-r border-line pr-3">
+              <span className="text-[10px] text-muted block">المنصرف</span>
+              <span className="text-base font-bold tabular-nums text-bad">
+                {formatCurrency(totalPaymentsAmount)}
+              </span>
+            </div>
           </div>
         </div>
         <Button
@@ -233,6 +237,7 @@ export const PaymentsPage: React.FC = () => {
           size="md"
           leftIcon={<Plus className="w-4 h-4" />}
           onClick={() => {
+            setErrorMessage(null);
             reset({
               type: 'RECEIPT',
               amount: 0,
@@ -259,23 +264,16 @@ export const PaymentsPage: React.FC = () => {
       <Card className="flex flex-col gap-2.5 p-3 sm:p-4 rounded-2xl w-full min-w-0 max-w-full overflow-hidden">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           {/* Tabs */}
-          {isOwner ? (
-            <div className="w-full sm:w-auto min-w-0">
-              <Tabs
-                tabs={paymentTabs}
-                activeTab={activeTab}
-                onChange={(id) => {
-                  setActiveTab(id as 'ALL' | 'RECEIPT' | 'PAYMENT');
-                  setPage(1);
-                }}
-              />
-            </div>
-          ) : (
-            <Badge tone="ok" className="px-3 py-2 text-xs rounded-xl">
-              <ArrowDownLeft className="w-4 h-4" />
-              <span>سندات قبض وتحصيل من العملاء فقط</span>
-            </Badge>
-          )}
+          <div className="w-full sm:w-auto min-w-0">
+            <Tabs
+              tabs={paymentTabs}
+              activeTab={activeTab}
+              onChange={(id) => {
+                setActiveTab(id as 'ALL' | 'RECEIPT' | 'PAYMENT');
+                setPage(1);
+              }}
+            />
+          </div>
 
           {/* Search Input */}
           <div className="flex-1 sm:max-w-xs">
@@ -291,7 +289,7 @@ export const PaymentsPage: React.FC = () => {
             />
           </div>
 
-          {isOwner && (
+          {canViewEmployeePaymentsScope && (
             <div className="sm:w-52">
               <Select
                 value={selectedEmployeeId}
@@ -349,7 +347,7 @@ export const PaymentsPage: React.FC = () => {
                     <th className="py-3.5 px-4">التاريخ</th>
                     <th className="py-3.5 px-4">النوع</th>
                     <th className="py-3.5 px-4">الطرف</th>
-                    {isOwner && <th className="py-3.5 px-4">المحصّل / المنشئ</th>}
+                    {canViewEmployeePaymentsScope && <th className="py-3.5 px-4">المحصّل / المنشئ</th>}
                     <th className="py-3.5 px-4">المبلغ</th>
                     <th className="py-3.5 px-4">طريقة الدفع</th>
                     <th className="py-3.5 px-4">البيان / ملاحظات</th>
@@ -370,7 +368,7 @@ export const PaymentsPage: React.FC = () => {
                           </Badge>
                         </td>
                         <td className="py-3.5 px-4 font-bold text-ink">{p.party_name || 'بدون طرف'}</td>
-                        {isOwner && (
+                        {canViewEmployeePaymentsScope && (
                           <td className="py-3.5 px-4 text-xs">
                             {p.created_by_name ? (
                               <div className="flex flex-col">
@@ -429,7 +427,7 @@ export const PaymentsPage: React.FC = () => {
                 <PaymentMobileCard
                   key={p.id}
                   payment={p}
-                  isOwner={isOwner}
+                  isOwner={canViewEmployeePaymentsScope}
                   canDelete={canDeletePayment}
                   onDelete={handleDelete}
                   onPrint={(payment) => setSelectedPrintPayment(payment)}
@@ -467,55 +465,87 @@ export const PaymentsPage: React.FC = () => {
             </div>
 
             <form onSubmit={handleSubmit(onSubmit)} className="p-5 space-y-4 overflow-y-auto">
+              {errorMessage && (
+                <div className="p-3 bg-bad-soft border border-bad/20 text-bad text-xs rounded-xl flex items-center gap-2 font-medium">
+                  <AlertCircle className="w-4 h-4 text-bad flex-shrink-0" />
+                  <span>{errorMessage}</span>
+                </div>
+              )}
+
               {/* Type Switcher */}
               <div>
                 <label className="block text-xs font-bold text-ink mb-1.5">نوع السند</label>
-                {isOwner ? (
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setValue('type', 'RECEIPT');
-                        setValue('party_id', undefined as any);
-                      }}
-                      className={`min-h-[44px] py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
-                        selectedType === 'RECEIPT'
-                          ? 'bg-ok-soft border-ok text-ok'
-                          : 'border-line text-muted hover:bg-surface-2 hover:text-ink'
-                      }`}
-                    >
-                      <ArrowDownLeft className="w-4 h-4" />
-                      قبض من عميل 🟢
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setValue('type', 'PAYMENT');
-                        setValue('party_id', undefined as any);
-                      }}
-                      className={`min-h-[44px] py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
-                        selectedType === 'PAYMENT'
-                          ? 'bg-bad-soft border-bad text-bad'
-                          : 'border-line text-muted hover:bg-surface-2 hover:text-ink'
-                      }`}
-                    >
-                      <ArrowUpRight className="w-4 h-4" />
-                      صرف لمورد 🔴
-                    </button>
-                  </div>
-                ) : (
-                  <div className="py-2.5 px-3 rounded-xl bg-ok-soft border border-ok/30 text-xs font-bold text-ok flex items-center gap-1.5">
-                    <ArrowDownLeft className="w-4 h-4 text-ok" />
-                    <span>سند قبض وتحصيل من عميل 🟢</span>
-                  </div>
-                )}
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setValue('type', 'RECEIPT');
+                      setValue('party_id', undefined as any);
+                    }}
+                    className={`min-h-[44px] py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                      selectedType === 'RECEIPT'
+                        ? 'bg-ok-soft border-ok text-ok'
+                        : 'border-line text-muted hover:bg-surface-2 hover:text-ink'
+                    }`}
+                  >
+                    <ArrowDownLeft className="w-4 h-4" />
+                    قبض من عميل 🟢
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setValue('type', 'PAYMENT');
+                      setValue('party_id', undefined as any);
+                      if (isCashRestrictedEmployee) {
+                        setValue('method', PaymentMethod.CASH);
+                      }
+                    }}
+                    className={`min-h-[44px] py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                      selectedType === 'PAYMENT'
+                        ? 'bg-bad-soft border-bad text-bad'
+                        : 'border-line text-muted hover:bg-surface-2 hover:text-ink'
+                    }`}
+                  >
+                    <ArrowUpRight className="w-4 h-4" />
+                    صرف لمورد / شحن 🔴
+                  </button>
+                </div>
               </div>
+
+              {selectedType === 'PAYMENT' && (
+                <div>
+                  <label className="block text-xs font-bold text-ink mb-1.5">الجهة المستفيدة من الصرف</label>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {[
+                      { id: 'SUPPLIER,COURIER', label: 'الكل' },
+                      { id: 'SUPPLIER', label: 'مورد' },
+                      { id: 'COURIER', label: 'شركة شحن' },
+                    ].map((scopeOption) => (
+                      <button
+                        key={scopeOption.id}
+                        type="button"
+                        onClick={() => {
+                          setPaymentPartyScope(scopeOption.id as 'SUPPLIER,COURIER' | 'SUPPLIER' | 'COURIER');
+                          setValue('party_id', undefined as any);
+                        }}
+                        className={`py-2 px-2.5 rounded-xl border text-xs font-bold transition-colors ${
+                          paymentPartyScope === scopeOption.id
+                            ? 'bg-brand-soft border-brand text-brand-ink'
+                            : 'border-line text-muted hover:bg-surface-2 hover:text-ink'
+                        }`}
+                      >
+                        {scopeOption.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Party Select */}
               <AsyncSearchSelect
                 required
                 allowClear={false}
-                label={selectedType === 'RECEIPT' ? 'العميل المستلم منه *' : 'المورد المدفوع له *'}
+                label={selectedType === 'RECEIPT' ? 'العميل المستلم منه *' : 'المورد أو شركة الشحن المدفوع لها *'}
                 placeholder="-- اختر الطرف --"
                 searchPlaceholder="ابحث بالاسم أو رقم الهاتف..."
                 value={selectedPartyId}
@@ -543,15 +573,25 @@ export const PaymentsPage: React.FC = () => {
                 />
                 <Select
                   label="طريقة الدفع"
+                  disabled={isEmployeeCashOnlyPayment}
                   {...register('method')}
                 >
                   <option value={PaymentMethod.CASH}>نقدًا (كاش)</option>
-                  <option value={PaymentMethod.CARD}>بطاقة / فيزا</option>
-                  <option value={PaymentMethod.INSTAPAY}>إنستاباي (InstaPay)</option>
-                  <option value={PaymentMethod.VODAFONE_CASH}>فودافون كاش ومحافظ إلكترونية</option>
-                  <option value={PaymentMethod.TRANSFER}>تحويل بنكي</option>
+                  {!isEmployeeCashOnlyPayment && (
+                    <>
+                      <option value={PaymentMethod.CARD}>بطاقة / فيزا</option>
+                      <option value={PaymentMethod.INSTAPAY}>إنستاباي (InstaPay)</option>
+                      <option value={PaymentMethod.VODAFONE_CASH}>فودافون كاش ومحافظ إلكترونية</option>
+                      <option value={PaymentMethod.TRANSFER}>تحويل بنكي</option>
+                    </>
+                  )}
                 </Select>
               </div>
+              {isEmployeeCashOnlyPayment && (
+                <p className="text-[11px] text-warn font-medium -mt-2">
+                  سندات الصرف للموظف تُخصم نقداً (كاش) فقط من رصيد الدرج / العهدة الحالي.
+                </p>
+              )}
 
               {/* Date */}
               <Input

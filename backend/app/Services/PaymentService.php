@@ -4,12 +4,15 @@ namespace App\Services;
 
 use App\Contracts\PaymentHandlerInterface;
 use App\Enums\LedgerSource;
+use App\Enums\PartyType;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentType;
 use App\Enums\TreasuryTransactionType;
 use App\Exceptions\PosDomainException;
 use App\Models\Party;
 use App\Models\Payment;
+use App\Models\Shift;
+use App\Models\Treasury;
 use App\Models\TreasuryTransaction;
 use App\Models\User;
 use App\Services\Payments\CardPaymentHandler;
@@ -76,11 +79,37 @@ class PaymentService
         $activeShift = $this->shiftService->getActiveShift($user);
         $treasury = $this->treasuryService->getTreasuryForUser($user);
 
+        $this->validateEmployeePaymentConstraints($user, $party, $treasury, (string) $data['type'], (string) $method, $amount);
+
         $payment = $this->createPaymentRecord($user, $party, $treasury, $activeShift, $data, $idempotencyKey, $amount, $method);
         $this->executePaymentStrategy($payment, $user, $party, $treasury, $activeShift, $method);
         $this->recordPaymentLedgerEntry($user, $party, $payment, $data['type'], $amount, $data['notes'] ?? null);
 
         return $payment->load('party');
+    }
+
+    private function validateEmployeePaymentConstraints(
+        User $user,
+        Party $party,
+        Treasury $treasury,
+        string $type,
+        string $method,
+        float $amount
+    ): void {
+        if ((!$user->isCashier() && !$user->isMandob()) || $type !== PaymentType::PAYMENT->value) {
+            return;
+        }
+        if ($method !== PaymentMethod::CASH->value) {
+            throw new PosDomainException('يمكن للكاشير والمندوب إصدار سندات الصرف نقداً (كاش) فقط من عهدتهم.', 'EMPLOYEE_PAYMENT_CASH_ONLY', 422);
+        }
+        $partyType = $party->type instanceof \BackedEnum ? $party->type->value : (string) $party->type;
+        if (!in_array($partyType, [PartyType::SUPPLIER->value, PartyType::COURIER->value], true)) {
+            throw new PosDomainException('يُسمح للكاشير والمندوب بإصدار سندات الصرف للموردين وشركات الشحن فقط.', 'EMPLOYEE_PAYMENT_PARTY_RESTRICTED', 422);
+        }
+        $lockedTreasury = Treasury::withoutGlobalScopes()->lockForUpdate()->findOrFail($treasury->id);
+        if (Money::of($lockedTreasury->balance)->lessThan(Money::of($amount))) {
+            throw new PosDomainException('رصيد الدرج / العهدة الحالي لا يكفي لصرف هذا المبلغ.', 'INSUFFICIENT_TREASURY_BALANCE', 422);
+        }
     }
 
     private function createPaymentRecord(User $user, Party $party, $treasury, $activeShift, array $data, ?string $idempotencyKey, float $amount, string $method): Payment
@@ -136,11 +165,16 @@ class PaymentService
                 );
             }
             $party = Party::where('user_id', $user->getAccountId())->findOrFail($payment->party_id);
+            $shiftId = $payment->shift_id;
 
             $this->reversePaymentLedgerEntry($user, $party, $payment);
             $this->reversePaymentTreasuryTransactions($user, $payment);
 
             $payment->delete();
+
+            if ($shiftId && ($shift = Shift::withoutGlobalScopes()->find($shiftId))) {
+                $this->shiftService->syncShiftFinancials($shift);
+            }
         });
     }
 

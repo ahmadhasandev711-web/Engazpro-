@@ -47,7 +47,7 @@ class ConfirmOnlineOrderRequest extends FormRequest
     {
         $user = $this->user();
 
-        return ($user->isManager() && $user->branch_id)
+        return (!$user->hasGlobalBranchAccess() && $user->branch_id)
             ? (int) $user->branch_id
             : (int) $this->validated('branch_id');
     }

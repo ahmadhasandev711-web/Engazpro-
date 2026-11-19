@@ -133,12 +133,17 @@ export const App: React.FC = () => {
                     <Route path="/shopify-orders" element={<Navigate to="/store-orders" replace />} />
                   </Route>
 
-                  {/* Treasuries & Shifts Management (Owner, Admin, Manager, Supervisor) */}
+                  {/* Treasuries & Shifts & Stock Operations & Transfers */}
                   <Route element={<RoleRoute allowedRoles={[UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPERVISOR]} />}>
                     <Route path="/treasuries" element={<TreasuriesPage />} />
+                    <Route path="/stock-operations" element={<StockOperationsPage />} />
                   </Route>
 
-                  {/* Purchases, Suppliers, Reports, Transfers & Employees (Owner, Admin, Manager) */}
+                  <Route element={<RoleRoute allowedRoles={[UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPERVISOR, UserRole.CASHIER]} />}>
+                    <Route path="/transfers" element={<StockTransfersPage />} />
+                  </Route>
+
+                  {/* Purchases, Suppliers, Reports & Employees (Owner, Admin, Manager) */}
                   <Route element={<RoleRoute allowedRoles={[UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER]} />}>
                     <Route path="/purchases" element={<InvoicesPage />} />
                     <Route path="/purchases/new" element={<InvoiceFormPage />} />
@@ -147,8 +152,6 @@ export const App: React.FC = () => {
                     <Route path="/suppliers" element={<PartiesPage />} />
                     <Route path="/reports" element={<ReportsPage />} />
                     <Route path="/excel" element={<ExcelPage />} />
-                    <Route path="/transfers" element={<StockTransfersPage />} />
-                    <Route path="/stock-operations" element={<StockOperationsPage />} />
                     <Route path="/employees" element={<EmployeesPage />} />
                   </Route>
 

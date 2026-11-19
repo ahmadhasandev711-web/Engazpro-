@@ -11,10 +11,12 @@ use App\Http\Requests\DispatchCourierRequest;
 use App\Http\Requests\DispatchMandobRequest;
 use App\Http\Requests\LogOnlineOrderCallRequest;
 use App\Http\Requests\ReturnOnlineOrderRequest;
+use App\Http\Requests\TransferOnlineOrderBranchRequest;
 use App\Http\Resources\OnlineOrderResource;
 use App\Jobs\PullShopifyOrdersJob;
 use App\Jobs\PullWooCommerceOrdersJob;
 use App\Models\OnlineOrder;
+use App\Services\BranchAvailabilityService;
 use App\Services\EcommerceAccessService;
 use App\Services\OnlineOrders\OnlineOrderQueryService;
 use App\Services\OnlineOrders\OnlineOrderSyncService;
@@ -155,6 +157,35 @@ class OnlineOrderController extends Controller
             'success' => true,
             'message' => 'تم إلغاء الطلب وتحديث المتجر وفك حجز المخزون بنجاح',
             'data' => new OnlineOrderResource($cancelled),
+        ]);
+    }
+
+    public function branchAvailability(Request $request, int $id, BranchAvailabilityService $availabilityService): JsonResponse
+    {
+        $order = $this->orderQueryService->findForShowOrFail($request->user(), $id);
+        Gate::authorize('transfer-online-order-branch', $order);
+
+        return response()->json([
+            'success' => true,
+            'data' => $availabilityService->getOrderBranchAvailability($request->user(), $order),
+        ]);
+    }
+
+    public function transferBranch(TransferOnlineOrderBranchRequest $request, int $id): JsonResponse
+    {
+        $order = $this->orderQueryService->findForAccountOrFail($request->user(), $id);
+        Gate::authorize('transfer-online-order-branch', $order);
+        $updated = $this->orderSyncService->transferOrderBranch(
+            $request->user(),
+            $order,
+            (int) $request->validated('target_branch_id'),
+            $request->validated('reason')
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم تحويل الطلب إلى الفرع المختار بنجاح وإرجاعه لحالة انتظار التأكيد',
+            'data' => new OnlineOrderResource($updated),
         ]);
     }
 

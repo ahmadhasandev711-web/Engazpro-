@@ -44,7 +44,7 @@ export const PartyCrmModal: React.FC<PartyCrmModalProps> = ({
   onClose,
 }) => {
   const toast = useToast();
-  const { isOwnerOrAdmin, isManager } = usePermissions();
+  const { canManageCustomerTier } = usePermissions();
   const { data, isLoading } = usePartyCrm(partyId, Boolean(partyId));
   const { addInteraction, deleteInteraction, updateTier } = usePartyCrmMutations(partyId);
 
@@ -65,7 +65,7 @@ export const PartyCrmModal: React.FC<PartyCrmModalProps> = ({
   const party = data?.party || initialParty;
   const metrics = data?.party?.crm_metrics || initialParty?.crm_metrics;
   const interactions = data?.interactions || [];
-  const canManageTier = isOwnerOrAdmin || isManager;
+  const canManageTier = canManageCustomerTier;
 
   const handleAddInteraction = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -48,4 +48,17 @@ class OnlineOrderPolicy
 
         return Response::allow();
     }
+
+    public function transferBranch(User $user, Model $order): Response
+    {
+        if (!($user->isOwnerOrAdmin() || $user->isManager() || $user->isSupervisor())) {
+            return Response::deny('عذراً، تحويل الطلبات الأونلاين بين الفروع متاح للمشرف ومدير الفرع والإدارة فقط.');
+        }
+
+        if ($order->branch_id !== null && !app(BranchScopeService::class)->canAccessBranch($user, (int) $order->branch_id)) {
+            return Response::deny('عذراً، لا يمكنك تحويل طلب غير تابع لفرعك.');
+        }
+
+        return Response::allow();
+    }
 }

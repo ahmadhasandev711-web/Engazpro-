@@ -12,6 +12,7 @@ use App\Exceptions\ShiftDomainException;
 use App\Models\Expense;
 use App\Models\Invoice;
 use App\Models\Payment;
+use App\Models\Scopes\StoreScope;
 use App\Models\Shift;
 use App\Models\Treasury;
 use App\Models\TreasuryTransaction;
@@ -71,7 +72,7 @@ class ShiftService
             'opened_at' => Carbon::now(),
             'opening_balance' => $openingMoney->getAmount(),
             'cash_sales' => 0.00, 'electronic_sales' => 0.00, 'credit_sales' => 0.00,
-            'cash_receipts' => 0.00, 'cash_returns' => 0.00, 'expenses' => 0.00,
+            'cash_receipts' => 0.00, 'cash_payments' => 0.00, 'cash_returns' => 0.00, 'expenses' => 0.00,
             'expected_cash' => $openingMoney->getAmount(),
             'notes' => $notes,
         ]);
@@ -91,24 +92,38 @@ class ShiftService
         $shiftId = $shift->id;
         $cashSales = $this->sumShiftSalesByMethods($shiftId, [PaymentMethod::CASH->value]);
         $electronicSales = $this->sumShiftSalesByMethods($shiftId, [PaymentMethod::CARD->value, PaymentMethod::TRANSFER->value, PaymentMethod::INSTAPAY->value, PaymentMethod::VODAFONE_CASH->value]);
-        $creditSales = Money::of(Invoice::withoutGlobalScopes()->where('shift_id', $shiftId)->where('type', InvoiceType::SALE)->sum('remaining_amount'));
-        $cashReceipts = Money::of(Payment::withoutGlobalScopes()->where('shift_id', $shiftId)->where('type', PaymentType::RECEIPT->value)->where('method', PaymentMethod::CASH->value)->whereNull('invoice_id')->sum('amount'));
-        $cashReturns = Money::of(Invoice::withoutGlobalScopes()->where('shift_id', $shiftId)->where('type', InvoiceType::SALE_RETURN)->sum('paid_amount'));
-        $expenses = Money::of(Expense::withoutGlobalScopes()->where('shift_id', $shiftId)->sum('amount'));
-        $expectedCash = Money::of($shift->opening_balance)->add($cashSales)->add($cashReceipts)->subtract($cashReturns)->subtract($expenses);
+        $creditSales = Money::of(Invoice::withoutGlobalScope(StoreScope::class)->where('shift_id', $shiftId)->where('type', InvoiceType::SALE)->sum('remaining_amount'));
+        $cashReceipts = $this->sumShiftCashVouchers($shiftId, PaymentType::RECEIPT);
+        $cashPayments = $this->sumShiftCashVouchers($shiftId, PaymentType::PAYMENT);
+        $cashReturns = Money::of(Invoice::withoutGlobalScope(StoreScope::class)->where('shift_id', $shiftId)->where('type', InvoiceType::SALE_RETURN)->sum('paid_amount'));
+        $expenses = Money::of(Expense::withoutGlobalScope(StoreScope::class)->where('shift_id', $shiftId)->sum('amount'));
+        $expectedCash = Money::of($shift->opening_balance)->add($cashSales)->add($cashReceipts)->subtract($cashReturns)->subtract($expenses)->subtract($cashPayments);
 
         $shift->update([
             'cash_sales' => $cashSales->getAmount(), 'electronic_sales' => $electronicSales->getAmount(),
             'credit_sales' => $creditSales->getAmount(), 'cash_receipts' => $cashReceipts->getAmount(),
+            'cash_payments' => $cashPayments->getAmount(),
             'cash_returns' => $cashReturns->getAmount(), 'expenses' => $expenses->getAmount(),
             'expected_cash' => $expectedCash->getAmount(),
         ]);
     }
 
+    private function sumShiftCashVouchers(int $shiftId, PaymentType $type): Money
+    {
+        return Money::of(
+            Payment::withoutGlobalScope(StoreScope::class)
+                ->where('shift_id', $shiftId)
+                ->where('type', $type->value)
+                ->where('method', PaymentMethod::CASH->value)
+                ->whereNull('invoice_id')
+                ->sum('amount')
+        );
+    }
+
     private function sumShiftSalesByMethods(int $shiftId, array $methods): Money
     {
-        $direct = Invoice::withoutGlobalScopes()->where('shift_id', $shiftId)->where('type', InvoiceType::SALE)->whereIn('payment_method', $methods)->sum('paid_amount');
-        $split = Payment::withoutGlobalScopes()->where('shift_id', $shiftId)->where('type', PaymentType::RECEIPT->value)->whereIn('method', $methods)
+        $direct = Invoice::withoutGlobalScope(StoreScope::class)->where('shift_id', $shiftId)->where('type', InvoiceType::SALE)->whereIn('payment_method', $methods)->sum('paid_amount');
+        $split = Payment::withoutGlobalScope(StoreScope::class)->where('shift_id', $shiftId)->where('type', PaymentType::RECEIPT->value)->whereIn('method', $methods)
             ->whereHas('invoice', fn($q) => $q->where('payment_method', PaymentMethod::SPLIT->value))->sum('amount');
 
         return Money::of($direct)->add(Money::of($split));

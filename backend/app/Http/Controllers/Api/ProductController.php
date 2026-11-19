@@ -8,6 +8,7 @@ use App\Http\Requests\ProductRequest;
 use App\Http\Requests\RecordOpeningBalanceRequest;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
+use App\Services\BranchAvailabilityService;
 use App\Services\ProductImageService;
 use App\Services\ProductService;
 use App\Services\StockService;
@@ -118,6 +119,20 @@ class ProductController extends Controller
         return response()->json([
             'success' => true,
             'data' => new ProductResource($product),
+        ]);
+    }
+
+    /**
+     * الاستعلام عن توافر الصنف ومتغيراته في الفروع والمخازن الثابتة (قراءة فقط)
+     */
+    public function branchAvailability(Request $request, int $id, BranchAvailabilityService $availabilityService): JsonResponse
+    {
+        $product = $this->productService->findOrFail($id);
+        Gate::authorize('view', $product);
+
+        return response()->json([
+            'success' => true,
+            'data' => $availabilityService->getProductAvailability($request->user(), $product),
         ]);
     }
 

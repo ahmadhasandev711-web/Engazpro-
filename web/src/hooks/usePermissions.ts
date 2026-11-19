@@ -6,6 +6,7 @@ export const usePermissions = () => {
 
   const isMandob = user?.role === UserRole.MANDOB;
   const isCashier = user?.role === UserRole.CASHIER;
+  const isSales = user?.role === UserRole.SALES;
   const isManager = user?.role === UserRole.MANAGER;
   const isSupervisor = user?.role === UserRole.SUPERVISOR;
   const isAdmin = user?.role === UserRole.ADMIN;
@@ -23,6 +24,7 @@ export const usePermissions = () => {
     isSupervisor,
     isMandob,
     isCashier,
+    isSales,
     // Shift & Treasury Permissions
     canOperateShift: isCashier || isMandob,
     canSettleShifts: isOwnerOrAdmin || isManager || isSupervisor,
@@ -42,21 +44,31 @@ export const usePermissions = () => {
     canDeleteInvoice: isOwnerOrAdmin,
     canCreatePurchases: isOwnerOrAdmin || isManager,
     canEditInvoiceSalesperson: isOwnerOrAdmin || isManager,
-    // Parties Permissions
+    // Parties & Categories & Couriers Permissions
     canDeleteParty: isOwnerOrAdmin,
     canManageSuppliers: isOwnerOrAdmin || isManager,
+    canManageCustomerTier: isOwnerOrAdmin || isManager || isSupervisor,
+    canViewSupplierLedger: isOwnerOrAdmin || isManager || isSupervisor,
+    canDeleteCategory: isOwnerOrAdmin || isManager,
+    canSettleCouriers: isOwnerOrAdmin || isManager || isSupervisor || isCashier,
+    canManageCouriers: isOwnerOrAdmin || isManager || isSupervisor,
     // Expense Permissions
     canDeleteExpense: isOwnerOrAdmin,
     canManageExpenses: true,
     // Payment Permissions
     canDeletePayment: isOwnerOrAdmin,
     canPaySuppliers: isOwnerOrAdmin || isManager,
-    // Reports & Settings Permissions (STRICT: Profit only for Owner and Admin!)
+    canIssuePaymentVouchers: isOwnerOrAdmin || isManager || isSupervisor || isCashier || isMandob,
+    canViewEmployeePaymentsScope: isOwnerOrAdmin || isManager || isSupervisor,
+    // Reports & Stock Operations & Transfers
     canViewProfitReport: isOwnerOrAdmin,
     canViewPurchaseReport: isOwnerOrAdmin || isManager,
     canViewCashFlowReport: isOwnerOrAdmin || isManager,
     canViewReceivablesPayablesReport: isOwnerOrAdmin || (isManager && !user?.branch_id),
-    canManageStockOperations: isOwnerOrAdmin || isManager,
+    canManageStockOperations: isOwnerOrAdmin || isManager || isSupervisor,
+    canViewStockTransfers: isOwnerOrAdmin || isManager || isSupervisor || isCashier,
+    canCreateStockTransfer: isOwnerOrAdmin || isManager || isSupervisor,
+    canReceiveStockTransfer: isOwnerOrAdmin || isManager || isSupervisor || isCashier,
     canManageEmployees: isOwnerOrAdmin || isManager,
     canManageBranches: isOwnerOrAdmin,
     canManageWooCommerce: isOwnerOrAdmin && hasEcommerceAddon,
@@ -66,6 +78,7 @@ export const usePermissions = () => {
     canViewStoreOrders: hasEcommerceAddon && activeEcommercePlatform !== null,
     canViewWooOrders: hasEcommerceAddon && activeEcommercePlatform === EcommercePlatform.WOOCOMMERCE,
     canViewShopifyOrders: hasEcommerceAddon && activeEcommercePlatform === EcommercePlatform.SHOPIFY,
+    canTransferOnlineOrderBranch: isOwnerOrAdmin || isManager || isSupervisor,
     canManageSettings: isOwnerOrAdmin,
   };
 };

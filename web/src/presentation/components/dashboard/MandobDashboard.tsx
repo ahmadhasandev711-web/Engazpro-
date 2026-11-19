@@ -218,6 +218,12 @@ export const MandobDashboard: React.FC<MandobDashboardProps> = ({
               </div>
               <div className="space-y-1.5 text-xs text-muted">
                 <div className="flex justify-between">
+                  <span>سندات صرف نقدية (موردين / شحن):</span>
+                  <span className="font-bold text-ink tabular-nums">
+                    {formatCurrency(cashFlow?.outflow.payment_vouchers ?? 0)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
                   <span>مرتجعات بيع كاش مردودة للعميل:</span>
                   <span className="font-bold text-ink tabular-nums">
                     {formatCurrency(cashFlow?.outflow.sale_returns ?? 0)}
@@ -242,7 +248,7 @@ export const MandobDashboard: React.FC<MandobDashboardProps> = ({
                   صافي النقدية باليد المطلوب توريدها للخزينة:
                 </div>
                 <div className="text-[11px] text-muted">
-                  (المقبوضات الكاش - المرتجعات الكاش - مصاريف خط السير)
+                  (المقبوضات الكاش - سندات الصرف - المرتجعات الكاش - مصاريف خط السير)
                 </div>
               </div>
             </div>
@@ -301,8 +307,8 @@ export const MandobDashboard: React.FC<MandobDashboardProps> = ({
             className="w-full min-h-[44px] text-right p-3 rounded-xl border border-line hover:border-warn/40 hover:bg-warn-soft/50 flex items-center justify-between transition-colors cursor-pointer"
           >
             <div>
-              <div className="text-xs font-bold text-ink">سندات القبض والتحصيل</div>
-              <div className="text-[11px] text-muted">تسجيل دفعات الديون من العملاء</div>
+              <div className="text-xs font-bold text-ink">سندات القبض والصرف</div>
+              <div className="text-[11px] text-muted">تحصيلات العملاء وسداد الموردين والشحن</div>
             </div>
             <span className="text-warn font-bold">&larr;</span>
           </button>

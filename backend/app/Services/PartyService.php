@@ -161,12 +161,8 @@ class PartyService
 
     private function buildFilteredQuery(array $filters, bool $includeBalanceFilter): Builder
     {
-        $type = $filters['type'] ?? null;
         $query = Party::query();
-
-        if ($type && in_array($type, array_column(PartyType::cases(), 'value'))) {
-            $query->where('type', $type);
-        }
+        $this->applyTypeFilter($query, $filters['type'] ?? null);
 
         if (!empty($filters['search'])) {
             $search = trim((string) $filters['search']);
@@ -183,6 +179,20 @@ class PartyService
         }
 
         return $query;
+    }
+
+    private function applyTypeFilter(Builder $query, mixed $type): void
+    {
+        if (empty($type)) {
+            return;
+        }
+        $allowedValues = array_column(PartyType::cases(), 'value');
+        $requested = array_values(array_intersect(array_map('trim', explode(',', (string) $type)), $allowedValues));
+        if (count($requested) === 1) {
+            $query->where('type', $requested[0]);
+        } elseif (count($requested) > 1) {
+            $query->whereIn('type', $requested);
+        }
     }
 
     public function findForShowOrFail(int $id, ?User $actor = null): Party

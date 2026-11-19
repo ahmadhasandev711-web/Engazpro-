@@ -34,8 +34,8 @@ class CategoryPolicy
 
     public function delete(User $user, Category $category): Response
     {
-        return $user->isMandob()
-            ? Response::deny('عذراً، المندوب لا يملك صلاحية حذف التصنيفات')
-            : Response::allow();
+        return ($user->isOwnerOrAdmin() || $user->isManager())
+            ? Response::allow()
+            : Response::deny('عذراً، حذف التصنيفات مقتصر على المالك والإدارة ومديري الفروع فقط');
     }
 }

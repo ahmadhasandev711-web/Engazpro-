@@ -9,15 +9,15 @@ class StockOperationsPolicy
 {
     public function viewAlerts(User $user): Response
     {
-        return ($user->isOwnerOrAdmin() || $user->isManager())
+        return ($user->isOwnerOrAdmin() || $user->isManager() || $user->isSupervisor())
             ? Response::allow()
-            : Response::deny('عذراً، متابعة تنبيهات المخزون وصلاحية الدفعات متاحة للإدارة فقط.');
+            : Response::deny('عذراً، متابعة تنبيهات المخزون وصلاحية الدفعات متاحة للإدارة والمشرفين فقط.');
     }
 
     public function viewMovements(User $user): Response
     {
-        return ($user->isOwnerOrAdmin() || $user->isManager())
+        return ($user->isOwnerOrAdmin() || $user->isManager() || $user->isSupervisor())
             ? Response::allow()
-            : Response::deny('عذراً، دفتر حركات المخزون متاح للإدارة فقط.');
+            : Response::deny('عذراً، دفتر حركات المخزون متاح للإدارة والمشرفين فقط.');
     }
 }

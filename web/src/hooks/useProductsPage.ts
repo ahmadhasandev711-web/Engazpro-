@@ -41,6 +41,7 @@ export const useProductsPage = () => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [selectedBatchProduct, setSelectedBatchProduct] = useState<Product | null>(null);
   const [selectedPrintProduct, setSelectedPrintProduct] = useState<Product | null>(null);
+  const [availabilityProduct, setAvailabilityProduct] = useState<Product | null>(null);
   const [isOpeningStockOpen, setIsOpeningStockOpen] = useState(false);
   const [syncingProductId, setSyncingProductId] = useState<number | null>(null);
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
@@ -438,6 +439,8 @@ export const useProductsPage = () => {
     setSelectedBatchProduct,
     selectedPrintProduct,
     setSelectedPrintProduct,
+    availabilityProduct,
+    setAvailabilityProduct,
     isOpeningStockOpen,
     setIsOpeningStockOpen,
     syncingProductId,

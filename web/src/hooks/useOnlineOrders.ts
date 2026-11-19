@@ -19,7 +19,7 @@ export interface OrdersChannelConfig {
 }
 
 export function useOnlineOrders(config?: OrdersChannelConfig) {
-  const { isOwnerOrAdmin, isManager, isMandob, activeEcommercePlatform } = usePermissions();
+  const { isOwnerOrAdmin, isManager, isMandob, canTransferOnlineOrderBranch, activeEcommercePlatform } = usePermissions();
   const apiBase = config?.apiBase ?? '/online-orders';
   const orderQueryKey = config?.queryKey ?? 'online-orders';
   const platformTitle =
@@ -85,6 +85,7 @@ export function useOnlineOrders(config?: OrdersChannelConfig) {
   const [callScheduledAt, setCallScheduledAt] = useState<string>('');
   const [callNotes, setCallNotes] = useState<string>('');
   const [cancelModalOrder, setCancelModalOrder] = useState<any | null>(null);
+  const [transferBranchModalOrder, setTransferBranchModalOrder] = useState<any | null>(null);
   const [cancelReason, setCancelReason] = useState<OrderCancelReason>(OrderCancelReason.CUSTOMER_REJECTED);
   const [cancelNotes, setCancelNotes] = useState<string>('');
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -427,7 +428,8 @@ export function useOnlineOrders(config?: OrdersChannelConfig) {
   });
 
   return {
-    channelTitle, selection, canPullOrders, isOwnerOrAdmin, isManager, isMandob,
+    channelTitle, selection, canPullOrders, canTransferOnlineOrderBranch, isOwnerOrAdmin, isManager, isMandob,
+    apiBase, orderQueryKey, transferBranchModalOrder, setTransferBranchModalOrder,
     search, setSearch, statusFilter, setStatusFilter, fromDate, setFromDate, toDate, setToDate,
     viewingOrder, setViewingOrder, confirmModalOrder, setConfirmModalOrder,
     selectedBranchId, setSelectedBranchId, confirmError, setConfirmError, forceConfirm, setForceConfirm,

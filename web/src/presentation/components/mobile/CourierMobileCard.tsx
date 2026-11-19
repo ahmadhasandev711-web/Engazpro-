@@ -16,6 +16,8 @@ import { useHaptic } from '../../hooks/useHaptic';
 interface CourierMobileCardProps {
   courier: any;
   canDeleteParty: boolean;
+  canSettle?: boolean;
+  canEdit?: boolean;
   onOpenManifest: (courier: any) => void;
   onOpenSettle: (courier: any, type?: 'RECEIPT' | 'PAYMENT') => void;
   onOpenLedger: (courierId: number) => void;
@@ -31,6 +33,8 @@ interface CourierMobileCardProps {
 export const CourierMobileCard: React.FC<CourierMobileCardProps> = ({
   courier,
   canDeleteParty,
+  canSettle = false,
+  canEdit = false,
   onOpenManifest,
   onOpenSettle,
   onOpenLedger,
@@ -156,18 +160,20 @@ export const CourierMobileCard: React.FC<CourierMobileCardProps> = ({
           <span>الشحنات</span>
         </button>
 
-        <button
-          type="button"
-          onClick={() => {
-            selection();
-            onOpenSettle(courier);
-          }}
-          className="min-h-[44px] px-3 py-2 text-xs font-black text-ok bg-ok-soft hover:bg-ok-soft/80 rounded-xl flex items-center gap-1.5 border border-ok/30 transition-all active:scale-95 cursor-pointer"
-          title="تصفية واستلام صافي المستحقات"
-        >
-          <ArrowDownLeft className="w-3.5 h-3.5 text-ok" />
-          <span>تصفية واستلام</span>
-        </button>
+        {canSettle && (
+          <button
+            type="button"
+            onClick={() => {
+              selection();
+              onOpenSettle(courier);
+            }}
+            className="min-h-[44px] px-3 py-2 text-xs font-black text-ok bg-ok-soft hover:bg-ok-soft/80 rounded-xl flex items-center gap-1.5 border border-ok/30 transition-all active:scale-95 cursor-pointer"
+            title="تصفية واستلام صافي المستحقات"
+          >
+            <ArrowDownLeft className="w-3.5 h-3.5 text-ok" />
+            <span>تصفية واستلام</span>
+          </button>
+        )}
 
         <button
           type="button"
@@ -182,18 +188,20 @@ export const CourierMobileCard: React.FC<CourierMobileCardProps> = ({
           <span>كشف الحساب</span>
         </button>
 
-        <button
-          type="button"
-          onClick={() => {
-            selection();
-            onEditCourier(courier);
-          }}
-          className="min-h-[44px] min-w-[44px] p-2.5 text-xs font-bold text-ink bg-surface-2 hover:bg-surface-2/80 rounded-xl flex items-center justify-center border border-line transition-all active:scale-95 cursor-pointer"
-          title="تعديل بيانات شركة الشحن"
-          aria-label="تعديل بيانات شركة الشحن"
-        >
-          <Edit2 className="w-3.5 h-3.5" />
-        </button>
+        {canEdit && (
+          <button
+            type="button"
+            onClick={() => {
+              selection();
+              onEditCourier(courier);
+            }}
+            className="min-h-[44px] min-w-[44px] p-2.5 text-xs font-bold text-ink bg-surface-2 hover:bg-surface-2/80 rounded-xl flex items-center justify-center border border-line transition-all active:scale-95 cursor-pointer"
+            title="تعديل بيانات شركة الشحن"
+            aria-label="تعديل بيانات شركة الشحن"
+          >
+            <Edit2 className="w-3.5 h-3.5" />
+          </button>
+        )}
 
         {canDeleteParty && (
           <button

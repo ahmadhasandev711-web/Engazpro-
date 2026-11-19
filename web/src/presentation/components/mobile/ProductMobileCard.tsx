@@ -10,6 +10,7 @@ import {
   ChevronDown,
   ChevronUp,
   Globe,
+  Building2,
 } from 'lucide-react';
 import { Product, formatCurrency, formatNumber } from '@pos-mandob/shared';
 import { Badge, Button, Card } from '../ui';
@@ -24,6 +25,7 @@ interface ProductMobileCardProps {
   syncingProductId: number | null;
   onPushStock: (product: Product) => void;
   onPrintBarcode: (product: Product) => void;
+  onCheckAvailability?: (product: Product) => void;
   onEditProduct: (product: Product) => void;
   onDeleteProduct: (product: Product) => void;
   onAddBatch?: (product: Product) => void;
@@ -42,6 +44,7 @@ export const ProductMobileCard: React.FC<ProductMobileCardProps> = ({
   syncingProductId,
   onPushStock,
   onPrintBarcode,
+  onCheckAvailability,
   onEditProduct,
   onDeleteProduct,
   onAddBatch,
@@ -276,6 +279,24 @@ export const ProductMobileCard: React.FC<ProductMobileCardProps> = ({
             title={isShopifyConnected ? 'مزامنة المخزون مع Shopify فورياً' : 'مزامنة المخزون مع ووكومرس فورياً'}
           >
             <span>{isShopifyConnected ? 'Shopify' : 'ووكومرس'}</span>
+          </Button>
+        )}
+
+        {/* Branch Availability */}
+        {onCheckAvailability && (
+          <Button
+            type="button"
+            variant="secondary"
+            size="md"
+            onClick={() => {
+              selection();
+              onCheckAvailability(product);
+            }}
+            leftIcon={<Building2 className="w-3.5 h-3.5" />}
+            className="px-3 text-xs text-info bg-info-soft hover:bg-info/15 border-info/25"
+            title="توافر الصنف في باقي الفروع"
+          >
+            <span>الفروع</span>
           </Button>
         )}
 

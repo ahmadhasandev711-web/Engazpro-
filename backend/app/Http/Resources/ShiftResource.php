@@ -42,6 +42,7 @@ class ShiftResource extends JsonResource
             'electronic_sales' => Money::of($this->electronic_sales ?? 0)->getAmount(),
             'credit_sales' => Money::of($this->credit_sales ?? 0)->getAmount(),
             'cash_receipts' => Money::of($this->cash_receipts ?? 0)->getAmount(),
+            'cash_payments' => Money::of($this->cash_payments ?? 0)->getAmount(),
             'cash_returns' => Money::of($this->cash_returns ?? 0)->getAmount(),
             'expenses' => Money::of($this->expenses ?? 0)->getAmount(),
             'expected_cash' => Money::of($this->expected_cash ?? 0)->getAmount(),
