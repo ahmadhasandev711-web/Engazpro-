@@ -65,6 +65,10 @@ class ExpenseCategoryService
      */
     public function createCategory(User $user, string $name): ExpenseCategory
     {
+        if ($user->isMandob()) {
+            throw new PosDomainException('عذراً، لا تملك صلاحية إضافة أو تعديل تصنيفات المصروفات.', 'UNAUTHORIZED', 403);
+        }
+
         $accountId = $user->getAccountId();
         $name = trim($name);
 
@@ -88,6 +92,10 @@ class ExpenseCategoryService
      */
     public function updateCategory(User $user, ExpenseCategory $category, string $newName): ExpenseCategory
     {
+        if ($user->isMandob()) {
+            throw new PosDomainException('عذراً، لا تملك صلاحية إضافة أو تعديل تصنيفات المصروفات.', 'UNAUTHORIZED', 403);
+        }
+
         $accountId = $user->getAccountId();
         $newName = trim($newName);
 
@@ -125,6 +133,10 @@ class ExpenseCategoryService
      */
     public function deleteCategory(User $user, ExpenseCategory $category): void
     {
+        if (!$user->isOwnerOrAdmin() && !$user->isManager()) {
+            throw new PosDomainException('عذراً، حذف تصنيفات المصروفات مقتصر على المالك والإدارة ومديري الفروع فقط.', 'UNAUTHORIZED', 403);
+        }
+
         $accountId = $user->getAccountId();
 
         if ($category->user_id !== $accountId) {

@@ -1,7 +1,7 @@
 {
-  "name": "إنجاز برو — Engaz Pro",
-  "short_name": "إنجاز برو",
-  "description": "منظومة إنجاز برو السحابية المتكاملة لإدارة نقاط البيع، الكاشير، الفروع، والمخازن",
+  "name": "EBMS — Easy Business Management System",
+  "short_name": "EBMS",
+  "description": "نظام EBMS من Easy Work لإدارة نقاط البيع، الكاشير، الفروع، المخازن، وربط المتاجر الإلكترونية",
   "start_url": "/dashboard",
   "scope": "/",
   "display": "standalone",

@@ -20,8 +20,8 @@ const LOGIN_FEATURES = [
 /** Store owner / staff login screen built on EngazPRO AuthShell. */
 export const LoginPage: React.FC = () => {
   usePageMeta({
-    title: 'تسجيل الدخول — إنجاز برو | Engaz PRO',
-    description: 'سجّل الدخول إلى منظومة إنجاز برو لإدارة نقاط البيع POS والمخازن والخزائن وعهد المناديب.',
+    title: 'تسجيل الدخول — EBMS | Easy Work',
+    description: 'سجّل الدخول إلى نظام EBMS (Easy Business Management System) لإدارة نقاط البيع والمخازن والخزائن وعهد المناديب.',
   });
   const navigate = useNavigate();
   const { login, isLoading, error } = useAuthStore();
@@ -81,12 +81,12 @@ export const LoginPage: React.FC = () => {
           </div>
 
           <div className="text-center">
-            <Link
-              to="/"
+            <a
+              href="https://ebms.online/"
               className="min-h-[44px] inline-flex items-center justify-center px-3 text-xs font-medium text-muted hover:text-ink transition-colors rounded-xl"
             >
-              العودة إلى الصفحة الرئيسية
-            </Link>
+              العودة إلى الموقع الرئيسي (ebms.online)
+            </a>
           </div>
         </div>
       }

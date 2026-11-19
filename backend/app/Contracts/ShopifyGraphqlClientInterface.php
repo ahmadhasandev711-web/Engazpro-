@@ -91,4 +91,39 @@ interface ShopifyGraphqlClientInterface
      * @param  list<string>  $topics
      */
     public function registerWebhooks(ShopifyIntegration $integration, string $callbackUrl, array $topics): bool;
+
+    /**
+     * @param  list<array{id: string, price: string, compareAtPrice: ?string}>  $variants
+     * @return list<array<string, mixed>>
+     */
+    public function updateVariantPricesBulk(ShopifyIntegration $integration, string $productGid, array $variants): array;
+
+    public function createCodeBasicDiscount(ShopifyIntegration $integration, array $input): string;
+
+    public function updateCodeBasicDiscount(ShopifyIntegration $integration, string $discountGid, array $input): string;
+
+    public function deactivateCodeDiscount(ShopifyIntegration $integration, string $discountGid): void;
+
+    public function deleteCodeDiscount(ShopifyIntegration $integration, string $discountGid): void;
+
+    public function createAutomaticBxgyDiscount(ShopifyIntegration $integration, array $input): string;
+
+    public function updateAutomaticBxgyDiscount(ShopifyIntegration $integration, string $discountGid, array $input): string;
+
+    public function deleteAutomaticDiscount(ShopifyIntegration $integration, string $discountGid): void;
+
+    /**
+     * @return array{nodes: list<array<string, mixed>>, has_next_page: bool, end_cursor: ?string}
+     */
+    public function getCodeDiscountsPage(ShopifyIntegration $integration, ?string $cursor = null, int $first = 50): array;
+
+    /**
+     * @return array{nodes: list<array<string, mixed>>, has_next_page: bool, end_cursor: ?string}
+     */
+    public function getAutomaticDiscountsPage(ShopifyIntegration $integration, ?string $cursor = null, int $first = 50): array;
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function getDiscountNodeById(ShopifyIntegration $integration, string $discountGid): ?array;
 }

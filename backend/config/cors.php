@@ -16,6 +16,7 @@ return [
             env('FRONTEND_URL', 'http://localhost:5173'),
             'https://ebms.online',
             'https://www.ebms.online',
+            'https://app.ebms.online',
             'https://engazpro.com',
             'https://www.engazpro.com',
             'https://localhost',

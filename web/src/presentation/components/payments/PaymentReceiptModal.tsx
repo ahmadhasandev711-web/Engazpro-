@@ -2,7 +2,10 @@ import React, { useRef } from 'react';
 import { Printer, X, Share2, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import { formatCurrency, getPaymentMethodLabel } from '@pos-mandob/shared';
 import { useAuthStore } from '../../../data/store/useAuthStore';
-import { webShareService } from '../../../infrastructure/pwa/webShareService';
+import {
+  webShareService,
+  formatPaymentVoucherWhatsAppText,
+} from '../../../infrastructure/pwa/webShareService';
 import { Button } from '../ui';
 
 export interface PaymentReceiptData {
@@ -70,32 +73,12 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
   };
 
   const handleShareWhatsApp = async () => {
-    const formattedAmount = formatCurrency(payment.amount);
     const voucherType = isReceipt ? 'إيصال استلام نقدية (سند قبض)' : 'إيصال صرف نقدية (سند صرف)';
-    const partyName = payment.party_name || (isReceipt ? 'العميل المحترم' : 'المورد المحترم');
-
-    let text = `🧾 *${voucherType}*\n`;
-    text += `🏬 *${storeName}*\n`;
-    text += `--------------------------------\n`;
-    text += `🔢 رقم السند: #${payment.id}\n`;
-    text += `📅 التاريخ: ${dateStr}${timeStr ? ` ${timeStr}` : ''}\n`;
-    text += `👤 الطرف: ${partyName}\n`;
-    text += `💰 المبلغ: *${formattedAmount}*\n`;
-    text += `💳 طريقة السداد: ${methodLabel}\n`;
-    if (payment.invoice_number) {
-      text += `📄 رقم الفاتورة: ${payment.invoice_number}\n`;
-    }
-    if (payment.notes) {
-      text += `📝 البيان: ${payment.notes}\n`;
-    }
-    if (payment.party_balance != null && Number(payment.party_balance) !== 0) {
-      text += `📊 الرصيد المتبقي: ${formatCurrency(payment.party_balance)}\n`;
-    }
-    if (payment.created_by_name) {
-      text += `✍️ المحصل / المسؤول: ${payment.created_by_name} (${roleLabel})\n`;
-    }
-    text += `--------------------------------\n`;
-    text += `شكراً لتعاملكم معنا!`;
+    const text = formatPaymentVoucherWhatsAppText(payment, {
+      storeName,
+      storePhone,
+      currencySymbol: storeIdentity?.currency || 'ج.م',
+    });
 
     await webShareService.shareInvoice({
       title: `${voucherType} #${payment.id} - ${storeName}`,

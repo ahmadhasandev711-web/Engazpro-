@@ -203,6 +203,91 @@ class ShopifyGraphqlClient implements ShopifyGraphqlClientInterface
         return $allOk;
     }
 
+    public function updateVariantPricesBulk(ShopifyIntegration $integration, string $productGid, array $variants): array
+    {
+        $data = $this->query($integration, ShopifyGraphqlQueries::PRODUCT_VARIANTS_BULK_UPDATE_PRICES, [
+            'productId' => $productGid,
+            'variants' => $variants,
+        ]);
+        $result = $data['productVariantsBulkUpdate'] ?? [];
+        $this->assertNoUserErrors($result['userErrors'] ?? [], 'فشل تحديث أسعار المتغيرات على Shopify');
+
+        return (array) ($result['productVariants'] ?? []);
+    }
+
+    public function createCodeBasicDiscount(ShopifyIntegration $integration, array $input): string
+    {
+        return $this->runDiscountMutation($integration, ShopifyGraphqlQueries::DISCOUNT_CODE_BASIC_CREATE, 'discountCodeBasicCreate', ['basicCodeDiscount' => $input], 'codeDiscountNode');
+    }
+
+    public function updateCodeBasicDiscount(ShopifyIntegration $integration, string $discountGid, array $input): string
+    {
+        return $this->runDiscountMutation($integration, ShopifyGraphqlQueries::DISCOUNT_CODE_BASIC_UPDATE, 'discountCodeBasicUpdate', ['id' => $discountGid, 'basicCodeDiscount' => $input], 'codeDiscountNode', $discountGid);
+    }
+
+    public function deactivateCodeDiscount(ShopifyIntegration $integration, string $discountGid): void
+    {
+        $this->runDiscountMutation($integration, ShopifyGraphqlQueries::DISCOUNT_CODE_DEACTIVATE, 'discountCodeDeactivate', ['id' => $discountGid], 'codeDiscountNode', $discountGid);
+    }
+
+    public function deleteCodeDiscount(ShopifyIntegration $integration, string $discountGid): void
+    {
+        $this->runDiscountMutation($integration, ShopifyGraphqlQueries::DISCOUNT_CODE_DELETE, 'discountCodeDelete', ['id' => $discountGid], null, $discountGid);
+    }
+
+    public function createAutomaticBxgyDiscount(ShopifyIntegration $integration, array $input): string
+    {
+        return $this->runDiscountMutation($integration, ShopifyGraphqlQueries::DISCOUNT_AUTOMATIC_BXGY_CREATE, 'discountAutomaticBxgyCreate', ['automaticBxgyDiscount' => $input], 'automaticDiscountNode');
+    }
+
+    public function updateAutomaticBxgyDiscount(ShopifyIntegration $integration, string $discountGid, array $input): string
+    {
+        return $this->runDiscountMutation($integration, ShopifyGraphqlQueries::DISCOUNT_AUTOMATIC_BXGY_UPDATE, 'discountAutomaticBxgyUpdate', ['id' => $discountGid, 'automaticBxgyDiscount' => $input], 'automaticDiscountNode', $discountGid);
+    }
+
+    public function deleteAutomaticDiscount(ShopifyIntegration $integration, string $discountGid): void
+    {
+        $this->runDiscountMutation($integration, ShopifyGraphqlQueries::DISCOUNT_AUTOMATIC_DELETE, 'discountAutomaticDelete', ['id' => $discountGid], null, $discountGid);
+    }
+
+    public function getCodeDiscountsPage(ShopifyIntegration $integration, ?string $cursor = null, int $first = 50): array
+    {
+        return $this->fetchDiscountsPage($integration, ShopifyGraphqlQueries::CODE_DISCOUNT_NODES_PAGE, 'codeDiscountNodes', $cursor, $first);
+    }
+
+    public function getAutomaticDiscountsPage(ShopifyIntegration $integration, ?string $cursor = null, int $first = 50): array
+    {
+        return $this->fetchDiscountsPage($integration, ShopifyGraphqlQueries::AUTOMATIC_DISCOUNT_NODES_PAGE, 'automaticDiscountNodes', $cursor, $first);
+    }
+
+    public function getDiscountNodeById(ShopifyIntegration $integration, string $discountGid): ?array
+    {
+        $data = $this->query($integration, ShopifyGraphqlQueries::DISCOUNT_NODE_BY_ID, ['id' => $discountGid]);
+
+        return !empty($data['discountNode']) && is_array($data['discountNode']) ? $data['discountNode'] : null;
+    }
+
+    private function runDiscountMutation(ShopifyIntegration $integration, string $mutation, string $rootKey, array $variables, ?string $nodeKey, string $fallbackGid = ''): string
+    {
+        $data = $this->query($integration, $mutation, $variables);
+        $result = $data[$rootKey] ?? [];
+        $this->assertNoUserErrors($result['userErrors'] ?? [], 'فشل مزامنة العرض أو الكوبون على Shopify');
+
+        return $nodeKey ? (string) ($result[$nodeKey]['id'] ?? $fallbackGid) : $fallbackGid;
+    }
+
+    private function fetchDiscountsPage(ShopifyIntegration $integration, string $query, string $rootKey, ?string $cursor, int $first): array
+    {
+        $data = $this->query($integration, $query, ['first' => $first, 'after' => $cursor]);
+        $conn = $data[$rootKey] ?? [];
+
+        return [
+            'nodes' => array_values(array_filter((array) ($conn['nodes'] ?? []))),
+            'has_next_page' => (bool) ($conn['pageInfo']['hasNextPage'] ?? false),
+            'end_cursor' => $conn['pageInfo']['endCursor'] ?? null,
+        ];
+    }
+
     private function executeWithRetry(ShopifyIntegration $integration, string $token, string $query, array $variables): Response
     {
         $attempts = 0;
@@ -230,17 +315,38 @@ class ShopifyGraphqlClient implements ShopifyGraphqlClientInterface
 
     private function extractGraphqlData(Response $response): array
     {
+        if ($response->status() === 403) {
+            throw new ShopifyConnectionException($this->scopeUpgradeMessage(), 403);
+        }
         if (!$response->successful()) {
             throw new ShopifyConnectionException("فشل اتصال Shopify GraphQL (HTTP {$response->status()}).", 422);
         }
         $json = $response->json() ?? [];
         if (!empty($json['errors'])) {
-            $msg = (string) ($json['errors'][0]['message'] ?? 'Shopify GraphQL error');
+            $first = (array) ($json['errors'][0] ?? []);
+            $msg = (string) ($first['message'] ?? 'Shopify GraphQL error');
+            if ($this->isScopeAccessDenied($first, $msg)) {
+                throw new ShopifyConnectionException($this->scopeUpgradeMessage(), 403);
+            }
             throw new ShopifyConnectionException("خطأ في استعلام Shopify: {$msg}", 422);
         }
         $this->paceCostBudget($json);
 
         return (array) ($json['data'] ?? []);
+    }
+
+    private function isScopeAccessDenied(array $firstError, string $message): bool
+    {
+        $code = strtoupper((string) ($firstError['extensions']['code'] ?? ''));
+        $lower = strtolower($message);
+
+        return ($code === 'ACCESS_DENIED' || str_contains($lower, 'access denied'))
+            && !$this->isPiiAccessDenied($message);
+    }
+
+    private function scopeUpgradeMessage(): string
+    {
+        return 'صلاحيات متجر Shopify الحالية غير كافية لمزامنة الأسعار أو الكوبونات (يلزم write_products و read_discounts و write_discounts). يرجى إعادة ربط متجر Shopify من الإعدادات لتحديث الصلاحيات.';
     }
 
     private function shouldRetryResponse(Response $response): bool

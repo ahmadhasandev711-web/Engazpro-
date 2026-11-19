@@ -10,6 +10,8 @@ import {
   Zap,
   MapPin,
   Webhook,
+  Tag,
+  DollarSign,
 } from 'lucide-react';
 import { apiClient } from '../../data/api/client';
 import { EcommercePlatform, ShopifyAuthMode } from '@pos-mandob/shared';
@@ -38,6 +40,8 @@ export const ShopifySettingsPage: React.FC = () => {
   const [webhookSecret, setWebhookSecret] = useState('');
   const [defaultBranchId, setDefaultBranchId] = useState<number | ''>('');
   const [autoSyncStock, setAutoSyncStock] = useState(true);
+  const [autoSyncPrices, setAutoSyncPrices] = useState(false);
+  const [autoSyncPromotions, setAutoSyncPromotions] = useState(false);
   const [isActive, setIsActive] = useState(true);
   const [importStock, setImportStock] = useState(false);
   const [mappings, setMappings] = useState<LocationMappingRow[]>([]);
@@ -75,6 +79,8 @@ export const ShopifySettingsPage: React.FC = () => {
     setClientId(settings.client_id || '');
     setDefaultBranchId(settings.default_branch_id || '');
     setAutoSyncStock(settings.auto_sync_stock ?? true);
+    setAutoSyncPrices(settings.auto_sync_prices ?? false);
+    setAutoSyncPromotions(settings.auto_sync_promotions ?? false);
     setIsActive(settings.is_active ?? true);
     setMappings(
       Array.isArray(settings.location_mappings)
@@ -107,6 +113,8 @@ export const ShopifySettingsPage: React.FC = () => {
         webhook_secret: webhookSecret.trim() || undefined,
         default_branch_id: defaultBranchId || null,
         auto_sync_stock: autoSyncStock,
+        auto_sync_prices: autoSyncPrices,
+        auto_sync_promotions: autoSyncPromotions,
         is_active: isActive,
       }),
     onSuccess: (res) => {
@@ -175,6 +183,21 @@ export const ShopifySettingsPage: React.FC = () => {
     onError: (err: any) => notify('error', err.response?.data?.message || 'فشل دفع الأرصدة'),
   });
 
+  const pushPricesMutation = useMutation({
+    mutationFn: () => apiClient.post('/shopify/push-all-prices'),
+    onSuccess: (res) => notify('success', res.data?.message || 'تم دفع الأسعار وسعر العرض إلى Shopify بنجاح'),
+    onError: (err: any) => notify('error', err.response?.data?.message || 'فشل دفع الأسعار إلى Shopify'),
+  });
+
+  const syncPromotionsMutation = useMutation({
+    mutationFn: () => apiClient.post('/shopify/sync-promotions'),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['promotions'] });
+      notify('success', res.data?.message || 'تمت مزامنة الكوبونات والعروض مع Shopify بنجاح');
+    },
+    onError: (err: any) => notify('error', err.response?.data?.message || 'فشلت مزامنة العروض من Shopify'),
+  });
+
   const handleOAuthConnect = async () => {
     if (!shopDomain.trim()) {
       notify('error', 'يرجى إدخال نطاق متجر Shopify أولاً (my-store.myshopify.com)');
@@ -225,10 +248,20 @@ export const ShopifySettingsPage: React.FC = () => {
       )}
 
       {settings?.last_error && (
-        <div className="p-4 rounded-2xl border bg-bad-soft border-bad/25 text-bad flex items-start gap-3 text-xs font-bold">
+        <div
+          className={
+            settings.last_error.includes('write_products') || settings.last_error.includes('write_discounts')
+              ? 'p-4 rounded-2xl border bg-warn-soft border-warn/30 text-warn flex items-start gap-3 text-xs font-bold'
+              : 'p-4 rounded-2xl border bg-bad-soft border-bad/25 text-bad flex items-start gap-3 text-xs font-bold'
+          }
+        >
           <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
           <div>
-            <p className="font-black">آخر تنبيه/خطأ في المزامنة:</p>
+            <p className="font-black">
+              {settings.last_error.includes('write_products') || settings.last_error.includes('write_discounts')
+                ? 'يلزم تحديث صلاحيات متجر Shopify (إعادة الربط):'
+                : 'آخر تنبيه/خطأ في المزامنة:'}
+            </p>
             <p className="mt-0.5 font-medium">{settings.last_error}</p>
           </div>
         </div>
@@ -323,6 +356,14 @@ export const ShopifySettingsPage: React.FC = () => {
                 مزامنة المخزون لحظياً من POS إلى Shopify عند كل حركة
               </label>
               <label className="flex items-center gap-2 text-xs font-bold text-ink cursor-pointer">
+                <input type="checkbox" checked={autoSyncPrices} onChange={(e) => setAutoSyncPrices(e.target.checked)} />
+                مزامنة الأسعار وسعر العرض تلقائياً (POS → Shopify)
+              </label>
+              <label className="flex items-center gap-2 text-xs font-bold text-ink cursor-pointer">
+                <input type="checkbox" checked={autoSyncPromotions} onChange={(e) => setAutoSyncPromotions(e.target.checked)} />
+                مزامنة الكوبونات وعروض الكميات تلقائياً (ثنائية الاتجاه)
+              </label>
+              <label className="flex items-center gap-2 text-xs font-bold text-ink cursor-pointer">
                 <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
                 تفعيل التكامل واستقبال الطلبات
               </label>
@@ -355,6 +396,12 @@ export const ShopifySettingsPage: React.FC = () => {
           </Button>
           <Button className="w-full" variant="secondary" isLoading={pushStocksMutation.isPending} onClick={() => pushStocksMutation.mutate()}>
             <Warehouse className="w-4 h-4 ml-1" /> دفع كافة الأرصدة لمواقع Shopify
+          </Button>
+          <Button className="w-full" variant="secondary" isLoading={pushPricesMutation.isPending} onClick={() => pushPricesMutation.mutate()}>
+            <DollarSign className="w-4 h-4 ml-1" /> دفع كل الأسعار لشوبيفاي
+          </Button>
+          <Button className="w-full" variant="secondary" isLoading={syncPromotionsMutation.isPending} onClick={() => syncPromotionsMutation.mutate()}>
+            <Tag className="w-4 h-4 ml-1" /> سحب كوبونات وعروض شوبيفاي
           </Button>
           <Button className="w-full" variant="secondary" isLoading={registerWebhooksMutation.isPending} onClick={() => registerWebhooksMutation.mutate()}>
             <Webhook className="w-4 h-4 ml-1" /> تسجيل / تحديث الـ Webhooks تلقائياً

@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Cache;
 
 class ShopifyWebhookService
 {
-    private const ACCEPTED_PREFIXES = ['orders/', 'products/', 'refunds/', 'locations/'];
+    private const ACCEPTED_PREFIXES = ['orders/', 'products/', 'refunds/', 'locations/', 'discounts/'];
 
     public function __construct(
         protected ShopifyAuthService $authService

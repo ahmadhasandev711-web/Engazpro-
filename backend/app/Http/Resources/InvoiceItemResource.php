@@ -23,7 +23,10 @@ class InvoiceItemResource extends JsonResource
             'expiry_date' => $this->expiry_date?->format('Y-m-d'),
             'unit_name' => $this->unit_name,
             'quantity' => Quantity::of($this->quantity ?? 0)->toFloat(),
+            'returned_quantity' => Quantity::of($this->returned_quantity ?? 0)->toFloat(),
+            'returnable_quantity' => Quantity::of($this->returnable_quantity ?? ($this->quantity ?? 0))->toFloat(),
             'unit_price' => Money::of($this->unit_price ?? 0)->getAmount(),
+            'effective_return_unit_price' => Money::of($this->effective_return_unit_price ?? ($this->unit_price ?? 0))->getAmount(),
             'total' => Money::of($this->total ?? 0)->getAmount(),
         ];
     }

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { apiClient } from '../api/client';
+import { queryClient } from '../api/queryClient';
 import { User, LoginInput, RegisterInput } from '@pos-mandob/shared';
 import { secureStorage } from '../../platform/secureStorage';
 
@@ -43,6 +44,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const response = await apiClient.post('/auth/login', input);
       const { user, token } = response.data.data;
+      queryClient.clear();
       await secureStorage.setToken(token);
       await secureStorage.setUser(user);
       set({ user, token, isAuthenticated: true, isLoading: false, error: null });
@@ -66,6 +68,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const response = await apiClient.post('/auth/register', input);
       const { user, token } = response.data.data;
+      queryClient.clear();
       await secureStorage.setToken(token);
       await secureStorage.setUser(user);
       set({ user, token, isAuthenticated: true, isLoading: false, error: null });
@@ -92,6 +95,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch {
       // Ignore errors on logout
     } finally {
+      queryClient.clear();
       await secureStorage.clearAuth();
       set({ user: null, token: null, isAuthenticated: false, error: null });
     }
@@ -102,11 +106,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const response = await apiClient.get('/auth/me');
       const user = response.data.data;
+      const prevUser = get().user;
+      if (
+        prevUser &&
+        (prevUser.id !== user.id ||
+          prevUser.owner_id !== user.owner_id ||
+          prevUser.branch_id !== user.branch_id ||
+          prevUser.role !== user.role)
+      ) {
+        queryClient.clear();
+      }
       await secureStorage.setUser(user);
       set({ user, isAuthenticated: true });
     } catch (err: any) {
       // Only clear token if server explicitly returned 401 Unauthorized.
       if (err.response?.status === 401) {
+        queryClient.clear();
         await secureStorage.clearAuth();
         set({ user: null, token: null, isAuthenticated: false });
       }

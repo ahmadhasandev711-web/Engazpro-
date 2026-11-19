@@ -8,9 +8,10 @@ import {
   CreditCard,
   Percent,
   Truck,
+  Tag,
   X,
 } from 'lucide-react';
-import { formatCurrency, PartyCrmMetrics } from '@pos-mandob/shared';
+import { formatCurrency, PartyCrmMetrics, PromotionEvaluation } from '@pos-mandob/shared';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../../../data/api/client';
 import { PosCartItem } from '../../../hooks/useHoldInvoices';
@@ -44,6 +45,12 @@ interface PosCartTicketProps {
   onHoldCart: () => void;
   onCheckout: () => void;
   onQuickAddCustomer: (name: string, phone?: string) => Promise<CustomerParty | void>;
+  appliedPromotion?: PromotionEvaluation | null;
+  appliedCouponCode?: string;
+  onApplyCoupon?: (code: string) => Promise<void> | void;
+  onClearCoupon?: () => void;
+  promoError?: string | null;
+  isEvaluatingPromo?: boolean;
 }
 
 export const PosCartTicket: React.FC<PosCartTicketProps> = ({
@@ -62,11 +69,18 @@ export const PosCartTicket: React.FC<PosCartTicketProps> = ({
   onHoldCart,
   onCheckout,
   onQuickAddCustomer,
+  appliedPromotion = null,
+  appliedCouponCode = '',
+  onApplyCoupon,
+  onClearCoupon,
+  promoError = null,
+  isEvaluatingPromo = false,
 }) => {
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
   const [newCustName, setNewCustName] = useState('');
   const [newCustPhone, setNewCustPhone] = useState('');
   const [isAddingCust, setIsAddingCust] = useState(false);
+  const [couponInput, setCouponInput] = useState('');
 
   // Fetch Couriers for shipping
   const { data: couriers = [] } = useQuery({
@@ -81,7 +95,8 @@ export const PosCartTicket: React.FC<PosCartTicketProps> = ({
   const [discountMode, setDiscountMode] = useState<'AMOUNT' | 'PERCENT'>('AMOUNT');
 
   const subtotal = items.reduce((acc, item) => acc + item.total, 0);
-  const total = Math.max(0, subtotal - discount + (shippingCost || 0));
+  const promoDiscount = Number(appliedPromotion?.promotion_discount || 0);
+  const total = Math.max(0, subtotal - discount - promoDiscount + (shippingCost || 0));
   const totalItemsCount = items.reduce((acc, item) => acc + item.quantity, 0);
 
   const handleCreateCustomer = async (e: React.FormEvent) => {
@@ -265,7 +280,7 @@ export const PosCartTicket: React.FC<PosCartTicketProps> = ({
           <div className="flex items-center justify-between">
             <span className="text-muted flex items-center gap-1">
               <Percent className="w-3.5 h-3.5 text-muted" />
-              <span>خصم الفاتورة:</span>
+              <span>خصم الفاتورة (يدوي):</span>
             </span>
             <div className="flex items-center gap-1 w-32 sm:w-28">
               <input
@@ -300,6 +315,72 @@ export const PosCartTicket: React.FC<PosCartTicketProps> = ({
               </button>
             </div>
           </div>
+
+          {/* Live Promotions & Promo Code */}
+          {items.length > 0 && onApplyCoupon && (
+            <div className="pt-1.5 space-y-1.5 border-t border-line/40">
+              {appliedPromotion && promoDiscount > 0 && (
+                <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl bg-ok-soft border border-ok/30 text-ok font-bold">
+                  <span className="flex items-center gap-1 truncate">
+                    <Tag className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">
+                      {appliedPromotion.promotion_name}
+                      {appliedPromotion.coupon_code ? ` (${appliedPromotion.coupon_code})` : ''}
+                    </span>
+                  </span>
+                  <div className="flex items-center gap-1.5 shrink-0 tabular-nums">
+                    <span>-{formatCurrency(promoDiscount)}</span>
+                    {appliedCouponCode && onClearCoupon && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCouponInput('');
+                          onClearCoupon();
+                        }}
+                        className="p-0.5 rounded hover:bg-ok/20"
+                        title="إلغاء الكوبون"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {!appliedCouponCode && (
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="text"
+                    value={couponInput}
+                    onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && couponInput.trim()) {
+                        e.preventDefault();
+                        void onApplyCoupon(couponInput.trim());
+                      }
+                    }}
+                    placeholder="كود خصم / برومو كود..."
+                    dir="ltr"
+                    className="flex-1 text-right font-mono font-bold text-xs px-2.5 py-1.5 bg-panel border border-line rounded-lg text-ink placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-brand"
+                  />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    disabled={!couponInput.trim() || isEvaluatingPromo}
+                    onClick={() => couponInput.trim() && void onApplyCoupon(couponInput.trim())}
+                    className="text-xs font-bold shrink-0"
+                  >
+                    {isEvaluatingPromo ? '...' : 'تطبيق'}
+                  </Button>
+                </div>
+              )}
+
+              {promoError && (
+                <p className="text-[11px] font-bold text-bad">{promoError}</p>
+              )}
+            </div>
+          )}
 
           {/* Courier & Shipping Section */}
           <div className="pt-1.5 space-y-2 border-t border-line/40">

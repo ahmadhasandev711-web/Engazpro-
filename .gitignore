@@ -26,7 +26,7 @@ engazpro_clean_database.sql
 engazpro_database.sql
 
 # ------------------------------------------------------------------------------
-# 3. Deployment Archives & Backups
+# 3. Deployment Archives, Static Landing Bundles & Backups
 # ------------------------------------------------------------------------------
 *.zip
 *.tar
@@ -37,9 +37,14 @@ engazpro_database.sql
 backend_engazpro.zip
 backend_update_patch.zip
 frontend_engazpro.zip
+landing_ebms.zip
+app_ebms.zip
+frontend_engazpro/
+landing/
+EBMS Landing Page.html
 
 # ------------------------------------------------------------------------------
-# 4. Internal Documentation & Agent Rules (Private Project Files)
+# 4. Internal Documentation & Agent Rules (Private Project Files — Never Push .md)
 # ------------------------------------------------------------------------------
 AGENTS.md
 GEMINI.md
@@ -47,10 +52,7 @@ ARCHITECTURE_RULES.md
 MasterPrompt_Updated.md
 CLAUDE.md
 *.md
-!README.md
-!README_*.md
-!LICENSE.md
-!docs/**/*.md
+**/*.md
 
 # ------------------------------------------------------------------------------
 # 5. Dependencies (Node & PHP Composer)
@@ -95,6 +97,7 @@ backend/.phpunit.result.cache
 # ------------------------------------------------------------------------------
 .expo/
 scratch/
+backend/scratch_*.php
 tmp/
 temp/
 

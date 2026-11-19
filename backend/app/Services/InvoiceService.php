@@ -19,6 +19,7 @@ use App\Models\InvoiceItem;
 use App\Models\Party;
 use App\Models\Payment;
 use App\Models\Product;
+use App\Models\Promotion;
 use App\Models\Treasury;
 use App\Models\TreasuryTransaction;
 use App\Models\User;
@@ -39,12 +40,14 @@ class InvoiceService
         protected ?TreasuryService $treasuryService = null,
         protected ?ShiftService $shiftService = null,
         protected ?SettingService $settingService = null,
-        protected ?DocumentSequenceService $sequenceService = null
+        protected ?DocumentSequenceService $sequenceService = null,
+        protected ?PromotionEngineService $promotionService = null
     ) {
         $this->treasuryService ??= app(TreasuryService::class);
         $this->shiftService ??= app(ShiftService::class);
         $this->settingService ??= app(SettingService::class);
         $this->sequenceService ??= app(DocumentSequenceService::class);
+        $this->promotionService ??= app(PromotionEngineService::class);
     }
 
     /**
@@ -85,9 +88,11 @@ class InvoiceService
             $docType = $this->resolveDocumentTypeAndAuthorize($user, $type);
             $invoiceNumber = $this->resolveInvoiceNumber($user, $docType, $data);
             [$preparedItems, $subtotalMoney] = $this->prepareInvoiceItems($user, $type, $data['items']);
-            $totals = $this->calculateInvoiceTotals($user, $data, $subtotalMoney, $data['payment_method'] ?? PaymentMethod::CASH->value);
+            $parentInvoice = $this->validateAndLockParentReturn($user, $type, $data, $preparedItems);
+            $branchId = $this->resolveInvoiceBranchId($user, $this->resolveCreatorUser($user, $data), $data);
+            $totals = $this->calculateInvoiceTotals($user, $data, $subtotalMoney, $data['payment_method'] ?? PaymentMethod::CASH->value, $preparedItems, $branchId);
             $context = $this->resolveInvoiceExecutionContext($user, $type, $data);
-            $invoice = $this->persistInvoiceHeader($user, $data, $invoiceNumber, $idempotencyKey, $totals, $context);
+            $invoice = $this->persistInvoiceHeader($user, $data, $invoiceNumber, $idempotencyKey, $totals, $context, $parentInvoice);
 
             $this->persistInvoiceItemsAndStock($user, $invoice, $type, $preparedItems, $context['branch_id']);
             $this->recordInvoicePartyAndCourierLedger($user, $invoice, $type, $totals, $data);
@@ -199,9 +204,11 @@ class InvoiceService
             ?? $batchQuery->orderBy('expiry_date', 'asc')->first();
     }
 
-    private function calculateInvoiceTotals(User $user, array $data, Money $subtotalMoney, string $paymentMethod): array
+    private function calculateInvoiceTotals(User $user, array $data, Money $subtotalMoney, string $paymentMethod, array $preparedItems = [], ?int $branchId = null): array
     {
-        $discountMoney = $this->enforceDiscountLimits($user, $data, $subtotalMoney, Money::of($data['discount'] ?? 0));
+        $promo = $this->resolveInvoicePromotion($user, $data, $preparedItems, $branchId);
+        $promoDiscountMoney = $promo['promotion_discount_money']->isGreaterThan($subtotalMoney) ? $subtotalMoney : $promo['promotion_discount_money'];
+        $discountMoney = $this->enforceDiscountLimits($user, $data, $subtotalMoney, Money::of($data['discount'] ?? 0), $promoDiscountMoney);
         $taxMoney = Money::of($data['tax'] ?? 0);
         $shippingMoney = Money::of($data['shipping_amount'] ?? 0);
         $totalMoney = $subtotalMoney->subtract($discountMoney)->add($taxMoney)->add($shippingMoney);
@@ -212,30 +219,76 @@ class InvoiceService
 
         return [
             'payment_method' => $paymentMethod, 'subtotal' => $subtotalMoney->getAmount(),
-            'discount' => $discountMoney->getAmount(), 'tax' => $taxMoney->getAmount(),
-            'shipping_amount' => $shippingMoney->getAmount(), 'total' => $totalMoney->getAmount(),
-            'paid_amount_money' => $paidAmountMoney, 'paid_amount' => $paidAmountMoney->getAmount(),
-            'remaining_amount' => $remainingMoney->getAmount(),
+            'discount' => $discountMoney->getAmount(), 'promotion_discount' => $promoDiscountMoney->getAmount(),
+            'promotion_id' => $promo['promotion_id'], 'coupon_code' => $promo['coupon_code'],
+            'tax' => $taxMoney->getAmount(), 'shipping_amount' => $shippingMoney->getAmount(),
+            'total' => $totalMoney->getAmount(), 'paid_amount_money' => $paidAmountMoney,
+            'paid_amount' => $paidAmountMoney->getAmount(), 'remaining_amount' => $remainingMoney->getAmount(),
         ];
     }
 
-    private function enforceDiscountLimits(User $user, array $data, Money $subtotalMoney, Money $discountMoney): Money
+    private function resolveInvoicePromotion(User $user, array $data, array $preparedItems, ?int $branchId): array
     {
+        $isExternal = !empty($data['online_order_id']) || !empty($data['wc_order_id']) || !empty($data['shopify_order_id']);
+        if ($isExternal) {
+            return ['promotion_id' => null, 'coupon_code' => $data['coupon_code'] ?? null, 'promotion_discount_money' => Money::of($data['promotion_discount'] ?? 0)];
+        }
+        $wantsPromo = ($data['type'] ?? null) === InvoiceType::SALE->value && (!empty($data['coupon_code']) || !empty($data['promotion_id']) || !empty($data['apply_auto_promotion']));
+        if (!$wantsPromo) {
+            return ['promotion_id' => null, 'coupon_code' => null, 'promotion_discount_money' => Money::zero()];
+        }
+        $couponCode = $data['coupon_code'] ?? ($data['promotion_id'] ? Promotion::where('user_id', $user->getAccountId())->whereKey((int) $data['promotion_id'])->value('code') : null);
+        $eval = $this->promotionService->evaluateCart($user, $this->mapPreparedItemsForPromo($preparedItems), $couponCode, $branchId, !empty($couponCode));
+        $this->consumeLockedPromotion($eval['promotion_id'], $user->getAccountId());
+
+        return $eval;
+    }
+
+    private function mapPreparedItemsForPromo(array $preparedItems): array
+    {
+        return array_map(fn (array $item) => [
+            'product_id' => $item['product']->id,
+            'quantity' => $item['quantity'],
+            'unit_price' => $item['unit_price'],
+        ], $preparedItems);
+    }
+
+    private function consumeLockedPromotion(?int $promotionId, int $accountId): void
+    {
+        if (!$promotionId) {
+            return;
+        }
+        $promo = Promotion::where('user_id', $accountId)->lockForUpdate()->find($promotionId);
+        if ($promo && $promo->max_uses !== null && (int) $promo->used_count >= (int) $promo->max_uses) {
+            throw new PosDomainException('تم استنفاد الحد الأقصى لاستخدام هذا العرض أو الكوبون.', 'PROMOTION_MAX_USES_EXCEEDED', 422);
+        }
+        $promo?->increment('used_count');
+    }
+
+    private function enforceDiscountLimits(User $user, array $data, Money $subtotalMoney, Money $discountMoney, Money $promoDiscountMoney): Money
+    {
+        if ($discountMoney->isLessThan($promoDiscountMoney)) {
+            $discountMoney = $promoDiscountMoney;
+        }
         if ($discountMoney->isGreaterThan($subtotalMoney)) {
             if (empty($data['online_order_id']) && empty($data['wc_order_id']) && empty($data['shopify_order_id'])) {
                 throw new PosDomainException('قيمة الخصم لا يمكن أن تتجاوز إجمالي الأصناف (قيمة السلة).', 'DISCOUNT_EXCEEDS_SUBTOTAL', 422);
             }
             $discountMoney = $subtotalMoney;
         }
+        $this->assertCashierManualDiscountLimit($user, $data, $subtotalMoney, $discountMoney->subtract($promoDiscountMoney));
 
+        return $discountMoney;
+    }
+
+    private function assertCashierManualDiscountLimit(User $user, array $data, Money $subtotalMoney, Money $manualDiscountMoney): void
+    {
         $maxPercent = $this->settingService->getMaxDiscountPercent($user);
         $isExternalStoreOrder = !empty($data['online_order_id']) || !empty($data['wc_order_id']) || !empty($data['shopify_order_id']);
-        if (!$isExternalStoreOrder && !$user->isOwnerOrAdmin() && !$user->isManager() && $maxPercent < 100.0 && $discountMoney->isGreaterThan($subtotalMoney->multiply($maxPercent / 100.0))) {
+        if (!$isExternalStoreOrder && !$user->isOwnerOrAdmin() && !$user->isManager() && $maxPercent < 100.0 && $manualDiscountMoney->isGreaterThan($subtotalMoney->multiply($maxPercent / 100.0))) {
             $maxAmount = number_format($subtotalMoney->multiply($maxPercent / 100.0)->getAmount(), 2);
             throw new PosDomainException(sprintf('أقصى نسبة خصم مسموحة لك هي %.2f%% (بحد أقصى %s).', $maxPercent, $maxAmount), 'DISCOUNT_EXCEEDS_LIMIT', 422);
         }
-
-        return $discountMoney;
     }
 
     private function resolveInvoicePaidMoney(array $data, Money $totalMoney, string $paymentMethod): Money
@@ -254,11 +307,18 @@ class InvoiceService
         return $paidAmountMoney;
     }
 
+    private function resolveCreatorUser(User $user, array $data): User
+    {
+        $createdBy = !empty($data['created_by']) ? (int) $data['created_by'] : $user->id;
+
+        return ($createdBy === $user->id) ? $user : (\App\Models\User::find($createdBy) ?? $user);
+    }
+
     private function resolveInvoiceExecutionContext(User $user, string $type, array $data): array
     {
         $accountId = $user->getAccountId();
-        $createdBy = !empty($data['created_by']) ? (int) $data['created_by'] : $user->id;
-        $creatorUser = ($createdBy === $user->id) ? $user : (\App\Models\User::find($createdBy) ?? $user);
+        $creatorUser = $this->resolveCreatorUser($user, $data);
+        $createdBy = $creatorUser->id;
         $activeShift = !empty($data['shift_id'])
             ? \App\Models\Shift::withoutGlobalScopes()->where('user_id', $accountId)->find($data['shift_id'])
             : $this->shiftService->getActiveShift($creatorUser);
@@ -292,20 +352,23 @@ class InvoiceService
             ?? Branch::where('user_id', $accountId)->value('id');
     }
 
-    private function persistInvoiceHeader(User $user, array $data, string $invoiceNumber, $idempotencyKey, array $totals, array $context): Invoice
+    private function persistInvoiceHeader(User $user, array $data, string $invoiceNumber, $idempotencyKey, array $totals, array $context, ?Invoice $parentInvoice = null): Invoice
     {
         $type = $data['type'];
         $isSaleType = in_array($type, [InvoiceType::SALE->value, InvoiceType::SALE_RETURN->value], true);
+        $defaultSalespersonId = $parentInvoice?->salesperson_id ?? $parentInvoice?->created_by ?? $context['created_by'];
 
         return Invoice::create([
             'user_id' => $user->getAccountId(), 'branch_id' => $context['branch_id'], 'created_by' => $context['created_by'],
-            'salesperson_id' => $isSaleType ? (!empty($data['salesperson_id']) ? (int) $data['salesperson_id'] : $context['created_by']) : null,
+            'salesperson_id' => $isSaleType ? (!empty($data['salesperson_id']) ? (int) $data['salesperson_id'] : $defaultSalespersonId) : null,
             'treasury_id' => $context['treasury']->id, 'shift_id' => $context['active_shift']?->id,
             'invoice_number' => $invoiceNumber, 'idempotency_key' => $idempotencyKey, 'online_order_id' => $data['online_order_id'] ?? null, 'wc_order_id' => $data['wc_order_id'] ?? null, 'shopify_order_id' => $data['shopify_order_id'] ?? null,
             'type' => $type, 'party_id' => $data['party_id'] ?? null,
             'courier_party_id' => !empty($data['courier_party_id']) ? (int) $data['courier_party_id'] : null,
-            'parent_invoice_id' => $data['parent_invoice_id'] ?? null, 'date' => $data['date'] ?? now()->toDateString(),
-            'subtotal' => $totals['subtotal'], 'discount' => $totals['discount'], 'tax' => $totals['tax'],
+            'parent_invoice_id' => $data['parent_invoice_id'] ?? null, 'promotion_id' => $totals['promotion_id'] ?? null,
+            'coupon_code' => $totals['coupon_code'] ?? null, 'date' => $data['date'] ?? now()->toDateString(),
+            'subtotal' => $totals['subtotal'], 'discount' => $totals['discount'], 'promotion_discount' => $totals['promotion_discount'] ?? 0,
+            'tax' => $totals['tax'],
             'shipping_amount' => $totals['shipping_amount'], 'total' => $totals['total'],
             'paid_amount' => $totals['paid_amount'], 'remaining_amount' => $totals['remaining_amount'],
             'payment_method' => $totals['payment_method'], 'notes' => $data['notes'] ?? null,
@@ -496,6 +559,12 @@ class InvoiceService
 
             $this->reverseInvoiceStock($user, $invoice, $invoiceTypeStr);
             $this->reverseInvoiceFinancials($user, $invoice, $invoiceTypeStr);
+            if ($invoice->promotion_id) {
+                Promotion::where('user_id', $user->getAccountId())
+                    ->whereKey($invoice->promotion_id)
+                    ->where('used_count', '>', 0)
+                    ->decrement('used_count');
+            }
             $invoice->items()->delete();
             $invoice->delete();
         });
@@ -586,7 +655,9 @@ class InvoiceService
         $perPage = min((int) ($filters['per_page'] ?? 20), 100);
 
         return $this->buildFilteredInvoicesQuery($user, $filters)
-            ->with(['party', 'creator', 'salesperson'])
+            ->with(['party', 'creator', 'salesperson', 'parentInvoice:id,invoice_number'])
+            ->withSum('returnInvoices as returned_total', 'total')
+            ->withCount('returnInvoices as returns_count')
             ->latest()
             ->paginate($perPage);
     }
@@ -610,15 +681,151 @@ class InvoiceService
 
     public function findForShowOrFail(int $id): Invoice
     {
-        return Invoice::with(['party', 'items', 'creator', 'salesperson'])->findOrFail($id);
+        return Invoice::with(['party', 'items', 'creator', 'salesperson', 'parentInvoice:id,invoice_number'])
+            ->withSum('returnInvoices as returned_total', 'total')
+            ->withCount('returnInvoices as returns_count')
+            ->findOrFail($id);
     }
 
-    public function findByNumberForUser(User $user, string $invoiceNumber): ?Invoice
+    public function findByNumberForUser(User $user, string $invoiceNumber, ?string $returnContextType = null): ?Invoice
     {
-        return Invoice::where('user_id', $user->getAccountId())
-            ->where('invoice_number', $invoiceNumber)
+        $candidates = $this->buildInvoiceNumberCandidates($invoiceNumber, $returnContextType);
+        if (empty($candidates)) {
+            return null;
+        }
+
+        $matches = Invoice::where('user_id', $user->getAccountId())
+            ->whereIn('invoice_number', $candidates)
             ->with(['party', 'items', 'creator', 'salesperson'])
-            ->first();
+            ->get()
+            ->keyBy('invoice_number');
+
+        foreach ($candidates as $candidate) {
+            if ($matches->has($candidate)) {
+                $found = $matches->get($candidate);
+                $this->enrichItemsWithReturnableQuantities($user->getAccountId(), $found);
+
+                return $found;
+            }
+        }
+
+        return null;
+    }
+
+    private function validateAndLockParentReturn(User $user, string $type, array $data, array $preparedItems): ?Invoice
+    {
+        if (empty($data['parent_invoice_id']) || !in_array($type, [InvoiceType::SALE_RETURN->value, InvoiceType::PURCHASE_RETURN->value], true)) {
+            return null;
+        }
+        $parent = Invoice::where('user_id', $user->getAccountId())->with('items')->lockForUpdate()->findOrFail((int) $data['parent_invoice_id']);
+        $expectedParent = $type === InvoiceType::SALE_RETURN->value ? InvoiceType::SALE->value : InvoiceType::PURCHASE->value;
+        $actualParent = $parent->type instanceof InvoiceType ? $parent->type->value : (string) $parent->type;
+        if ($actualParent !== $expectedParent) {
+            throw new PosDomainException('نوع الفاتورة الأصلية غير متوافق مع نوع المرتجع.', 'INVALID_PARENT_INVOICE_TYPE', 422);
+        }
+        $this->assertReturnQuantitiesWithinParent($user->getAccountId(), $parent, $preparedItems);
+
+        return $parent;
+    }
+
+    private function assertReturnQuantitiesWithinParent(int $accountId, Invoice $parent, array $preparedItems): void
+    {
+        $originalMap = $this->aggregateItemQuantities($parent->items);
+        $returnedMap = $this->getReturnedQuantitiesByParent($accountId, $parent->id);
+        $requestedMap = $this->aggregateItemQuantities($preparedItems);
+
+        foreach ($requestedMap as $key => $requestedQty) {
+            if (!isset($originalMap[$key])) {
+                throw new PosDomainException('أحد الأصناف المحددة غير موجود في الفاتورة الأصلية المربوطة.', 'RETURN_ITEM_NOT_IN_PARENT', 422);
+            }
+            $remaining = Quantity::of($originalMap[$key])->subtract(Quantity::of($returnedMap[$key] ?? 0))->maxZero();
+            if ($requestedQty->isGreaterThan($remaining)) {
+                throw new PosDomainException(
+                    "الكمية المطلوب استرجاعها تتجاوز الكمية المتبقية القابلة للاسترجاع ({$remaining->toFloat()}).",
+                    'RETURN_QUANTITY_EXCEEDS_ORIGINAL',
+                    422
+                );
+            }
+        }
+    }
+
+    /**
+     * @return array<string, Quantity>
+     */
+    private function aggregateItemQuantities(iterable $items): array
+    {
+        $map = [];
+        foreach ($items as $item) {
+            $productId = is_array($item) ? (int) $item['product']->id : (int) $item->product_id;
+            $variantId = is_array($item) ? ($item['product_variant_id'] ?? 0) : ($item->product_variant_id ?? 0);
+            $qty = Quantity::of(is_array($item) ? $item['quantity'] : $item->quantity);
+            $key = "{$productId}:{$variantId}";
+            $map[$key] = isset($map[$key]) ? $map[$key]->add($qty) : $qty;
+        }
+
+        return $map;
+    }
+
+    /**
+     * @return array<string, float>
+     */
+    private function getReturnedQuantitiesByParent(int $accountId, int $parentInvoiceId): array
+    {
+        $priorItems = InvoiceItem::whereHas('invoice', fn ($q) => $q->where('user_id', $accountId)->where('parent_invoice_id', $parentInvoiceId))
+            ->get(['product_id', 'product_variant_id', 'quantity']);
+
+        return array_map(fn (Quantity $q) => $q->toFloat(), $this->aggregateItemQuantities($priorItems));
+    }
+
+    private function enrichItemsWithReturnableQuantities(int $accountId, Invoice $invoice): void
+    {
+        $returnedMap = $this->getReturnedQuantitiesByParent($accountId, $invoice->id);
+        foreach ($invoice->items as $item) {
+            $key = "{$item->product_id}:" . ($item->product_variant_id ?? 0);
+            $alreadyReturned = Quantity::of($returnedMap[$key] ?? 0);
+            $returnable = Quantity::of($item->quantity)->subtract($alreadyReturned)->maxZero();
+            $item->setAttribute('returned_quantity', $alreadyReturned->toFloat());
+            $item->setAttribute('returnable_quantity', $returnable->toFloat());
+            $item->setAttribute('effective_return_unit_price', $this->resolveEffectiveReturnUnitPrice($invoice, $item));
+        }
+    }
+
+    private function resolveEffectiveReturnUnitPrice(Invoice $invoice, InvoiceItem $item): float
+    {
+        $subtotalMoney = Money::of($invoice->subtotal ?? 0);
+        $discountMoney = Money::of($invoice->discount ?? 0);
+        $unitPriceMoney = Money::of($item->unit_price ?? 0);
+        if (!$discountMoney->isPositive() || !$subtotalMoney->isPositive()) {
+            return $unitPriceMoney->getAmount();
+        }
+        $netRatio = max(0, $subtotalMoney->subtract($discountMoney)->getAmount() / $subtotalMoney->getAmount());
+
+        return $unitPriceMoney->multiply($netRatio)->getAmount();
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function buildInvoiceNumberCandidates(string $rawInput, ?string $returnContextType): array
+    {
+        $cleaned = strtoupper(ltrim(trim($rawInput), '#'));
+        if ($cleaned === '') {
+            return [];
+        }
+
+        $candidates = [trim($rawInput), $cleaned];
+        if (preg_match('/^(INV|PUR|SRT|PRT)-?0*(\d+)$/', $cleaned, $m)) {
+            $num = (string) (int) $m[2];
+            $candidates[] = $m[1] . '-' . str_pad($num, 5, '0', STR_PAD_LEFT);
+            $candidates[] = $m[1] . '-' . $num;
+        } elseif (preg_match('/^0*(\d+)$/', $cleaned, $m)) {
+            $prefix = $returnContextType === InvoiceType::PURCHASE_RETURN->value ? 'PUR-' : 'INV-';
+            $num = (string) (int) $m[1];
+            $candidates[] = $prefix . str_pad($num, 5, '0', STR_PAD_LEFT);
+            $candidates[] = $prefix . $num;
+        }
+
+        return array_values(array_unique(array_filter($candidates, fn (string $v) => $v !== '')));
     }
 
     public function updateSalesperson(Invoice $invoice, ?int $salespersonId): Invoice

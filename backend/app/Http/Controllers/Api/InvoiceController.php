@@ -76,7 +76,12 @@ class InvoiceController extends Controller
      */
     public function findByNumber(Request $request, string $invoiceNumber): JsonResponse
     {
-        $invoice = $this->invoiceService->findByNumberForUser($request->user(), $invoiceNumber);
+        $returnType = $request->query('return_type');
+        $invoice = $this->invoiceService->findByNumberForUser(
+            $request->user(),
+            $invoiceNumber,
+            is_string($returnType) ? $returnType : null
+        );
 
         if (!$invoice) {
             return response()->json([
@@ -85,7 +90,7 @@ class InvoiceController extends Controller
             ], 404);
         }
 
-        Gate::authorize('view', $invoice);
+        Gate::authorize($request->boolean('for_return') ? 'viewForReturn' : 'view', $invoice);
 
         return response()->json([
             'success' => true,

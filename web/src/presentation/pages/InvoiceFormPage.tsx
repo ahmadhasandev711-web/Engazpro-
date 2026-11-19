@@ -219,28 +219,49 @@ export const InvoiceFormPage: React.FC = () => {
     enabled: isSale,
   });
 
-  const handleSearchInvoice = async () => {
-    if (!invoiceLookupNumber.trim()) return;
-    setIsSearchingInvoice(true);
-    setErrorMessage(null);
-    try {
-      const res = await apiClient.get(`/invoices/by-number/${encodeURIComponent(invoiceLookupNumber.trim())}`);
-      const inv: Invoice = res.data.data;
-      setParentInvoice(inv);
-      setValue('parent_invoice_id', inv.id);
-      if (inv.party_id) {
-        setValue('party_id', inv.party_id);
+  const performParentInvoiceLookup = React.useCallback(
+    async (targetNumber: string) => {
+      const cleaned = targetNumber.trim();
+      if (!cleaned) return;
+      setIsSearchingInvoice(true);
+      setErrorMessage(null);
+      try {
+        const res = await apiClient.get(`/invoices/by-number/${encodeURIComponent(cleaned)}`, {
+          params: { for_return: 1, return_type: invoiceType },
+        });
+        const inv: Invoice = res.data.data;
+        setParentInvoice(inv);
+        setValue('parent_invoice_id', inv.id);
+        if (inv.party_id) {
+          setValue('party_id', inv.party_id);
+        }
+        if (inv.branch_id && !isCashier && !isMandob) {
+          setValue('branch_id', inv.branch_id);
+        }
+      } catch (err: any) {
+        setErrorMessage(err.response?.data?.message || 'لم يتم العثور على فاتورة بهذا الرقم');
+        setParentInvoice(null);
+      } finally {
+        setIsSearchingInvoice(false);
       }
-      if (inv.branch_id && !isCashier && !isMandob) {
-        setValue('branch_id', inv.branch_id);
-      }
-    } catch (err: any) {
-      setErrorMessage(err.response?.data?.message || 'لم يتم العثور على فاتورة بهذا الرقم');
-      setParentInvoice(null);
-    } finally {
-      setIsSearchingInvoice(false);
-    }
+    },
+    [invoiceType, isCashier, isMandob, setValue]
+  );
+
+  const handleSearchInvoice = () => {
+    void performParentInvoiceLookup(invoiceLookupNumber);
   };
+
+  const autoLookedUpParentRef = React.useRef<string | null>(null);
+  useEffect(() => {
+    if (!isReturn) return;
+    const parentParam = new URLSearchParams(location.search).get('parent')?.trim();
+    if (parentParam && autoLookedUpParentRef.current !== parentParam) {
+      autoLookedUpParentRef.current = parentParam;
+      setInvoiceLookupNumber(parentParam);
+      void performParentInvoiceLookup(parentParam);
+    }
+  }, [isReturn, location.search, performParentInvoiceLookup]);
 
   const isSameInvoiceLine = (line: any, candidate: any) =>
     Number(line.product_id) === Number(candidate.product_id) &&
@@ -327,12 +348,17 @@ export const InvoiceFormPage: React.FC = () => {
       unit_name: item.unit_name ?? null,
     };
     const existingIndex = fields.findIndex((f: any) => isSameInvoiceLine(f, candidate));
-    const maxQty = Number(item.quantity || 0);
+    const maxQty = Number(item.returnable_quantity ?? item.quantity ?? 0);
+
+    if (maxQty <= 0) {
+      setErrorMessage(`تم استرجاع كامل كمية "${item.product_name}" مسبقاً من هذه الفاتورة.`);
+      return;
+    }
 
     if (existingIndex >= 0) {
       const currentQty = Number(items[existingIndex]?.quantity || 0);
-      if (maxQty > 0 && currentQty >= maxQty) {
-        setErrorMessage(`الكمية المسترجعة من "${item.product_name}" لا يمكن أن تتجاوز الكمية الأصلية (${maxQty}).`);
+      if (currentQty >= maxQty) {
+        setErrorMessage(`الكمية المسترجعة من "${item.product_name}" لا يمكن أن تتجاوز الكمية المتبقية (${maxQty}).`);
         return;
       }
       setValue(`items.${existingIndex}.quantity`, currentQty + 1, { shouldValidate: true, shouldDirty: true });
@@ -342,10 +368,12 @@ export const InvoiceFormPage: React.FC = () => {
         ...candidate,
         product_name: item.product_name,
         quantity: 1,
-        unit_price: item.unit_price,
+        unit_price: Number(item.effective_return_unit_price ?? item.unit_price ?? 0),
       } as any);
     }
   };
+
+  const shouldRedirectToPosExchangeRef = React.useRef(false);
 
   const saveMutation = useMutation({
     mutationFn: async (data: InvoiceInput) => {
@@ -355,13 +383,31 @@ export const InvoiceFormPage: React.FC = () => {
         parent_invoice_id: data.parent_invoice_id || null,
       });
     },
-    onSuccess: () => {
+    onSuccess: (res: any) => {
+      if (isSaleReturn && shouldRedirectToPosExchangeRef.current) {
+        shouldRedirectToPosExchangeRef.current = false;
+        const savedInv = res.data?.data || res.data;
+        navigate('/pos', {
+          state: {
+            exchangeFromReturn: {
+              id: savedInv?.id,
+              invoice_number: savedInv?.invoice_number,
+              total: Number(savedInv?.total ?? total) || 0,
+              party_id: savedInv?.party_id ?? watch('party_id') ?? null,
+              party_name: savedInv?.party_name || parentInvoice?.party_name || null,
+            },
+          },
+        });
+        return;
+      }
+      shouldRedirectToPosExchangeRef.current = false;
       if (isSaleReturn) navigate('/sales/returns');
       else if (isPurchaseReturn) navigate('/purchases/returns');
       else if (isPurchase) navigate('/purchases');
       else navigate('/sales');
     },
     onError: (err: any) => {
+      shouldRedirectToPosExchangeRef.current = false;
       const errors = err.response?.data?.errors;
       if (errors) {
         const firstErr = Object.values(errors).flat()[0] as string;
@@ -431,6 +477,7 @@ export const InvoiceFormPage: React.FC = () => {
               parentInvoice={parentInvoice}
               invoiceLookupNumber={invoiceLookupNumber}
               isSearchingInvoice={isSearchingInvoice}
+              isPurchaseReturn={isPurchaseReturn}
               onSearchNumberChange={setInvoiceLookupNumber}
               onSearchInvoice={handleSearchInvoice}
               onClearParentInvoice={() => {
@@ -516,6 +563,14 @@ export const InvoiceFormPage: React.FC = () => {
           total={total}
           remaining={remaining}
           isPending={saveMutation.isPending}
+          onSaveAndExchangeInPos={
+            isSaleReturn
+              ? () => {
+                  shouldRedirectToPosExchangeRef.current = true;
+                  handleSubmit(onSubmit)();
+                }
+              : undefined
+          }
         />
       </form>
 

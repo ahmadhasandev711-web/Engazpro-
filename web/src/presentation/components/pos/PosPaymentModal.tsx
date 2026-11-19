@@ -26,6 +26,9 @@ interface PosPaymentModalProps {
   customer: CustomerParty | null;
   items: PosCartItem[];
   discount: number;
+  promotionId?: number | null;
+  couponCode?: string | null;
+  applyAutoPromotion?: boolean;
   shippingCost?: number;
   courierPartyId?: number | null;
   branchId?: number | null;
@@ -39,6 +42,9 @@ export const PosPaymentModal: React.FC<PosPaymentModalProps> = ({
   customer,
   items,
   discount,
+  promotionId,
+  couponCode,
+  applyAutoPromotion = false,
   shippingCost = 0,
   courierPartyId,
   branchId,
@@ -189,6 +195,9 @@ export const PosPaymentModal: React.FC<PosPaymentModalProps> = ({
           unit_price: i.unit_price,
         })),
         discount: discount || 0,
+        promotion_id: promotionId || undefined,
+        coupon_code: couponCode || undefined,
+        apply_auto_promotion: applyAutoPromotion || undefined,
         shipping_amount: shippingCost || 0,
         courier_party_id: courierPartyId || undefined,
         payment_method: method,

@@ -37,6 +37,8 @@ class WooCommerceIntegration extends Model
         'anoofy_callback_url',
         'anoofy_connected_at',
         'auto_sync_stock',
+        'auto_sync_prices',
+        'auto_sync_promotions',
         'is_active',
         'last_synced_at',
         'last_error',
@@ -49,6 +51,8 @@ class WooCommerceIntegration extends Model
         'anoofy_secret' => 'encrypted',
         'anoofy_connected_at' => 'datetime',
         'auto_sync_stock' => 'boolean',
+        'auto_sync_prices' => 'boolean',
+        'auto_sync_promotions' => 'boolean',
         'is_active' => 'boolean',
         'last_synced_at' => 'datetime',
     ];

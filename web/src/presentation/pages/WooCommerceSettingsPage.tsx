@@ -15,6 +15,8 @@ import {
   Headphones,
   X,
   AlertTriangle,
+  Tag,
+  DollarSign,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { apiClient } from '../../data/api/client';
@@ -36,6 +38,8 @@ export const WooCommerceSettingsPage: React.FC = () => {
   const [consumerSecret, setConsumerSecret] = useState('');
   const [onlineBranchId, setOnlineBranchId] = useState<number | ''>('');
   const [autoSyncStock, setAutoSyncStock] = useState(true);
+  const [autoSyncPrices, setAutoSyncPrices] = useState(false);
+  const [autoSyncPromotions, setAutoSyncPromotions] = useState(false);
   const [isActive, setIsActive] = useState(true);
   const [copiedWebhook, setCopiedWebhook] = useState(false);
   const [copiedSecret, setCopiedSecret] = useState(false);
@@ -110,6 +114,8 @@ export const WooCommerceSettingsPage: React.FC = () => {
       setStoreUrl(settingsData.store_url || '');
       setOnlineBranchId(settingsData.online_branch_id || '');
       setAutoSyncStock(settingsData.auto_sync_stock ?? true);
+      setAutoSyncPrices(settingsData.auto_sync_prices ?? false);
+      setAutoSyncPromotions(settingsData.auto_sync_promotions ?? false);
       setIsActive(settingsData.is_active ?? true);
     }
   }, [settingsData]);
@@ -121,6 +127,8 @@ export const WooCommerceSettingsPage: React.FC = () => {
         store_url: storeUrl,
         online_branch_id: onlineBranchId || null,
         auto_sync_stock: autoSyncStock,
+        auto_sync_prices: autoSyncPrices,
+        auto_sync_promotions: autoSyncPromotions,
         is_active: isActive,
       };
       if (consumerKey) payload.consumer_key = consumerKey;
@@ -203,6 +211,29 @@ export const WooCommerceSettingsPage: React.FC = () => {
     },
     onError: (err: any) => {
       setFeedback({ type: 'error', message: err.response?.data?.message || 'فشلت مزامنة أرصدة المنتجات مع ووكومرس' });
+    },
+  });
+
+  const pushAllPricesMutation = useMutation({
+    mutationFn: async () => apiClient.post('/woocommerce/push-all-prices'),
+    onSuccess: (res) => {
+      setFeedback({ type: 'success', message: res.data?.message || 'تم تحديث أسعار المنتجات في ووكومرس بنجاح' });
+      setTimeout(() => setFeedback(null), 5000);
+    },
+    onError: (err: any) => {
+      setFeedback({ type: 'error', message: err.response?.data?.message || 'فشلت مزامنة الأسعار مع ووكومرس' });
+    },
+  });
+
+  const syncCouponsMutation = useMutation({
+    mutationFn: async () => apiClient.post('/woocommerce/sync-coupons'),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['promotions'] });
+      setFeedback({ type: 'success', message: res.data?.message || 'تم سحب كوبونات ووكومرس بنجاح' });
+      setTimeout(() => setFeedback(null), 5000);
+    },
+    onError: (err: any) => {
+      setFeedback({ type: 'error', message: err.response?.data?.message || 'فشل سحب كوبونات ووكومرس' });
     },
   });
 
@@ -325,6 +356,26 @@ export const WooCommerceSettingsPage: React.FC = () => {
       onClick: () => pushAllStocksMutation.mutate(),
       cardClass: 'bg-brand-soft/60 border-brand/30 hover:bg-brand-soft',
       iconClass: 'bg-brand text-on-brand',
+    },
+    {
+      key: 'prices',
+      title: 'دفع كل الأسعار لووكومرس (Bulk Price Push)',
+      subtitle: 'إرسال الأسعار وسعر العرض لجميع الأصناف والمتغيرات لووكومرس فوراً',
+      icon: DollarSign,
+      isPending: pushAllPricesMutation.isPending,
+      onClick: () => pushAllPricesMutation.mutate(),
+      cardClass: 'bg-info-soft/60 border-info/30 hover:bg-info-soft',
+      iconClass: 'bg-info text-on-brand',
+    },
+    {
+      key: 'coupons',
+      title: 'سحب كوبونات ووكومرس الآن',
+      subtitle: 'استيراد كوبونات الخصم من ووكومرس لتعمل تلقائياً داخل الكاشير',
+      icon: Tag,
+      isPending: syncCouponsMutation.isPending,
+      onClick: () => syncCouponsMutation.mutate(),
+      cardClass: 'bg-ok-soft/60 border-ok/30 hover:bg-ok-soft',
+      iconClass: 'bg-ok text-on-brand',
     },
     {
       key: 'webhooks',
@@ -529,6 +580,40 @@ export const WooCommerceSettingsPage: React.FC = () => {
                   type="checkbox"
                   checked={autoSyncStock}
                   onChange={(e) => setAutoSyncStock(e.target.checked)}
+                  className="w-5 h-5 text-brand rounded-lg focus:ring-brand accent-brand cursor-pointer shrink-0"
+                />
+              </div>
+
+              <div className="p-4 bg-surface-2/60 border border-line rounded-2xl flex items-center justify-between gap-3">
+                <div>
+                  <span className="text-xs font-bold text-ink block">
+                    مزامنة الأسعار وسعر العرض تلقائياً (POS → WooCommerce)
+                  </span>
+                  <span className="text-xs text-muted block mt-0.5">
+                    عند تعديل السعر أو سعر الأوكازيون في السيستم، يتم تحديث سعر الصنف ومتغيراته في ووكومرس تلقائياً.
+                  </span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={autoSyncPrices}
+                  onChange={(e) => setAutoSyncPrices(e.target.checked)}
+                  className="w-5 h-5 text-brand rounded-lg focus:ring-brand accent-brand cursor-pointer shrink-0"
+                />
+              </div>
+
+              <div className="p-4 bg-surface-2/60 border border-line rounded-2xl flex items-center justify-between gap-3">
+                <div>
+                  <span className="text-xs font-bold text-ink block">
+                    مزامنة الكوبونات والعروض تلقائياً (ثنائية الاتجاه)
+                  </span>
+                  <span className="text-xs text-muted block mt-0.5">
+                    دفع كوبونات الخصم من الكاشير لووكومرس واستقبال تعديلات كوبونات المتجر عبر Webhooks.
+                  </span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={autoSyncPromotions}
+                  onChange={(e) => setAutoSyncPromotions(e.target.checked)}
                   className="w-5 h-5 text-brand rounded-lg focus:ring-brand accent-brand cursor-pointer shrink-0"
                 />
               </div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowDownLeft, ArrowUpRight, Trash2, User, FileText, CreditCard, Printer } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, Trash2, User, FileText, CreditCard, Printer, Share2 } from 'lucide-react';
 import { formatCurrency, getPaymentMethodLabel } from '@pos-mandob/shared';
 import { Badge, Button, Card } from '../ui';
 
@@ -9,6 +9,7 @@ interface PaymentMobileCardProps {
   canDelete?: boolean;
   onDelete?: (id: number) => void;
   onPrint?: (payment: any) => void;
+  onShare?: (payment: any) => void;
 }
 
 export const PaymentMobileCard: React.FC<PaymentMobileCardProps> = ({
@@ -17,6 +18,7 @@ export const PaymentMobileCard: React.FC<PaymentMobileCardProps> = ({
   canDelete = false,
   onDelete,
   onPrint,
+  onShare,
 }) => {
   const isReceipt = payment.type === 'RECEIPT';
 
@@ -91,6 +93,20 @@ export const PaymentMobileCard: React.FC<PaymentMobileCardProps> = ({
         </Badge>
 
         <div className="flex items-center gap-1.5">
+          {onShare && (
+            <Button
+              type="button"
+              variant="secondary"
+              size="md"
+              onClick={() => onShare(payment)}
+              className="px-3 text-xs font-bold text-ok bg-ok-soft border-ok/30 hover:bg-ok-soft/80 gap-1.5"
+              title="مشاركة عبر واتساب"
+            >
+              <Share2 className="w-3.5 h-3.5" />
+              <span>واتساب</span>
+            </Button>
+          )}
+
           {onPrint && (
             <Button
               type="button"

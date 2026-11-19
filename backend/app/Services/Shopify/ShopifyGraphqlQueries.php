@@ -263,6 +263,136 @@ mutation CancelOrder($orderId: ID!, $reason: OrderCancelReason!, $notifyCustomer
 }
 GRAPHQL;
 
+    public const PRODUCT_VARIANTS_BULK_UPDATE_PRICES = <<<'GRAPHQL'
+mutation ProductVariantsBulkUpdatePrices($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
+  productVariantsBulkUpdate(productId: $productId, variants: $variants) {
+    productVariants { id price compareAtPrice }
+    userErrors { field message code }
+  }
+}
+GRAPHQL;
+
+    public const DISCOUNT_CODE_BASIC_CREATE = <<<'GRAPHQL'
+mutation DiscountCodeBasicCreate($basicCodeDiscount: DiscountCodeBasicInput!) {
+  discountCodeBasicCreate(basicCodeDiscount: $basicCodeDiscount) {
+    codeDiscountNode { id }
+    userErrors { field message code }
+  }
+}
+GRAPHQL;
+
+    public const DISCOUNT_CODE_BASIC_UPDATE = <<<'GRAPHQL'
+mutation DiscountCodeBasicUpdate($id: ID!, $basicCodeDiscount: DiscountCodeBasicInput!) {
+  discountCodeBasicUpdate(id: $id, basicCodeDiscount: $basicCodeDiscount) {
+    codeDiscountNode { id }
+    userErrors { field message code }
+  }
+}
+GRAPHQL;
+
+    public const DISCOUNT_CODE_DEACTIVATE = <<<'GRAPHQL'
+mutation DiscountCodeDeactivate($id: ID!) {
+  discountCodeDeactivate(id: $id) {
+    codeDiscountNode { id }
+    userErrors { field message code }
+  }
+}
+GRAPHQL;
+
+    public const DISCOUNT_CODE_DELETE = <<<'GRAPHQL'
+mutation DiscountCodeDelete($id: ID!) {
+  discountCodeDelete(id: $id) {
+    deletedCodeDiscountId
+    userErrors { field message code }
+  }
+}
+GRAPHQL;
+
+    public const DISCOUNT_AUTOMATIC_BXGY_CREATE = <<<'GRAPHQL'
+mutation DiscountAutomaticBxgyCreate($automaticBxgyDiscount: DiscountAutomaticBxgyInput!) {
+  discountAutomaticBxgyCreate(automaticBxgyDiscount: $automaticBxgyDiscount) {
+    automaticDiscountNode { id }
+    userErrors { field message code }
+  }
+}
+GRAPHQL;
+
+    public const DISCOUNT_AUTOMATIC_BXGY_UPDATE = <<<'GRAPHQL'
+mutation DiscountAutomaticBxgyUpdate($id: ID!, $automaticBxgyDiscount: DiscountAutomaticBxgyInput!) {
+  discountAutomaticBxgyUpdate(id: $id, automaticBxgyDiscount: $automaticBxgyDiscount) {
+    automaticDiscountNode { id }
+    userErrors { field message code }
+  }
+}
+GRAPHQL;
+
+    public const DISCOUNT_AUTOMATIC_DELETE = <<<'GRAPHQL'
+mutation DiscountAutomaticDelete($id: ID!) {
+  discountAutomaticDelete(id: $id) {
+    deletedAutomaticDiscountId
+    userErrors { field message code }
+  }
+}
+GRAPHQL;
+
+    public const CODE_DISCOUNT_NODES_PAGE = <<<'GRAPHQL'
+query FetchCodeDiscounts($first: Int!, $after: String) {
+  codeDiscountNodes(first: $first, after: $after) {
+    pageInfo { hasNextPage endCursor }
+    nodes {
+      id
+      codeDiscount {
+        ... on DiscountCodeBasic {
+          title status startsAt endsAt usageLimit asyncUsageCount
+          codes(first: 1) { nodes { code } }
+          minimumRequirement { ... on DiscountMinimumSubtotal { greaterThanOrEqualToSubtotal { amount } } }
+          customerGets { value { ... on DiscountPercentage { percentage } ... on DiscountAmount { amount { amount } } } }
+        }
+      }
+    }
+  }
+}
+GRAPHQL;
+
+    public const AUTOMATIC_DISCOUNT_NODES_PAGE = <<<'GRAPHQL'
+query FetchAutomaticDiscounts($first: Int!, $after: String) {
+  automaticDiscountNodes(first: $first, after: $after) {
+    pageInfo { hasNextPage endCursor }
+    nodes {
+      id
+      automaticDiscount {
+        ... on DiscountAutomaticBxgy {
+          title status startsAt endsAt
+          customerBuys { value { ... on DiscountQuantity { quantity } } }
+          customerGets { value { ... on DiscountOnQuantity { quantity { quantity } effect { ... on DiscountPercentage { percentage } } } } }
+        }
+      }
+    }
+  }
+}
+GRAPHQL;
+
+    public const DISCOUNT_NODE_BY_ID = <<<'GRAPHQL'
+query FetchDiscountNodeById($id: ID!) {
+  discountNode(id: $id) {
+    id
+    discount {
+      ... on DiscountCodeBasic {
+        title status startsAt endsAt usageLimit asyncUsageCount
+        codes(first: 1) { nodes { code } }
+        minimumRequirement { ... on DiscountMinimumSubtotal { greaterThanOrEqualToSubtotal { amount } } }
+        customerGets { value { ... on DiscountPercentage { percentage } ... on DiscountAmount { amount { amount } } } }
+      }
+      ... on DiscountAutomaticBxgy {
+        title status startsAt endsAt
+        customerBuys { value { ... on DiscountQuantity { quantity } } }
+        customerGets { value { ... on DiscountOnQuantity { quantity { quantity } effect { ... on DiscountPercentage { percentage } } } } }
+      }
+    }
+  }
+}
+GRAPHQL;
+
     /**
      * Shared media extraction for GraphQL ProductVariant `media` connection and legacy `image` payload.
      *

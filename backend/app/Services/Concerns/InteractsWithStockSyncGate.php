@@ -16,23 +16,22 @@ trait InteractsWithStockSyncGate
 
     public static function isActive(int $userId): bool
     {
-        if ((self::$suppressedDepth[$userId] ?? 0) > 0) {
-            return false;
-        }
+        return self::checkIntegrationFlag($userId, 'auto_sync_stock', '');
+    }
 
-        return Cache::remember(static::cachePrefix() . $userId, 60, function () use ($userId) {
-            if (!User::withoutGlobalScopes()->whereKey($userId)->where('ecommerce_enabled', true)->exists()) {
-                return false;
-            }
+    public static function isPriceSyncActive(int $userId): bool
+    {
+        return self::checkIntegrationFlag($userId, 'auto_sync_prices', 'price_');
+    }
 
-            $modelClass = static::integrationModelClass();
+    public static function isPromotionSyncActive(int $userId): bool
+    {
+        return self::checkIntegrationFlag($userId, 'auto_sync_promotions', 'promo_');
+    }
 
-            return $modelClass::withoutGlobalScopes()
-                ->where('user_id', $userId)
-                ->where('is_active', true)
-                ->where('auto_sync_stock', true)
-                ->exists();
-        });
+    public static function isSuppressed(int $accountId): bool
+    {
+        return (self::$suppressedDepth[$accountId] ?? 0) > 0;
     }
 
     public static function suppressDuring(int $accountId, callable $callback): mixed
@@ -50,6 +49,29 @@ trait InteractsWithStockSyncGate
 
     public static function forget(int $userId): void
     {
-        Cache::forget(static::cachePrefix() . $userId);
+        foreach (['', 'price_', 'promo_'] as $subKey) {
+            Cache::forget(static::cachePrefix() . $subKey . $userId);
+        }
+    }
+
+    private static function checkIntegrationFlag(int $userId, string $flagColumn, string $subKey): bool
+    {
+        if (self::isSuppressed($userId)) {
+            return false;
+        }
+
+        return Cache::remember(static::cachePrefix() . $subKey . $userId, 60, function () use ($userId, $flagColumn) {
+            if (!User::withoutGlobalScopes()->whereKey($userId)->where('ecommerce_enabled', true)->exists()) {
+                return false;
+            }
+
+            $modelClass = static::integrationModelClass();
+
+            return $modelClass::withoutGlobalScopes()
+                ->where('user_id', $userId)
+                ->where('is_active', true)
+                ->where($flagColumn, true)
+                ->exists();
+        });
     }
 }

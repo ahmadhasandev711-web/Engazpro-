@@ -19,7 +19,7 @@ export const ExpensesPage: React.FC = () => {
   const { confirm } = useConfirm();
   const toast = useToast();
   const queryClient = useQueryClient();
-  const { canDeleteExpense, isOwnerOrAdmin, isCashier, isMandob } = usePermissions();
+  const { canDeleteExpense, canDeleteCategory, isOwnerOrAdmin, isCashier, isMandob } = usePermissions();
   const initialDates = calculatePresetDates('today');
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebouncedValue(search.trim(), 250);
@@ -170,6 +170,9 @@ export const ExpensesPage: React.FC = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['treasuries'] });
+      queryClient.invalidateQueries({ queryKey: ['active-shift'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       setIsModalOpen(false);
       setEditingExpense(null);
       reset();
@@ -185,6 +188,9 @@ export const ExpensesPage: React.FC = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['treasuries'] });
+      queryClient.invalidateQueries({ queryKey: ['active-shift'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
     onError: (err: any) => {
       setErrorMessage(err.response?.data?.message || 'تعذر حذف المصروف');
@@ -251,20 +257,22 @@ export const ExpensesPage: React.FC = () => {
               >
                 تصدير Excel
               </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                size="md"
-                leftIcon={<Tags className="w-4 h-4 text-brand" />}
-                onClick={() => {
-                  setCatError(null);
-                  setIsCategoriesModalOpen(true);
-                }}
-                className="text-xs font-bold"
-                title="إدارة تصنيفات المصروفات"
-              >
-                إدارة التصنيفات
-              </Button>
+              {!isMandob && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="md"
+                  leftIcon={<Tags className="w-4 h-4 text-brand" />}
+                  onClick={() => {
+                    setCatError(null);
+                    setIsCategoriesModalOpen(true);
+                  }}
+                  className="text-xs font-bold"
+                  title="إدارة تصنيفات المصروفات"
+                >
+                  إدارة التصنيفات
+                </Button>
+              )}
               <Button
                 type="button"
                 variant="primary"
@@ -322,19 +330,21 @@ export const ExpensesPage: React.FC = () => {
           >
             <Download className="w-4 h-4 text-ok" />
           </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            size="md"
-            onClick={() => {
-              setCatError(null);
-              setIsCategoriesModalOpen(true);
-            }}
-            className="px-3"
-            title="إدارة التصنيفات"
-          >
-            <Tags className="w-4 h-4 text-brand" />
-          </Button>
+          {!isMandob && (
+            <Button
+              type="button"
+              variant="secondary"
+              size="md"
+              onClick={() => {
+                setCatError(null);
+                setIsCategoriesModalOpen(true);
+              }}
+              className="px-3"
+              title="إدارة التصنيفات"
+            >
+              <Tags className="w-4 h-4 text-brand" />
+            </Button>
+          )}
           <Button
             type="button"
             variant="primary"
@@ -772,23 +782,25 @@ export const ExpensesPage: React.FC = () => {
                             >
                               <Edit2 className="w-3.5 h-3.5" />
                             </button>
-                            <button
-                              type="button"
-                              onClick={async () => {
-                                const ok = await confirm({
-                                  title: 'تأكيد حذف التصنيف',
-                                  message: `هل أنت متأكد من حذف تصنيف "${cat.name}"؟`,
-                                  type: 'danger',
-                                });
-                                if (ok) {
-                                  deleteCategoryMutation.mutate(cat.id);
-                                }
-                              }}
-                              className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center text-muted hover:text-bad rounded-xl hover:bg-bad-soft transition-colors"
-                              title="حذف التصنيف"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            {canDeleteCategory && (
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  const ok = await confirm({
+                                    title: 'تأكيد حذف التصنيف',
+                                    message: `هل أنت متأكد من حذف تصنيف "${cat.name}"؟`,
+                                    type: 'danger',
+                                  });
+                                  if (ok) {
+                                    deleteCategoryMutation.mutate(cat.id);
+                                  }
+                                }}
+                                className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center text-muted hover:text-bad rounded-xl hover:bg-bad-soft transition-colors"
+                                title="حذف التصنيف"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                           </div>
                         </>
                       )}

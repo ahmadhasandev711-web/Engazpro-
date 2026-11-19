@@ -8,6 +8,7 @@ interface InvoiceParentLookupProps {
   parentInvoice: Invoice | null;
   invoiceLookupNumber: string;
   isSearchingInvoice: boolean;
+  isPurchaseReturn?: boolean;
   onSearchNumberChange: (value: string) => void;
   onSearchInvoice: () => void;
   onClearParentInvoice: () => void;
@@ -18,11 +19,21 @@ export const InvoiceParentLookup: React.FC<InvoiceParentLookupProps> = ({
   parentInvoice,
   invoiceLookupNumber,
   isSearchingInvoice,
+  isPurchaseReturn = false,
   onSearchNumberChange,
   onSearchInvoice,
   onClearParentInvoice,
   onAddItemToReturn,
 }) => {
+  const sampleNumber = isPurchaseReturn ? 'PUR-00001' : 'INV-00001';
+  const handleLookupKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (invoiceLookupNumber.trim() && !isSearchingInvoice) {
+        onSearchInvoice();
+      }
+    }
+  };
   return (
     <Card className="p-4 bg-warn-soft/50 border-warn/30 space-y-3">
       <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -46,9 +57,10 @@ export const InvoiceParentLookup: React.FC<InvoiceParentLookupProps> = ({
         <div className="flex-1">
           <Input
             type="text"
-            placeholder="أدخل رقم الفاتورة الأصلية (مثال: INV-00001)..."
+            placeholder={`أدخل رقم الفاتورة (مثال: 1 أو 001 أو ${sampleNumber})...`}
             value={invoiceLookupNumber}
             onChange={(e) => onSearchNumberChange(e.target.value)}
+            onKeyDown={handleLookupKeyDown}
             className="tabular-nums text-right border-warn/40 focus:border-warn focus:ring-warn"
           />
         </div>
@@ -79,29 +91,55 @@ export const InvoiceParentLookup: React.FC<InvoiceParentLookupProps> = ({
               التاريخ: <span className="text-ink tabular-nums">{parentInvoice.date}</span>
             </span>
           </div>
+          {!isPurchaseReturn && Number(parentInvoice.discount) > 0 && (
+            <div className="p-2 rounded-xl bg-info-soft border border-info/30 text-info text-[11px] font-bold">
+              تنبيه: الفاتورة الأصلية عليها خصم/عرض بقيمة {formatCurrency(parentInvoice.discount)} — يتم احتساب صافي سعر الاسترجاع للوحدة بعد الخصم تلقائياً
+            </div>
+          )}
           <div className="text-xs font-medium text-muted">اختر البنود المراد استرجاعها:</div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {parentInvoice.items?.map((item: any) => (
-              <button
-                key={`${item.id ?? item.product_id}-${item.product_variant_id ?? 0}-${item.product_batch_id ?? 0}`}
-                type="button"
-                onClick={() => onAddItemToReturn(item)}
-                className="min-h-[44px] flex justify-between items-center gap-2 p-2.5 bg-surface-2 hover:bg-warn-soft/50 border border-line rounded-xl text-right transition-colors cursor-pointer"
-              >
-                <div className="min-w-0">
-                  <p className="font-bold text-ink text-xs truncate">{item.product_name}</p>
-                  <InvoiceItemMeta
-                    variantName={item.variant_name}
-                    batchNumber={item.batch_number}
-                    unitName={item.unit_name}
-                  />
-                  <p className="text-[11px] text-muted tabular-nums mt-0.5">
-                    الكمية الأصلية: {item.quantity} × {formatCurrency(item.unit_price)}
-                  </p>
-                </div>
-                <Badge tone="warn" className="shrink-0">+ استرجاع</Badge>
-              </button>
-            ))}
+            {parentInvoice.items?.map((item: any) => {
+              const returnedQty = Number(item.returned_quantity ?? 0);
+              const returnableQty = Number(item.returnable_quantity ?? item.quantity ?? 0);
+              const isFullyReturned = returnableQty <= 0;
+              const effectiveUnitPrice = Number(item.effective_return_unit_price ?? item.unit_price ?? 0);
+              const hasProratedDiscount = effectiveUnitPrice !== Number(item.unit_price ?? 0);
+
+              return (
+                <button
+                  key={`${item.id ?? item.product_id}-${item.product_variant_id ?? 0}-${item.product_batch_id ?? 0}`}
+                  type="button"
+                  disabled={isFullyReturned}
+                  onClick={() => onAddItemToReturn(item)}
+                  className={`min-h-[44px] flex justify-between items-center gap-2 p-2.5 border border-line rounded-xl text-right transition-colors ${
+                    isFullyReturned
+                      ? 'bg-surface-2/40 opacity-60 cursor-not-allowed'
+                      : 'bg-surface-2 hover:bg-warn-soft/50 cursor-pointer'
+                  }`}
+                >
+                  <div className="min-w-0">
+                    <p className="font-bold text-ink text-xs truncate">{item.product_name}</p>
+                    <InvoiceItemMeta
+                      variantName={item.variant_name}
+                      batchNumber={item.batch_number}
+                      unitName={item.unit_name}
+                    />
+                    <p className="text-[11px] text-muted tabular-nums mt-0.5">
+                      الأصلية: {item.quantity} × {formatCurrency(effectiveUnitPrice)}
+                      {hasProratedDiscount && (
+                        <span className="line-through opacity-60 mr-1">
+                          ({formatCurrency(item.unit_price)})
+                        </span>
+                      )}
+                      {returnedQty > 0 && ` | متاح: ${returnableQty}`}
+                    </p>
+                  </div>
+                  <Badge tone={isFullyReturned ? 'neutral' : 'warn'} className="shrink-0">
+                    {isFullyReturned ? 'مسترجع بالكامل' : '+ استرجاع'}
+                  </Badge>
+                </button>
+              );
+            })}
           </div>
         </Card>
       )}

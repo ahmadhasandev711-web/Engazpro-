@@ -18,8 +18,13 @@ class BarcodeController extends Controller
      */
     public function generate(Request $request): JsonResponse
     {
-        $count = (int) $request->input('count', 1);
-        $prefix = $request->input('prefix');
+        $validated = $request->validate([
+            'count' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'prefix' => ['nullable', 'string', 'max:20'],
+        ]);
+
+        $count = (int) ($validated['count'] ?? 1);
+        $prefix = $validated['prefix'] ?? null;
 
         $barcodes = $this->barcodeService->generateUniqueBarcodes($request->user(), $count, $prefix);
 

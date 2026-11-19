@@ -6,7 +6,10 @@ use App\Enums\EcommercePlatform;
 use App\Enums\QueueName;
 use App\Jobs\Middleware\WithTenantContext;
 use App\Models\User;
+use App\Models\WooCommerceIntegration;
 use App\Services\OnlineOrders\OnlineOrderIngestionService;
+use App\Services\WooCommerce\WooCommerceProductImportService;
+use App\Services\WooCommerce\WooCommercePromotionSyncService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -35,16 +38,51 @@ class ProcessWooCommerceWebhookJob implements ShouldQueue
         return [new WithTenantContext($this->userId)];
     }
 
-    public function handle(OnlineOrderIngestionService $ingestionService): void
-    {
+    public function handle(
+        OnlineOrderIngestionService $ingestionService,
+        ?WooCommerceProductImportService $productImportService = null,
+        ?WooCommercePromotionSyncService $promotionSyncService = null
+    ): void {
         $user = User::withoutGlobalScopes()->find($this->userId);
         if (!$user) {
             Log::warning("ProcessWooCommerceWebhookJob: User #{$this->userId} not found.");
+            return;
+        }
+        $normalized = strtolower(trim((string) ($this->topic ?? '')));
+        if (str_starts_with($normalized, 'product.') || str_starts_with($normalized, 'coupon.')) {
+            $this->handleCatalogOrCouponWebhook(
+                $user,
+                $normalized,
+                $productImportService ?? app(WooCommerceProductImportService::class),
+                $promotionSyncService ?? app(WooCommercePromotionSyncService::class)
+            );
             return;
         }
 
         if (!empty($this->payload['id'])) {
             $ingestionService->ingest($user, EcommercePlatform::WOOCOMMERCE, $this->payload);
         }
+    }
+
+    private function handleCatalogOrCouponWebhook(
+        User $user,
+        string $normalizedTopic,
+        WooCommerceProductImportService $productImportService,
+        WooCommercePromotionSyncService $promotionSyncService
+    ): void {
+        $integration = WooCommerceIntegration::withoutGlobalScopes()
+            ->where('user_id', $this->userId)
+            ->where('is_active', true)
+            ->first();
+
+        if (!$integration) {
+            return;
+        }
+        if (str_starts_with($normalizedTopic, 'product.')) {
+            $productImportService->syncSingleProductFromWebhook($user, $integration, $this->payload);
+            return;
+        }
+
+        $promotionSyncService->ingestCouponWebhook($user, $integration, $normalizedTopic, $this->payload);
     }
 }

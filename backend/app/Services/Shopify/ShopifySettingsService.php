@@ -7,6 +7,8 @@ use App\Enums\EcommercePlatform;
 use App\Enums\ShopifyAuthMode;
 use App\Exceptions\ShopifyConnectionException;
 use App\Jobs\ImportShopifyProductsPageJob;
+use App\Jobs\PullEcommercePromotionsJob;
+use App\Jobs\PushAllShopifyPricesJob;
 use App\Jobs\PushAllShopifyStocksJob;
 use App\Models\Branch;
 use App\Models\Product;
@@ -33,12 +35,20 @@ class ShopifySettingsService
         'LOCATIONS_UPDATE',
     ];
 
+    public const DISCOUNT_WEBHOOK_TOPICS = [
+        'DISCOUNTS_CREATE',
+        'DISCOUNTS_UPDATE',
+        'DISCOUNTS_DELETE',
+    ];
+
     public function __construct(
         protected ShopifyGraphqlClientInterface $graphqlClient,
         protected ShopifyAuthService $authService,
         protected ShopifyProductImportService $importService,
         protected ShopifyBulkStockPushService $bulkStockPushService,
-        protected EcommerceAccessService $ecommerceAccess
+        protected EcommerceAccessService $ecommerceAccess,
+        protected ShopifyPricePushService $pricePushService,
+        protected ShopifyPromotionSyncService $promotionSyncService
     ) {}
 
     public function findForAccount(int $accountId, bool $withRelations = false): ?ShopifyIntegration
@@ -151,11 +161,14 @@ class ShopifySettingsService
     {
         $integration = $this->findActiveOrFail($accountId);
         $callbackUrl = url("/api/webhooks/shopify/{$integration->user_id}");
-        $ok = $this->graphqlClient->registerWebhooks($integration, $callbackUrl, self::DEFAULT_WEBHOOK_TOPICS);
+        $topics = $integration->auto_sync_promotions
+            ? [...self::DEFAULT_WEBHOOK_TOPICS, ...self::DISCOUNT_WEBHOOK_TOPICS]
+            : self::DEFAULT_WEBHOOK_TOPICS;
+        $ok = $this->graphqlClient->registerWebhooks($integration, $callbackUrl, $topics);
 
         $integration->update([
             'webhook_registered_at' => $ok ? now() : $integration->webhook_registered_at,
-            'webhook_topics' => $ok ? self::DEFAULT_WEBHOOK_TOPICS : $integration->webhook_topics,
+            'webhook_topics' => $ok ? $topics : $integration->webhook_topics,
             'last_error' => $ok ? null : 'تعذر تسجيل بعض خطافات الويب (Webhooks) على Shopify؛ تأكد من رابط HTTPS والصلاحيات.',
         ]);
 
@@ -197,6 +210,38 @@ class ShopifySettingsService
         PushAllShopifyStocksJob::dispatch($user->getAccountId(), $user->id);
 
         return ['queued' => true, 'linked_count' => $this->countLinkedProducts($user->getAccountId())];
+    }
+
+    public function pushAllPrices(User $user): array
+    {
+        $integration = $this->findActiveOrFail($user->getAccountId());
+        if (!$integration->is_active) {
+            throw new ShopifyConnectionException('ربط متجر Shopify غير نشط حالياً.', 422);
+        }
+
+        if (config('queue.default') === 'sync') {
+            return ['queued' => false, 'result' => $this->pricePushService->pushAll($user, $integration)];
+        }
+
+        PushAllShopifyPricesJob::dispatch($user->getAccountId(), $user->id);
+
+        return ['queued' => true, 'linked_count' => $this->countLinkedProducts($user->getAccountId())];
+    }
+
+    public function syncPromotions(User $user): array
+    {
+        $integration = $this->findActiveOrFail($user->getAccountId());
+        if (!$integration->is_active) {
+            throw new ShopifyConnectionException('ربط متجر Shopify غير نشط حالياً.', 422);
+        }
+
+        if (config('queue.default') === 'sync') {
+            return ['queued' => false, 'result' => $this->promotionSyncService->pullPromotions($user, $integration)];
+        }
+
+        PullEcommercePromotionsJob::dispatch($user->getAccountId(), $user->id, EcommercePlatform::SHOPIFY->value);
+
+        return ['queued' => true];
     }
 
     private function upsertRemoteLocation(ShopifyIntegration $integration, array $loc, bool $allowAutoDefaultBranch): void
@@ -244,6 +289,12 @@ class ShopifySettingsService
             $integration->default_branch_id = $validated['default_branch_id'] ? (int) $validated['default_branch_id'] : null;
         }
         $integration->auto_sync_stock = (bool) ($validated['auto_sync_stock'] ?? true);
+        if (array_key_exists('auto_sync_prices', $validated)) {
+            $integration->auto_sync_prices = (bool) $validated['auto_sync_prices'];
+        }
+        if (array_key_exists('auto_sync_promotions', $validated)) {
+            $integration->auto_sync_promotions = (bool) $validated['auto_sync_promotions'];
+        }
         $integration->is_active = (bool) ($validated['is_active'] ?? true);
     }
 

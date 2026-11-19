@@ -96,16 +96,26 @@ class BranchScopeService
         }
 
         $branchId = $this->resolveQueryBranchId($actor, $requestedBranchId);
+
+        return $this->applyDirectBranchIdToTreasuryOrCreator($query, $actor->getAccountId(), $branchId);
+    }
+
+    public function applyDirectBranchIdToTreasuryOrCreator(
+        Builder $query,
+        int $accountId,
+        ?int $branchId
+    ): Builder {
         if ($branchId === null) {
             return $query;
         }
 
-        return $query->where(function (Builder $q) use ($treasuryRelation, $creatorRelation, $branchId) {
-            $q->whereHas($treasuryRelation, fn ($tq) => $tq->where('branch_id', $branchId))
-                ->orWhere(fn ($sub) => $sub
-                    ->whereHas($treasuryRelation, fn ($tq) => $tq->whereNull('branch_id'))
-                    ->whereHas($creatorRelation, fn ($cq) => $cq->where('branch_id', $branchId)));
-        });
+        $branchTreasuries = Treasury::withoutGlobalScopes()->where('user_id', $accountId)->where('branch_id', $branchId)->select('id');
+        $globalTreasuries = Treasury::withoutGlobalScopes()->where('user_id', $accountId)->whereNull('branch_id')->select('id');
+        $branchUsers = User::where(fn ($uq) => $uq->where('id', $accountId)->orWhere('owner_id', $accountId))->where('branch_id', $branchId)->select('id');
+
+        return $query->where(fn (Builder $q) => $q
+            ->whereIn('treasury_id', $branchTreasuries)
+            ->orWhere(fn (Builder $sub) => $sub->whereIn('treasury_id', $globalTreasuries)->whereIn('created_by', $branchUsers)));
     }
 
     public function canAccessTreasury(User $actor, Treasury $treasury): bool

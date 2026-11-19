@@ -34,8 +34,11 @@ class PayrollService
         $startDate = $date->copy()->startOfMonth()->toDateString();
         $endDate = $date->copy()->endOfMonth()->toDateString() . ' 23:59:59';
 
-        $salesQuery = $this->buildMonthlySalesQuery($employee, $startDate, $endDate);
-        $totalSalesAmount = Money::of($salesQuery->sum('total') ?? 0)->getAmount();
+        $salesQuery = $this->buildMonthlyInvoiceTypeQuery($employee, InvoiceType::SALE, $startDate, $endDate);
+        $grossSalesMoney = Money::of($salesQuery->sum('total') ?? 0);
+        $saleReturnsMoney = Money::of($this->buildMonthlyInvoiceTypeQuery($employee, InvoiceType::SALE_RETURN, $startDate, $endDate)->sum('total') ?? 0);
+        $netSalesMoney = $grossSalesMoney->subtract($saleReturnsMoney);
+        $totalSalesAmount = $netSalesMoney->isNegative() ? 0.0 : $netSalesMoney->getAmount();
         $invoicesCount = (int) $salesQuery->count();
 
         $commissionType = $employee->commission_type instanceof CommissionType
@@ -47,12 +50,12 @@ class PayrollService
         [$adjustments, $bonusesTotal, $deductionsTotal] = $this->aggregateMonthlyAdjustments($employee, $startDate, $endDate);
         $payout = PayrollPayout::where('user_id', $employee->getAccountId())->where('employee_id', $employee->id)->where('month', $yearMonth)->with(['treasury:id,name,type', 'payer:id,name'])->first();
 
-        return $this->formatMonthlyPayrollSummary($employee, $yearMonth, $totalSalesAmount, $invoicesCount, $commissionType, $commissionRate, $commissionMoney, $bonusesTotal, $deductionsTotal, $payout, $adjustments);
+        return $this->formatMonthlyPayrollSummary($employee, $yearMonth, $totalSalesAmount, $grossSalesMoney->getAmount(), $saleReturnsMoney->getAmount(), $invoicesCount, $commissionType, $commissionRate, $commissionMoney, $bonusesTotal, $deductionsTotal, $payout, $adjustments);
     }
 
-    private function buildMonthlySalesQuery(User $employee, string $startDate, string $endDate)
+    private function buildMonthlyInvoiceTypeQuery(User $employee, InvoiceType $type, string $startDate, string $endDate)
     {
-        $query = Invoice::where('user_id', $employee->getAccountId())->where('type', InvoiceType::SALE->value)->whereBetween('date', [$startDate, $endDate]);
+        $query = Invoice::where('user_id', $employee->getAccountId())->where('type', $type->value)->whereBetween('date', [$startDate, $endDate]);
 
         return $employee->isManager()
             ? $query->where('branch_id', $employee->branch_id)->whereNull('wc_order_id')
@@ -87,14 +90,14 @@ class PayrollService
         return [$adjustments, $bonuses, $deductions];
     }
 
-    private function formatMonthlyPayrollSummary(User $employee, string $yearMonth, float $totalSales, int $invoicesCount, CommissionType $commType, float $commRate, Money $commMoney, Money $bonuses, Money $deductions, ?PayrollPayout $payout, $adjustments): array
+    private function formatMonthlyPayrollSummary(User $employee, string $yearMonth, float $totalSales, float $grossSales, float $saleReturns, int $invoicesCount, CommissionType $commType, float $commRate, Money $commMoney, Money $bonuses, Money $deductions, ?PayrollPayout $payout, $adjustments): array
     {
         $baseSalaryMoney = Money::of($employee->base_salary ?? 0);
         $netPayableMoney = $baseSalaryMoney->add($commMoney)->add($bonuses)->subtract($deductions);
 
         return [
             'employee' => ['id' => $employee->id, 'name' => $employee->name, 'role' => $employee->role, 'branch_id' => $employee->branch_id, 'base_salary' => $baseSalaryMoney->getAmount(), 'commission_type' => $commType->value, 'commission_rate' => $commRate],
-            'month' => $yearMonth, 'is_manager_scope' => $employee->isManager(), 'total_sales' => $totalSales, 'invoices_count' => $invoicesCount,
+            'month' => $yearMonth, 'is_manager_scope' => $employee->isManager(), 'gross_sales' => $grossSales, 'sale_returns' => $saleReturns, 'total_sales' => $totalSales, 'invoices_count' => $invoicesCount,
             'base_salary' => $baseSalaryMoney->getAmount(), 'commission_amount' => $commMoney->getAmount(),
             'total_bonuses' => $bonuses->getAmount(), 'total_deductions' => $deductions->getAmount(),
             'net_payable' => max(0, $netPayableMoney->getAmount()), 'is_paid' => (bool) $payout,

@@ -41,7 +41,7 @@ return [
         'client_secret' => env('SHOPIFY_CLIENT_SECRET'),
         'scopes' => env(
             'SHOPIFY_SCOPES',
-            'read_products,write_inventory,read_orders,write_orders,read_fulfillments,write_fulfillments,read_locations,read_customers'
+            'read_products,write_products,write_inventory,read_orders,write_orders,read_fulfillments,write_fulfillments,read_locations,read_customers,read_discounts,write_discounts'
         ),
     ],
 

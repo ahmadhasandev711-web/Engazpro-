@@ -80,7 +80,7 @@ class ExpenseController extends Controller
 
         Gate::authorize('update', $expense);
 
-        $updated = $this->expenseService->updateExpense($expense, $request->validated());
+        $updated = $this->expenseService->updateExpense($expense, $request->validated(), $request->user());
 
         return response()->json([
             'success' => true,
@@ -98,7 +98,7 @@ class ExpenseController extends Controller
 
         Gate::authorize('delete', $expense);
 
-        $this->expenseService->deleteExpense($expense);
+        $this->expenseService->deleteExpense($expense, $request->user());
 
         return response()->json([
             'success' => true,

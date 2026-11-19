@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\InvoiceReturnStatus;
 use App\Support\Money;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -20,6 +21,9 @@ class InvoiceResource extends JsonResource
             ...$this->amountFields(),
             'payment_method' => $this->enumValue($this->payment_method),
             'parent_invoice_id' => $this->parent_invoice_id,
+            'promotion_id' => $this->promotion_id,
+            'coupon_code' => $this->coupon_code,
+            ...$this->returnMetaFields(),
             'created_by' => $this->created_by,
             'created_by_name' => $this->creator?->name,
             'created_by_role' => $this->enumValue($this->creator?->role),
@@ -34,11 +38,31 @@ class InvoiceResource extends JsonResource
         ];
     }
 
+    private function returnMetaFields(): array
+    {
+        $returnedMoney = Money::of($this->returned_total ?? 0);
+        $totalMoney = Money::of($this->total ?? 0);
+        $status = InvoiceReturnStatus::NONE->value;
+        if ($returnedMoney->isPositive()) {
+            $status = ($totalMoney->isPositive() && !$returnedMoney->lessThan($totalMoney))
+                ? InvoiceReturnStatus::FULL->value
+                : InvoiceReturnStatus::PARTIAL->value;
+        }
+
+        return [
+            'parent_invoice_number' => $this->parentInvoice?->invoice_number,
+            'returned_total' => $returnedMoney->getAmount(),
+            'returns_count' => (int) ($this->returns_count ?? 0),
+            'return_status' => $status,
+        ];
+    }
+
     private function amountFields(): array
     {
         return [
             'subtotal' => Money::of($this->subtotal ?? 0)->getAmount(),
             'discount' => Money::of($this->discount ?? 0)->getAmount(),
+            'promotion_discount' => Money::of($this->promotion_discount ?? 0)->getAmount(),
             'shipping_amount' => Money::of($this->shipping_amount ?? 0)->getAmount(),
             'tax' => Money::of($this->tax ?? 0)->getAmount(),
             'total' => Money::of($this->total ?? 0)->getAmount(),

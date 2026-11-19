@@ -116,6 +116,34 @@ class ShopifySettingsController extends Controller
         return response()->json(['success' => true, 'queued' => false, 'message' => "تم دفع رصيد {$outcome['result']['synced_count']} منتج إلى مواقع Shopify بنجاح", 'data' => $outcome['result']]);
     }
 
+    public function pushAllPrices(Request $request): JsonResponse
+    {
+        Gate::authorize('manage-ecommerce');
+        $outcome = $this->settingsService->pushAllPrices($request->user());
+        if ($outcome['queued']) {
+            return response()->json(['success' => true, 'queued' => true, 'message' => "بدأت مزامنة أسعار {$outcome['linked_count']} منتج نحو Shopify في الخلفية"], 202);
+        }
+
+        return response()->json(['success' => true, 'queued' => false, 'message' => "تم دفع أسعار {$outcome['result']['synced_count']} منتج إلى Shopify بنجاح", 'data' => $outcome['result']]);
+    }
+
+    public function syncPromotions(Request $request): JsonResponse
+    {
+        Gate::authorize('manage-ecommerce');
+        $outcome = $this->settingsService->syncPromotions($request->user());
+        if ($outcome['queued']) {
+            return response()->json(['success' => true, 'queued' => true, 'message' => 'بدأت عملية سحب الكوبونات والعروض من Shopify في الخلفية'], 202);
+        }
+        $res = $outcome['result'];
+
+        return response()->json([
+            'success' => true,
+            'queued' => false,
+            'message' => "تم سحب {$res['imported']} عرض جديد وتحديث {$res['updated']} عرض من Shopify بنجاح",
+            'data' => $res,
+        ]);
+    }
+
     private function presentSettings(ShopifyIntegration $integration): array
     {
         return [
@@ -128,6 +156,8 @@ class ShopifySettingsController extends Controller
             'default_branch_id' => $integration->default_branch_id,
             'default_branch_name' => $integration->defaultBranch?->name,
             'auto_sync_stock' => $integration->auto_sync_stock,
+            'auto_sync_prices' => (bool) ($integration->auto_sync_prices ?? false),
+            'auto_sync_promotions' => (bool) ($integration->auto_sync_promotions ?? false),
             'is_active' => $integration->is_active,
             'webhook_url' => url("/api/webhooks/shopify/{$integration->user_id}"),
             'webhook_secret' => $integration->webhook_secret,

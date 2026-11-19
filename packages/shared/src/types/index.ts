@@ -18,6 +18,10 @@ import {
   CustomerTier,
   CustomerInteractionChannel,
   CrmRiskLevel,
+  InvoiceReturnStatus,
+  PromotionType,
+  PromotionDiscountType,
+  PromotionSyncSource,
 } from '../enums';
 
 export interface BaseEntity {
@@ -197,6 +201,7 @@ export interface InvoiceItem {
   is_sub_unit?: boolean;
   quantity: number;
   unit_price: number;
+  effective_return_unit_price?: number;
   purchase_price_at_sale?: number | null; // for profit tracking
   total: number;
   notes?: string | null;
@@ -231,11 +236,57 @@ export interface Invoice extends BaseEntity {
   branch_id?: number | null;
   branch?: Branch | null;
   parent_invoice_id?: number | null; // For returns
+  parent_invoice_number?: string | null;
+  promotion_id?: number | null;
+  coupon_code?: string | null;
+  promotion_discount?: number;
+  returned_total?: number;
+  returns_count?: number;
+  return_status?: InvoiceReturnStatus | 'NONE' | 'PARTIAL' | 'FULL';
   online_order_id?: number | null;
   wc_order_id?: number | null;
   shopify_order_id?: number | null;
   created_by?: number | null;
   creator?: User | null;
+}
+
+export interface Promotion {
+  id: number;
+  name: string;
+  code?: string | null;
+  type: PromotionType | string;
+  discount_type: PromotionDiscountType | string;
+  discount_value: number;
+  buy_quantity?: number | null;
+  get_quantity?: number | null;
+  branch_id?: number | null;
+  branch_name?: string | null;
+  category_id?: number | null;
+  category_name?: string | null;
+  product_id?: number | null;
+  product_name?: string | null;
+  min_order_amount: number;
+  max_discount_amount?: number | null;
+  max_uses?: number | null;
+  used_count: number;
+  starts_at?: string | null;
+  ends_at?: string | null;
+  is_active: boolean;
+  wc_coupon_id?: number | null;
+  shopify_discount_id?: string | null;
+  sync_source?: PromotionSyncSource | string;
+  sync_to_ecommerce?: boolean;
+  last_synced_at?: string | null;
+  sync_error?: string | null;
+  created_at?: string;
+}
+
+export interface PromotionEvaluation {
+  promotion_id: number | null;
+  coupon_code: string | null;
+  promotion_name: string | null;
+  promotion_type: PromotionType | string | null;
+  promotion_discount: number;
 }
 
 export interface Treasury extends BaseEntity {

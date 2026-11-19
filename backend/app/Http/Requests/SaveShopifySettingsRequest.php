@@ -32,6 +32,8 @@ class SaveShopifySettingsRequest extends FormRequest
             'webhook_secret' => ['nullable', 'string', 'max:255'],
             'default_branch_id' => ['nullable', 'integer', Rule::exists('branches', 'id')->where(fn ($q) => $q->where('user_id', $accountId)->whereNull('deleted_at'))],
             'auto_sync_stock' => ['boolean'],
+            'auto_sync_prices' => ['boolean'],
+            'auto_sync_promotions' => ['boolean'],
             'is_active' => ['boolean'],
         ];
     }

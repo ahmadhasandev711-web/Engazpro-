@@ -283,10 +283,13 @@ class OnlineOrderSyncService
 
     private function resolveSnapshotUnitPrice(array $row, float $qty): float
     {
+        $safeQty = max(0.01, $qty);
+
         return match (true) {
+            isset($row['unit_price']) => Money::of($row['unit_price'])->getAmount(),
+            isset($row['subtotal']) => Money::of($row['subtotal'])->divide($safeQty)->getAmount(),
             isset($row['price']) => Money::of($row['price'])->getAmount(),
-            isset($row['subtotal']) => Money::of($row['subtotal'])->divide(max(1, $qty))->getAmount(),
-            default => Money::of($row['total'] ?? 0)->divide(max(1, $qty))->getAmount(),
+            default => Money::of($row['total'] ?? 0)->divide($safeQty)->getAmount(),
         };
     }
 
@@ -316,6 +319,8 @@ class OnlineOrderSyncService
             'type' => InvoiceType::SALE->value, 'party_id' => $locked->party_id, 'courier_party_id' => $locked->courier_party_id,
             'branch_id' => $branchId, 'items' => $this->resolveDeliveryItemsPayload($accountId, $locked),
             'discount' => $locked->discount_total, 'tax' => $locked->tax_total ?? 0, 'shipping_amount' => $locked->shipping_cost,
+            'coupon_code' => !empty($locked->coupon_codes[0]) ? substr((string) $locked->coupon_codes[0], 0, 64) : null,
+            'promotion_discount' => $locked->discount_total,
             'paid_amount' => $settlement['paid_amount']->getAmount(), 'payment_method' => $settlement['method'],
             'online_order_id' => $locked->id,
             'notes' => "أوردر {$locked->platform->label()} {$locked->displayReference()}{$tag}" . ($locked->notes ? " | {$locked->notes}" : ''),

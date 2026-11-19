@@ -19,7 +19,8 @@ class WooCommerceWebhookController extends Controller
             $userId,
             $request->getContent(),
             $request->header('X-WC-Webhook-Signature'),
-            $request->header('X-WC-Webhook-Topic')
+            $request->header('X-WC-Webhook-Topic'),
+            $request->header('X-WC-Webhook-Delivery-ID')
         );
 
         return response()->json($result['body'], $result['status']);

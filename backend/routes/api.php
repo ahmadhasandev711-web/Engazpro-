@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\LedgerController;
 use App\Http\Controllers\Api\PartyController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ProductController;
+use App\Http\Controllers\Api\PromotionController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\ShiftController;
 use App\Http\Controllers\Api\StockTransferController;
@@ -105,6 +106,10 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
         Route::get('invoices/by-number/{invoiceNumber}', [InvoiceController::class, 'findByNumber']);
         Route::patch('invoices/{id}/salesperson', [InvoiceController::class, 'updateSalesperson']);
         Route::apiResource('invoices', InvoiceController::class)->except(['update']);
+
+        // Promotions & Coupons Engine
+        Route::post('promotions/evaluate', [PromotionController::class, 'evaluate']);
+        Route::apiResource('promotions', PromotionController::class)->except(['show']);
 
         // Payments (Receipts & Payments)
         Route::apiResource('payments', PaymentController::class)->except(['update']);
@@ -201,6 +206,8 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
                 Route::post('register-webhooks', [\App\Http\Controllers\Api\WooCommerceSettingsController::class, 'autoRegisterWebhooks']);
                 Route::post('products/{product}/push-stock', [\App\Http\Controllers\Api\WooCommerceSettingsController::class, 'pushProductStock']);
                 Route::post('push-all-stocks', [\App\Http\Controllers\Api\WooCommerceSettingsController::class, 'pushAllStocks']);
+                Route::post('push-all-prices', [\App\Http\Controllers\Api\WooCommerceSettingsController::class, 'pushAllPrices']);
+                Route::post('sync-coupons', [\App\Http\Controllers\Api\WooCommerceSettingsController::class, 'syncCoupons']);
                 Route::post('anoofy/connection-key', [\App\Http\Controllers\Api\AnoofyConnectionController::class, 'generateKey']);
                 Route::delete('anoofy/connection', [\App\Http\Controllers\Api\AnoofyConnectionController::class, 'disconnect']);
             });
@@ -233,6 +240,8 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
                 Route::post('import-products', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'importProducts']);
                 Route::post('products/{product}/push-stock', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'pushProductStock']);
                 Route::post('push-all-stocks', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'pushAllStocks']);
+                Route::post('push-all-prices', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'pushAllPrices']);
+                Route::post('sync-promotions', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'syncPromotions']);
             });
         });
 

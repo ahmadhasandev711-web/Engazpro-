@@ -1,15 +1,2 @@
 User-agent: *
-Allow: /
-Allow: /login
-Allow: /register
-Disallow: /dashboard
-Disallow: /pos
-Disallow: /products
-Disallow: /invoices
-Disallow: /store-orders
-Disallow: /shopify
-Disallow: /woocommerce
-Disallow: /settings
-Disallow: /admin
-
-Sitemap: https://ebms.online/sitemap.xml
+Disallow: /

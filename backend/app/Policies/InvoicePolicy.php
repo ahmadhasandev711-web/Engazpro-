@@ -32,6 +32,36 @@ class InvoicePolicy
             : Response::deny('عذراً، لا تملك صلاحية عرض هذه الفاتورة');
     }
 
+    public function viewForReturn(User $user, Invoice $invoice): Response
+    {
+        if ($this->isPurchaseInvoice($invoice)) {
+            return ($user->isOwnerOrAdmin() || ($user->isManager() && app(BranchScopeService::class)->canAccessBranch($user, $invoice->branch_id)))
+                ? Response::allow()
+                : Response::deny('عذراً، استرجاع فواتير المشتريات مقتصر على المالك والإدارة ومديري الفروع فقط.');
+        }
+
+        if ($user->hasGlobalBranchAccess()) {
+            return Response::allow();
+        }
+
+        if ($user->isManager() || $user->isSupervisor() || $user->isCashier()) {
+            return app(BranchScopeService::class)->canAccessBranch($user, $invoice->branch_id)
+                ? Response::allow()
+                : Response::deny('عذراً، لا يمكنك عمل مرتجع على فاتورة تابعة لفرع آخر');
+        }
+
+        return ($invoice->created_by === $user->id && app(BranchScopeService::class)->canAccessBranch($user, $invoice->branch_id))
+            ? Response::allow()
+            : Response::deny('عذراً، لا تملك صلاحية عرض هذه الفاتورة');
+    }
+
+    private function isPurchaseInvoice(Invoice $invoice): bool
+    {
+        $typeVal = $invoice->type instanceof InvoiceType ? $invoice->type->value : (string) $invoice->type;
+
+        return in_array($typeVal, [InvoiceType::PURCHASE->value, InvoiceType::PURCHASE_RETURN->value], true);
+    }
+
     public function create(User $user, ?string $invoiceType = null): Response
     {
         if ($user->isOwnerOrAdmin() || $user->isManager()) {

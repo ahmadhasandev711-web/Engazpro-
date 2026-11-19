@@ -11,14 +11,11 @@ import {
   Building2,
   RefreshCw,
   X,
-  Trash2,
   Eye,
-  Send,
   Check,
   Search,
 } from 'lucide-react';
 import { apiClient } from '../../data/api/client';
-import { fetchProductSelectOptions } from '../../data/api/asyncOptionLoaders';
 import { REFERENCE_QUERY_OPTIONS } from '../../data/api/queryPresets';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useAuthStore } from '../../data/store/useAuthStore';
@@ -31,8 +28,8 @@ import { DateRangeFilter } from '../components/common/DateRangeFilter';
 import { nativeBackButton } from '../../platform/nativeBackButton';
 import { useToast } from '../context/ToastContext';
 import { useConfirm } from '../context/ConfirmContext';
+import { CreateStockTransferModal, StockTransferDetailsModal } from '../components/transfers/StockTransferModals';
 import {
-  AsyncSearchSelect,
   Badge,
   Button,
   Card,
@@ -43,7 +40,6 @@ import {
   Select,
   Tabs,
   TabItem,
-  Textarea,
 } from '../components/ui';
 
 export const StockTransfersPage: React.FC = () => {
@@ -95,7 +91,12 @@ export const StockTransfersPage: React.FC = () => {
 
   // 1. Fetch Branches for dropdowns (branch-scoped managers/supervisors use lightweight transfer_targets directory)
   const { data: rawBranches = [] } = useQuery({
-    queryKey: ['branches', canCreateStockTransfer && !hasGlobalBranchAccess ? 'transfer_targets' : 'default'],
+    queryKey: [
+      'branches',
+      user?.id,
+      lockedBranchId ?? null,
+      canCreateStockTransfer && !hasGlobalBranchAccess ? 'transfer_targets' : 'default',
+    ],
     queryFn: async () => {
       const res = await apiClient.get('/branches', {
         params: canCreateStockTransfer && !hasGlobalBranchAccess ? { purpose: 'transfer_targets' } : undefined,
@@ -110,6 +111,8 @@ export const StockTransfersPage: React.FC = () => {
   const { data: transfersData, isLoading, isFetching } = useQuery({
     queryKey: [
       'stock-transfers',
+      user?.id,
+      lockedBranchId ?? null,
       statusFilter,
       debouncedSearch,
       fromBranchFilter,
@@ -688,277 +691,27 @@ export const StockTransfersPage: React.FC = () => {
       </Card>
 
       {/* Create Transfer Modal - Responsive Bottom Sheet */}
-      {createModalOpen && (
-        <div className="fixed inset-0 z-50 bg-canvas/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150">
-          <div className="bg-panel border border-line w-full sm:max-w-2xl rounded-t-[2.5rem] sm:rounded-2xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col animate-in slide-in-from-bottom sm:zoom-in-95 duration-200">
-            {/* Sheet Handle */}
-            <div className="w-12 h-1.5 bg-line-2 rounded-full mx-auto my-2.5 sm:hidden" />
-            <div className="p-5 bg-surface-2 border-b border-line flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <ArrowLeftRight className="w-5 h-5 text-brand-ink" />
-                <h2 className="font-bold text-ink text-lg">إذن تحويل بضاعة بين الفروع</h2>
-              </div>
-              <button
-                type="button"
-                onClick={() => setCreateModalOpen(false)}
-                className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center rounded-xl text-muted hover:bg-surface-2 hover:text-ink transition-colors"
-                aria-label="إغلاق"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
-              {/* From & To Branch Selectors */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Select
-                  label="فرع المصدر (يتم الخصم منه) *"
-                  required
-                  disabled={!hasGlobalBranchAccess && Boolean(lockedBranchId)}
-                  value={formData.from_branch_id}
-                  onChange={(e) => setFormData({ ...formData, from_branch_id: e.target.value })}
-                >
-                  <option value="">-- اختر فرع المصدر --</option>
-                  {branches.map((b: any) => (
-                    <option key={b.id} value={b.id}>
-                      {b.name} ({b.code})
-                    </option>
-                  ))}
-                </Select>
-
-                <Select
-                  label="فرع الوجهة (المستقبل) *"
-                  required
-                  value={formData.to_branch_id}
-                  onChange={(e) => setFormData({ ...formData, to_branch_id: e.target.value })}
-                >
-                  <option value="">-- اختر فرع الوجهة --</option>
-                  {branches
-                    .filter((b: any) => String(b.id) !== formData.from_branch_id)
-                    .map((b: any) => (
-                      <option key={b.id} value={b.id}>
-                        {b.name} ({b.code})
-                      </option>
-                    ))}
-                </Select>
-              </div>
-
-              {/* Items List */}
-              <div className="pt-3">
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-xs font-semibold text-ink">الأصناف والكميات المحولة *</label>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="md"
-                    onClick={handleAddItem}
-                    leftIcon={<Plus className="w-3.5 h-3.5" />}
-                    className="text-xs font-semibold text-brand-ink"
-                  >
-                    إضافة صنف آخر
-                  </Button>
-                </div>
-
-                <div className="space-y-3">
-                  {formData.items.map((item, idx) => {
-                    const selectedProd = item.selected_product;
-                    const hasVariants = selectedProd?.variants && selectedProd.variants.length > 0;
-
-                    return (
-                      <div key={idx} className="p-3 bg-surface-2 border border-line rounded-xl flex flex-col sm:flex-row items-center gap-2">
-                        <div className="flex-1 w-full">
-                          <AsyncSearchSelect
-                            required
-                            placeholder="-- اختر الصنف --"
-                            searchPlaceholder="ابحث باسم الصنف أو الكود..."
-                            value={item.product_id}
-                            selectedOption={
-                              selectedProd
-                                ? {
-                                    value: String(selectedProd.id),
-                                    label: selectedProd.code
-                                      ? `${selectedProd.name} (${selectedProd.code})`
-                                      : selectedProd.name,
-                                    raw: selectedProd,
-                                  }
-                                : null
-                            }
-                            queryKeyPrefix={['transfer-products', formData.from_branch_id || 'all']}
-                            loadOptions={(term) =>
-                              fetchProductSelectOptions(term, formData.from_branch_id || null)
-                            }
-                            onChange={(opt) => {
-                              const newItems = [...formData.items];
-                              newItems[idx] = {
-                                ...newItems[idx],
-                                product_id: opt ? String(opt.value) : '',
-                                product_variant_id: '',
-                                selected_product: opt?.raw || null,
-                              };
-                              setFormData({ ...formData, items: newItems });
-                            }}
-                          />
-                        </div>
-
-                        {hasVariants && (
-                          <div className="w-full sm:w-48">
-                            <Select
-                              required
-                              value={item.product_variant_id}
-                              onChange={(e) => handleItemChange(idx, 'product_variant_id', e.target.value)}
-                              className="text-brand-ink font-medium"
-                            >
-                              <option value="">-- اختر المقاس / اللون --</option>
-                              {selectedProd.variants.map((v: any) => (
-                                <option key={v.id} value={v.id}>
-                                  {v.name} (مقاس: {v.size || '-'} | لون: {v.color || '-'})
-                                </option>
-                              ))}
-                            </Select>
-                          </div>
-                        )}
-
-                        <div className="w-full sm:w-28">
-                          <Input
-                            type="number"
-                            min="0.1"
-                            step="any"
-                            required
-                            placeholder="الكمية"
-                            value={item.quantity_sent}
-                            onChange={(e) => handleItemChange(idx, 'quantity_sent', Number(e.target.value))}
-                            className="text-center font-bold tabular-nums"
-                          />
-                        </div>
-
-                        {formData.items.length > 1 && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="md"
-                            onClick={() => handleRemoveItem(idx)}
-                            className="min-w-[44px] px-2.5 text-muted hover:text-bad hover:bg-bad-soft"
-                            aria-label="حذف الصنف"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <Textarea
-                label="ملاحظات التحويل (اختياري)"
-                rows={2}
-                placeholder="أي تفاصيل أو رقم مرجعي للشحن والتسليم..."
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                className="resize-none"
-              />
-
-              <div className="flex items-center justify-end gap-2 pt-4 border-t border-line">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="md"
-                  onClick={() => setCreateModalOpen(false)}
-                >
-                  إلغاء
-                </Button>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  size="md"
-                  disabled={createMutation.isPending}
-                  leftIcon={<Send className="w-4 h-4" />}
-                >
-                  {createMutation.isPending ? 'جاري التحويل...' : 'تأكيد وإرسال التحويل'}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <CreateStockTransferModal
+        isOpen={createModalOpen}
+        onClose={() => setCreateModalOpen(false)}
+        userId={user?.id}
+        branches={branches}
+        formData={formData}
+        setFormData={setFormData}
+        hasGlobalBranchAccess={hasGlobalBranchAccess}
+        lockedBranchId={lockedBranchId}
+        isSubmitting={createMutation.isPending}
+        onAddItem={handleAddItem}
+        onRemoveItem={handleRemoveItem}
+        onItemChange={handleItemChange}
+        onSubmit={handleSubmit}
+      />
 
       {/* View Transfer Details Modal - Responsive Bottom Sheet */}
-      {selectedTransfer && (
-        <div className="fixed inset-0 z-50 bg-canvas/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150">
-          <div className="bg-panel border border-line w-full sm:max-w-lg rounded-t-[2.5rem] sm:rounded-2xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col animate-in slide-in-from-bottom sm:zoom-in-95 duration-200">
-            {/* Sheet Handle */}
-            <div className="w-12 h-1.5 bg-line-2 rounded-full mx-auto my-2.5 sm:hidden" />
-            <div className="p-5 bg-surface-2 border-b border-line flex items-center justify-between">
-              <div>
-                <h3 className="font-bold text-ink text-lg">إذن تحويل: {selectedTransfer.transfer_number}</h3>
-                <span className="text-xs text-muted">
-                  {selectedTransfer.transferred_at ? new Date(selectedTransfer.transferred_at).toLocaleString('ar-EG') : ''}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedTransfer(null)}
-                className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center rounded-xl text-muted hover:bg-surface-2 hover:text-ink transition-colors"
-                aria-label="إغلاق"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-3 p-3 bg-surface-2 rounded-xl text-xs">
-                <div>
-                  <span className="text-muted block">من فرع:</span>
-                  <span className="font-bold text-ink mt-0.5 block">{selectedTransfer.from_branch?.name}</span>
-                </div>
-                <div>
-                  <span className="text-muted block">إلى فرع:</span>
-                  <span className="font-bold text-brand-ink mt-0.5 block">{selectedTransfer.to_branch?.name}</span>
-                </div>
-              </div>
-
-              <div>
-                <h4 className="text-xs font-semibold text-muted mb-2">الأصناف المحولة:</h4>
-                <div className="divide-y divide-line border border-line rounded-xl overflow-hidden">
-                  {selectedTransfer.items?.map((item: any) => (
-                    <div key={item.id} className="p-3 flex items-center justify-between text-sm">
-                      <div>
-                        <div className="font-semibold text-ink">{item.product?.name}</div>
-                        {item.variant && (
-                          <div className="text-xs text-brand-ink font-medium">
-                            مقاس: {item.variant.size || '-'} | لون: {item.variant.color || '-'}
-                          </div>
-                        )}
-                      </div>
-                      <div className="text-left font-bold text-ink tabular-nums">
-                        {item.quantity_sent} {item.unit_name || 'قطعة'}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {selectedTransfer.notes && (
-                <div className="p-3 bg-warn-soft rounded-xl text-xs text-warn border border-warn/25">
-                  <span className="font-bold block mb-0.5">ملاحظات:</span>
-                  {selectedTransfer.notes}
-                </div>
-              )}
-            </div>
-
-            <div className="p-4 bg-surface-2 border-t border-line flex justify-end">
-              <Button
-                type="button"
-                variant="secondary"
-                size="md"
-                onClick={() => setSelectedTransfer(null)}
-              >
-                إغلاق
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <StockTransferDetailsModal
+        transfer={selectedTransfer}
+        onClose={() => setSelectedTransfer(null)}
+      />
     </div>
   );
 };

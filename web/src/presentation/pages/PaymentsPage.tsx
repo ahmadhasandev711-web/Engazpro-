@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Trash2, ArrowDownLeft, ArrowUpRight, AlertCircle, X, CheckCircle2, Receipt, Printer } from 'lucide-react';
+import { Plus, Search, Trash2, ArrowDownLeft, ArrowUpRight, AlertCircle, X, CheckCircle2, Receipt, Printer, Share2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { PaymentSchema, PaymentInput, PaymentMethod, formatCurrency, getPaymentMethodLabel } from '@pos-mandob/shared';
@@ -9,6 +9,8 @@ import { fetchPartySelectOptions } from '../../data/api/asyncOptionLoaders';
 import { REFERENCE_QUERY_OPTIONS } from '../../data/api/queryPresets';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { usePermissions } from '../../hooks/usePermissions';
+import { useAuthStore } from '../../data/store/useAuthStore';
+import { webShareService, formatPaymentVoucherWhatsAppText } from '../../infrastructure/pwa/webShareService';
 import { DateRangeFilter, calculatePresetDates } from '../components/common/DateRangeFilter';
 import { PaginationBar } from '../components/common/PaginationBar';
 import { PaymentMobileCard } from '../components/mobile/PaymentMobileCard';
@@ -21,6 +23,7 @@ export const PaymentsPage: React.FC = () => {
   const { confirm } = useConfirm();
   const queryClient = useQueryClient();
   const { canDeletePayment, canViewEmployeePaymentsScope, isCashier, isMandob } = usePermissions();
+  const user = useAuthStore((state) => state.user);
   const isCashRestrictedEmployee = isCashier || isMandob;
   const initialDates = calculatePresetDates('today');
   const [activeTab, setActiveTab] = useState<'ALL' | 'RECEIPT' | 'PAYMENT'>('ALL');
@@ -159,6 +162,24 @@ export const PaymentsPage: React.FC = () => {
   const onSubmit = (data: PaymentInput) => {
     setErrorMessage(null);
     createMutation.mutate(data);
+  };
+
+  const handleSharePayment = async (p: any) => {
+    const storeIdentity = user?.store_identity;
+    const storeName = storeIdentity?.business_name || (user as any)?.store_name || user?.name || 'المتجر';
+    const storePhone = storeIdentity?.store_phone || user?.phone;
+    const currencySymbol = storeIdentity?.currency || 'ج.م';
+    const isReceipt = p.type === 'RECEIPT';
+    const text = formatPaymentVoucherWhatsAppText(p, {
+      storeName,
+      storePhone,
+      currencySymbol,
+    });
+    await webShareService.shareInvoice({
+      title: `${isReceipt ? 'سند قبض' : 'سند صرف'} #${p.id} - ${storeName}`,
+      text,
+      phone: p.party_phone || undefined,
+    });
   };
 
   const filteredPayments = payments;
@@ -396,6 +417,14 @@ export const PaymentsPage: React.FC = () => {
                           <div className="flex items-center justify-center gap-1">
                             <button
                               type="button"
+                              onClick={() => handleSharePayment(p)}
+                              className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center text-ok hover:bg-ok-soft rounded-xl transition-colors"
+                              title="مشاركة عبر واتساب"
+                            >
+                              <Share2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
                               onClick={() => setSelectedPrintPayment(p)}
                               className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center text-muted hover:text-brand rounded-xl hover:bg-surface-2 transition-colors"
                               title="طباعة / مشاركة إيصال السند"
@@ -431,6 +460,7 @@ export const PaymentsPage: React.FC = () => {
                   canDelete={canDeletePayment}
                   onDelete={handleDelete}
                   onPrint={(payment) => setSelectedPrintPayment(payment)}
+                  onShare={handleSharePayment}
                 />
               ))}
             </div>

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import {
   ArrowRight,
   Maximize,
@@ -11,8 +11,10 @@ import {
   Sparkles,
   Building2,
   ShoppingBag,
+  RotateCcw,
+  X,
 } from 'lucide-react';
-import { formatCurrency } from '@pos-mandob/shared';
+import { formatCurrency, PromotionEvaluation } from '@pos-mandob/shared';
 import { apiClient } from '../../data/api/client';
 import { REFERENCE_QUERY_OPTIONS } from '../../data/api/queryPresets';
 import { useAuthStore } from '../../data/store/useAuthStore';
@@ -67,6 +69,35 @@ export const PosPage: React.FC = () => {
   const [availabilityProduct, setAvailabilityProduct] = useState<ProductItem | null>(null);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [notification, setNotification] = useState<string | null>(null);
+  const location = useLocation();
+  const [exchangeBanner, setExchangeBanner] = useState<{
+    id?: number;
+    invoice_number?: string;
+    total: number;
+    party_id?: number | null;
+    party_name?: string | null;
+  } | null>(null);
+  const appliedExchangeStateRef = useRef(false);
+
+  useEffect(() => {
+    if (appliedExchangeStateRef.current) return;
+    const exchangeState = (location.state as { exchangeFromReturn?: any } | null)?.exchangeFromReturn;
+    if (!exchangeState) return;
+    appliedExchangeStateRef.current = true;
+    setExchangeBanner({
+      id: exchangeState.id,
+      invoice_number: exchangeState.invoice_number,
+      total: Number(exchangeState.total) || 0,
+      party_id: exchangeState.party_id || null,
+      party_name: exchangeState.party_name || null,
+    });
+    if (exchangeState.party_id && exchangeState.party_name) {
+      setSelectedCustomer({
+        id: Number(exchangeState.party_id),
+        name: String(exchangeState.party_name),
+      } as CustomerParty);
+    }
+  }, [location.state]);
 
   // Show temporary toast notification
   const showToast = useCallback((msg: string) => {
@@ -98,6 +129,77 @@ export const PosPage: React.FC = () => {
 
   // Hold Invoices Hook
   const { heldCarts, holdCart, removeHeldCart } = useHoldInvoices();
+
+  // Live Omnichannel Promotions & Coupons Evaluation
+  const [appliedCouponCode, setAppliedCouponCode] = useState<string>('');
+  const [appliedPromotion, setAppliedPromotion] = useState<PromotionEvaluation | null>(null);
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [isEvaluatingPromo, setIsEvaluatingPromo] = useState<boolean>(false);
+
+  const evaluatePromotions = useCallback(
+    async (itemsToEval: typeof cartItems, codeToEval: string, branchToEval: number | null, explicitCoupon: boolean) => {
+      if (itemsToEval.length === 0) {
+        setAppliedPromotion(null);
+        setPromoError(null);
+        return;
+      }
+      setIsEvaluatingPromo(true);
+      try {
+        const res = await apiClient.post('/promotions/evaluate', {
+          branch_id: branchToEval || undefined,
+          coupon_code: codeToEval || undefined,
+          items: itemsToEval.map((i) => ({
+            product_id: i.product_id,
+            quantity: i.quantity,
+            unit_price: i.unit_price,
+          })),
+        });
+        const evalData: PromotionEvaluation | null = res.data?.data || null;
+        setAppliedPromotion(evalData && evalData.promotion_discount > 0 ? evalData : null);
+        setPromoError(null);
+        if (explicitCoupon && codeToEval && (!evalData || evalData.promotion_discount <= 0)) {
+          setPromoError('هذا الكوبون غير منطبق على أصناف السلة الحالية.');
+        }
+      } catch (err: any) {
+        if (explicitCoupon) {
+          setAppliedCouponCode('');
+          setPromoError(err.response?.data?.message || 'كود الخصم غير صالح أو منتهي الصلاحية');
+        }
+        setAppliedPromotion(null);
+      } finally {
+        setIsEvaluatingPromo(false);
+      }
+    },
+    []
+  );
+
+  useEffect(() => {
+    if (cartItems.length === 0) {
+      setAppliedPromotion(null);
+      setAppliedCouponCode('');
+      setPromoError(null);
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      void evaluatePromotions(cartItems, appliedCouponCode, selectedBranchId, false);
+    }, 220);
+    return () => window.clearTimeout(timer);
+  }, [cartItems, appliedCouponCode, selectedBranchId, evaluatePromotions]);
+
+  const handleApplyCoupon = async (code: string) => {
+    setAppliedCouponCode(code);
+    await evaluatePromotions(cartItems, code, selectedBranchId, true);
+  };
+
+  const handleClearCoupon = () => {
+    setAppliedCouponCode('');
+    setPromoError(null);
+    void evaluatePromotions(cartItems, '', selectedBranchId, false);
+  };
+
+  const promoDiscount = Number(appliedPromotion?.promotion_discount || 0);
+  const effectiveTotalAmount = Math.max(0, Number((totalAmount - promoDiscount).toFixed(2)));
+  const effectiveTotalDiscount = Number((discount + promoDiscount).toFixed(2));
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedSearch(searchQuery.trim()), 180);
@@ -324,6 +426,9 @@ export const PosPage: React.FC = () => {
     });
     if (ok) {
       clearCart();
+      setAppliedCouponCode('');
+      setAppliedPromotion(null);
+      setPromoError(null);
       showToast('تم إفراغ السلة بنجاح.');
     }
   };
@@ -346,6 +451,9 @@ export const PosPage: React.FC = () => {
     setCompletedInvoice(createdInvoice);
     resetCartAfterCheckout();
     setSelectedCustomer(null);
+    setAppliedCouponCode('');
+    setAppliedPromotion(null);
+    setPromoError(null);
     queryClient.invalidateQueries({ queryKey: ['products'] });
     queryClient.invalidateQueries({ queryKey: ['active-shift'] });
     refetchShift();
@@ -659,6 +767,36 @@ export const PosPage: React.FC = () => {
         </div>
       )}
 
+      {/* Quick Exchange Return Credit Banner */}
+      {exchangeBanner && (
+        <div className="mx-3 sm:mx-4 mt-2 bg-info-soft border border-info/30 text-info rounded-2xl px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs font-bold shrink-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <RotateCcw className="w-4 h-4 shrink-0" />
+            <span>
+              عملية استبدال مرتبطة بمرتجع رقم{' '}
+              <span className="font-black tabular-nums">{exchangeBanner.invoice_number || ''}</span>
+              {' — '}رصيد المرتجع:{' '}
+              <span className="font-black tabular-nums">{formatCurrency(exchangeBanner.total)}</span>
+            </span>
+            {effectiveTotalAmount > 0 && (
+              <span className="px-2 py-0.5 rounded-lg bg-panel/80 border border-info/20 tabular-nums">
+                {effectiveTotalAmount >= exchangeBanner.total
+                  ? `فرق مطلوب من العميل: ${formatCurrency(effectiveTotalAmount - exchangeBanner.total)}`
+                  : `متبقي لصالح العميل: ${formatCurrency(exchangeBanner.total - effectiveTotalAmount)}`}
+              </span>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setExchangeBanner(null)}
+            className="p-1.5 rounded-lg hover:bg-panel/60 transition-colors"
+            aria-label="إغلاق تنبيه الاستبدال"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Master Workspace: Split Screen Layout */}
       <div className="flex-1 p-3 sm:p-4 overflow-hidden flex flex-col lg:flex-row gap-3 sm:gap-4">
         {/* Right Pane (RTL): Product Catalog & Quick Search */}
@@ -706,6 +844,12 @@ export const PosPage: React.FC = () => {
             onHoldCart={handleHoldCurrentCart}
             onCheckout={handleCheckout}
             onQuickAddCustomer={handleQuickAddCustomer}
+            appliedPromotion={appliedPromotion}
+            appliedCouponCode={appliedCouponCode}
+            onApplyCoupon={handleApplyCoupon}
+            onClearCoupon={handleClearCoupon}
+            promoError={promoError}
+            isEvaluatingPromo={isEvaluatingPromo}
           />
         </div>
       </div>
@@ -723,7 +867,7 @@ export const PosPage: React.FC = () => {
             <div className="min-w-0 truncate">
               <span className="text-2xs opacity-80 font-bold block leading-none mb-0.5">إجمالي السلة</span>
               <span className="text-base font-black text-on-brand leading-none truncate block">
-                {formatCurrency(totalAmount)}
+                {formatCurrency(effectiveTotalAmount)}
               </span>
             </div>
           </div>
@@ -749,7 +893,7 @@ export const PosPage: React.FC = () => {
         isOpen={isMobileCartOpen}
         onClose={() => setIsMobileCartOpen(false)}
         title={`سلة الفاتورة (${cartItems.reduce((acc, item) => acc + item.quantity, 0)} قطعة)`}
-        subtitle={`الإجمالي: ${formatCurrency(totalAmount)}`}
+        subtitle={`الإجمالي: ${formatCurrency(effectiveTotalAmount)}`}
         maxHeight="max-h-[94vh]"
       >
         <div className="p-2 sm:p-3">
@@ -775,6 +919,12 @@ export const PosPage: React.FC = () => {
               handleCheckout();
             }}
             onQuickAddCustomer={handleQuickAddCustomer}
+            appliedPromotion={appliedPromotion}
+            appliedCouponCode={appliedCouponCode}
+            onApplyCoupon={handleApplyCoupon}
+            onClearCoupon={handleClearCoupon}
+            promoError={promoError}
+            isEvaluatingPromo={isEvaluatingPromo}
           />
         </div>
       </MobileBottomSheet>
@@ -797,10 +947,13 @@ export const PosPage: React.FC = () => {
       <PosPaymentModal
         isOpen={isPaymentModalOpen}
         onClose={() => setIsPaymentModalOpen(false)}
-        totalAmount={totalAmount}
+        totalAmount={effectiveTotalAmount}
         customer={selectedCustomer}
         items={cartItems}
-        discount={discount}
+        discount={effectiveTotalDiscount}
+        promotionId={appliedPromotion?.promotion_id ?? null}
+        couponCode={appliedCouponCode || appliedPromotion?.coupon_code || null}
+        applyAutoPromotion={Boolean(appliedPromotion?.promotion_id)}
         shippingCost={shippingCost}
         courierPartyId={courierPartyId}
         branchId={selectedBranchId}

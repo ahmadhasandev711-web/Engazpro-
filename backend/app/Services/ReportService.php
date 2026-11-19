@@ -68,12 +68,16 @@ class ReportService
      */
     protected function calculateCogs(string $invoiceType, ?string $fromDate, ?string $toDate, ?int $branchId = null): Money
     {
-        $rawSum = InvoiceItem::whereHas('invoice', function ($q) use ($invoiceType, $fromDate, $toDate, $branchId) {
-            $q->where('type', $invoiceType)
-              ->when($branchId !== null, fn($iq) => $iq->where('branch_id', $branchId))
-              ->when($fromDate, fn($iq) => $iq->where('date', '>=', $fromDate))
-              ->when($toDate, fn($iq) => $iq->where('date', '<=', $toDate . ' 23:59:59'));
-        })->sum(DB::raw('quantity * purchase_price_at_sale'));
+        $accountId = auth()->user()?->getAccountId();
+        $rawSum = InvoiceItem::query()
+            ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
+            ->whereNull('invoices.deleted_at')
+            ->when($accountId !== null, fn ($q) => $q->where('invoices.user_id', $accountId))
+            ->where('invoices.type', $invoiceType)
+            ->when($branchId !== null, fn ($q) => $q->where('invoices.branch_id', $branchId))
+            ->when($fromDate, fn ($q) => $q->where('invoices.date', '>=', $fromDate))
+            ->when($toDate, fn ($q) => $q->where('invoices.date', '<=', $toDate . ' 23:59:59'))
+            ->sum(DB::raw('invoice_items.quantity * invoice_items.purchase_price_at_sale'));
 
         return Money::of($rawSum ?? 0);
     }
@@ -344,7 +348,14 @@ class ReportService
 
     private function applyCashFlowRelationBranch($query, ?int $branchId)
     {
-        return $branchId === null ? $query : $query->where(fn ($sub) => $sub
+        if ($branchId === null) {
+            return $query;
+        }
+        if ($accountId = auth()->user()?->getAccountId()) {
+            return app(BranchScopeService::class)->applyDirectBranchIdToTreasuryOrCreator($query, $accountId, $branchId);
+        }
+
+        return $query->where(fn ($sub) => $sub
             ->whereHas('treasury', fn ($tq) => $tq->where('branch_id', $branchId))
             ->orWhere(fn ($inner) => $inner->whereHas('treasury', fn ($tq) => $tq->whereNull('branch_id'))->whereHas('creator', fn ($cq) => $cq->where('branch_id', $branchId))));
     }

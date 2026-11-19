@@ -53,7 +53,7 @@ export const usePermissions = () => {
     canSettleCouriers: isOwnerOrAdmin || isManager || isSupervisor || isCashier,
     canManageCouriers: isOwnerOrAdmin || isManager || isSupervisor,
     // Expense Permissions
-    canDeleteExpense: isOwnerOrAdmin,
+    canDeleteExpense: isOwnerOrAdmin || isManager || isSupervisor || isCashier,
     canManageExpenses: true,
     // Payment Permissions
     canDeletePayment: isOwnerOrAdmin,

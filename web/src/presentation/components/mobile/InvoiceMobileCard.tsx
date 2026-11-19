@@ -22,6 +22,7 @@ interface InvoiceMobileCardProps {
   onSelectInvoice: (invoiceId: number) => void;
   onPrintReceipt: (invoiceId: number) => void;
   onDeleteInvoice: (invoiceId: number, invoiceNumber: string) => void;
+  onQuickReturn?: (invoice: any) => void;
 }
 
 /**
@@ -38,6 +39,7 @@ export const InvoiceMobileCard: React.FC<InvoiceMobileCardProps> = ({
   onSelectInvoice,
   onPrintReceipt,
   onDeleteInvoice,
+  onQuickReturn,
 }) => {
   const { selection } = useHaptic();
 
@@ -48,7 +50,11 @@ export const InvoiceMobileCard: React.FC<InvoiceMobileCardProps> = ({
       ? 'border-r-bad'
       : 'border-r-ok';
 
-  const salesperson = invoice.salesperson_name || invoice.created_by_name;
+  const isPurchaseDoc =
+    invoice.type === 'PURCHASE' || invoice.type === 'PURCHASE_RETURN';
+  const salesperson = isPurchaseDoc
+    ? invoice.created_by_name
+    : invoice.salesperson_name || invoice.created_by_name;
 
   return (
     <Card
@@ -65,6 +71,24 @@ export const InvoiceMobileCard: React.FC<InvoiceMobileCardProps> = ({
           <Badge tone="neutral" className="tabular-nums font-black text-ink">
             {invoice.invoice_number}
           </Badge>
+
+          {!isReturn && invoice.return_status === 'FULL' && (
+            <Badge tone="bad" className="text-[11px]">
+              <RotateCcw className="w-3 h-3" />
+              مرتجع بالكامل
+            </Badge>
+          )}
+          {!isReturn && invoice.return_status === 'PARTIAL' && (
+            <Badge tone="warn" className="text-[11px] tabular-nums">
+              <RotateCcw className="w-3 h-3" />
+              مرتجع جزئي: {formatCurrency(invoice.returned_total ?? 0)}
+            </Badge>
+          )}
+          {isReturn && invoice.parent_invoice_number && (
+            <Badge tone="info" className="text-[11px] tabular-nums">
+              أصل: {invoice.parent_invoice_number}
+            </Badge>
+          )}
 
           {isReturn ? (
             <Badge tone="warn" className="text-[11px]">
@@ -101,7 +125,7 @@ export const InvoiceMobileCard: React.FC<InvoiceMobileCardProps> = ({
 
         {(isOwnerOrAdmin || isManager) && salesperson && (
           <Badge tone="info" className="text-[11px] shrink-0">
-            {invoice.salesperson_name
+            {!isPurchaseDoc && invoice.salesperson_name
               ? `سيلز: ${invoice.salesperson_name}`
               : `المنشئ: ${invoice.created_by_name}`}
           </Badge>
@@ -142,9 +166,26 @@ export const InvoiceMobileCard: React.FC<InvoiceMobileCardProps> = ({
 
       {/* 4. Action Buttons (Touch Targets >= 44px) */}
       <div
-        className="flex items-center justify-end gap-1.5 pt-1.5 border-t border-line"
+        className="flex flex-wrap items-center justify-end gap-1.5 pt-1.5 border-t border-line"
         onClick={(e) => e.stopPropagation()}
       >
+        {!isReturn && invoice.return_status !== 'FULL' && onQuickReturn && (
+          <Button
+            type="button"
+            variant="secondary"
+            size="md"
+            onClick={() => {
+              selection();
+              onQuickReturn(invoice);
+            }}
+            leftIcon={<RotateCcw className="w-3.5 h-3.5 text-warn" />}
+            className="text-xs font-bold border-warn/30 bg-warn-soft text-warn hover:bg-warn-soft/80 px-3"
+            title="عمل مرتجع لهذه الفاتورة"
+          >
+            مرتجع
+          </Button>
+        )}
+
         {/* Thermal Receipt Print */}
         <Button
           type="button"

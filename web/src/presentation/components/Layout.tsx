@@ -25,6 +25,7 @@ import {
   Sun,
   Moon,
   AlertTriangle,
+  Tag,
 } from 'lucide-react';
 import { useAuthStore } from '../../data/store/useAuthStore';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -153,6 +154,7 @@ export const Layout: React.FC = () => {
         ]
       : []),
     ...(!isSales ? [{ to: '/couriers', label: 'شركات الشحن', icon: Truck }] : []),
+    ...((isOwnerOrAdmin || isManager) ? [{ to: '/promotions', label: 'العروض والكوبونات', icon: Tag }] : []),
   ];
 
   // Group 2: المخزون (الأصناف، العمليات والنواقص، التحويلات، الفروع)

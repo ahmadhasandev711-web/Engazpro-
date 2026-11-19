@@ -9,6 +9,8 @@ use App\Exceptions\PosDomainException;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\User;
+use App\Services\EcommerceCatalogSyncDispatcher;
+use App\Services\EcommerceSyncEchoGuard;
 use App\Support\Quantity;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
@@ -117,17 +119,37 @@ class ProductService
         $variantsData = $data['variants'] ?? null;
         $user = auth()->user() ?? $product->user;
         unset($data['quantity'], $data['variants'], $data['batches']);
-
         $this->validateProductBarcodes($user, $data['barcode'] ?? null, $variantsData, $product->id);
 
-        return DB::transaction(function () use ($product, $data, $variantsData, $user) {
+        $accountId = (int) $product->user_id;
+        $outerSuppressed = EcommerceSyncEchoGuard::isSuppressed($accountId);
+        $beforeSignature = $this->productPriceSignature($product);
+
+        $updated = EcommerceSyncEchoGuard::suppressDuring($accountId, fn () => DB::transaction(function () use ($product, $data, $variantsData, $user) {
             $product->update($data);
             if ($variantsData !== null) {
                 $this->syncProductVariants($user, $product, $variantsData);
             }
 
             return $product->fresh(['variants', 'batches']);
-        });
+        }));
+
+        if (!$outerSuppressed && $beforeSignature !== $this->productPriceSignature($updated)) {
+            app(EcommerceCatalogSyncDispatcher::class)->dispatchProductPricePush($accountId, (int) $updated->id, $updated->wc_product_id, $updated->shopify_product_id);
+        }
+
+        return $updated;
+    }
+
+    private function productPriceSignature(Product $product): string
+    {
+        $variants = $product->relationLoaded('variants') ? $product->variants : $product->variants()->get(['id', 'regular_price', 'sale_price']);
+        $parts = ["p:{$product->regular_price}:{$product->sale_price}"];
+        foreach ($variants->sortBy('id') as $v) {
+            $parts[] = "v{$v->id}:{$v->regular_price}:{$v->sale_price}";
+        }
+
+        return implode('|', $parts);
     }
 
     private function syncProductVariants(User $user, Product $product, array $variantsData): void

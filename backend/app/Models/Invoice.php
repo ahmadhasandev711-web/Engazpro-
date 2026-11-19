@@ -28,9 +28,12 @@ class Invoice extends Model
         'party_id',
         'courier_party_id',
         'parent_invoice_id',
+        'promotion_id',
+        'coupon_code',
         'date',
         'subtotal',
         'discount',
+        'promotion_discount',
         'tax',
         'total',
         'paid_amount',
@@ -49,6 +52,7 @@ class Invoice extends Model
         'shopify_order_id' => 'integer',
         'online_order_id' => 'integer',
         'shipping_amount' => 'decimal:2',
+        'promotion_discount' => 'decimal:2',
         'type' => InvoiceType::class,
         'payment_method' => PaymentMethod::class,
         'date' => 'date',
@@ -103,6 +107,11 @@ class Invoice extends Model
     public function returnInvoices(): HasMany
     {
         return $this->hasMany(Invoice::class, 'parent_invoice_id');
+    }
+
+    public function promotion(): BelongsTo
+    {
+        return $this->belongsTo(Promotion::class);
     }
 
     public function items(): HasMany

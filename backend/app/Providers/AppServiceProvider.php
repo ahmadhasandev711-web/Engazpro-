@@ -16,12 +16,16 @@ use App\Models\Party;
 use App\Models\Payment;
 use App\Models\PayrollPayout;
 use App\Models\Product;
+use App\Models\ProductVariant;
+use App\Models\Promotion;
 use App\Models\StockTransfer;
 use App\Models\Treasury;
 use App\Models\User;
 use App\Observers\BranchStockEcommerceSyncObserver;
 use App\Observers\OnlineOrderStockSyncObserver;
 use App\Observers\PartyWooCommerceObserver;
+use App\Observers\ProductPriceEcommerceSyncObserver;
+use App\Observers\ProductVariantPriceEcommerceSyncObserver;
 use App\Policies\BranchPolicy;
 use App\Policies\CategoryPolicy;
 use App\Policies\EmployeePolicy;
@@ -33,6 +37,7 @@ use App\Enums\AnoofyEventType;
 use App\Policies\PaymentPolicy;
 use App\Policies\PayrollPolicy;
 use App\Policies\ProductPolicy;
+use App\Policies\PromotionPolicy;
 use App\Policies\ReportPolicy;
 use App\Policies\StockOperationsPolicy;
 use App\Policies\StockTransferPolicy;
@@ -102,6 +107,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(StockTransfer::class, StockTransferPolicy::class);
         Gate::policy(Treasury::class, TreasuryPolicy::class);
         Gate::policy(PayrollPayout::class, PayrollPolicy::class);
+        Gate::policy(Promotion::class, PromotionPolicy::class);
     }
 
     private function registerGates(): void
@@ -129,6 +135,8 @@ class AppServiceProvider extends ServiceProvider
         BranchStock::observe(BranchStockEcommerceSyncObserver::class);
         Party::observe(PartyWooCommerceObserver::class);
         OnlineOrder::observe(OnlineOrderStockSyncObserver::class);
+        Product::observe(ProductPriceEcommerceSyncObserver::class);
+        ProductVariant::observe(ProductVariantPriceEcommerceSyncObserver::class);
     }
 
     private function registerRateLimiters(): void

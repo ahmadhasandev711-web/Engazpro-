@@ -37,6 +37,7 @@ __export(index_exports, {
   ExpenseSchema: () => ExpenseSchema,
   ExpiryStatus: () => ExpiryStatus,
   InvoiceItemSchema: () => InvoiceItemSchema,
+  InvoiceReturnStatus: () => InvoiceReturnStatus,
   InvoiceSchema: () => InvoiceSchema,
   InvoiceType: () => InvoiceType,
   LedgerSource: () => LedgerSource,
@@ -51,6 +52,9 @@ __export(index_exports, {
   ProductSchema: () => ProductSchema,
   ProductType: () => ProductType,
   ProductVariantSchema: () => ProductVariantSchema,
+  PromotionDiscountType: () => PromotionDiscountType,
+  PromotionSyncSource: () => PromotionSyncSource,
+  PromotionType: () => PromotionType,
   RegisterSchema: () => RegisterSchema,
   ShiftStatus: () => ShiftStatus,
   ShopifyAuthMode: () => ShopifyAuthMode,
@@ -309,6 +313,29 @@ var CrmRiskLevel = /* @__PURE__ */ ((CrmRiskLevel2) => {
   CrmRiskLevel2["HIGH"] = "HIGH";
   return CrmRiskLevel2;
 })(CrmRiskLevel || {});
+var InvoiceReturnStatus = /* @__PURE__ */ ((InvoiceReturnStatus2) => {
+  InvoiceReturnStatus2["NONE"] = "NONE";
+  InvoiceReturnStatus2["PARTIAL"] = "PARTIAL";
+  InvoiceReturnStatus2["FULL"] = "FULL";
+  return InvoiceReturnStatus2;
+})(InvoiceReturnStatus || {});
+var PromotionType = /* @__PURE__ */ ((PromotionType2) => {
+  PromotionType2["COUPON"] = "COUPON";
+  PromotionType2["BUY_X_GET_Y"] = "BUY_X_GET_Y";
+  PromotionType2["CART_AUTO"] = "CART_AUTO";
+  return PromotionType2;
+})(PromotionType || {});
+var PromotionDiscountType = /* @__PURE__ */ ((PromotionDiscountType2) => {
+  PromotionDiscountType2["PERCENTAGE"] = "PERCENTAGE";
+  PromotionDiscountType2["FIXED_AMOUNT"] = "FIXED_AMOUNT";
+  return PromotionDiscountType2;
+})(PromotionDiscountType || {});
+var PromotionSyncSource = /* @__PURE__ */ ((PromotionSyncSource2) => {
+  PromotionSyncSource2["LOCAL"] = "POS_LOCAL";
+  PromotionSyncSource2["WOOCOMMERCE"] = "WC_STORE";
+  PromotionSyncSource2["SHOPIFY"] = "SHOPIFY_STORE";
+  return PromotionSyncSource2;
+})(PromotionSyncSource || {});
 
 // src/schemas/index.ts
 var import_zod = require("zod");
@@ -721,6 +748,7 @@ function formatDateTime(dateString) {
   ExpenseSchema,
   ExpiryStatus,
   InvoiceItemSchema,
+  InvoiceReturnStatus,
   InvoiceSchema,
   InvoiceType,
   LedgerSource,
@@ -735,6 +763,9 @@ function formatDateTime(dateString) {
   ProductSchema,
   ProductType,
   ProductVariantSchema,
+  PromotionDiscountType,
+  PromotionSyncSource,
+  PromotionType,
   RegisterSchema,
   ShiftStatus,
   ShopifyAuthMode,

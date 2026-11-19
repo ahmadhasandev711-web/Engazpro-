@@ -212,3 +212,26 @@ export enum CrmRiskLevel {
   MEDIUM = 'MEDIUM',
   HIGH = 'HIGH',
 }
+
+export enum InvoiceReturnStatus {
+  NONE = 'NONE',
+  PARTIAL = 'PARTIAL',
+  FULL = 'FULL',
+}
+
+export enum PromotionType {
+  COUPON = 'COUPON',
+  BUY_X_GET_Y = 'BUY_X_GET_Y',
+  CART_AUTO = 'CART_AUTO',
+}
+
+export enum PromotionDiscountType {
+  PERCENTAGE = 'PERCENTAGE',
+  FIXED_AMOUNT = 'FIXED_AMOUNT',
+}
+
+export enum PromotionSyncSource {
+  LOCAL = 'POS_LOCAL',
+  WOOCOMMERCE = 'WC_STORE',
+  SHOPIFY = 'SHOPIFY_STORE',
+}

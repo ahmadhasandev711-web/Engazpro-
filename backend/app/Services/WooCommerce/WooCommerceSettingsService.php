@@ -4,6 +4,8 @@ namespace App\Services\WooCommerce;
 
 use App\Enums\EcommercePlatform;
 use App\Jobs\ImportWooCommerceProductsPageJob;
+use App\Jobs\PullEcommercePromotionsJob;
+use App\Jobs\PushAllWooCommercePricesJob;
 use App\Jobs\PushAllWooCommerceStocksJob;
 use App\Models\Product;
 use App\Models\User;
@@ -18,7 +20,9 @@ class WooCommerceSettingsService
         protected WooCommerceCustomerSyncService $customerSyncService,
         protected WooCommerceProductImportService $importService,
         protected WooCommerceBulkStockPushService $bulkStockPushService,
-        protected EcommerceAccessService $ecommerceAccess
+        protected EcommerceAccessService $ecommerceAccess,
+        protected WooCommercePricePushService $pricePushService,
+        protected WooCommercePromotionSyncService $promotionSyncService
     ) {}
 
     public function findForAccount(int $accountId, bool $withBranch = false): ?WooCommerceIntegration
@@ -114,6 +118,32 @@ class WooCommerceSettingsService
         return ['queued' => true, 'total_linked_products' => $linkedCount];
     }
 
+    public function pushAllPrices(User $user, WooCommerceIntegration $integration, int $linkedCount): array
+    {
+        $accountId = $user->getAccountId();
+
+        if (config('queue.default') === 'sync') {
+            return ['queued' => false, 'result' => $this->pricePushService->pushAll($user, $integration)];
+        }
+
+        PushAllWooCommercePricesJob::dispatch($accountId, $user->id);
+
+        return ['queued' => true, 'total_linked_products' => $linkedCount];
+    }
+
+    public function syncCoupons(User $user, WooCommerceIntegration $integration): array
+    {
+        $accountId = $user->getAccountId();
+
+        if (config('queue.default') === 'sync') {
+            return ['queued' => false, 'result' => $this->promotionSyncService->pullCoupons($user, $integration)];
+        }
+
+        PullEcommercePromotionsJob::dispatch($accountId, $user->id, EcommercePlatform::WOOCOMMERCE->value);
+
+        return ['queued' => true];
+    }
+
     private function applyCredentialsAndFlags(WooCommerceIntegration $integration, array $validated): void
     {
         if (!empty($validated['consumer_key'])) {
@@ -130,6 +160,12 @@ class WooCommerceSettingsService
             $integration->online_branch_id = $validated['online_branch_id'] ? (int) $validated['online_branch_id'] : null;
         }
         $integration->auto_sync_stock = $validated['auto_sync_stock'] ?? $integration->auto_sync_stock ?? true;
+        if (array_key_exists('auto_sync_prices', $validated)) {
+            $integration->auto_sync_prices = (bool) $validated['auto_sync_prices'];
+        }
+        if (array_key_exists('auto_sync_promotions', $validated)) {
+            $integration->auto_sync_promotions = (bool) $validated['auto_sync_promotions'];
+        }
         $integration->is_active = $validated['is_active'] ?? true;
     }
 

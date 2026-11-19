@@ -20,8 +20,8 @@ const REGISTER_FEATURES = [
 /** Store trial registration screen built on EngazPRO AuthShell. */
 export const RegisterPage: React.FC = () => {
   usePageMeta({
-    title: 'ابدأ تجربة مجانية 14 يوم — إنجاز برو | Engaz PRO',
-    description: 'أنشئ حساب متجرك في إنجاز برو خلال 60 ثانية واحصل على تجربة مجانية 14 يوم بكامل الصلاحيات بدون بطاقة بنكية.',
+    title: 'ابدأ تجربة مجانية 14 يوم — EBMS | Easy Work',
+    description: 'أنشئ حساب متجرك في نظام EBMS (Easy Business Management System) خلال 60 ثانية واحصل على تجربة مجانية 14 يوم بدون بطاقة بنكية.',
   });
   const navigate = useNavigate();
   const { register: registerUser, isLoading, error } = useAuthStore();
@@ -79,12 +79,12 @@ export const RegisterPage: React.FC = () => {
             </Link>
           </p>
           <div>
-            <Link
-              to="/"
+            <a
+              href="https://ebms.online/"
               className="min-h-[44px] inline-flex items-center justify-center px-3 text-xs font-medium text-muted hover:text-ink transition-colors rounded-xl"
             >
-              العودة للصفحة الرئيسية
-            </Link>
+              العودة للموقع الرئيسي (ebms.online)
+            </a>
           </div>
         </div>
       }

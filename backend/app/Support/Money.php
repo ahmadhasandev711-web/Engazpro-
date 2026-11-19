@@ -60,6 +60,11 @@ class Money implements JsonSerializable, Stringable
         return round($this->cents / 100, 2);
     }
 
+    public function toDecimalString(): string
+    {
+        return number_format($this->getAmount(), 2, '.', '');
+    }
+
     public function getCents(): int
     {
         return $this->cents;

@@ -43,7 +43,7 @@ class FinancialClosingService
         $grossProfitMoney = Money::of($profit['profit']['gross_profit']);
         $grossMargin = $netSalesMoney->isPositive() ? round(($grossProfitMoney->getAmount() / $netSalesMoney->getAmount()) * 100, 2) : 0.0;
 
-        $expensesByCategory = $this->aggregateExpensesByCategory($fromDate, $toDate, $branchId);
+        $expensesByCategory = $this->aggregateExpensesByCategory($accountId, $fromDate, $toDate, $branchId);
         $currentMonth = Carbon::now()->format('Y-m');
         $disbursedPayroll = Money::of(PayrollPayout::where('user_id', $accountId)->where('month', $currentMonth)->sum('net_paid') ?? 0)->getAmount();
 
@@ -59,14 +59,13 @@ class FinancialClosingService
         ];
     }
 
-    private function aggregateExpensesByCategory(?string $fromDate, ?string $toDate, ?int $branchId): array
+    private function aggregateExpensesByCategory(int $accountId, ?string $fromDate, ?string $toDate, ?int $branchId): array
     {
-        $query = Expense::query()
+        $query = Expense::where('user_id', $accountId)
             ->when($fromDate, fn ($q) => $q->where('date', '>=', $fromDate))
-            ->when($toDate, fn ($q) => $q->where('date', '<=', $toDate . ' 23:59:59'))
-            ->when($branchId !== null, fn ($q) => $q->where(fn ($sub) => $sub
-                ->whereHas('treasury', fn ($tq) => $tq->where('branch_id', $branchId))
-                ->orWhere(fn ($in) => $in->whereHas('treasury', fn ($tq) => $tq->whereNull('branch_id'))->whereHas('creator', fn ($cq) => $cq->where('branch_id', $branchId)))));
+            ->when($toDate, fn ($q) => $q->where('date', '<=', $toDate . ' 23:59:59'));
+
+        app(BranchScopeService::class)->applyDirectBranchIdToTreasuryOrCreator($query, $accountId, $branchId);
 
         return $query->selectRaw("COALESCE(NULLIF(category, ''), 'مصروفات عامة') as cat_name, COUNT(*) as cnt, COALESCE(SUM(amount), 0) as sum_amount")
             ->groupBy('cat_name')

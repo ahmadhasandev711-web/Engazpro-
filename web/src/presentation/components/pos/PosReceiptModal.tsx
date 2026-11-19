@@ -183,7 +183,9 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
               </div>
               {Number(invoice.discount) > 0 && (
                 <div className="flex justify-between text-bad">
-                  <span>الخصم:</span>
+                  <span>
+                    الخصم{invoice.coupon_code ? ` (كوبون ${invoice.coupon_code})` : ''}:
+                  </span>
                   <span>-{formatCurrency(invoice.discount, currencySymbol)}</span>
                 </div>
               )}

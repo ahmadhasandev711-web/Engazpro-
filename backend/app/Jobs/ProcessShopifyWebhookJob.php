@@ -8,9 +8,13 @@ use App\Enums\QueueName;
 use App\Jobs\Middleware\WithTenantContext;
 use App\Models\ShopifyIntegration;
 use App\Models\User;
+use App\Services\EcommerceSyncEchoGuard;
 use App\Services\OnlineOrders\OnlineOrderIngestionService;
+use App\Services\Shopify\ShopifyPricePushService;
 use App\Services\Shopify\ShopifyProductImportService;
+use App\Services\Shopify\ShopifyPromotionSyncService;
 use App\Services\Shopify\ShopifySettingsService;
+use App\Services\Shopify\ShopifyStockSyncGate;
 use App\Support\ShopifyGid;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -43,7 +47,8 @@ class ProcessShopifyWebhookJob implements ShouldQueue
         OnlineOrderIngestionService $ingestionService,
         ShopifyGraphqlClientInterface $graphqlClient,
         ShopifyProductImportService $productImportService,
-        ShopifySettingsService $settingsService
+        ShopifySettingsService $settingsService,
+        ?ShopifyPromotionSyncService $promotionSyncService = null
     ): void {
         $user = User::withoutGlobalScopes()->findOrFail($this->userId);
         $integration = ShopifyIntegration::withoutGlobalScopes()
@@ -55,6 +60,7 @@ class ProcessShopifyWebhookJob implements ShouldQueue
             str_starts_with($this->topic, 'orders/') => $this->handleOrderWebhook($user, $integration, $ingestionService, $graphqlClient),
             str_starts_with($this->topic, 'refunds/') => $this->handleRefundWebhook($user, $integration, $ingestionService, $graphqlClient),
             str_starts_with($this->topic, 'products/') => $this->handleProductWebhook($user, $integration, $productImportService, $graphqlClient),
+            str_starts_with($this->topic, 'discounts/') => $this->handleDiscountWebhook($user, $integration, $promotionSyncService ?? app(ShopifyPromotionSyncService::class)),
             str_starts_with($this->topic, 'locations/') => $this->handleLocationWebhook($integration, $settingsService),
             default => null,
         };
@@ -123,8 +129,43 @@ class ProcessShopifyWebhookJob implements ShouldQueue
             return;
         }
         $node = $graphqlClient->getProductById($integration, ShopifyGid::toGid('Product', $productId));
-        if ($node) {
-            $productImportService->syncSingleProduct($user, $integration, $node, importStock: false);
+        if (!$node || $this->isOutgoingPriceEcho($user->getAccountId(), $productId, $node)) {
+            return;
+        }
+
+        EcommerceSyncEchoGuard::suppressDuring($user->getAccountId(), function () use ($user, $integration, $productImportService, $node): void {
+            ShopifyStockSyncGate::suppressDuring($user->getAccountId(), fn () => $productImportService->syncSingleProduct($user, $integration, $node, importStock: false));
+        });
+    }
+
+    private function isOutgoingPriceEcho(int $accountId, int $shopifyProductId, array $node): bool
+    {
+        $variants = collect($node['variants']['edges'] ?? [])->pluck('node')->filter()->map(fn (array $v): array => [
+            'id' => (string) ($v['id'] ?? ''),
+            'price' => (string) ($v['price'] ?? '0'),
+            'compareAtPrice' => $v['compareAtPrice'] ?? null,
+        ])->values()->all();
+
+        if (empty($variants)) {
+            return false;
+        }
+
+        return EcommerceSyncEchoGuard::matchesAndConsumeEcho(
+            EcommercePlatform::SHOPIFY,
+            'product_price',
+            $accountId,
+            $shopifyProductId,
+            ShopifyPricePushService::fingerprintFromVariantInputs($variants)
+        );
+    }
+
+    private function handleDiscountWebhook(
+        User $user,
+        ?ShopifyIntegration $integration,
+        ShopifyPromotionSyncService $promotionSyncService
+    ): void {
+        if ($integration) {
+            $promotionSyncService->ingestDiscountWebhook($user, $integration, $this->topic, $this->payload);
         }
     }
 

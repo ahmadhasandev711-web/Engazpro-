@@ -28,7 +28,8 @@ class ReportController extends Controller
 
         $data = $this->reportService->getProfitReport(
             fromDate: $request->input('from_date'),
-            toDate: $request->input('to_date')
+            toDate: $request->input('to_date'),
+            branchId: $request->filled('branch_id') ? (int) $request->input('branch_id') : null
         );
 
         return response()->json(['data' => $data]);

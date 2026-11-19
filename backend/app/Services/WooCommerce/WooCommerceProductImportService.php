@@ -3,6 +3,7 @@
 namespace App\Services\WooCommerce;
 
 use App\Contracts\WooCommerceApiClientInterface;
+use App\Enums\EcommercePlatform;
 use App\Enums\ProductType;
 use App\Enums\StockMovementSource;
 use App\Enums\StockMovementType;
@@ -12,6 +13,7 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\User;
 use App\Models\WooCommerceIntegration;
+use App\Services\EcommerceSyncEchoGuard;
 use App\Services\ProductService;
 use App\Services\StockService;
 use App\Support\Money;
@@ -33,6 +35,40 @@ class WooCommerceProductImportService
      *
      * @return array{imported: int, updated: int, errors: list<string>, count: int, has_more: bool}
      */
+    public function syncSingleProductFromWebhook(User $user, WooCommerceIntegration $integration, array $wcProduct): string
+    {
+        $accountId = $user->getAccountId();
+        if ($this->isOutgoingPriceEcho($accountId, $wcProduct)) {
+            return 'skipped';
+        }
+
+        return EcommerceSyncEchoGuard::suppressDuring($accountId, fn () => WooStockSyncGate::suppressDuring(
+            $accountId,
+            fn () => $this->syncSingleProduct($user, $integration, $wcProduct, false)
+        ));
+    }
+
+    private function isOutgoingPriceEcho(int $accountId, array $wcProduct): bool
+    {
+        $wcId = (int) ($wcProduct['id'] ?? 0);
+        if (!$wcId) {
+            return false;
+        }
+        if (($wcProduct['type'] ?? '') === 'variable') {
+            return EcommerceSyncEchoGuard::matchesAndConsumeEcho(EcommercePlatform::WOOCOMMERCE, 'product_var_batch', $accountId, $wcId, 'pushed');
+        }
+        $reg = is_numeric($wcProduct['regular_price'] ?? null) ? $wcProduct['regular_price'] : ($wcProduct['price'] ?? 0);
+        $sale = is_numeric($wcProduct['sale_price'] ?? null) ? $wcProduct['sale_price'] : $this->resolveSellingPrice($wcProduct, 0);
+
+        return EcommerceSyncEchoGuard::matchesAndConsumeEcho(
+            EcommercePlatform::WOOCOMMERCE,
+            'product_price',
+            $accountId,
+            $wcId,
+            EcommerceSyncEchoGuard::priceFingerprint($reg, $sale)
+        );
+    }
+
     public function importPage(User $user, WooCommerceIntegration $integration, int $page = 1, int $perPage = 50, bool $importStock = false): array
     {
         return WooStockSyncGate::suppressDuring($user->getAccountId(), function () use ($user, $integration, $page, $perPage, $importStock) {

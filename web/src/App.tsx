@@ -1,6 +1,7 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from './data/api/queryClient';
 import { Layout } from './presentation/components/Layout';
 import { ProtectedRoute } from './presentation/components/ProtectedRoute';
 import { RoleRoute } from './presentation/components/RoleRoute';
@@ -15,7 +16,6 @@ import { AuthHydrationGate } from './presentation/components/AuthHydrationGate';
 import { LoadingSpinnerView } from './presentation/components/common/LoadingSpinnerView';
 
 // Code-Splitting & Lazy Loading for blazing-fast POS initialization
-const LandingPage = lazy(() => import('./presentation/pages/LandingPage').then((m) => ({ default: m.LandingPage })));
 const LoginPage = lazy(() => import('./presentation/pages/LoginPage').then((m) => ({ default: m.LoginPage })));
 const RegisterPage = lazy(() => import('./presentation/pages/RegisterPage').then((m) => ({ default: m.RegisterPage })));
 const DashboardPage = lazy(() => import('./presentation/pages/DashboardPage').then((m) => ({ default: m.DashboardPage })));
@@ -32,6 +32,7 @@ const SettingsPage = lazy(() => import('./presentation/pages/SettingsPage').then
 const EmployeesPage = lazy(() => import('./presentation/pages/EmployeesPage').then((m) => ({ default: m.EmployeesPage })));
 const TreasuriesPage = lazy(() => import('./presentation/pages/TreasuriesPage').then((m) => ({ default: m.TreasuriesPage })));
 const BranchesPage = lazy(() => import('./presentation/pages/BranchesPage').then((m) => ({ default: m.BranchesPage })));
+const PromotionsPage = lazy(() => import('./presentation/pages/PromotionsPage').then((m) => ({ default: m.PromotionsPage })));
 const StockTransfersPage = lazy(() => import('./presentation/pages/StockTransfersPage').then((m) => ({ default: m.StockTransfersPage })));
 const StockOperationsPage = lazy(() => import('./presentation/pages/StockOperationsPage').then((m) => ({ default: m.StockOperationsPage })));
 const PosPage = lazy(() => import('./presentation/pages/PosPage').then((m) => ({ default: m.PosPage })));
@@ -40,17 +41,6 @@ const WooCommerceSettingsPage = lazy(() => import('./presentation/pages/WooComme
 const ShopifySettingsPage = lazy(() => import('./presentation/pages/ShopifySettingsPage').then((m) => ({ default: m.ShopifySettingsPage })));
 const StoreOrdersPage = lazy(() => import('./presentation/pages/StoreOrdersPage').then((m) => ({ default: m.StoreOrdersPage })));
 const CouriersPage = lazy(() => import('./presentation/pages/CouriersPage').then((m) => ({ default: m.CouriersPage })));
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false,
-      retry: 1,
-      staleTime: 1000 * 60 * 3, // 3 minutes fresh cache (instant page switches without refetch spinners)
-      gcTime: 1000 * 60 * 10,   // 10 minutes memory retention
-    },
-  },
-});
 
 if (typeof window !== 'undefined') {
   const prefetchCorePages = () => {
@@ -77,10 +67,7 @@ const PageLoadingFallback: React.FC = () => (
 
 const RootRouteHandler: React.FC = () => {
   const { isAuthenticated } = useAuthStore();
-  if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
-  }
-  return <LandingPage />;
+  return <Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />;
 };
 
 const EcommerceRoute: React.FC = () => {
@@ -101,9 +88,9 @@ export const App: React.FC = () => {
             <ToastProvider>
           <Suspense fallback={<PageLoadingFallback />}>
             <Routes>
-              {/* Public Landing & Auth Routes */}
+              {/* Auth & Entry Routes (Landing Page hosted separately at https://ebms.online) */}
               <Route path="/" element={<RootRouteHandler />} />
-              <Route path="/landing" element={<LandingPage />} />
+              <Route path="/landing" element={<RootRouteHandler />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
 
@@ -151,6 +138,7 @@ export const App: React.FC = () => {
                     <Route path="/purchases/returns/new" element={<InvoiceFormPage />} />
                     <Route path="/suppliers" element={<PartiesPage />} />
                     <Route path="/reports" element={<ReportsPage />} />
+                    <Route path="/promotions" element={<PromotionsPage />} />
                     <Route path="/excel" element={<ExcelPage />} />
                     <Route path="/employees" element={<EmployeesPage />} />
                   </Route>

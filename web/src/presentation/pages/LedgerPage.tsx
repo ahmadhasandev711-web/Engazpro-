@@ -11,6 +11,7 @@ import {
   ArrowUpRight,
   TrendingUp,
   Download,
+  Share2,
 } from 'lucide-react';
 import { apiClient } from '../../data/api/client';
 import { formatCurrency, formatDate } from '@pos-mandob/shared';
@@ -18,6 +19,7 @@ import { formatCurrency, formatDate } from '@pos-mandob/shared';
 import { DateRangeFilter } from '../components/common/DateRangeFilter';
 import { PaginationBar } from '../components/common/PaginationBar';
 import { useAuthStore } from '../../data/store/useAuthStore';
+import { webShareService, formatLedgerStatementWhatsAppText } from '../../infrastructure/pwa/webShareService';
 import { useToast } from '../context/ToastContext';
 import { LedgerEntryMobileCard } from '../components/mobile/LedgerEntryMobileCard';
 import { Badge, Button, Card, DataTable, EmptyState, PageHeader } from '../components/ui';
@@ -38,7 +40,7 @@ export const LedgerPage: React.FC = () => {
   const [page, setPage] = useState<number>(1);
 
   const { data, isLoading, isFetching } = useQuery({
-    queryKey: ['ledger', partyId, fromDate, toDate, page],
+    queryKey: ['ledger', user?.id, partyId, fromDate, toDate, page],
     queryFn: async () => {
       const res = await apiClient.get(`/ledger/${partyId}`, {
         params: {
@@ -62,6 +64,24 @@ export const LedgerPage: React.FC = () => {
   const isCustomer = party?.type === 'CUSTOMER';
   const isCourier = party?.type === 'COURIER';
   const partyTypeLabel = isCustomer ? 'عميل' : isCourier ? 'شركة شحن' : 'مورد';
+
+  const handleShareLedgerWhatsApp = async () => {
+    if (!data) return;
+    const text = formatLedgerStatementWhatsAppText(
+      data,
+      {
+        storeName,
+        storePhone,
+        currencySymbol: storeIdentity?.currency || 'ج.م',
+      },
+      { fromDate: fromDate || undefined, toDate: toDate || undefined }
+    );
+    await webShareService.shareInvoice({
+      title: `كشف حساب ${party?.name || 'طرف التعامل'} - ${storeName}`,
+      text,
+      phone: party?.phone || undefined,
+    });
+  };
 
   return (
     <div className="space-y-3 sm:space-y-6" dir="rtl">
@@ -113,6 +133,18 @@ export const LedgerPage: React.FC = () => {
               </Button>
               <Button
                 type="button"
+                variant="secondary"
+                size="md"
+                leftIcon={<Share2 className="w-4 h-4 text-ok" />}
+                onClick={handleShareLedgerWhatsApp}
+                disabled={!data}
+                className="bg-ok-soft text-ok border-ok/30 hover:bg-ok-soft/80 text-xs font-bold"
+                title="مشاركة ملخص كشف الحساب عبر واتساب"
+              >
+                إرسال واتساب
+              </Button>
+              <Button
+                type="button"
                 variant="primary"
                 size="md"
                 leftIcon={<Printer className="w-4 h-4" />}
@@ -157,20 +189,34 @@ export const LedgerPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="text-left shrink-0">
-          <span className="text-[10px] text-muted block font-medium">الرصيد الصافي</span>
-          <span
-            className={`text-sm font-black tabular-nums ${
-              (party?.current_balance || 0) > 0
-                ? (isCustomer || isCourier)
-                  ? 'text-ok'
-                  : 'text-bad'
-                : 'text-ink'
-            }`}
-            dir="ltr"
+        <div className="flex items-center gap-2 shrink-0">
+          <Button
+            type="button"
+            variant="secondary"
+            size="md"
+            onClick={handleShareLedgerWhatsApp}
+            disabled={!data}
+            className="px-2.5 bg-ok-soft text-ok border-ok/30"
+            title="إرسال كشف الحساب عبر واتساب"
+            aria-label="إرسال كشف الحساب عبر واتساب"
           >
-            {formatCurrency(party?.current_balance || 0)}
-          </span>
+            <Share2 className="w-4 h-4" />
+          </Button>
+          <div className="text-left">
+            <span className="text-[10px] text-muted block font-medium">الرصيد الصافي</span>
+            <span
+              className={`text-sm font-black tabular-nums ${
+                (party?.current_balance || 0) > 0
+                  ? (isCustomer || isCourier)
+                    ? 'text-ok'
+                    : 'text-bad'
+                  : 'text-ink'
+              }`}
+              dir="ltr"
+            >
+              {formatCurrency(party?.current_balance || 0)}
+            </span>
+          </div>
         </div>
       </Card>
 

@@ -29,6 +29,8 @@ class WooCommerceSettingsController extends Controller
             'online_branch_id' => $integration->online_branch_id,
             'online_branch_name' => $integration->onlineBranch?->name,
             'auto_sync_stock' => $integration->auto_sync_stock,
+            'auto_sync_prices' => (bool) ($integration->auto_sync_prices ?? false),
+            'auto_sync_promotions' => (bool) ($integration->auto_sync_promotions ?? false),
             'is_active' => $integration->is_active,
             'webhook_url' => url("/api/webhooks/woocommerce/{$integration->user_id}"),
             'webhook_secret' => $integration->webhook_secret,
@@ -157,6 +159,46 @@ class WooCommerceSettingsController extends Controller
         }
 
         return $this->pushAllStocksResponse($this->settingsService->pushAllStocks($request->user(), $linkedCount));
+    }
+
+    public function pushAllPrices(Request $request): JsonResponse
+    {
+        Gate::authorize('manage-ecommerce');
+        $accountId = $request->user()->getAccountId();
+        $integration = $this->settingsService->findForAccount($accountId);
+        if (!$integration || !$integration->is_active || !$integration->consumer_key || !$integration->consumer_secret) {
+            return response()->json(['success' => false, 'message' => 'ربط متجر ووكومرس غير نشط أو غير مهيأ بعد بالمفاتيح.'], 422);
+        }
+
+        $linkedCount = $this->settingsService->countLinkedProducts($accountId);
+        if ($linkedCount === 0) {
+            return response()->json(['success' => false, 'message' => 'لا توجد أصناف مرتبطة بمتجر ووكومرس حالياً لمزامنة أسعارها.'], 422);
+        }
+
+        $outcome = $this->settingsService->pushAllPrices($request->user(), $integration, $linkedCount);
+        if (!$outcome['queued']) {
+            $res = $outcome['result'];
+            return response()->json(['success' => true, 'message' => "تمت مزامنة أسعار {$res['synced_count']} صنف مع ووكومرس بنجاح.", 'data' => $res]);
+        }
+
+        return response()->json(['success' => true, 'message' => 'بدأت مزامنة الأسعار مع ووكومرس في الخلفية.', 'data' => ['status' => 'queued', 'total_linked_products' => $outcome['total_linked_products']]], 202);
+    }
+
+    public function syncCoupons(Request $request): JsonResponse
+    {
+        Gate::authorize('manage-ecommerce');
+        $integration = $this->settingsService->findForAccount($request->user()->getAccountId());
+        if (!$integration || !$integration->is_active || !$integration->consumer_key || !$integration->consumer_secret) {
+            return response()->json(['success' => false, 'message' => 'ربط ووكومرس غير مفعل أو غير مكتمل المفاتيح.'], 422);
+        }
+
+        $outcome = $this->settingsService->syncCoupons($request->user(), $integration);
+        if (!$outcome['queued']) {
+            $res = $outcome['result'];
+            return response()->json(['success' => true, 'message' => "تم سحب {$res['imported']} كوبون جديد وتحديث {$res['updated']} كوبون من ووكومرس بنجاح.", 'data' => $res]);
+        }
+
+        return response()->json(['success' => true, 'message' => 'بدأت عملية سحب كوبونات ووكومرس في الخلفية.', 'data' => ['status' => 'queued']], 202);
     }
 
     private function importProductsResponse(array $outcome): JsonResponse

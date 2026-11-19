@@ -196,6 +196,25 @@ declare enum CrmRiskLevel {
     MEDIUM = "MEDIUM",
     HIGH = "HIGH"
 }
+declare enum InvoiceReturnStatus {
+    NONE = "NONE",
+    PARTIAL = "PARTIAL",
+    FULL = "FULL"
+}
+declare enum PromotionType {
+    COUPON = "COUPON",
+    BUY_X_GET_Y = "BUY_X_GET_Y",
+    CART_AUTO = "CART_AUTO"
+}
+declare enum PromotionDiscountType {
+    PERCENTAGE = "PERCENTAGE",
+    FIXED_AMOUNT = "FIXED_AMOUNT"
+}
+declare enum PromotionSyncSource {
+    LOCAL = "POS_LOCAL",
+    WOOCOMMERCE = "WC_STORE",
+    SHOPIFY = "SHOPIFY_STORE"
+}
 
 interface BaseEntity {
     id: number;
@@ -362,6 +381,7 @@ interface InvoiceItem {
     is_sub_unit?: boolean;
     quantity: number;
     unit_price: number;
+    effective_return_unit_price?: number;
     purchase_price_at_sale?: number | null;
     total: number;
     notes?: string | null;
@@ -394,11 +414,55 @@ interface Invoice extends BaseEntity {
     branch_id?: number | null;
     branch?: Branch | null;
     parent_invoice_id?: number | null;
+    parent_invoice_number?: string | null;
+    promotion_id?: number | null;
+    coupon_code?: string | null;
+    promotion_discount?: number;
+    returned_total?: number;
+    returns_count?: number;
+    return_status?: InvoiceReturnStatus | 'NONE' | 'PARTIAL' | 'FULL';
     online_order_id?: number | null;
     wc_order_id?: number | null;
     shopify_order_id?: number | null;
     created_by?: number | null;
     creator?: User | null;
+}
+interface Promotion {
+    id: number;
+    name: string;
+    code?: string | null;
+    type: PromotionType | string;
+    discount_type: PromotionDiscountType | string;
+    discount_value: number;
+    buy_quantity?: number | null;
+    get_quantity?: number | null;
+    branch_id?: number | null;
+    branch_name?: string | null;
+    category_id?: number | null;
+    category_name?: string | null;
+    product_id?: number | null;
+    product_name?: string | null;
+    min_order_amount: number;
+    max_discount_amount?: number | null;
+    max_uses?: number | null;
+    used_count: number;
+    starts_at?: string | null;
+    ends_at?: string | null;
+    is_active: boolean;
+    wc_coupon_id?: number | null;
+    shopify_discount_id?: string | null;
+    sync_source?: PromotionSyncSource | string;
+    sync_to_ecommerce?: boolean;
+    last_synced_at?: string | null;
+    sync_error?: string | null;
+    created_at?: string;
+}
+interface PromotionEvaluation {
+    promotion_id: number | null;
+    coupon_code: string | null;
+    promotion_name: string | null;
+    promotion_type: PromotionType | string | null;
+    promotion_discount: number;
 }
 interface Treasury extends BaseEntity {
     user_id: number;
@@ -1862,4 +1926,4 @@ declare class Money {
     toString(): string;
 }
 
-export { type AdminAuditLogItem, type AdminStatsData, type ApiResponse, BarcodeFormat, BarcodeLabelSize, type BarcodePrintItemInput, BarcodePrintItemSchema, type BarcodePrintRequestInput, BarcodePrintRequestSchema, type BaseEntity, type Branch, type BranchInput, BranchSchema, type BranchStock, BranchType, type CalculationItem, type CashFlowReportData, type CashFlowTransaction, type CashFlowTransactionsResponse, type Category, CategorySchema, CommissionType, CrmRiskLevel, CustomerInteractionChannel, CustomerTier, type DashboardSummary, EcommercePlatform, EmployeeAdjustmentType, type EmployeeInput, EmployeeSchema, type Expense, type ExpenseInput, ExpenseSchema, type ExpiringBatchAlertItem, ExpiryStatus, type FinancialClosingReportData, type Invoice, type InvoiceCalculations, type InvoiceInput, type InvoiceItem, type InvoiceItemInput, InvoiceItemSchema, InvoiceSchema, InvoiceType, type LedgerEntry, LedgerSource, type LicenseKey, type LoginInput, LoginSchema, type LowStockAlertItem, Money, type OnlineOrder, OnlineOrderCallStatus, type OnlineOrderItem, OrderCancelReason, type PaginatedResponse, type Party, type PartyCrmMetrics, type PartyInput, type PartyInteraction, PartySchema, PartyType, type Payment, type PaymentInput, PaymentMethod, PaymentSchema, type Product, type ProductBatch, type ProductInput, ProductSchema, ProductType, type ProductVariant, type ProductVariantInput, ProductVariantSchema, type ProfitReportData, type PurchaseReportData, type ReceivablesPayablesAgingBuckets, type ReceivablesPayablesBucketParty, type ReceivablesPayablesReportData, type RegisterInput, RegisterSchema, type SalesReportData, ShiftStatus, ShopifyAuthMode, type SplitPaymentItem, StockAdjustmentMode, type StockAlertsResponse, type StockAlertsSummary, type StockMovement, type StockMovementRecord, StockMovementSource, StockMovementType, type StockReportData, type StockReportItem, type StockTransfer, type StockTransferInput, type StockTransferItem, type StockTransferItemInput, StockTransferItemSchema, StockTransferSchema, StockTransferStatus, type StoreIdentity, type Subscription, SubscriptionPlan, SubscriptionStatus, type Treasury, type TreasuryBreakdown, TreasuryTransactionSource, TreasuryTransactionType, TreasuryType, type Unit, type User, UserRole, UserStatus, type WcOrder, type WcOrderItem, WcOrderStatus, WcPaymentStatus, calculateInvoiceTotals, calculateNetProfit, calculatePartyBalanceImpact, formatCurrency, formatDate, formatDateTime, formatNumber, getPaymentMethodLabel };
+export { type AdminAuditLogItem, type AdminStatsData, type ApiResponse, BarcodeFormat, BarcodeLabelSize, type BarcodePrintItemInput, BarcodePrintItemSchema, type BarcodePrintRequestInput, BarcodePrintRequestSchema, type BaseEntity, type Branch, type BranchInput, BranchSchema, type BranchStock, BranchType, type CalculationItem, type CashFlowReportData, type CashFlowTransaction, type CashFlowTransactionsResponse, type Category, CategorySchema, CommissionType, CrmRiskLevel, CustomerInteractionChannel, CustomerTier, type DashboardSummary, EcommercePlatform, EmployeeAdjustmentType, type EmployeeInput, EmployeeSchema, type Expense, type ExpenseInput, ExpenseSchema, type ExpiringBatchAlertItem, ExpiryStatus, type FinancialClosingReportData, type Invoice, type InvoiceCalculations, type InvoiceInput, type InvoiceItem, type InvoiceItemInput, InvoiceItemSchema, InvoiceReturnStatus, InvoiceSchema, InvoiceType, type LedgerEntry, LedgerSource, type LicenseKey, type LoginInput, LoginSchema, type LowStockAlertItem, Money, type OnlineOrder, OnlineOrderCallStatus, type OnlineOrderItem, OrderCancelReason, type PaginatedResponse, type Party, type PartyCrmMetrics, type PartyInput, type PartyInteraction, PartySchema, PartyType, type Payment, type PaymentInput, PaymentMethod, PaymentSchema, type Product, type ProductBatch, type ProductInput, ProductSchema, ProductType, type ProductVariant, type ProductVariantInput, ProductVariantSchema, type ProfitReportData, type Promotion, PromotionDiscountType, type PromotionEvaluation, PromotionSyncSource, PromotionType, type PurchaseReportData, type ReceivablesPayablesAgingBuckets, type ReceivablesPayablesBucketParty, type ReceivablesPayablesReportData, type RegisterInput, RegisterSchema, type SalesReportData, ShiftStatus, ShopifyAuthMode, type SplitPaymentItem, StockAdjustmentMode, type StockAlertsResponse, type StockAlertsSummary, type StockMovement, type StockMovementRecord, StockMovementSource, StockMovementType, type StockReportData, type StockReportItem, type StockTransfer, type StockTransferInput, type StockTransferItem, type StockTransferItemInput, StockTransferItemSchema, StockTransferSchema, StockTransferStatus, type StoreIdentity, type Subscription, SubscriptionPlan, SubscriptionStatus, type Treasury, type TreasuryBreakdown, TreasuryTransactionSource, TreasuryTransactionType, TreasuryType, type Unit, type User, UserRole, UserStatus, type WcOrder, type WcOrderItem, WcOrderStatus, WcPaymentStatus, calculateInvoiceTotals, calculateNetProfit, calculatePartyBalanceImpact, formatCurrency, formatDate, formatDateTime, formatNumber, getPaymentMethodLabel };

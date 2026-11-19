@@ -31,6 +31,8 @@ class SaveWooCommerceSettingsRequest extends FormRequest
             'consumer_secret' => ['nullable', 'string'],
             'online_branch_id' => ['nullable', 'integer', $this->scopedExists('branches')],
             'auto_sync_stock' => ['boolean'],
+            'auto_sync_prices' => ['boolean'],
+            'auto_sync_promotions' => ['boolean'],
             'is_active' => ['boolean'],
         ];
     }

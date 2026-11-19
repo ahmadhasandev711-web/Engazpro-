@@ -117,20 +117,62 @@ class WooCommerceApiClient implements WooCommerceApiClientInterface
      */
     public function updateVariationStock(WooCommerceIntegration $config, int $wcProductId, int $wcVariationId, float $qty): bool
     {
-        try {
-            $url = rtrim($config->store_url, '/') . "/wp-json/wc/v3/products/{$wcProductId}/variations/{$wcVariationId}";
-            $response = Http::timeout(15)
-                ->withBasicAuth($config->consumer_key, $config->consumer_secret)
-                ->put($url, [
-                    'manage_stock' => true,
-                    'stock_quantity' => (int) $qty,
-                ]);
+        return $this->sendPutBool($config, "products/{$wcProductId}/variations/{$wcVariationId}", [
+            'manage_stock' => true,
+            'stock_quantity' => (int) $qty,
+        ], 'updateVariationStock');
+    }
 
-            return $response->successful();
-        } catch (Exception $e) {
-            Log::error("WooCommerce updateVariationStock exception: " . $e->getMessage());
-            return false;
+    public function updateProductPrices(WooCommerceIntegration $config, int $wcProductId, string $regularPrice, string $salePrice): bool
+    {
+        return $this->sendPutBool($config, "products/{$wcProductId}", [
+            'regular_price' => $regularPrice,
+            'sale_price' => $salePrice,
+        ], 'updateProductPrices');
+    }
+
+    public function updateVariationPrices(WooCommerceIntegration $config, int $wcProductId, int $wcVariationId, string $regularPrice, string $salePrice): bool
+    {
+        return $this->sendPutBool($config, "products/{$wcProductId}/variations/{$wcVariationId}", [
+            'regular_price' => $regularPrice,
+            'sale_price' => $salePrice,
+        ], 'updateVariationPrices');
+    }
+
+    public function batchUpdateVariationPrices(WooCommerceIntegration $config, int $wcProductId, array $updates): bool
+    {
+        if (empty($updates)) {
+            return true;
         }
+        foreach (array_chunk($updates, 50) as $chunk) {
+            if ($this->sendRequest($config, 'post', "products/{$wcProductId}/variations/batch", ['update' => $chunk], 'batchUpdateVariationPrices', 30) === null) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public function getCoupons(WooCommerceIntegration $config, int $page = 1, int $perPage = 50): array
+    {
+        $res = $this->sendRequest($config, 'get', 'coupons', ['page' => $page, 'per_page' => $perPage], 'getCoupons', 25);
+
+        return is_array($res) ? $res : [];
+    }
+
+    public function createCoupon(WooCommerceIntegration $config, array $data): ?array
+    {
+        return $this->sendRequest($config, 'post', 'coupons', $data, 'createCoupon', 20);
+    }
+
+    public function updateCoupon(WooCommerceIntegration $config, int $wcCouponId, array $data): ?array
+    {
+        return $this->sendRequest($config, 'put', "coupons/{$wcCouponId}", $data, 'updateCoupon', 20);
+    }
+
+    public function deleteCoupon(WooCommerceIntegration $config, int $wcCouponId): bool
+    {
+        return $this->sendRequest($config, 'delete', "coupons/{$wcCouponId}?force=true", [], 'deleteCoupon', 15) !== null;
     }
 
     /**
@@ -279,11 +321,37 @@ class WooCommerceApiClient implements WooCommerceApiClientInterface
 
             $this->ensureWebhookTopic($config, $webhooksUrl, $deliveryUrl, $existing, 'order.created', 'إنجاز برو - مزامنة الطلبيات اللحظية');
             $this->ensureWebhookTopic($config, $webhooksUrl, $deliveryUrl, $existing, 'order.updated', 'إنجاز برو - تحديث الطلبيات');
+            $this->ensureWebhookTopic($config, $webhooksUrl, $deliveryUrl, $existing, 'product.updated', 'إنجاز برو - تحديث أسعار ومنتجات المتجر');
+            $this->ensureWebhookTopic($config, $webhooksUrl, $deliveryUrl, $existing, 'coupon.created', 'إنجاز برو - مزامنة كوبونات المتجر (إنشاء)');
+            $this->ensureWebhookTopic($config, $webhooksUrl, $deliveryUrl, $existing, 'coupon.updated', 'إنجاز برو - مزامنة كوبونات المتجر (تحديث)');
+            $this->ensureWebhookTopic($config, $webhooksUrl, $deliveryUrl, $existing, 'coupon.deleted', 'إنجاز برو - مزامنة كوبونات المتجر (حذف)');
 
             return true;
         } catch (Exception $e) {
             Log::warning("WooCommerce registerWebhooks exception for store #{$config->user_id}: " . $e->getMessage());
             return false;
+        }
+    }
+
+    private function sendPutBool(WooCommerceIntegration $config, string $path, array $payload, string $context): bool
+    {
+        return $this->sendRequest($config, 'put', $path, $payload, $context, 15) !== null;
+    }
+
+    private function sendRequest(WooCommerceIntegration $config, string $method, string $path, array $payload, string $context, int $timeout = 20): ?array
+    {
+        try {
+            $url = rtrim($config->store_url, '/') . '/wp-json/wc/v3/' . ltrim($path, '/');
+            $req = Http::timeout($timeout)->withBasicAuth($config->consumer_key, $config->consumer_secret);
+            $response = $req->{$method}($url, $payload);
+            if ($response->successful()) {
+                return is_array($response->json()) ? $response->json() : [];
+            }
+            Log::warning("WooCommerce {$context} failed ({$response->status()}): " . $response->body());
+            return null;
+        } catch (Exception $e) {
+            Log::error("WooCommerce {$context} exception: " . $e->getMessage());
+            return null;
         }
     }
 

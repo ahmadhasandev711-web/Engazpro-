@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, ShoppingBag } from 'lucide-react';
 import { UseFormRegister, FieldErrors } from 'react-hook-form';
 import { Party, PaymentMethod, formatCurrency, InvoiceInput } from '@pos-mandob/shared';
 import { fetchPartySelectOptions } from '../../../data/api/asyncOptionLoaders';
@@ -22,6 +22,7 @@ interface InvoiceSummaryPanelProps {
   total: number;
   remaining: number;
   isPending: boolean;
+  onSaveAndExchangeInPos?: () => void;
 }
 
 export const InvoiceSummaryPanel: React.FC<InvoiceSummaryPanelProps> = ({
@@ -41,6 +42,7 @@ export const InvoiceSummaryPanel: React.FC<InvoiceSummaryPanelProps> = ({
   total,
   remaining,
   isPending,
+  onSaveAndExchangeInPos,
 }) => {
   return (
     <Card className="p-5 sm:p-6 flex flex-col gap-6 h-fit">
@@ -181,6 +183,20 @@ export const InvoiceSummaryPanel: React.FC<InvoiceSummaryPanelProps> = ({
       >
         {isPending ? 'جاري الحفظ...' : isReturn ? 'تأكيد وحفظ المرتجع' : 'حفظ الفاتورة'}
       </Button>
+
+      {onSaveAndExchangeInPos && isReturn && !isPurchaseReturn && (
+        <Button
+          type="button"
+          variant="secondary"
+          size="md"
+          disabled={isPending}
+          onClick={onSaveAndExchangeInPos}
+          leftIcon={<ShoppingBag className="w-4 h-4 text-brand" />}
+          className="w-full font-bold text-xs border-brand/30 text-brand bg-brand-soft hover:bg-brand-soft/80"
+        >
+          حفظ واستبدال بأصناف من الكاشير (POS)
+        </Button>
+      )}
     </Card>
   );
 };
