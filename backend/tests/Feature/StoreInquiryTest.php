@@ -86,4 +86,66 @@ class StoreInquiryTest extends TestCase
 
         $response->assertStatus(403);
     }
+
+    public function test_honeypot_and_fast_bot_submissions_are_silently_ignored(): void
+    {
+        $this->postJson('/api/landing/inquiries', [
+            'name' => 'Bot User',
+            'phone' => '01011112222',
+            'company_ref' => 'http://spam-bot.test',
+            'elapsed_ms' => 5000,
+        ])->assertStatus(201)->assertJson(['success' => true, 'data' => null]);
+
+        $this->postJson('/api/landing/inquiries', [
+            'name' => 'Fast Bot',
+            'phone' => '01033334444',
+            'elapsed_ms' => 350,
+        ])->assertStatus(201)->assertJson(['success' => true, 'data' => null]);
+
+        $this->assertDatabaseCount('store_inquiries', 0);
+    }
+
+    public function test_duplicate_phone_and_invalid_inputs_are_rejected(): void
+    {
+        $this->postJson('/api/landing/inquiries', [
+            'name' => 'https://spam.link',
+            'phone' => '01055556666',
+        ])->assertStatus(422);
+
+        $this->postJson('/api/landing/inquiries', [
+            'name' => 'عميل حقيقي',
+            'phone' => 'abc-not-phone',
+        ])->assertStatus(422);
+
+        $this->postJson('/api/landing/inquiries', [
+            'name' => 'سارة أحمد',
+            'phone' => '01099998888',
+            'elapsed_ms' => 4500,
+        ])->assertStatus(201);
+
+        $this->postJson('/api/landing/inquiries', [
+            'name' => 'سارة أحمد',
+            'phone' => '010-9999-8888',
+            'elapsed_ms' => 4500,
+        ])->assertStatus(429);
+
+        $this->assertDatabaseCount('store_inquiries', 1);
+    }
+
+    public function test_public_inquiry_endpoint_rate_limits_excessive_requests_per_ip(): void
+    {
+        foreach (['01010000001', '01010000002', '01010000003'] as $i => $phone) {
+            $this->postJson('/api/landing/inquiries', [
+                'name' => "تاجر {$i}",
+                'phone' => $phone,
+                'elapsed_ms' => 3000,
+            ])->assertStatus(201);
+        }
+
+        $this->postJson('/api/landing/inquiries', [
+            'name' => 'تاجر رابع',
+            'phone' => '01010000004',
+            'elapsed_ms' => 3000,
+        ])->assertStatus(429);
+    }
 }

@@ -48,7 +48,7 @@ Route::post('webhooks/anoofy/events', \App\Http\Controllers\Api\AnoofyInboundCon
 
 // Public Landing Page Pricing & Store Creation Inquiries
 Route::get('public/pricing', \App\Http\Controllers\Api\PublicPricingController::class)->middleware('throttle:60,1');
-Route::post('landing/inquiries', [\App\Http\Controllers\Api\StoreInquiryController::class, 'submitPublic'])->middleware('throttle:15,1');
+Route::post('landing/inquiries', [\App\Http\Controllers\Api\StoreInquiryController::class, 'submitPublic'])->middleware('throttle:3,10');
 
 // Production cache refresh without SSH. Secret required. Migrations are not run here.
 Route::get('ops/maintenance-sync-7b3e9a', [\App\Http\Controllers\Api\DeployMaintenanceController::class, 'clearCache'])->middleware('throttle:5,1');

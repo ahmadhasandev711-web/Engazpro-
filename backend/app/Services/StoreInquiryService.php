@@ -4,8 +4,11 @@ namespace App\Services;
 
 use App\Enums\AdminAuditAction;
 use App\Enums\StoreInquiryStatus;
+use App\Exceptions\PosDomainException;
 use App\Models\StoreInquiry;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class StoreInquiryService
 {
@@ -13,16 +16,52 @@ class StoreInquiryService
         protected AdminAuditService $auditService
     ) {}
 
-    public function submitPublicInquiry(array $validated): StoreInquiry
+    public function submitPublicInquiry(array $validated): ?StoreInquiry
     {
+        if ($this->isBotTrapTriggered($validated)) {
+            Log::info('Blocked automated spam store inquiry via trap.');
+            return null;
+        }
+
+        $cleanPhone = trim((string) $validated['phone']);
+        $this->assertNotDuplicateRecentPhone($cleanPhone);
+
         return StoreInquiry::create([
-            'name' => $validated['name'],
-            'phone' => $validated['phone'],
+            'name' => trim((string) $validated['name']),
+            'phone' => $cleanPhone,
             'business_type' => $validated['business_type'] ?? null,
             'city' => $validated['city'] ?? null,
             'notes' => $validated['notes'] ?? null,
             'status' => StoreInquiryStatus::NEW->value,
         ]);
+    }
+
+    private function isBotTrapTriggered(array $validated): bool
+    {
+        if (!empty(trim((string) ($validated['company_ref'] ?? '')))) {
+            return true;
+        }
+
+        return array_key_exists('elapsed_ms', $validated)
+            && $validated['elapsed_ms'] !== null
+            && (int) $validated['elapsed_ms'] < 1200;
+    }
+
+    private function assertNotDuplicateRecentPhone(string $cleanPhone): void
+    {
+        $digits = preg_replace('/\D+/', '', $cleanPhone) ?: $cleanPhone;
+        $cacheKey = 'store_inquiry_phone_lock:' . sha1($digits);
+        $recentlyStored = StoreInquiry::where('phone', $cleanPhone)
+            ->where('created_at', '>=', now()->subMinutes(30))
+            ->exists();
+
+        if ($recentlyStored || !Cache::add($cacheKey, true, now()->addMinutes(30))) {
+            throw new PosDomainException(
+                'تم استلام طلبك بهذا الرقم بالفعل منذ قليل، وسيتواصل معك فريقنا قريباً.',
+                'DUPLICATE_STORE_INQUIRY',
+                429
+            );
+        }
     }
 
     public function listWithStats(?string $status, ?string $search, int $perPage): array

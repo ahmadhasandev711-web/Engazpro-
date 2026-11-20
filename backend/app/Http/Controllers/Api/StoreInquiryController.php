@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\SubmitStoreInquiryRequest;
 use App\Http\Requests\UpdateStoreInquiryRequest;
 use App\Services\StoreInquiryService;
 use Illuminate\Http\JsonResponse;
@@ -17,17 +18,9 @@ class StoreInquiryController extends Controller
     /**
      * Submit a store creation inquiry from the public landing page.
      */
-    public function submitPublic(Request $request): JsonResponse
+    public function submitPublic(SubmitStoreInquiryRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:150'],
-            'phone' => ['required', 'string', 'max:50'],
-            'business_type' => ['nullable', 'string', 'max:100'],
-            'city' => ['nullable', 'string', 'max:100'],
-            'notes' => ['nullable', 'string', 'max:1000'],
-        ]);
-
-        $inquiry = $this->inquiryService->submitPublicInquiry($validated);
+        $inquiry = $this->inquiryService->submitPublicInquiry($request->validated());
 
         return response()->json([
             'success' => true,
