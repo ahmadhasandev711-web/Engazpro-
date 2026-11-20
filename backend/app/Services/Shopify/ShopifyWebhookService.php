@@ -6,6 +6,7 @@ use App\Exceptions\ShopifyConnectionException;
 use App\Jobs\ProcessShopifyWebhookJob;
 use App\Models\ShopifyIntegration;
 use App\Models\User;
+use App\Services\SubscriptionGate;
 use App\Support\ShopifyGid;
 use App\Support\TenantContext;
 use Illuminate\Support\Facades\Cache;
@@ -78,8 +79,9 @@ class ShopifyWebhookService
         }
 
         $owner = User::withoutGlobalScopes()->find($userId);
-        if (!$owner || !$owner->ecommerce_enabled) {
-            throw new ShopifyConnectionException('Store owner not found or e-commerce addon disabled', 403);
+        $gate = $owner ? SubscriptionGate::statusFor($owner) : null;
+        if (!$owner || empty($gate['active']) || empty($gate['ecommerce_enabled'])) {
+            throw new ShopifyConnectionException('Store owner not found, subscription inactive, or e-commerce addon disabled', 403);
         }
 
         return [$owner, $integration];

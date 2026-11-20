@@ -7,6 +7,8 @@ use App\Enums\SubscriptionStatus;
 use App\Models\ActivationCode;
 use App\Models\Subscription;
 use App\Models\User;
+use App\Services\Shopify\ShopifyStockSyncGate;
+use App\Services\WooCommerce\WooStockSyncGate;
 use App\Support\Money;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -160,11 +162,19 @@ class ActivationCodeService
             'notes' => 'تفعيل عبر كود: ' . $activationCode->code,
         ]);
         $subscription->save();
-        if ($activationCode->ecommerce_enabled && !$user->ecommerce_enabled) {
-            $user->forceFill(['ecommerce_enabled' => true])->save();
-            SubscriptionGate::clear($user->id);
-        }
+        $this->syncUserEcommerceAccess($user, (bool) $activationCode->ecommerce_enabled);
 
         return [$subscription, $newEndDate];
+    }
+
+    private function syncUserEcommerceAccess(User $user, bool $enabled): void
+    {
+        if ((bool) $user->ecommerce_enabled !== $enabled) {
+            $user->forceFill(['ecommerce_enabled' => $enabled])->save();
+        }
+
+        SubscriptionGate::clear($user->id);
+        WooStockSyncGate::forget($user->id);
+        ShopifyStockSyncGate::forget($user->id);
     }
 }

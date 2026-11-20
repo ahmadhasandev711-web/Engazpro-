@@ -30,6 +30,7 @@ class AuthService
                 'status' => UserStatus::ACTIVE,
             ]);
             $user->role = UserRole::OWNER;
+            $user->ecommerce_enabled = true;
             $user->save();
 
             $this->createTrialSubscription($user, $trialDays);

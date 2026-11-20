@@ -8,18 +8,20 @@ use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Resources\UserResource;
 use App\Services\AuthService;
+use App\Services\PlatformPricingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class AuthController extends Controller
 {
     public function __construct(
-        protected AuthService $authService
+        protected AuthService $authService,
+        protected PlatformPricingService $pricingService
     ) {}
 
     public function register(RegisterRequest $request): JsonResponse
     {
-        $trialDays = (int) config('pos.trial_days', 14);
+        $trialDays = (int) $this->pricingService->getPricing()['trial_days'];
         $result = $this->authService->registerOwner($request->validated(), $trialDays);
 
         return response()->json([

@@ -152,4 +152,31 @@ class AuthAndSubscriptionTest extends TestCase
             ->assertJsonPath('success', true)
             ->assertJsonPath('data.subscription.status', 'ACTIVE');
     }
+
+    public function test_trial_registration_enables_ecommerce_and_respects_dynamic_pricing_trial_days(): void
+    {
+        app(\App\Services\PlatformPricingService::class)->updatePricing([
+            'basic_monthly_price' => 399,
+            'basic_annual_price' => 3990,
+            'pro_monthly_price' => 749,
+            'pro_annual_price' => 7500,
+            'trial_days' => 21,
+        ]);
+
+        $response = $this->postJson('/api/auth/register', [
+            'name' => 'براند فاشون أونلاين',
+            'phone' => '01066665555',
+            'password' => 'secret123',
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.user.ecommerce_enabled', true)
+            ->assertJsonPath('message', 'تم إنشاء الحساب بنجاح وتفعيل الفترة التجريبية (21 أيام)');
+
+        $user = User::where('phone', '01066665555')->firstOrFail();
+        $this->assertTrue((bool) $user->ecommerce_enabled);
+
+        $sub = Subscription::where('user_id', $user->id)->where('plan', 'TRIAL')->firstOrFail();
+        $this->assertSame(Carbon::today()->addDays(21)->toDateString(), $sub->end_date->toDateString());
+    }
 }

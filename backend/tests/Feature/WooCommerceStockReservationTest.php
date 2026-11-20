@@ -3,12 +3,14 @@
 namespace Tests\Feature;
 
 use App\Enums\EcommercePlatform;
+use App\Enums\SubscriptionStatus;
 use App\Models\Branch;
 use App\Models\BranchStock;
 use App\Models\OnlineOrder;
 use App\Models\OnlineOrderItem;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\Subscription;
 use App\Models\User;
 use App\Models\WooCommerceIntegration;
 use App\Services\OnlineOrders\OnlineOrderSyncService;
@@ -28,6 +30,14 @@ class WooCommerceStockReservationTest extends TestCase
         parent::setUp();
 
         $this->owner = User::factory()->create(['role' => 'OWNER', 'ecommerce_enabled' => true]);
+        Subscription::create([
+            'user_id' => $this->owner->id,
+            'start_date' => now()->subDay()->toDateString(),
+            'end_date' => now()->addYear()->toDateString(),
+            'status' => SubscriptionStatus::ACTIVE,
+            'plan' => 'PRO_ECOMMERCE',
+            'price' => 5000.00,
+        ]);
         $this->mainBranch = Branch::create([
             'user_id' => $this->owner->id,
             'name' => 'الفرع الرئيسي',

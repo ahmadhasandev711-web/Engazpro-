@@ -213,4 +213,106 @@ class EcommerceAccessAndExclusivityTest extends TestCase
         $this->assertTrue((bool) $row['ecommerce_enabled']);
         $this->assertSame(EcommercePlatform::SHOPIFY->value, $row['active_ecommerce_platform']);
     }
+
+    public function test_trial_ecommerce_access_turns_off_on_basic_code_and_reenables_on_pro_code(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true, 'role' => UserRole::ADMIN]);
+
+        $regRes = $this->postJson('/api/auth/register', [
+            'name' => 'تاجر تجربة متكاملة',
+            'phone' => '01091919191',
+            'password' => 'secret123',
+        ])->assertStatus(201);
+
+        $owner = User::where('phone', '01091919191')->firstOrFail();
+        $this->assertTrue((bool) $regRes->json('data.user.ecommerce_enabled'));
+
+        WooCommerceIntegration::create([
+            'user_id' => $owner->id,
+            'store_url' => 'https://trial-wc.example.com',
+            'consumer_key' => 'ck_trial',
+            'consumer_secret' => 'cs_trial',
+            'webhook_secret' => 'wh_trial_123',
+            'is_active' => true,
+            'auto_sync_stock' => true,
+        ]);
+
+        WooStockSyncGate::forget($owner->id);
+        $this->assertTrue(WooStockSyncGate::isActive($owner->id));
+
+        $basicGen = $this->actingAs($admin)->postJson('/api/admin/licenses/generate', [
+            'count' => 1, 'duration_days' => 30, 'price' => 399, 'ecommerce_enabled' => false,
+        ])->assertStatus(201);
+        $this->actingAs($owner)->postJson('/api/subscription/activate-code', [
+            'code' => $basicGen->json('data.0.code'),
+        ])->assertOk();
+
+        $this->assertFalse((bool) $owner->fresh()->ecommerce_enabled);
+        $this->assertFalse(WooStockSyncGate::isActive($owner->id));
+        $this->actingAs($owner->fresh())->getJson('/api/online-orders')->assertStatus(403);
+
+        $proGen = $this->actingAs($admin)->postJson('/api/admin/licenses/generate', [
+            'count' => 1, 'duration_days' => 30, 'price' => 749, 'ecommerce_enabled' => true,
+        ])->assertStatus(201);
+        $this->actingAs($owner->fresh())->postJson('/api/subscription/activate-code', [
+            'code' => $proGen->json('data.0.code'),
+        ])->assertOk();
+
+        $this->assertTrue((bool) $owner->fresh()->ecommerce_enabled);
+        $this->assertTrue(WooStockSyncGate::isActive($owner->id));
+        $this->actingAs($owner->fresh())->getJson('/api/online-orders')->assertOk();
+    }
+
+    public function test_expired_subscription_blocks_webhooks_and_stock_sync_gates_even_with_ecommerce_enabled(): void
+    {
+        $owner = $this->createSubscribedMerchant(true);
+
+        WooCommerceIntegration::create([
+            'user_id' => $owner->id,
+            'store_url' => 'https://exp-wc.example.com',
+            'consumer_key' => 'ck_exp',
+            'consumer_secret' => 'cs_exp',
+            'webhook_secret' => 'wh_exp_wc',
+            'is_active' => true,
+            'auto_sync_stock' => true,
+        ]);
+
+        WooStockSyncGate::forget($owner->id);
+        $this->assertTrue(WooStockSyncGate::isActive($owner->id));
+
+        $owner->subscription->update([
+            'status' => SubscriptionStatus::EXPIRED,
+            'end_date' => now()->subDays(5)->toDateString(),
+        ]);
+
+        $this->assertFalse(WooStockSyncGate::isActive($owner->id));
+
+        $wcPayload = json_encode(['id' => 999]);
+        $wcSig = base64_encode(hash_hmac('sha256', $wcPayload, 'wh_exp_wc', true));
+        $this->call('POST', "/api/webhooks/woocommerce/{$owner->id}", [], [], [], [
+            'HTTP_X-WC-Webhook-Signature' => $wcSig,
+            'HTTP_X-WC-Webhook-Topic' => 'order.created',
+            'CONTENT_TYPE' => 'application/json',
+        ], $wcPayload)->assertStatus(403);
+
+        ShopifyIntegration::create([
+            'user_id' => $owner->id,
+            'shop_domain' => 'exp-shop.myshopify.com',
+            'access_token' => 'shpat_exp',
+            'webhook_secret' => 'wh_exp_shopify',
+            'is_active' => true,
+            'auto_sync_stock' => true,
+        ]);
+        ShopifyStockSyncGate::forget($owner->id);
+        $this->assertFalse(ShopifyStockSyncGate::isActive($owner->id));
+
+        $shPayload = json_encode(['id' => 888]);
+        $shSig = base64_encode(hash_hmac('sha256', $shPayload, 'wh_exp_shopify', true));
+        $this->call('POST', "/api/webhooks/shopify/{$owner->id}", [], [], [], [
+            'HTTP_X-Shopify-Hmac-Sha256' => $shSig,
+            'HTTP_X-Shopify-Topic' => 'orders/create',
+            'HTTP_X-Shopify-Shop-Domain' => 'exp-shop.myshopify.com',
+            'CONTENT_TYPE' => 'application/json',
+        ], $shPayload)->assertStatus(403);
+    }
 }

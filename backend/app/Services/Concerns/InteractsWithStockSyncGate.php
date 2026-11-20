@@ -2,7 +2,9 @@
 
 namespace App\Services\Concerns;
 
+use App\Enums\SubscriptionStatus;
 use App\Models\User;
+use App\Services\SubscriptionGate;
 use Illuminate\Support\Facades\Cache;
 
 trait InteractsWithStockSyncGate
@@ -60,11 +62,12 @@ trait InteractsWithStockSyncGate
             return false;
         }
 
-        return Cache::remember(static::cachePrefix() . $subKey . $userId, 60, function () use ($userId, $flagColumn) {
-            if (!User::withoutGlobalScopes()->whereKey($userId)->where('ecommerce_enabled', true)->exists()) {
-                return false;
-            }
+        $gate = self::resolveSubscriptionGate($userId);
+        if (empty($gate['active']) || empty($gate['ecommerce_enabled'])) {
+            return false;
+        }
 
+        return Cache::remember(static::cachePrefix() . $subKey . $userId, 60, function () use ($userId, $flagColumn) {
             $modelClass = static::integrationModelClass();
 
             return $modelClass::withoutGlobalScopes()
@@ -73,5 +76,20 @@ trait InteractsWithStockSyncGate
                 ->where($flagColumn, true)
                 ->exists();
         });
+    }
+
+    /** @return array{active: bool, frozen: bool, subscription_status: string, ecommerce_enabled: bool} */
+    private static function resolveSubscriptionGate(int $userId): array
+    {
+        $cached = Cache::get(SubscriptionGate::cacheKey($userId));
+        if (is_array($cached)) {
+            return $cached;
+        }
+
+        $owner = User::withoutGlobalScopes()->find($userId);
+
+        return $owner
+            ? SubscriptionGate::statusFor($owner)
+            : ['active' => false, 'frozen' => false, 'subscription_status' => SubscriptionStatus::NONE->value, 'ecommerce_enabled' => false];
     }
 }

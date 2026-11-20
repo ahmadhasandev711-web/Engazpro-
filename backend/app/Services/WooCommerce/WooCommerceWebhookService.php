@@ -6,6 +6,7 @@ use App\Exceptions\WooCommerceConnectionException;
 use App\Jobs\ProcessWooCommerceWebhookJob;
 use App\Models\User;
 use App\Models\WooCommerceIntegration;
+use App\Services\SubscriptionGate;
 use App\Support\TenantContext;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -90,8 +91,9 @@ class WooCommerceWebhookService
         }
 
         $user = User::withoutGlobalScopes()->find($userId);
-        if (!$user || !$user->ecommerce_enabled) {
-            throw new WooCommerceConnectionException('Store owner not found or e-commerce addon disabled', 403);
+        $gate = $user ? SubscriptionGate::statusFor($user) : null;
+        if (!$user || empty($gate['active']) || empty($gate['ecommerce_enabled'])) {
+            throw new WooCommerceConnectionException('Store owner not found, subscription inactive, or e-commerce addon disabled', 403);
         }
 
         return [$integration, $user];
