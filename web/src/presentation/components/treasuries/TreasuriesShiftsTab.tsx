@@ -86,8 +86,13 @@ export const TreasuriesShiftsTab: React.FC<{ vm: TreasuriesViewModel }> = ({ vm 
                               ? `${new Date(s.closed_at).toLocaleDateString('ar-EG')} ${new Date(s.closed_at).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}`
                               : '-'}
                           </td>
-                          <td className="py-3 px-4 tabular-nums font-bold text-ok">
-                            {formatCurrency(s.cash_sales)}
+                          <td className="py-3 px-4 tabular-nums">
+                            <div className="font-bold text-ok">{formatCurrency(s.cash_sales)}</div>
+                            {Number(s.electronic_sales ?? 0) > 0 && (
+                              <div className="text-[11px] font-bold text-brand">
+                                شبكة/محافظ: +{formatCurrency(s.electronic_sales)}
+                              </div>
+                            )}
                           </td>
                           <td className="py-3 px-4 tabular-nums text-ink">
                             {formatCurrency(s.expected_cash)}
@@ -188,6 +193,12 @@ export const TreasuriesShiftsTab: React.FC<{ vm: TreasuriesViewModel }> = ({ vm 
                           <span>مبيعات كاش:</span>
                           <span className="font-bold text-ok">{formatCurrency(s.cash_sales)}</span>
                         </div>
+                        {Number(s.electronic_sales ?? 0) > 0 && (
+                          <div className="flex justify-between text-muted">
+                            <span>شبكة / محافظ:</span>
+                            <span className="font-bold text-brand">+{formatCurrency(s.electronic_sales)}</span>
+                          </div>
+                        )}
                         <div className="flex justify-between text-muted">
                           <span>المتوقع:</span>
                           <span className="font-bold text-ink">{formatCurrency(s.expected_cash)}</span>

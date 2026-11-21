@@ -19,7 +19,15 @@ export interface OrdersChannelConfig {
 }
 
 export function useOnlineOrders(config?: OrdersChannelConfig) {
-  const { isOwnerOrAdmin, isManager, isMandob, canTransferOnlineOrderBranch, activeEcommercePlatform } = usePermissions();
+  const {
+    isOwnerOrAdmin,
+    isManager,
+    isCashier,
+    isMandob,
+    canTransferOnlineOrderBranch,
+    canViewOnlineOrderHistory,
+    activeEcommercePlatform,
+  } = usePermissions();
   const apiBase = config?.apiBase ?? '/online-orders';
   const orderQueryKey = config?.queryKey ?? 'online-orders';
   const platformTitle =
@@ -28,7 +36,9 @@ export function useOnlineOrders(config?: OrdersChannelConfig) {
       : activeEcommercePlatform === EcommercePlatform.WOOCOMMERCE
         ? 'WooCommerce'
         : 'المتجر';
-  const channelTitle = config?.channelTitle ?? `طلبات ${platformTitle} والتوصيل الميداني`;
+  const channelTitle = isMandob
+    ? 'طلباتي'
+    : (config?.channelTitle ?? `طلبات ${platformTitle} والتوصيل الميداني`);
 
   const queryClient = useQueryClient();
   const { selection } = useHaptic();
@@ -37,8 +47,11 @@ export function useOnlineOrders(config?: OrdersChannelConfig) {
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebouncedValue(search.trim(), 250);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
-  const [fromDate, setFromDate] = useState<string>(() => calculatePresetDates('today').from);
-  const [toDate, setToDate] = useState<string>(() => calculatePresetDates('today').to);
+  const todayDates = calculatePresetDates('today');
+  const [fromDate, setFromDate] = useState<string>(() => todayDates.from);
+  const [toDate, setToDate] = useState<string>(() => todayDates.to);
+  const effectiveFromDate = canViewOnlineOrderHistory ? fromDate : todayDates.from;
+  const effectiveToDate = canViewOnlineOrderHistory ? toDate : todayDates.to;
   const [viewingOrder, setViewingOrder] = useState<any | null>(null);
 
   const [confirmModalOrder, setConfirmModalOrder] = useState<any | null>(null);
@@ -224,13 +237,13 @@ export function useOnlineOrders(config?: OrdersChannelConfig) {
   };
 
   const { data: ordersResult, isLoading } = useQuery({
-    queryKey: [orderQueryKey, activeEcommercePlatform, debouncedSearch, statusFilter, fromDate, toDate],
+    queryKey: [orderQueryKey, user?.id, activeEcommercePlatform, debouncedSearch, statusFilter, effectiveFromDate, effectiveToDate],
     queryFn: async () => {
       const params: any = {};
       if (debouncedSearch) params.search = debouncedSearch;
       if (statusFilter !== 'ALL') params.status = statusFilter;
-      if (fromDate) params.date_from = fromDate;
-      if (toDate) params.date_to = toDate;
+      if (effectiveFromDate) params.date_from = effectiveFromDate;
+      if (effectiveToDate) params.date_to = effectiveToDate;
 
       const res = await apiClient.get(apiBase, { params });
       const raw = res.data?.data?.data ?? res.data?.data ?? res.data;
@@ -243,12 +256,19 @@ export function useOnlineOrders(config?: OrdersChannelConfig) {
           }))
         : [];
       const counts: Record<string, number> | null = res.data?.counts ?? null;
-      return { items, counts };
+      const summaryTotal = res.data?.summary?.total_amount;
+      return { items, counts, summaryTotal: typeof summaryTotal === 'number' ? summaryTotal : null };
     },
     placeholderData: (previousData) => previousData,
   });
   const orders = ordersResult?.items ?? [];
   const statusCounts = ordersResult?.counts ?? null;
+  const ordersTotalAmount =
+    ordersResult?.summaryTotal ??
+    orders.reduce((sum: number, o: any) => sum + (Number(o.total) || 0), 0);
+  const ordersTotalCount =
+    statusCounts?.[statusFilter] ??
+    (statusFilter === 'ALL' ? (statusCounts?.ALL ?? orders.length) : orders.length);
 
   const confirmMutation = useMutation({
     mutationFn: async ({ orderId, branchId, force }: { orderId: number; branchId: number; force?: boolean }) =>
@@ -428,9 +448,12 @@ export function useOnlineOrders(config?: OrdersChannelConfig) {
   });
 
   return {
-    channelTitle, selection, canPullOrders, canTransferOnlineOrderBranch, isOwnerOrAdmin, isManager, isMandob,
+    channelTitle, selection, canPullOrders, canTransferOnlineOrderBranch, canViewOnlineOrderHistory,
+    isOwnerOrAdmin, isManager, isCashier, isMandob,
     apiBase, orderQueryKey, transferBranchModalOrder, setTransferBranchModalOrder,
-    search, setSearch, statusFilter, setStatusFilter, fromDate, setFromDate, toDate, setToDate,
+    search, setSearch, statusFilter, setStatusFilter,
+    fromDate: effectiveFromDate, setFromDate, toDate: effectiveToDate, setToDate,
+    ordersTotalAmount, ordersTotalCount,
     viewingOrder, setViewingOrder, confirmModalOrder, setConfirmModalOrder,
     selectedBranchId, setSelectedBranchId, confirmError, setConfirmError, forceConfirm, setForceConfirm,
     dispatchModalOrder, setDispatchModalOrder, selectedMandobId, setSelectedMandobId,

@@ -536,14 +536,18 @@ export const Layout: React.FC = () => {
             </div>
             <form onSubmit={handleChangeOwnPassword} className="space-y-3">
               <Input
+                name="current_password"
                 type="password"
+                autoComplete="current-password"
                 label="كلمة المرور الحالية"
                 value={pwdForm.current_password}
                 onChange={(e) => setPwdForm({ ...pwdForm, current_password: e.target.value })}
                 required
               />
               <Input
+                name="new_password"
                 type="password"
+                autoComplete="new-password"
                 label="كلمة المرور الجديدة"
                 value={pwdForm.new_password}
                 onChange={(e) => setPwdForm({ ...pwdForm, new_password: e.target.value })}
@@ -551,7 +555,9 @@ export const Layout: React.FC = () => {
                 required
               />
               <Input
+                name="new_password_confirmation"
                 type="password"
+                autoComplete="new-password"
                 label="تأكيد كلمة المرور الجديدة"
                 value={pwdForm.new_password_confirmation}
                 onChange={(e) => setPwdForm({ ...pwdForm, new_password_confirmation: e.target.value })}

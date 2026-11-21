@@ -100,7 +100,7 @@ export const StoreStaffModal: React.FC<StoreStaffModalProps> = ({ userId, onClos
 
         <div className="p-4 sm:p-6 overflow-y-auto space-y-6 flex-1">
           {resetTarget && (
-            <form onSubmit={handleSubmitReset} className="p-4 rounded-xl bg-brand-soft/40 border border-brand/30 space-y-3">
+            <form onSubmit={handleSubmitReset} autoComplete="off" className="p-4 rounded-xl bg-brand-soft/40 border border-brand/30 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-black text-ink">تعيين كلمة مرور جديدة للموظف: {resetTarget.name}</span>
                 <Button type="button" size="sm" variant="ghost" onClick={() => setResetTarget(null)}>إلغاء</Button>
@@ -108,7 +108,9 @@ export const StoreStaffModal: React.FC<StoreStaffModalProps> = ({ userId, onClos
               <div className="flex items-end gap-2 flex-wrap">
                 <div className="flex-1 min-w-[200px]">
                   <Input
+                    name="admin_reset_staff_password"
                     type="password"
+                    autoComplete="new-password"
                     label="كلمة المرور الجديدة (8 أحرف على الأقل)"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}

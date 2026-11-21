@@ -7,6 +7,7 @@ use App\Enums\WcOrderStatus;
 use App\Models\OnlineOrder;
 use App\Models\User;
 use App\Services\CustomerIntelligenceService;
+use App\Support\Money;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -52,6 +53,19 @@ class OnlineOrderQueryService
         )->first();
 
         return $this->formatTabCounts($row);
+    }
+
+    /**
+     * @return array{total_amount: float}
+     */
+    public function summarizeAmountForUser(User $user, array $filters): array
+    {
+        $query = $this->scopedBaseQuery($user);
+        $this->applyFilters($query, $user, $filters);
+
+        return [
+            'total_amount' => Money::of($query->sum('total') ?? 0)->getAmount(),
+        ];
     }
 
     public function findForShowOrFail(User $user, int $id): OnlineOrder
@@ -119,7 +133,7 @@ class OnlineOrderQueryService
         if (!empty($filters['branch_id']) && $user->hasGlobalBranchAccess()) {
             $query->where('branch_id', $filters['branch_id']);
         }
-        $this->applySearchAndDateFilters($query, $filters);
+        $this->applySearchAndDateFilters($query, $user, $filters);
     }
 
     /**
@@ -159,10 +173,17 @@ class OnlineOrderQueryService
         ];
     }
 
-    private function applySearchAndDateFilters(Builder $query, array $filters): void
+    private function applySearchAndDateFilters(Builder $query, User $user, array $filters): void
     {
         if (!empty($filters['search'])) {
             $this->applySearchFilter($query, trim((string) $filters['search']));
+        }
+        if (!$this->canViewOrderHistory($user)) {
+            $today = now()->toDateString();
+            $this->applyDateBound($query, $today, '>=', '00:00:00');
+            $this->applyDateBound($query, $today, '<=', '23:59:59');
+
+            return;
         }
         if (!empty($filters['date_from'])) {
             $this->applyDateBound($query, (string) $filters['date_from'], '>=', '00:00:00');
@@ -170,6 +191,11 @@ class OnlineOrderQueryService
         if (!empty($filters['date_to'])) {
             $this->applyDateBound($query, (string) $filters['date_to'], '<=', '23:59:59');
         }
+    }
+
+    private function canViewOrderHistory(User $user): bool
+    {
+        return !$user->isCashier() && !$user->isMandob();
     }
 
     private function applySearchFilter(Builder $query, string $search): void

@@ -289,19 +289,21 @@ export const StoreManageModal: React.FC<StoreManageModalProps> = ({
               <p className="text-xs font-bold">جاري تحميل إعدادات المتجر...</p>
             </div>
           ) : section === 'profile' ? (
-            <form onSubmit={handleSaveProfile} className="space-y-4">
+            <form onSubmit={handleSaveProfile} autoComplete="off" className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Input
                   label="معرّف المتجر الفريد (store_code)"
+                  name="merchant_store_code"
                   dir="ltr"
+                  autoComplete="off"
                   value={profileForm.store_code}
                   onChange={(e) => setProfileForm({ ...profileForm, store_code: normalizeStoreCodeInput(e.target.value) })}
                   className="font-mono text-right"
                 />
-                <Input label="اسم صاحب المتجر" value={profileForm.name} onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })} required />
-                <Input label="الاسم التجاري للمنشأة" value={profileForm.business_name} onChange={(e) => setProfileForm({ ...profileForm, business_name: e.target.value })} />
-                <Input label="رقم الهاتف" dir="ltr" value={profileForm.phone} onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })} required />
-                <Input label="البريد الإلكتروني (لـ OTP)" type="email" dir="ltr" value={profileForm.email} onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })} />
+                <Input label="اسم صاحب المتجر" name="merchant_owner_name" autoComplete="off" value={profileForm.name} onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })} required />
+                <Input label="الاسم التجاري للمنشأة" name="merchant_business_name" autoComplete="off" value={profileForm.business_name} onChange={(e) => setProfileForm({ ...profileForm, business_name: e.target.value })} />
+                <Input label="رقم الهاتف" name="merchant_phone" dir="ltr" autoComplete="off" value={profileForm.phone} onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })} required />
+                <Input label="البريد الإلكتروني (لـ OTP)" name="merchant_email" type="email" dir="ltr" autoComplete="off" value={profileForm.email} onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })} />
               </div>
 
               <Select
@@ -323,14 +325,14 @@ export const StoreManageModal: React.FC<StoreManageModalProps> = ({
               </div>
             </form>
           ) : section === 'woo' ? (
-            <form onSubmit={handleSaveWoo} className="space-y-4">
-              <Input label="رابط متجر WooCommerce *" dir="ltr" placeholder="https://example-store.com" value={wooForm.store_url} onChange={(e) => setWooForm({ ...wooForm, store_url: e.target.value })} required />
+            <form onSubmit={handleSaveWoo} autoComplete="off" className="space-y-4">
+              <Input label="رابط متجر WooCommerce *" name="merchant_woo_url" dir="ltr" autoComplete="off" placeholder="https://example-store.com" value={wooForm.store_url} onChange={(e) => setWooForm({ ...wooForm, store_url: e.target.value })} required />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Input label="Consumer Key" dir="ltr" placeholder={data?.woocommerce?.has_credentials ? 'اتركه فارغاً للإبقاء على الحالي' : 'ck_...'} value={wooForm.consumer_key} onChange={(e) => setWooForm({ ...wooForm, consumer_key: e.target.value })} />
-                <Input label="Consumer Secret" dir="ltr" type="password" placeholder={data?.woocommerce?.has_credentials ? 'اتركه فارغاً للإبقاء على الحالي' : 'cs_...'} value={wooForm.consumer_secret} onChange={(e) => setWooForm({ ...wooForm, consumer_secret: e.target.value })} />
+                <Input label="Consumer Key" name="merchant_woo_consumer_key" dir="ltr" autoComplete="off" placeholder={data?.woocommerce?.has_credentials ? 'اتركه فارغاً للإبقاء على الحالي' : 'ck_...'} value={wooForm.consumer_key} onChange={(e) => setWooForm({ ...wooForm, consumer_key: e.target.value })} />
+                <Input label="Consumer Secret" name="merchant_woo_consumer_secret" dir="ltr" type="password" autoComplete="new-password" placeholder={data?.woocommerce?.has_credentials ? 'اتركه فارغاً للإبقاء على الحالي' : 'cs_...'} value={wooForm.consumer_secret} onChange={(e) => setWooForm({ ...wooForm, consumer_secret: e.target.value })} />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Input label="Webhook Secret (اختياري)" dir="ltr" value={wooForm.webhook_secret} onChange={(e) => setWooForm({ ...wooForm, webhook_secret: e.target.value })} />
+                <Input label="Webhook Secret (اختياري)" name="merchant_woo_webhook_secret" dir="ltr" autoComplete="off" value={wooForm.webhook_secret} onChange={(e) => setWooForm({ ...wooForm, webhook_secret: e.target.value })} />
                 <Select label="فرع سحب/مزامنة الأونلاين" value={wooForm.online_branch_id} onChange={(e) => setWooForm({ ...wooForm, online_branch_id: e.target.value })} options={branchOptions} />
               </div>
 
@@ -360,14 +362,14 @@ export const StoreManageModal: React.FC<StoreManageModalProps> = ({
               </div>
             </form>
           ) : (
-            <form onSubmit={handleSaveShopify} className="space-y-4">
-              <Input label="دومين متجر Shopify *" dir="ltr" placeholder="brand-name.myshopify.com" value={shopifyForm.shop_domain} onChange={(e) => setShopifyForm({ ...shopifyForm, shop_domain: e.target.value })} required />
+            <form onSubmit={handleSaveShopify} autoComplete="off" className="space-y-4">
+              <Input label="دومين متجر Shopify *" name="merchant_shopify_domain" dir="ltr" autoComplete="off" placeholder="brand-name.myshopify.com" value={shopifyForm.shop_domain} onChange={(e) => setShopifyForm({ ...shopifyForm, shop_domain: e.target.value })} required />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Input label="Admin API Access Token" dir="ltr" type="password" placeholder={data?.shopify?.has_token ? 'اتركه فارغاً للإبقاء على الحالي' : 'shpat_...'} value={shopifyForm.access_token} onChange={(e) => setShopifyForm({ ...shopifyForm, access_token: e.target.value })} />
-                <Input label="Webhook Secret (اختياري)" dir="ltr" value={shopifyForm.webhook_secret} onChange={(e) => setShopifyForm({ ...shopifyForm, webhook_secret: e.target.value })} />
+                <Input label="Admin API Access Token" name="merchant_shopify_access_token" dir="ltr" type="password" autoComplete="new-password" placeholder={data?.shopify?.has_token ? 'اتركه فارغاً للإبقاء على الحالي' : 'shpat_...'} value={shopifyForm.access_token} onChange={(e) => setShopifyForm({ ...shopifyForm, access_token: e.target.value })} />
+                <Input label="Webhook Secret (اختياري)" name="merchant_shopify_webhook_secret" dir="ltr" autoComplete="off" value={shopifyForm.webhook_secret} onChange={(e) => setShopifyForm({ ...shopifyForm, webhook_secret: e.target.value })} />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Input label="Client ID (اختياري)" dir="ltr" value={shopifyForm.client_id} onChange={(e) => setShopifyForm({ ...shopifyForm, client_id: e.target.value })} />
+                <Input label="Client ID (اختياري)" name="merchant_shopify_client_id" dir="ltr" autoComplete="off" value={shopifyForm.client_id} onChange={(e) => setShopifyForm({ ...shopifyForm, client_id: e.target.value })} />
                 <Select label="فرع سحب/مزامنة الأونلاين" value={shopifyForm.online_branch_id} onChange={(e) => setShopifyForm({ ...shopifyForm, online_branch_id: e.target.value })} options={branchOptions} />
               </div>
 

@@ -165,6 +165,7 @@ export const LoginPage: React.FC = () => {
         <Input
           {...register('store_code')}
           type="text"
+          autoComplete="off"
           label="معرّف المتجر"
           placeholder="ebms"
           dir="ltr"
@@ -180,6 +181,7 @@ export const LoginPage: React.FC = () => {
         <Input
           {...register('phone')}
           type="tel"
+          autoComplete="username"
           label="رقم الهاتف"
           placeholder="01xxxxxxxxx"
           dir="ltr"
@@ -190,6 +192,7 @@ export const LoginPage: React.FC = () => {
 
         <PasswordField
           {...register('password')}
+          autoComplete="current-password"
           placeholder="••••••••"
           error={errors.password?.message}
           labelAction={
@@ -237,7 +240,9 @@ export const LoginPage: React.FC = () => {
                   أدخل معرّف متجرك ورقم هاتفك المسجل: إن كنت صاحب متجر سيصلك رمز تحقق عبر بريدك، وإن كنت موظفاً سيصل طلبك لمدير متجرك فوراً.
                 </p>
                 <Input
+                  name="recovery_store_code"
                   type="text"
+                  autoComplete="off"
                   label="معرّف المتجر"
                   dir="ltr"
                   placeholder="ebms"
@@ -247,7 +252,9 @@ export const LoginPage: React.FC = () => {
                   required
                 />
                 <Input
+                  name="recovery_phone"
                   type="tel"
+                  autoComplete="tel"
                   label="رقم الهاتف"
                   dir="ltr"
                   placeholder="01xxxxxxxxx"
@@ -262,13 +269,15 @@ export const LoginPage: React.FC = () => {
             )}
 
             {recStep === 'otp' && (
-              <form onSubmit={handleSubmitOtpReset} className="space-y-3">
+              <form onSubmit={handleSubmitOtpReset} autoComplete="off" className="space-y-3">
                 <div className="flex items-center gap-2 text-xs text-muted bg-surface-2 p-2.5 rounded-xl border border-line">
                   <Mail className="w-4 h-4 text-brand shrink-0" />
                   <span>أدخل الرمز المرسل لبريدك وكلمة المرور الجديدة.</span>
                 </div>
                 <Input
+                  name="recovery_otp"
                   type="text"
+                  autoComplete="one-time-code"
                   label="رمز التحقق (6 أرقام)"
                   dir="ltr"
                   placeholder="123456"
@@ -278,6 +287,8 @@ export const LoginPage: React.FC = () => {
                   required
                 />
                 <PasswordField
+                  name="recovery_new_password"
+                  autoComplete="new-password"
                   label="كلمة المرور الجديدة"
                   placeholder="••••••••"
                   value={recNewPassword}

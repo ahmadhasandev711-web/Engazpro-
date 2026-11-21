@@ -414,4 +414,105 @@ class RolesPermissionsAndBranchRoutingTest extends TestCase
         $this->assertEquals(WcOrderStatus::PENDING_CONFIRMATION->value, $transferRes->json('data.status'));
         $this->assertStringContainsString('تحويل فرع', (string) $shortageOrder->fresh()->notes);
     }
+
+    public function test_cashier_and_mandob_locked_to_today_while_supervisor_sees_history_and_instapay_updates_mandob_shift(): void
+    {
+        Queue::fake();
+        $supervisor = $this->createStaff(UserRole::SUPERVISOR, $this->storeMain, '01090000060');
+        $cashier = $this->createStaff(UserRole::CASHIER, $this->storeMain, '01090000061');
+        $mandob = $this->createStaff(UserRole::MANDOB, $this->storeMain, '01090000062');
+
+        $mandobDrawer = Treasury::create([
+            'user_id' => $this->owner->id,
+            'name' => 'عهدة المندوب',
+            'type' => TreasuryType::MANDOB_CUSTODY->value,
+            'branch_id' => $this->storeMain->id,
+            'assigned_user_id' => $mandob->id,
+            'balance' => 0,
+            'is_active' => true,
+        ]);
+        $mandobShift = Shift::create([
+            'user_id' => $this->owner->id,
+            'created_by' => $mandob->id,
+            'treasury_id' => $mandobDrawer->id,
+            'shift_number' => 'SH-INSTA-01',
+            'status' => ShiftStatus::OPEN,
+            'opened_at' => now(),
+            'opening_balance' => 0,
+        ]);
+
+        $todayOrder = OnlineOrder::create([
+            'user_id' => $this->owner->id,
+            'platform' => EcommercePlatform::WOOCOMMERCE->value,
+            'external_order_id' => 'WC-TODAY-1',
+            'external_order_number' => '#701',
+            'branch_id' => $this->storeMain->id,
+            'mandob_id' => $mandob->id,
+            'status' => WcOrderStatus::DISPATCHED->value,
+            'payment_status' => WcPaymentStatus::PENDING_COD->value,
+            'subtotal' => 115,
+            'total' => 115,
+            'order_date' => now(),
+            'items_snapshot' => [
+                [
+                    'product_id' => $this->product->id,
+                    'name' => $this->product->name,
+                    'quantity' => 1,
+                    'price' => 115,
+                    'total' => 115,
+                ],
+            ],
+        ]);
+        OnlineOrderItem::create([
+            'user_id' => $this->owner->id,
+            'online_order_id' => $todayOrder->id,
+            'product_id' => $this->product->id,
+            'quantity' => 1,
+        ]);
+
+        $pastMonthOrder = OnlineOrder::create([
+            'user_id' => $this->owner->id,
+            'platform' => EcommercePlatform::WOOCOMMERCE->value,
+            'external_order_id' => 'WC-OLD-2',
+            'external_order_number' => '#700',
+            'branch_id' => $this->storeMain->id,
+            'mandob_id' => $mandob->id,
+            'status' => WcOrderStatus::DELIVERED->value,
+            'payment_status' => WcPaymentStatus::COLLECTED->value,
+            'subtotal' => 500,
+            'total' => 500,
+            'order_date' => now()->subDays(10),
+        ]);
+
+        $wideRangeQuery = '?date_from=' . now()->subDays(30)->toDateString() . '&date_to=' . now()->toDateString();
+
+        // Cashier & Mandob MUST remain locked to today even if forging wide date range params
+        foreach ([$cashier, $mandob] as $restrictedActor) {
+            Sanctum::actingAs($restrictedActor);
+            $res = $this->getJson('/api/online-orders' . $wideRangeQuery)->assertOk();
+            $ids = collect($res->json('data.data'))->pluck('id')->all();
+            $this->assertContains($todayOrder->id, $ids);
+            $this->assertNotContains($pastMonthOrder->id, $ids);
+            $this->assertEquals(115.0, (float) $res->json('summary.total_amount'));
+        }
+
+        // Supervisor sees full historical range & accurate summary total
+        Sanctum::actingAs($supervisor);
+        $supRes = $this->getJson('/api/online-orders' . $wideRangeQuery)->assertOk();
+        $supIds = collect($supRes->json('data.data'))->pluck('id')->all();
+        $this->assertContains($todayOrder->id, $supIds);
+        $this->assertContains($pastMonthOrder->id, $supIds);
+        $this->assertGreaterThanOrEqual(615.0, (float) $supRes->json('summary.total_amount'));
+
+        // Delivering mandob order with INSTAPAY attaches to mandob's active shift electronic_sales
+        $this->actingAs($this->owner)->postJson("/api/online-orders/{$todayOrder->id}/deliver", [
+            'collected_amount' => 115,
+            'payment_method' => PaymentMethod::INSTAPAY->value,
+        ])->assertOk();
+
+        $freshShift = $mandobShift->fresh();
+        $this->assertEquals(0.0, (float) $freshShift->cash_sales);
+        $this->assertEquals(115.0, (float) $freshShift->electronic_sales);
+        $this->assertEquals(0.0, (float) $freshShift->expected_cash);
+    }
 }

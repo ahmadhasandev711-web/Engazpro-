@@ -332,15 +332,19 @@ class OnlineOrderSyncService
             'notes' => "أوردر {$locked->platform->label()} {$locked->displayReference()}{$tag}" . ($locked->notes ? " | {$locked->notes}" : ''),
         ], $adapter->invoiceReferencePayload($locked));
 
-        return $this->attachMandobCashContext($data, $locked, $settlement['method']);
+        return $this->attachMandobContext($data, $locked, $settlement['method']);
     }
 
-    private function attachMandobCashContext(array $data, OnlineOrder $locked, string $method): array
+    private function attachMandobContext(array $data, OnlineOrder $locked, string $method): array
     {
-        if ($locked->mandob && $method === PaymentMethod::CASH->value) {
-            $data['created_by'] = $locked->mandob->id;
+        if (!$locked->mandob) {
+            return $data;
+        }
+
+        $data['created_by'] = $locked->mandob->id;
+        $data['shift_id'] = $this->shiftService->getActiveShift($locked->mandob)?->id;
+        if ($method === PaymentMethod::CASH->value) {
             $data['treasury_id'] = $locked->mandob->assignedTreasury?->id;
-            $data['shift_id'] = $this->shiftService->getActiveShift($locked->mandob)?->id;
         }
 
         return $data;

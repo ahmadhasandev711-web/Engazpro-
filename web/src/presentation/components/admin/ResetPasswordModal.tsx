@@ -111,7 +111,7 @@ export const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({
             </Button>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} autoComplete="off" className="space-y-4">
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="block text-xs font-bold text-ink">كلمة المرور الجديدة (8 خانات فأكثر)</label>
@@ -129,7 +129,9 @@ export const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({
 
               <div className="relative">
                 <input
+                  name="admin_reset_merchant_password"
                   type={showPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="أدخل 8 أحرف أو أرقام على الأقل..."

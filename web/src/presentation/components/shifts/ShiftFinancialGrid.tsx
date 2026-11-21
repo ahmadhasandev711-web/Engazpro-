@@ -4,6 +4,8 @@ import { formatCurrency } from '@pos-mandob/shared';
 export interface ShiftFinancialSummary {
   opening_balance: number;
   cash_sales: number;
+  electronic_sales?: number;
+  credit_sales?: number;
   cash_receipts: number;
   cash_payments?: number;
   cash_returns?: number;
@@ -16,7 +18,7 @@ interface ShiftFinancialGridProps {
 }
 
 /**
- * شبكة موحدة لعرض تفاصيل الحركات النقدية للوردية (تقفيل الوردية وتوريد العهدة)
+ * شبكة موحدة لعرض تفاصيل الحركات النقدية وغير النقدية للوردية (تقفيل الوردية وتوريد العهدة)
  */
 export const ShiftFinancialGrid: React.FC<ShiftFinancialGridProps> = ({
   shift,
@@ -24,6 +26,8 @@ export const ShiftFinancialGrid: React.FC<ShiftFinancialGridProps> = ({
 }) => {
   const cashPayments = Number(shift.cash_payments ?? 0);
   const cashReturns = Number(shift.cash_returns ?? 0);
+  const electronicSales = Number(shift.electronic_sales ?? 0);
+  const creditSales = Number(shift.credit_sales ?? 0);
 
   const itemClass =
     variant === 'modal'
@@ -60,6 +64,18 @@ export const ShiftFinancialGrid: React.FC<ShiftFinancialGridProps> = ({
         <span className={labelClass}>{variant === 'modal' ? 'مصروفات ونثريات:' : 'مصروفات:'}</span>
         <span className="font-bold text-bad tabular-nums">-{formatCurrency(shift.expenses)}</span>
       </div>
+      {electronicSales > 0 && (
+        <div className={itemClass}>
+          <span className={labelClass}>شبكة / محافظ (لا تدخل الدرج):</span>
+          <span className="font-bold text-brand tabular-nums">+{formatCurrency(electronicSales)}</span>
+        </div>
+      )}
+      {creditSales > 0 && (
+        <div className={itemClass}>
+          <span className={labelClass}>مبيعات آجل (لا تدخل الدرج):</span>
+          <span className="font-bold text-warn tabular-nums">+{formatCurrency(creditSales)}</span>
+        </div>
+      )}
     </div>
   );
 };

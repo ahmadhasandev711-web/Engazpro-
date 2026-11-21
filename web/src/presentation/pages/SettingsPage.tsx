@@ -603,7 +603,9 @@ export const SettingsPage: React.FC = () => {
               </label>
               <div className="relative">
                 <input
+                  name="current_password"
                   type={showCurrentPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
                   required
                   value={passwordForm.current_password}
                   onChange={(e) => setPasswordForm({ ...passwordForm, current_password: e.target.value })}
@@ -627,7 +629,9 @@ export const SettingsPage: React.FC = () => {
               </label>
               <div className="relative">
                 <input
+                  name="new_password"
                   type={showNewPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
                   required
                   minLength={6}
                   value={passwordForm.new_password}
@@ -652,7 +656,9 @@ export const SettingsPage: React.FC = () => {
               </label>
               <div className="relative">
                 <input
+                  name="new_password_confirmation"
                   type={showConfirmPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
                   required
                   minLength={6}
                   value={passwordForm.new_password_confirmation}

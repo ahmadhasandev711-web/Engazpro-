@@ -94,6 +94,7 @@ export const RegisterPage: React.FC = () => {
         <Input
           {...register('store_code')}
           type="text"
+          autoComplete="off"
           label="معرّف المتجر الفريد (لدخولك ودخول موظفيك)"
           placeholder="ebms-shop"
           dir="ltr"
@@ -109,6 +110,7 @@ export const RegisterPage: React.FC = () => {
         <Input
           {...register('name')}
           type="text"
+          autoComplete="organization"
           label="الاسم التجاري أو اسمك"
           placeholder="مثال: مؤسسة الأمل للتجارة والتوزيع"
           leftIcon={<Store className="w-4 h-4" />}
@@ -118,6 +120,7 @@ export const RegisterPage: React.FC = () => {
         <Input
           {...register('phone')}
           type="tel"
+          autoComplete="tel"
           label="رقم الهاتف (اسم المستخدم للدخول)"
           placeholder="01xxxxxxxxx"
           dir="ltr"
@@ -129,6 +132,7 @@ export const RegisterPage: React.FC = () => {
         <Input
           {...register('email')}
           type="email"
+          autoComplete="email"
           label="البريد الإلكتروني (مطلوب لاستعادة كلمة المرور)"
           placeholder="name@example.com"
           dir="ltr"
@@ -139,6 +143,7 @@ export const RegisterPage: React.FC = () => {
 
         <PasswordField
           {...register('password')}
+          autoComplete="new-password"
           placeholder="••••••••"
           error={errors.password?.message}
         />

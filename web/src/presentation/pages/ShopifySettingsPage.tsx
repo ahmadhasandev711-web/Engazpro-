@@ -304,14 +304,18 @@ export const ShopifySettingsPage: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input
                 label={`Access Token ${settings?.access_token_preview ? `(المحفوظ: ${settings.access_token_preview})` : ''}`}
+                name="shopify_access_token"
                 type="password"
+                autoComplete="new-password"
                 placeholder="shpat_xxxxxxxxxxxxxxxxxxxxxxxx"
                 value={accessToken}
                 onChange={(e) => setAccessToken(e.target.value)}
               />
               <Input
                 label="Webhook Signing Secret (اختياري للربط اليدوي)"
+                name="shopify_webhook_secret"
                 type="password"
+                autoComplete="new-password"
                 placeholder="من Shopify Notifications > Webhooks"
                 value={webhookSecret}
                 onChange={(e) => setWebhookSecret(e.target.value)}
@@ -321,10 +325,12 @@ export const ShopifySettingsPage: React.FC = () => {
 
           {authMode === ShopifyAuthMode.CLIENT_CREDENTIALS && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input label="Client ID" value={clientId} onChange={(e) => setClientId(e.target.value)} placeholder="من Shopify Dev Dashboard" />
+              <Input label="Client ID" name="shopify_client_id" autoComplete="off" value={clientId} onChange={(e) => setClientId(e.target.value)} placeholder="من Shopify Dev Dashboard" />
               <Input
                 label={`Client Secret ${settings?.has_client_secret ? '(محفوظ)' : ''}`}
+                name="shopify_client_secret"
                 type="password"
+                autoComplete="new-password"
                 value={clientSecret}
                 onChange={(e) => setClientSecret(e.target.value)}
               />

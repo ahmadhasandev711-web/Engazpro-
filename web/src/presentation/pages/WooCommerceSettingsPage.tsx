@@ -511,7 +511,9 @@ export const WooCommerceSettingsPage: React.FC = () => {
             <div className="space-y-3">
               <Input
                 label="رابط المتجر الإلكتروني (Store URL) *"
+                name="woo_store_url"
                 type="url"
+                autoComplete="off"
                 value={storeUrl}
                 onChange={(e) => setStoreUrl(e.target.value)}
                 placeholder="https://myfashionstore.com"
@@ -522,7 +524,9 @@ export const WooCommerceSettingsPage: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Input
                   label="Consumer Key (مفتاح العميل)"
+                  name="woo_consumer_key"
                   type="password"
+                  autoComplete="new-password"
                   value={consumerKey}
                   onChange={(e) => setConsumerKey(e.target.value)}
                   placeholder={settingsData?.consumer_key_preview || 'ck_xxxxxxxxxxxx'}
@@ -532,7 +536,9 @@ export const WooCommerceSettingsPage: React.FC = () => {
 
                 <Input
                   label="Consumer Secret (المفتاح السري)"
+                  name="woo_consumer_secret"
                   type="password"
+                  autoComplete="new-password"
                   value={consumerSecret}
                   onChange={(e) => setConsumerSecret(e.target.value)}
                   placeholder="cs_xxxxxxxxxxxx"

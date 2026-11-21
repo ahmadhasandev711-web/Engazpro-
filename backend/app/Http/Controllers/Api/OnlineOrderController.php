@@ -48,8 +48,14 @@ class OnlineOrderController extends Controller
         )->through(fn (OnlineOrder $order) => (new OnlineOrderResource($order))->resolve($request));
 
         $counts = $this->orderQueryService->tabCountsForUser($request->user(), $filters);
+        $summary = $this->orderQueryService->summarizeAmountForUser($request->user(), $filters);
 
-        return response()->json(['success' => true, 'data' => $orders, 'counts' => $counts]);
+        return response()->json([
+            'success' => true,
+            'data' => $orders,
+            'counts' => $counts,
+            'summary' => $summary,
+        ]);
     }
 
     public function show(Request $request, int $id): JsonResponse

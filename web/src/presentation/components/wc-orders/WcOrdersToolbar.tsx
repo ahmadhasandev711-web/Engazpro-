@@ -11,6 +11,9 @@ import type { WcOrdersViewModel } from './types';
 export const WcOrdersToolbar: React.FC<{ vm: WcOrdersViewModel }> = ({ vm }) => {
   const {
     canPullOrders,
+    canViewOnlineOrderHistory,
+    isMandob,
+    isCashier,
     search,
     setSearch,
     statusFilter,
@@ -22,6 +25,8 @@ export const WcOrdersToolbar: React.FC<{ vm: WcOrdersViewModel }> = ({ vm }) => 
     feedback,
     setFeedback,
     orders,
+    ordersTotalAmount,
+    ordersTotalCount,
     statusCounts,
     pullMutation,
     user,
@@ -65,9 +70,19 @@ export const WcOrdersToolbar: React.FC<{ vm: WcOrdersViewModel }> = ({ vm }) => 
     { id: 'CANCELLED', label: 'ملغي', count: tabCounts.CANCELLED ?? 0 },
   ];
 
-  const storeSubtitle = user?.business_name
-    ? `متجر ${user.business_name} — متابعة وتأكيد طلبات المتجر والتوصيل الميداني`
-    : 'متابعة وتأكيد طلبات المتجر، التوزيع على المناديب وسيارات التوصيل، والتسليم على باب البيت';
+  const storeSubtitle = isMandob
+    ? 'متابعة وتوصيل طلباتك المسندة وتسويتها في الوردية (اليوم بيومه)'
+    : isCashier
+      ? 'متابعة وتأكيد وتجهيز طلبات اليوم لفرعك'
+      : user?.business_name
+        ? `متجر ${user.business_name} — متابعة وتأكيد طلبات المتجر والتوصيل الميداني`
+        : 'متابعة وتأكيد طلبات المتجر، التوزيع على المناديب وسيارات التوصيل، والتسليم على باب البيت';
+
+  const summaryHeading = isMandob
+    ? `طلباتي (${ordersTotalCount})`
+    : !canViewOnlineOrderHistory
+      ? `طلبات اليوم (${ordersTotalCount})`
+      : `طلبيات المتجر (${ordersTotalCount})`;
 
   return (
     <>
@@ -115,10 +130,10 @@ export const WcOrdersToolbar: React.FC<{ vm: WcOrdersViewModel }> = ({ vm }) => 
         <div>
           <div className="flex items-center gap-1.5 text-2xs font-bold text-muted">
             <ShoppingBag className="w-3.5 h-3.5 text-brand" />
-            <span>طلبيات المتجر ({orders.length})</span>
+            <span>{summaryHeading}</span>
           </div>
           <h3 className="text-lg font-black mt-0.5 text-ink tabular-nums">
-            {formatCurrency(orders.reduce((sum: number, o: any) => sum + (Number(o.total) || 0), 0))}
+            {formatCurrency(ordersTotalAmount)}
           </h3>
         </div>
         {canPullOrders && (
@@ -183,17 +198,26 @@ export const WcOrdersToolbar: React.FC<{ vm: WcOrdersViewModel }> = ({ vm }) => 
         />
       </div>
 
-      {/* Date Range Filter Bar */}
+      {/* Date Range Filter Bar (Full history restricted to Supervisor/Manager/Owner/Admin) */}
       <div className="bg-panel p-3 rounded-2xl border border-line shadow-xs w-full min-w-0 max-w-full overflow-hidden">
-        <DateRangeFilter
-          fromDate={fromDate}
-          toDate={toDate}
-          defaultPreset="today"
-          onChange={(from, to) => {
-            setFromDate(from);
-            setToDate(to);
-          }}
-        />
+        {canViewOnlineOrderHistory ? (
+          <DateRangeFilter
+            fromDate={fromDate}
+            toDate={toDate}
+            defaultPreset="today"
+            onChange={(from, to) => {
+              setFromDate(from);
+              setToDate(to);
+            }}
+          />
+        ) : (
+          <div className="flex items-center justify-between gap-2 px-2 py-1 text-xs">
+            <span className="font-bold text-muted">نطاق العرض:</span>
+            <span className="font-black text-brand bg-brand-soft px-3 py-1 rounded-full tabular-nums">
+              طلبات اليوم فقط ({fromDate})
+            </span>
+          </div>
+        )}
       </div>
     </>
   );

@@ -85,7 +85,7 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
           </Button>
         </div>
 
-        <form onSubmit={onSubmit} className="p-6 space-y-4 overflow-y-auto">
+        <form onSubmit={onSubmit} autoComplete="off" className="p-6 space-y-4 overflow-y-auto">
           {errorMessage && (
             <div className="p-3 bg-bad-soft text-bad text-xs rounded-xl border border-bad/30 flex items-center gap-2 font-bold">
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
@@ -95,7 +95,9 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
 
           <Input
             label="اسم الموظف *"
+            name="emp_full_name"
             type="text"
+            autoComplete="off"
             placeholder="مثال: أحمد محمود"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -103,7 +105,9 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
 
           <Input
             label="رقم الهاتف (يُستخدم للدخول إلى التطبيق) *"
+            name="emp_phone"
             type="text"
+            autoComplete="off"
             placeholder="مثال: 01012345678"
             dir="ltr"
             value={formData.phone}
@@ -265,9 +269,11 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
                   <label className="block text-xs font-bold text-muted mb-1">الراتب الأساسي الشهري</label>
                   <div className="relative">
                     <input
+                      name="emp_base_salary"
                       type="number"
                       step="0.01"
                       min="0"
+                      autoComplete="off"
                       placeholder="0.00"
                       value={formData.base_salary}
                       onChange={(e) => setFormData({ ...formData, base_salary: e.target.value })}
@@ -298,9 +304,11 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
                   </label>
                   <div className="relative">
                     <input
+                      name="emp_commission_rate"
                       type="number"
                       step="0.01"
                       min="0"
+                      autoComplete="off"
                       disabled={formData.commission_type === 'NONE'}
                       placeholder="0"
                       value={formData.commission_rate}
@@ -345,7 +353,9 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
 
           <Input
             label={`كلمة المرور ${editingEmployee ? '(اتركها فارغة إذا كنت لا ترغب في تغييرها)' : '*'}`}
+            name="emp_new_password"
             type="password"
+            autoComplete="new-password"
             placeholder={editingEmployee ? '••••••••' : '6 خانات على الأقل'}
             value={formData.password}
             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
