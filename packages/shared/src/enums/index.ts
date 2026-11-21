@@ -14,6 +14,8 @@ export enum PaymentMethod {
   CREDIT = 'CREDIT',
   SPLIT = 'SPLIT',
   COURIER_COD = 'COURIER_COD',
+  STORE_CREDIT = 'STORE_CREDIT',
+  EXCHANGE_OFFSET = 'EXCHANGE_OFFSET',
 }
 
 export enum PartyType {
@@ -234,4 +236,38 @@ export enum PromotionSyncSource {
   LOCAL = 'POS_LOCAL',
   WOOCOMMERCE = 'WC_STORE',
   SHOPIFY = 'SHOPIFY_STORE',
+}
+
+export enum ExchangeSource {
+  POS = 'POS',
+  ONLINE_ORDER = 'ONLINE_ORDER',
+}
+
+export enum ExchangeStatus {
+  COMPLETED = 'COMPLETED',
+  AWAITING_COURIER_PICKUP = 'AWAITING_COURIER_PICKUP',
+  CANCELLED = 'CANCELLED',
+}
+
+export enum ExchangeSettlementType {
+  EVEN_EXCHANGE = 'EVEN_EXCHANGE',
+  CUSTOMER_PAYS = 'CUSTOMER_PAYS',
+  REFUND_CASH = 'REFUND_CASH',
+  STORE_CREDIT = 'STORE_CREDIT',
+}
+
+export enum ReturnItemCondition {
+  SELLABLE = 'SELLABLE',
+  DAMAGED = 'DAMAGED',
+}
+
+export enum ExchangeItemDirection {
+  RETURNED = 'RETURNED',
+  REPLACEMENT = 'REPLACEMENT',
+}
+
+export enum StoreCreditTransactionType {
+  EARNED = 'EARNED',
+  REDEEMED = 'REDEEMED',
+  ADJUSTMENT = 'ADJUSTMENT',
 }

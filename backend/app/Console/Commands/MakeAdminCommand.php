@@ -15,7 +15,7 @@ class MakeAdminCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'user:make-admin {identifier : The email or phone number of the user}';
+    protected $signature = 'user:make-admin {identifier : The email or phone number of the user} {--store= : Optional store_code to disambiguate matching users}';
 
     /**
      * The console command description.
@@ -30,10 +30,13 @@ class MakeAdminCommand extends Command
     public function handle(): int
     {
         $identifier = trim($this->argument('identifier'));
+        $storeOption = $this->option('store');
 
-        $user = User::where('email', $identifier)
-            ->orWhere('phone', $identifier)
-            ->first();
+        $query = User::where(fn ($q) => $q->where('email', $identifier)->orWhere('phone', $identifier));
+        if (!empty($storeOption)) {
+            $query->where('store_code', strtolower(trim((string) $storeOption)));
+        }
+        $user = $query->first();
 
         if (!$user) {
             $this->error("المستخدم المحدد ({$identifier}) غير موجود في قاعدة البيانات!");

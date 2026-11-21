@@ -4,15 +4,16 @@ namespace App\Services;
 
 use App\Enums\AdminAuditAction;
 use App\Enums\EcommercePlatform;
+use App\Enums\PasswordResetRequestStatus;
+use App\Enums\StoreInquiryStatus;
 use App\Enums\SubscriptionStatus;
 use App\Enums\UserStatus;
 use App\Services\Shopify\ShopifyStockSyncGate;
 use App\Services\WooCommerce\WooStockSyncGate;
 use App\Exceptions\PosDomainException;
 use App\Models\ActivationCode;
-use App\Models\Invoice;
-use App\Models\Party;
-use App\Models\Product;
+use App\Models\PasswordResetRequest;
+use App\Models\StoreInquiry;
 use App\Models\Subscription;
 use App\Models\User;
 use App\Support\Money;
@@ -20,6 +21,7 @@ use Carbon\Carbon;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 
 class AdminStatsService
 {
@@ -33,11 +35,7 @@ class AdminStatsService
             'users' => $this->getUserStats(),
             'subscriptions' => $this->getSubscriptionStats(),
             'licenses' => $this->getLicenseStats(),
-            'activity' => [
-                'invoices' => Invoice::count(),
-                'products' => Product::count(),
-                'parties' => Party::count(),
-            ],
+            'operations' => $this->getOperationStats(),
             'financials' => $this->getFinancialStats(),
             'system' => [
                 'database_driver' => $dbDriver,
@@ -74,7 +72,7 @@ class AdminStatsService
     {
         $query = User::whereNull('owner_id')
             ->with(['subscription', 'settings', 'wooCommerceIntegration:id,user_id,is_active', 'shopifyIntegration:id,user_id,is_active'])
-            ->withCount(['employees', 'branches', 'invoices', 'products', 'parties'])
+            ->withCount(['employees', 'branches'])
             ->orderByDesc('id');
 
         $this->applyUserStatusFilter($query, $status);
@@ -82,6 +80,7 @@ class AdminStatsService
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('store_code', 'like', "%{$search}%")
                     ->orWhere('phone', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%");
             });
@@ -170,6 +169,7 @@ class AdminStatsService
         return [
             'owner' => [
                 'id' => $user->id,
+                'store_code' => $user->store_code,
                 'name' => $user->name,
                 'phone' => $user->phone,
                 'email' => $user->email,
@@ -251,6 +251,7 @@ class AdminStatsService
         DB::transaction(function () use ($user, $newPassword) {
             $user->update(['password' => Hash::make($newPassword)]);
             $user->revokeTokens();
+            app(PasswordRecoveryService::class)->resolvePendingRequestsForUser($user->id, auth()->id() ?? $user->id);
 
             $this->auditService->record(
                 action: AdminAuditAction::USER_PASSWORD_RESET,
@@ -346,6 +347,23 @@ class AdminStatsService
             'unused' => ActivationCode::where('is_used', false)->where('is_revoked', false)->count(),
             'used' => ActivationCode::where('is_used', true)->count(),
             'revoked' => ActivationCode::where('is_revoked', true)->count(),
+        ];
+    }
+
+    private function getOperationStats(): array
+    {
+        $today = Carbon::today()->toDateString();
+        $nextWeek = Carbon::today()->addDays(7)->toDateString();
+
+        return [
+            'trial_active' => Subscription::where('plan', 'TRIAL')->where('status', SubscriptionStatus::ACTIVE->value)->where('end_date', '>=', $today)->count(),
+            'expiring_7d' => Subscription::where('status', SubscriptionStatus::ACTIVE->value)->whereBetween('end_date', [$today, $nextWeek])->count(),
+            'pending_inquiries' => StoreInquiry::where('status', StoreInquiryStatus::NEW->value)->count(),
+            'pending_reset_requests' => Schema::hasTable('password_reset_requests')
+                ? PasswordResetRequest::whereNull('owner_id')->where('status', PasswordResetRequestStatus::PENDING)->count()
+                : 0,
+            'pending_jobs' => Schema::hasTable('jobs') ? DB::table('jobs')->count() : 0,
+            'failed_jobs' => Schema::hasTable('failed_jobs') ? DB::table('failed_jobs')->count() : 0,
         ];
     }
 

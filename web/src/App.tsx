@@ -36,6 +36,8 @@ const PromotionsPage = lazy(() => import('./presentation/pages/PromotionsPage').
 const StockTransfersPage = lazy(() => import('./presentation/pages/StockTransfersPage').then((m) => ({ default: m.StockTransfersPage })));
 const StockOperationsPage = lazy(() => import('./presentation/pages/StockOperationsPage').then((m) => ({ default: m.StockOperationsPage })));
 const PosPage = lazy(() => import('./presentation/pages/PosPage').then((m) => ({ default: m.PosPage })));
+const ExchangesPage = lazy(() => import('./presentation/pages/ExchangesPage').then((m) => ({ default: m.ExchangesPage })));
+const PosExchangePage = lazy(() => import('./presentation/pages/PosExchangePage').then((m) => ({ default: m.PosExchangePage })));
 const AdminDashboardPage = lazy(() => import('./presentation/pages/AdminDashboardPage').then((m) => ({ default: m.AdminDashboardPage })));
 const WooCommerceSettingsPage = lazy(() => import('./presentation/pages/WooCommerceSettingsPage').then((m) => ({ default: m.WooCommerceSettingsPage })));
 const ShopifySettingsPage = lazy(() => import('./presentation/pages/ShopifySettingsPage').then((m) => ({ default: m.ShopifySettingsPage })));
@@ -100,11 +102,13 @@ export const App: React.FC = () => {
                   <Route path="/dashboard" element={<DashboardPage />} />
                   <Route path="/products" element={<ProductsPage />} />
                   
-                  {/* Sales & Sales Returns */}
+                  {/* Sales & Sales Returns & Smart Exchanges */}
                   <Route path="/sales" element={<InvoicesPage />} />
                   <Route path="/sales/new" element={<InvoiceFormPage />} />
                   <Route path="/sales/returns" element={<InvoicesPage />} />
                   <Route path="/sales/returns/new" element={<InvoiceFormPage />} />
+                  <Route path="/exchanges" element={<ExchangesPage />} />
+                  <Route path="/exchanges/new" element={<PosExchangePage />} />
                   
                   {/* Payments & Customers & Expenses (Accessible to all roles) */}
                   <Route path="/payments" element={<PaymentsPage />} />

@@ -57,6 +57,7 @@ class AdminPasswordResetTest extends TestCase
 
         // 4. Merchant can login with new password
         $loginRes = $this->postJson('/api/auth/login', [
+            'store_code' => $merchant->store_code,
             'phone' => '01099998888',
             'password' => 'NewSecret@2026',
         ]);
@@ -64,6 +65,7 @@ class AdminPasswordResetTest extends TestCase
 
         // 5. Merchant can also login with Arabic numerals normalized
         $loginResArabic = $this->postJson('/api/auth/login', [
+            'store_code' => $merchant->store_code,
             'phone' => '٠١٠٩٩٩٩٨٨٨٨',
             'password' => 'NewSecret@2026',
         ]);
@@ -71,6 +73,7 @@ class AdminPasswordResetTest extends TestCase
 
         // 6. Login with accidental trailing space in password
         $loginResSpace = $this->postJson('/api/auth/login', [
+            'store_code' => $merchant->store_code,
             'phone' => '01099998888',
             'password' => 'NewSecret@2026 ',
         ]);
@@ -78,6 +81,7 @@ class AdminPasswordResetTest extends TestCase
 
         // 7. Login with +20 country code
         $loginResCountry = $this->postJson('/api/auth/login', [
+            'store_code' => $merchant->store_code,
             'phone' => '+201099998888',
             'password' => 'NewSecret@2026',
         ]);

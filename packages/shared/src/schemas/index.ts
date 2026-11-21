@@ -10,16 +10,33 @@ import {
 } from '../enums';
 
 // Auth Schemas
+const STORE_CODE_REGEX = /^[a-z0-9](?:[a-z0-9-]{0,28}[a-z0-9])?$/;
+
 export const LoginSchema = z.object({
+  store_code: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .min(2, 'معرّف المتجر لا يقل عن حرفين')
+    .max(30, 'معرّف المتجر لا يتجاوز 30 حرفاً')
+    .regex(STORE_CODE_REGEX, 'أحرف إنجليزية صغيرة وأرقام وشرطة (-) فقط بدون مسافات'),
   phone: z.string().min(8, 'رقم الهاتف يجب أن يكون 8 أرقام على الأقل'),
   password: z.string().min(6, 'كلمة المرور يجب أن تكون 6 أحرف على الأقل'),
 });
 
 export const RegisterSchema = z.object({
+  store_code: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .min(2, 'معرّف المتجر لا يقل عن حرفين')
+    .max(30, 'معرّف المتجر لا يتجاوز 30 حرفاً')
+    .regex(STORE_CODE_REGEX, 'أحرف إنجليزية صغيرة وأرقام وشرطة (-) فقط بدون مسافات')
+    .refine((v) => v !== 'ebms', 'معرّف المتجر محجوز للنظام'),
   name: z.string().min(2, 'الاسم مطلوب'),
   phone: z.string().min(8, 'رقم الهاتف غير صالح'),
   password: z.string().min(6, 'كلمة المرور لا تقل عن 6 خانات'),
-  email: z.string().email('البريد الإلكتروني غير صالح').optional().nullable(),
+  email: z.string().min(1, 'البريد الإلكتروني مطلوب لاستعادة كلمة المرور').email('البريد الإلكتروني غير صالح'),
 });
 
 // Category Schema

@@ -14,6 +14,8 @@ import {
   Lock,
   Eye,
   EyeOff,
+  Copy,
+  Check,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuthStore } from '../../data/store/useAuthStore';
@@ -63,6 +65,7 @@ export const SettingsPage: React.FC = () => {
     currency: 'ج.م',
     max_discount_percent: '100',
     allow_negative_branch_stock: false,
+    allow_cashier_unlinked_exchange: false,
   });
   const [loadingStore, setLoadingStore] = useState(false);
   const [savingStore, setSavingStore] = useState(false);
@@ -81,6 +84,7 @@ export const SettingsPage: React.FC = () => {
             currency: res.data.data.currency || 'ج.م',
             max_discount_percent: String(res.data.data.max_discount_percent ?? 100),
             allow_negative_branch_stock: Boolean(res.data.data.allow_negative_branch_stock),
+            allow_cashier_unlinked_exchange: Boolean(res.data.data.allow_cashier_unlinked_exchange),
           });
         }
       } catch (err) {
@@ -145,6 +149,14 @@ export const SettingsPage: React.FC = () => {
   });
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
+  const [copiedStoreCode, setCopiedStoreCode] = useState(false);
+
+  const handleCopyStoreCode = () => {
+    if (!user?.store_code) return;
+    navigator.clipboard?.writeText(user.store_code);
+    setCopiedStoreCode(true);
+    setTimeout(() => setCopiedStoreCode(false), 2000);
+  };
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [passwordFeedback, setPasswordFeedback] = useState<FeedbackState | null>(null);
@@ -355,6 +367,31 @@ export const SettingsPage: React.FC = () => {
                 عند التفعيل، يُسمح بالبيع حتى لو رصيد الفرع غير كافٍ وتُوسم الحركة بـ [بيع على المكشوف].
               </p>
             </div>
+
+            <div className="flex flex-col justify-start sm:col-span-2">
+              <label className="text-xs font-bold text-ink block mb-1.5">
+                صلاحية الاستبدال بدون فاتورة أصلية للكاشير
+              </label>
+              <div className="min-h-[44px] flex items-center bg-surface-2/60 border border-line rounded-xl px-3.5 py-2.5">
+                <label className="inline-flex items-center gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    disabled={!isOwnerOrAdmin || loadingStore}
+                    checked={storeData.allow_cashier_unlinked_exchange}
+                    onChange={(e) =>
+                      setStoreData({ ...storeData, allow_cashier_unlinked_exchange: e.target.checked })
+                    }
+                    className="rounded border-line-2 text-brand focus:ring-brand w-4 h-4 cursor-pointer accent-brand"
+                  />
+                  <span className="text-xs font-bold text-ink">
+                    السماح للكاشير بعمل استبدال مباشر بدون ربط بفاتورة أصلية (مثل الهدايا)
+                  </span>
+                </label>
+              </div>
+              <p className="text-xs text-muted mt-1.5">
+                افتراضياً متاح للمالك والمدير فقط؛ وعند التفعيل للكاشير يُحظر تعيين عمولة بائع تلقائياً لمنع التلاعب.
+              </p>
+            </div>
           </div>
 
           {isOwnerOrAdmin && (
@@ -502,10 +539,28 @@ export const SettingsPage: React.FC = () => {
         {/* Account Info Card */}
         <Card className="space-y-4">
           <h3 className="font-bold text-base text-ink">بيانات الحساب الشخصي</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
             <div>
               <span className="text-xs text-muted block">الاسم:</span>
               <span className="font-bold text-ink">{user?.name || 'غير مسجل'}</span>
+            </div>
+            <div>
+              <span className="text-xs text-muted block">معرّف المتجر (للدخول):</span>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="font-mono font-black text-brand" dir="ltr">
+                  {user?.store_code || '—'}
+                </span>
+                {user?.store_code && (
+                  <button
+                    type="button"
+                    onClick={handleCopyStoreCode}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-brand-soft text-brand text-2xs font-bold hover:opacity-80 cursor-pointer"
+                  >
+                    {copiedStoreCode ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                    <span>{copiedStoreCode ? 'تم النسخ' : 'نسخ'}</span>
+                  </button>
+                )}
+              </div>
             </div>
             <div>
               <span className="text-xs text-muted block">رقم الهاتف:</span>

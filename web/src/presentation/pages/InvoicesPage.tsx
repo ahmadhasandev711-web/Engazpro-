@@ -9,6 +9,7 @@ import {
   Eye,
   AlertCircle,
   RotateCcw,
+  ArrowLeftRight,
   Download,
   Printer,
 } from 'lucide-react';
@@ -78,7 +79,7 @@ export const InvoicesPage: React.FC = () => {
   const { canDeleteInvoice, isOwnerOrAdmin, isManager, canEditInvoiceSalesperson } = usePermissions();
   const initialDates = calculatePresetDates('today');
   const [search, setSearch] = useState('');
-  const debouncedSearch = useDebouncedValue(search.trim(), 250);
+  const debouncedSearch = useDebouncedValue(search.trim(), 400);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
   const [fromDate, setFromDate] = useState<string>(initialDates.from);
   const [toDate, setToDate] = useState<string>(initialDates.to);
@@ -387,7 +388,7 @@ export const InvoicesPage: React.FC = () => {
           <div className="flex-1">
             <Input
               type="text"
-              placeholder="البحث برقم المستند أو اسم الطرف..."
+              placeholder="البحث برقم الفاتورة أو اسم العميل أو رقم الموبايل..."
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
@@ -612,6 +613,18 @@ export const InvoicesPage: React.FC = () => {
                               <RotateCcw className="w-4 h-4" />
                             </Button>
                           )}
+                        {!isReturn && !isPurchase && inv.return_status !== 'FULL' && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="md"
+                            onClick={() => navigate(`/exchanges/new?invoiceId=${inv.id}`)}
+                            className="text-muted hover:text-brand px-2.5"
+                            title="استبدال لهذه الفاتورة"
+                          >
+                            <ArrowLeftRight className="w-4 h-4" />
+                          </Button>
+                        )}
                         {canDeleteInvoice && (
                           <Button
                             type="button"
@@ -650,6 +663,11 @@ export const InvoicesPage: React.FC = () => {
                   onQuickReturn={
                     !isReturn && (!isPurchase || isOwnerOrAdmin || isManager)
                       ? handleQuickReturn
+                      : undefined
+                  }
+                  onExchange={
+                    !isReturn && !isPurchase
+                      ? (selectedInv) => navigate(`/exchanges/new?invoiceId=${selectedInv.id}`)
                       : undefined
                   }
                 />

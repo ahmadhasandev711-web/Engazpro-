@@ -21,6 +21,7 @@ use App\Models\OnlineOrderItem;
 use App\Models\Party;
 use App\Models\User;
 use App\Services\CourierService;
+use App\Services\Exchange\OnlineExchangeService;
 use App\Services\InvoiceService;
 use App\Services\ShiftService;
 use App\Support\Money;
@@ -37,6 +38,7 @@ class OnlineOrderSyncService
         private readonly InvoiceService $invoiceService,
         private readonly CourierService $courierService,
         private readonly ShiftService $shiftService,
+        private readonly ?OnlineExchangeService $onlineExchangeService = null,
     ) {}
 
     public function confirmOrder(User $user, OnlineOrder $order, int $branchId, bool $force = false): OnlineOrder
@@ -251,6 +253,10 @@ class OnlineOrderSyncService
 
         $transfer = $this->vanTransferService->settleForDelivery($user, $locked);
         $branchId = $transfer?->to_branch_id ?? $locked->branch_id;
+        if ($locked->is_exchange && $locked->exchange_id) {
+            return ($this->onlineExchangeService ?? app(OnlineExchangeService::class))
+                ->completeDeliveredExchange($user, $locked, $branchId, $deliveryData);
+        }
         $settlement = $this->resolvePaymentSettlement($locked, $deliveryData);
         $invoice = $this->invoiceService->createInvoice($user, $this->buildDeliveryInvoicePayload($locked, $accountId, $branchId, $settlement));
 
@@ -369,6 +375,7 @@ class OnlineOrderSyncService
             'cancel_reason' => $locked->cancel_reason ?? OrderCancelReason::CUSTOMER_REJECTED,
             'notes' => $notes,
         ]);
+        ($this->onlineExchangeService ?? app(OnlineExchangeService::class))->cancelCourierExchange($locked);
     }
 
     private function logCallInsideTransaction(
@@ -417,6 +424,7 @@ class OnlineOrderSyncService
             'cancel_notes' => $cleanNotes, 'cancelled_at' => now(),
             'cancelled_by_user_id' => $user->id, 'notes' => $locked->notes ? "{$locked->notes}\n{$tag}" : $tag,
         ]);
+        ($this->onlineExchangeService ?? app(OnlineExchangeService::class))->cancelCourierExchange($locked);
 
         return $locked->fresh(['party', 'branch', 'mandob', 'courierParty', 'cancelledByUser']);
     }

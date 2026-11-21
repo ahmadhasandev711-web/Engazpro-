@@ -101,8 +101,10 @@ class EmployeeService
     {
         return DB::transaction(function () use ($user, $data) {
             $accountId = $user->getAccountId();
+            $storeCode = (string) (User::whereKey($accountId)->value('store_code') ?? $user->store_code);
 
-            $employee = User::create([
+            $employee = new User([
+                'store_code' => $storeCode,
                 'branch_id' => $data['branch_id'] ?? null,
                 'name' => $data['name'],
                 'phone' => $data['phone'],
@@ -129,20 +131,24 @@ class EmployeeService
     /**
      * تعديل بيانات موظف
      */
-    public function updateEmployee(User $employee, array $data): User
+    public function updateEmployee(User $employee, array $data, ?User $actor = null): User
     {
-        return DB::transaction(function () use ($employee, $data) {
+        return DB::transaction(function () use ($employee, $data, $actor) {
             $oldBranchId = $employee->branch_id ? (int) $employee->branch_id : null;
             $oldRole = $employee->role?->value ?? (string) $employee->role;
             $newBranchId = !empty($data['branch_id']) ? (int) $data['branch_id'] : null;
             $newRoleEnum = $data['role'] instanceof UserRole ? $data['role'] : UserRole::from($data['role']);
+            $passwordChanged = !empty($data['password']);
 
             $this->guardAndSyncBranchTransfer($employee, $oldBranchId, $newBranchId);
             $employee->update($this->extractEmployeeUpdatePayload($data));
             $employee->role = $newRoleEnum;
             $employee->save();
 
-            $this->finalizeEmployeeSecurityState($employee, $oldBranchId !== $newBranchId || $oldRole !== $newRoleEnum->value);
+            $this->finalizeEmployeeSecurityState($employee, $oldBranchId !== $newBranchId || $oldRole !== $newRoleEnum->value || $passwordChanged);
+            if ($passwordChanged) {
+                app(PasswordRecoveryService::class)->resolvePendingRequestsForUser($employee->id, $actor?->id ?? (int) ($employee->owner_id ?: $employee->id));
+            }
 
             return $employee->fresh()->load('branch:id,name,code,type');
         });

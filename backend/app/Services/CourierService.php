@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\EcommercePlatform;
+use App\Enums\ExchangeSource;
 use App\Enums\LedgerSource;
 use App\Enums\PartyType;
 use App\Enums\PaymentMethod;
@@ -248,7 +249,7 @@ class CourierService
 
     private function applyManifestSourceFilter($query, string $source): bool
     {
-        if (!in_array($source, ['ALL', 'ONLINE_ORDER', 'WOOCOMMERCE', 'SHOPIFY'], true)) {
+        if (!in_array($source, ['ALL', ExchangeSource::ONLINE_ORDER->value, 'WOOCOMMERCE', 'SHOPIFY'], true)) {
             return false;
         }
         if ($source === 'WOOCOMMERCE') {

@@ -12,6 +12,8 @@ enum PaymentMethod: string
     case CREDIT = 'CREDIT';
     case SPLIT = 'SPLIT';
     case COURIER_COD = 'COURIER_COD';
+    case STORE_CREDIT = 'STORE_CREDIT';
+    case EXCHANGE_OFFSET = 'EXCHANGE_OFFSET';
 
     public function label(): string
     {
@@ -24,6 +26,8 @@ enum PaymentMethod: string
             self::CREDIT => 'آجل (على الحساب)',
             self::SPLIT => 'دفع مجزأ (متعدد)',
             self::COURIER_COD => 'تحصيل عبر شركة شحن (COD)',
+            self::STORE_CREDIT => 'رصيد محفظة المتجر',
+            self::EXCHANGE_OFFSET => 'مقاصة استبدال',
         };
     }
 }

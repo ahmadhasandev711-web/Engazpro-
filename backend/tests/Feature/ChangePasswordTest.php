@@ -58,6 +58,7 @@ class ChangePasswordTest extends TestCase
 
         // 5. Can login with the new password
         $loginRes = $this->postJson('/api/auth/login', [
+            'store_code' => $user->store_code,
             'phone' => '01011112222',
             'password' => 'BrandNewPassword@2026',
         ]);

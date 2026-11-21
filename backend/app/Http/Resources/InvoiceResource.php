@@ -21,6 +21,7 @@ class InvoiceResource extends JsonResource
             ...$this->amountFields(),
             'payment_method' => $this->enumValue($this->payment_method),
             'parent_invoice_id' => $this->parent_invoice_id,
+            'exchange_id' => $this->exchange_id,
             'promotion_id' => $this->promotion_id,
             'coupon_code' => $this->coupon_code,
             ...$this->returnMetaFields(),

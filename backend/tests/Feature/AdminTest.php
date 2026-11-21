@@ -54,6 +54,7 @@ class AdminTest extends TestCase
     public function test_admin_can_login_with_email_and_get_is_admin_flag(): void
     {
         $response = $this->postJson('/api/auth/login', [
+            'store_code' => 'ebms',
             'phone' => 'ahmadhasandev711@gmail.com',
             'password' => 'ahmadhasandev711@gmail.com',
         ]);
@@ -90,7 +91,7 @@ class AdminTest extends TestCase
                     'users',
                     'subscriptions',
                     'licenses',
-                    'activity',
+                    'operations',
                     'financials',
                 ],
             ]);

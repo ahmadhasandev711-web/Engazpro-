@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\DocumentType;
 use App\Models\Branch;
 use App\Models\DocumentSequence;
+use App\Models\Exchange;
 use App\Models\Invoice;
 use App\Models\Shift;
 use App\Models\StockTransfer;
@@ -60,7 +61,15 @@ class DocumentSequenceService
             DocumentType::TRANSFER => $this->findMaxFromTransfers($accountId),
             DocumentType::SHIFT => $this->findMaxFromShifts($accountId),
             DocumentType::BRANCH => $this->findMaxFromBranches($accountId),
+            DocumentType::EXCHANGE => $this->findMaxFromExchanges($accountId),
         };
+    }
+
+    private function findMaxFromExchanges(int $accountId): int
+    {
+        $numbers = Exchange::withoutGlobalScopes()->where('user_id', $accountId)->pluck('exchange_number');
+
+        return $this->extractMaxNumber($numbers);
     }
 
     private function findMaxFromInvoices(int $accountId, string $invoiceType): int

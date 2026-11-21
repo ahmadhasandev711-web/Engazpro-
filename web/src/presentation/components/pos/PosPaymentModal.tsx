@@ -12,6 +12,7 @@ import {
   Smartphone,
   Layers,
   UserCheck,
+  Wallet,
 } from 'lucide-react';
 import { formatCurrency, PaymentMethod } from '@pos-mandob/shared';
 import { apiClient } from '../../../data/api/client';
@@ -83,6 +84,7 @@ export const PosPaymentModal: React.FC<PosPaymentModalProps> = ({
   const [splitCard, setSplitCard] = useState<string>('');
   const [splitInstapay, setSplitInstapay] = useState<string>('');
   const [splitVodafone, setSplitVodafone] = useState<string>('');
+  const [splitStoreCredit, setSplitStoreCredit] = useState<string>('');
 
   // Sync received amount whenever modal opens or total changes
   useEffect(() => {
@@ -94,6 +96,7 @@ export const PosPaymentModal: React.FC<PosPaymentModalProps> = ({
       setSplitCard('');
       setSplitInstapay('');
       setSplitVodafone('');
+      setSplitStoreCredit('');
       setSalespersonId('');
     }
   }, [isOpen, totalAmount]);
@@ -109,9 +112,10 @@ export const PosPaymentModal: React.FC<PosPaymentModalProps> = ({
       (Number(splitCash) || 0) +
       (Number(splitCard) || 0) +
       (Number(splitInstapay) || 0) +
-      (Number(splitVodafone) || 0)
+      (Number(splitVodafone) || 0) +
+      (Number(splitStoreCredit) || 0)
     );
-  }, [splitCash, splitCard, splitInstapay, splitVodafone]);
+  }, [splitCash, splitCard, splitInstapay, splitVodafone, splitStoreCredit]);
 
   const splitRemaining = useMemo(() => {
     return Math.round((totalAmount - splitTotalPaid) * 100) / 100;
@@ -126,6 +130,18 @@ export const PosPaymentModal: React.FC<PosPaymentModalProps> = ({
     if (method === PaymentMethod.CREDIT && !customer?.id) {
       setError('لا يمكن إصدار فاتورة آجلة لعميل نقدي بدون حساب. يرجى اختيار عميل أولاً.');
       return;
+    }
+
+    if (method === PaymentMethod.STORE_CREDIT) {
+      const storeCreditBal = Number((customer as any)?.store_credit_balance ?? 0);
+      if (!customer?.id) {
+        setError('يجب تحديد عميل مسجل للدفع من رصيد المحفظة.');
+        return;
+      }
+      if (totalAmount > storeCreditBal) {
+        setError(`رصيد محفظة العميل (${formatCurrency(storeCreditBal)}) غير كافٍ لسداد كامل الفاتورة.`);
+        return;
+      }
     }
 
     if (method === PaymentMethod.CASH && numReceived < totalAmount) {
@@ -169,6 +185,15 @@ export const PosPaymentModal: React.FC<PosPaymentModalProps> = ({
         }
         if (Number(splitVodafone) > 0) {
           splitPaymentsPayload.push({ method: PaymentMethod.VODAFONE_CASH, amount: Number(splitVodafone), notes: 'محفظة فودافون كاش' });
+        }
+        if (Number(splitStoreCredit) > 0) {
+          const availableWallet = Number((customer as any)?.store_credit_balance ?? 0);
+          if (!customer?.id || Number(splitStoreCredit) > availableWallet) {
+            setError(`المبلغ المخصوم من محفظة العميل يتجاوز الرصيد المتاح (${formatCurrency(availableWallet)}).`);
+            setIsSubmitting(false);
+            return;
+          }
+          splitPaymentsPayload.push({ method: PaymentMethod.STORE_CREDIT, amount: Number(splitStoreCredit), notes: 'خصم من محفظة المتجر' });
         }
       }
 
@@ -371,6 +396,27 @@ export const PosPaymentModal: React.FC<PosPaymentModalProps> = ({
                 <Layers className="w-5 h-5" />
                 <span>دفع مجزأ (متعدد)</span>
               </button>
+
+              {/* Store Credit Wallet (when customer has balance > 0) */}
+              {Number((customer as any)?.store_credit_balance ?? 0) > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMethod(PaymentMethod.STORE_CREDIT);
+                    setReceivedAmount(totalAmount);
+                  }}
+                  className={`min-h-[48px] p-3 rounded-2xl border text-xs font-bold flex flex-col items-center justify-center gap-1.5 transition-all col-span-2 sm:col-span-3 ${
+                    method === PaymentMethod.STORE_CREDIT
+                      ? 'border-info bg-info-soft text-info shadow-xs ring-2 ring-info/20'
+                      : 'bg-panel border-info/30 text-info hover:bg-info-soft/40'
+                  }`}
+                >
+                  <Wallet className="w-5 h-5" />
+                  <span>
+                    الدفع من رصيد المحفظة ({formatCurrency(Number((customer as any).store_credit_balance))})
+                  </span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -604,6 +650,38 @@ export const PosPaymentModal: React.FC<PosPaymentModalProps> = ({
                     className="w-full text-sm font-bold px-2 py-1.5 bg-panel border border-line rounded-lg text-ink focus:outline-none focus:border-brand"
                   />
                 </div>
+
+                {Number((customer as any)?.store_credit_balance ?? 0) > 0 && (
+                  <div className="p-2.5 bg-info-soft/40 rounded-xl border border-info/30 space-y-1 sm:col-span-2">
+                    <div className="flex items-center justify-between text-[11px] font-bold text-info">
+                      <span className="flex items-center gap-1">
+                        <Wallet className="w-3.5 h-3.5" /> محفظة العميل (المتاح: {formatCurrency(Number((customer as any).store_credit_balance))})
+                      </span>
+                      {splitRemaining > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const maxUse = Number((customer as any).store_credit_balance);
+                            setSplitStoreCredit(String(Math.min(maxUse, splitRemaining + (Number(splitStoreCredit) || 0))));
+                          }}
+                          className="text-2xs text-brand hover:underline font-bold"
+                        >
+                          المتبقي من المحفظة
+                        </button>
+                      )}
+                    </div>
+                    <input
+                      type="number"
+                      step="1"
+                      min="0"
+                      max={Number((customer as any).store_credit_balance)}
+                      value={splitStoreCredit}
+                      onChange={(e) => setSplitStoreCredit(e.target.value)}
+                      placeholder="0.00"
+                      className="w-full text-sm font-bold px-2 py-1.5 bg-panel border border-line rounded-lg text-ink focus:outline-none focus:border-info"
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Split Balance Summary: text-warn for customer credit remainder, text-bad for blocking deficiency */}

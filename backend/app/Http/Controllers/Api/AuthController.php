@@ -4,10 +4,13 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\ChangePasswordRequest;
+use App\Http\Requests\Auth\ForgotPasswordRequest;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
+use App\Http\Requests\Auth\ResetPasswordOtpRequest;
 use App\Http\Resources\UserResource;
 use App\Services\AuthService;
+use App\Services\PasswordRecoveryService;
 use App\Services\PlatformPricingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -16,7 +19,8 @@ class AuthController extends Controller
 {
     public function __construct(
         protected AuthService $authService,
-        protected PlatformPricingService $pricingService
+        protected PlatformPricingService $pricingService,
+        protected PasswordRecoveryService $recoveryService
     ) {}
 
     public function register(RegisterRequest $request): JsonResponse
@@ -37,7 +41,7 @@ class AuthController extends Controller
     public function login(LoginRequest $request): JsonResponse
     {
         $validated = $request->validated();
-        $result = $this->authService->login($validated['phone'], $validated['password']);
+        $result = $this->authService->login($validated['store_code'], $validated['phone'], $validated['password']);
 
         return response()->json([
             'success' => true,
@@ -85,6 +89,34 @@ class AuthController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'تم تغيير كلمة المرور بنجاح ✅',
+        ]);
+    }
+
+    public function forgotPassword(ForgotPasswordRequest $request): JsonResponse
+    {
+        $validated = $request->validated();
+        $result = $this->recoveryService->requestRecovery($validated['store_code'], $validated['phone'], $validated['notes'] ?? null);
+
+        return response()->json([
+            'success' => true,
+            'message' => $result['message'],
+            'data' => $result,
+        ]);
+    }
+
+    public function resetPasswordWithOtp(ResetPasswordOtpRequest $request): JsonResponse
+    {
+        $validated = $request->validated();
+        $this->recoveryService->resetOwnerPasswordWithOtp(
+            $validated['store_code'],
+            $validated['phone'],
+            $validated['otp'],
+            $validated['password']
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم تعيين كلمة المرور الجديدة بنجاح. يمكنك الآن تسجيل الدخول.',
         ]);
     }
 }

@@ -39,6 +39,7 @@ export interface StoreIdentity {
 }
 
 export interface User extends BaseEntity {
+  store_code?: string;
   name: string;
   phone: string;
   email?: string | null;
@@ -178,6 +179,7 @@ export interface Party extends BaseEntity {
   phone2?: string | null;
   address?: string | null;
   balance: number; // Positive: we owe them (for supplier) or they owe us (for customer)
+  store_credit_balance?: number;
   notes?: string | null;
   invoices_count?: number;
   interactions_count?: number;
@@ -237,6 +239,7 @@ export interface Invoice extends BaseEntity {
   branch?: Branch | null;
   parent_invoice_id?: number | null; // For returns
   parent_invoice_number?: string | null;
+  exchange_id?: number | null;
   promotion_id?: number | null;
   coupon_code?: string | null;
   promotion_discount?: number;
@@ -572,10 +575,13 @@ export interface AdminStatsData {
     used: number;
     revoked?: number;
   };
-  activity: {
-    invoices: number;
-    products: number;
-    parties: number;
+  operations: {
+    trial_active: number;
+    expiring_7d: number;
+    pending_inquiries: number;
+    pending_reset_requests: number;
+    pending_jobs: number;
+    failed_jobs: number;
   };
   financials: {
     estimated_revenue_egp: number;
@@ -726,6 +732,8 @@ export interface OnlineOrder extends BaseEntity {
   tracking_number?: string | null;
   shipped_at?: string | null;
   invoice_id?: number | null;
+  is_exchange?: boolean;
+  exchange_id?: number | null;
   status: string;
   call_confirmed_at?: string | null;
   call_confirmed_by?: string | null;
@@ -962,4 +970,70 @@ export interface ReceivablesPayablesReportData {
   top_customers: ReceivablesPayablesBucketParty[];
   top_suppliers: ReceivablesPayablesBucketParty[];
   top_couriers: ReceivablesPayablesBucketParty[];
+}
+
+export interface ExchangeItemRow {
+  id: number;
+  direction: 'RETURNED' | 'REPLACEMENT';
+  product_id: number;
+  product_variant_id?: number | null;
+  product_name: string;
+  variant_name?: string | null;
+  quantity: number;
+  unit_price: number;
+  total: number;
+  condition?: 'SELLABLE' | 'DAMAGED' | null;
+  received_into_stock_at?: string | null;
+}
+
+export interface ExchangeRecord {
+  id: number;
+  exchange_number: string;
+  source: 'POS' | 'ONLINE_ORDER';
+  status: 'COMPLETED' | 'AWAITING_COURIER_PICKUP' | 'CANCELLED';
+  branch_id?: number | null;
+  branch_name?: string | null;
+  party_id?: number | null;
+  party_name?: string | null;
+  party_phone?: string | null;
+  salesperson_id?: number | null;
+  salesperson_name?: string | null;
+  created_by?: number | null;
+  created_by_name?: string | null;
+  original_invoice_id?: number | null;
+  original_invoice_number?: string | null;
+  original_online_order_id?: number | null;
+  original_online_order_number?: string | null;
+  return_invoice_id?: number | null;
+  return_invoice_number?: string | null;
+  replacement_invoice_id?: number | null;
+  replacement_invoice_number?: string | null;
+  replacement_online_order_id?: number | null;
+  replacement_online_order_number?: string | null;
+  return_total: number;
+  replacement_total: number;
+  exchange_shipping_fee: number;
+  store_credit_used: number;
+  net_amount: number;
+  settlement_type: 'EVEN_EXCHANGE' | 'CUSTOMER_PAYS' | 'REFUND_CASH' | 'STORE_CREDIT';
+  payment_method?: string | null;
+  completed_at?: string | null;
+  created_at?: string | null;
+  notes?: string | null;
+  items?: ExchangeItemRow[];
+}
+
+export interface StoreCreditTransactionRecord {
+  id: number;
+  type: 'EARNED' | 'REDEEMED' | 'ADJUSTMENT';
+  amount: number;
+  balance_after: number;
+  exchange_id?: number | null;
+  exchange_number?: string | null;
+  invoice_id?: number | null;
+  invoice_number?: string | null;
+  created_by_name?: string | null;
+  expires_at?: string | null;
+  notes?: string | null;
+  created_at?: string | null;
 }

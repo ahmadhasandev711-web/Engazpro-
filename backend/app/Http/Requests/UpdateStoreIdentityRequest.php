@@ -26,6 +26,7 @@ class UpdateStoreIdentityRequest extends FormRequest
             'currency' => ['required', 'string', 'max:10'],
             'max_discount_percent' => ['nullable', 'numeric', 'between:0,100'],
             'allow_negative_branch_stock' => ['nullable', 'boolean'],
+            'allow_cashier_unlinked_exchange' => ['nullable', 'boolean'],
         ];
     }
 

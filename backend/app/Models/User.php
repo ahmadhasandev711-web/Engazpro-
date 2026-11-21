@@ -5,12 +5,14 @@ namespace App\Models;
 use App\Enums\PartyType;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
+use App\Support\StoreCode;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Str;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
@@ -18,6 +20,7 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, Notifiable;
 
     protected $fillable = [
+        'store_code',
         'name',
         'phone',
         'email',
@@ -298,6 +301,10 @@ class User extends Authenticatable
 
     protected static function booted(): void
     {
+        static::saving(function (User $user) {
+            self::assignDefaultStoreIdentity($user);
+        });
+
         static::saved(function (User $user) {
             if ($user->isDirty(['status', 'ecommerce_enabled'])) {
                 $accountId = (int) ($user->owner_id ?: $user->id);
@@ -306,5 +313,27 @@ class User extends Authenticatable
                 \App\Services\Shopify\ShopifyStockSyncGate::forget($accountId);
             }
         });
+    }
+
+    private static function assignDefaultStoreIdentity(User $user): void
+    {
+        if ($user->owner_id) {
+            $ownerCode = static::whereKey($user->owner_id)->value('store_code');
+            $user->store_code = $ownerCode ? StoreCode::normalize($ownerCode) : 'store-' . $user->owner_id;
+            $user->owned_store_code = null;
+
+            return;
+        }
+
+        if ($user->is_admin && empty($user->store_code)) {
+            $user->store_code = StoreCode::ADMIN_CODE;
+            $user->owned_store_code = null;
+
+            return;
+        }
+
+        $code = !empty($user->store_code) ? StoreCode::normalize($user->store_code) : 'store-' . Str::lower(Str::random(8));
+        $user->store_code = $code;
+        $user->owned_store_code = $user->is_admin ? null : $code;
     }
 }

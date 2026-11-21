@@ -24,6 +24,7 @@ use App\Models\Treasury;
 use App\Models\TreasuryTransaction;
 use App\Models\User;
 use App\Services\DocumentSequenceService;
+use App\Services\Exchange\StoreCreditService;
 use App\Support\Money;
 use App\Support\Quantity;
 use Exception;
@@ -134,6 +135,7 @@ class InvoiceService
             DocumentType::PURCHASE => 'PUR-',
             DocumentType::SALE_RETURN => 'SRT-',
             DocumentType::PURCHASE_RETURN => 'PRT-',
+            default => throw new PosDomainException("نوع المستند '{$docType->value}' غير صالح للفاتورة.", 'INVALID_INVOICE_TYPE'),
         };
 
         return $prefix . str_pad((string) $this->sequenceService->next($user->getAccountId(), $docType), 5, '0', STR_PAD_LEFT);
@@ -175,6 +177,7 @@ class InvoiceService
             'unit_name' => $unitName, 'quantity' => $qty, 'stock_deduct_qty' => $stockDeductQty,
             'unit_price' => $unitPriceMoney->getAmount(), 'purchase_price_at_sale' => Money::of($rawCost ?? 0)->getAmount(),
             'total' => $itemTotalMoney->getAmount(), 'notes' => $itemData['notes'] ?? null,
+            'is_damaged' => !empty($itemData['is_damaged']) && $type === InvoiceType::SALE_RETURN->value,
         ], $itemTotalMoney];
     }
 
@@ -293,6 +296,7 @@ class InvoiceService
 
     private function resolveInvoicePaidMoney(array $data, Money $totalMoney, string $paymentMethod): Money
     {
+        $this->assertAllowedPaymentMethods($data, $paymentMethod);
         $paidAmountMoney = Money::of($data['paid_amount'] ?? 0);
         if ($paymentMethod === PaymentMethod::SPLIT->value && !empty($data['split_payments'])) {
             $paidAmountMoney = array_reduce($data['split_payments'], fn (Money $c, $sp) => $c->add(Money::of($sp['amount'] ?? 0)), Money::zero());
@@ -305,6 +309,22 @@ class InvoiceService
         }
 
         return $paidAmountMoney;
+    }
+
+    private function assertAllowedPaymentMethods(array $data, string $paymentMethod): void
+    {
+        if (!empty($data['_internal_exchange'])) {
+            return;
+        }
+        $usesOffset = $paymentMethod === PaymentMethod::EXCHANGE_OFFSET->value;
+        foreach ($data['split_payments'] ?? [] as $sp) {
+            if (($sp['method'] ?? null) === PaymentMethod::EXCHANGE_OFFSET->value) {
+                $usesOffset = true;
+            }
+        }
+        if ($usesOffset) {
+            throw new PosDomainException('مقاصة الاستبدال مسموحة فقط من خلال شاشة الاستبدال الرسمية.', 'EXCHANGE_OFFSET_INTERNAL_ONLY', 422);
+        }
     }
 
     private function resolveCreatorUser(User $user, array $data): User
@@ -366,7 +386,8 @@ class InvoiceService
             'shopify_order_id' => $data['shopify_order_id'] ?? null,
             'type' => $type, 'party_id' => $data['party_id'] ?? null,
             'courier_party_id' => !empty($data['courier_party_id']) ? (int) $data['courier_party_id'] : null,
-            'parent_invoice_id' => $data['parent_invoice_id'] ?? null, 'promotion_id' => $totals['promotion_id'] ?? null,
+            'parent_invoice_id' => $data['parent_invoice_id'] ?? null, 'exchange_id' => $data['exchange_id'] ?? null,
+            'promotion_id' => $totals['promotion_id'] ?? null,
             'coupon_code' => $totals['coupon_code'] ?? null, 'date' => $data['date'] ?? now()->toDateString(),
             'subtotal' => $totals['subtotal'], 'discount' => $totals['discount'], 'promotion_discount' => $totals['promotion_discount'] ?? 0,
             'tax' => $totals['tax'],
@@ -380,6 +401,9 @@ class InvoiceService
     {
         if (!in_array($type, [InvoiceType::SALE->value, InvoiceType::SALE_RETURN->value], true)) {
             return null;
+        }
+        if (array_key_exists('_forced_salesperson_id', $data)) {
+            return $data['_forced_salesperson_id'] !== null ? (int) $data['_forced_salesperson_id'] : null;
         }
         if (!empty($data['salesperson_id'])) {
             return (int) $data['salesperson_id'];
@@ -407,16 +431,20 @@ class InvoiceService
         };
 
         foreach ($preparedItems as $item) {
+            $isDamaged = !empty($item['is_damaged']);
+            $itemNotes = $isDamaged ? trim(($item['notes'] ? $item['notes'] . ' ' : '') . '[تالف - معزول عن المخزون]') : $item['notes'];
             $invoice->items()->create([
                 'product_id' => $item['product']->id, 'product_variant_id' => $item['product_variant_id'],
                 'product_batch_id' => $item['product_batch_id'], 'product_name' => $item['product_name'],
                 'product_code' => $item['product_code'], 'variant_name' => $item['variant_name'],
                 'batch_number' => $item['batch_number'], 'expiry_date' => $item['expiry_date'],
                 'unit_name' => $item['unit_name'], 'quantity' => $item['quantity'], 'unit_price' => $item['unit_price'],
-                'purchase_price_at_sale' => $item['purchase_price_at_sale'], 'total' => $item['total'], 'notes' => $item['notes'],
+                'purchase_price_at_sale' => $item['purchase_price_at_sale'], 'total' => $item['total'], 'notes' => $itemNotes,
             ]);
-            $note = "فاتورة {$invoice->invoice_number}" . ($item['variant_name'] ? " ({$item['variant_name']})" : '');
-            $this->stockService->recordMovement($user, $item['product'], $movementType, $type, $invoice->id, $item['stock_deduct_qty'], $item['unit_price'], $note, $item['variant'], $item['batch'], $branchId);
+            if (!$isDamaged) {
+                $note = "فاتورة {$invoice->invoice_number}" . ($item['variant_name'] ? " ({$item['variant_name']})" : '');
+                $this->stockService->recordMovement($user, $item['product'], $movementType, $type, $invoice->id, $item['stock_deduct_qty'], $item['unit_price'], $note, $item['variant'], $item['batch'], $branchId);
+            }
             $this->syncPurchaseItemCostPrice($type, $item);
         }
     }
@@ -497,6 +525,12 @@ class InvoiceService
 
     private function recordChannelAllocation(User $user, Invoice $invoice, string $type, string $paymentType, ?int $partyId, array $context, Money $amount, string $method, string $notes): void
     {
+        if ($method === PaymentMethod::STORE_CREDIT->value && $type === InvoiceType::SALE->value) {
+            if (!$partyId) {
+                throw new PosDomainException('يجب تحديد العميل عند استخدام رصيد محفظة المتجر.', 'CUSTOMER_REQUIRED_FOR_STORE_CREDIT', 422);
+            }
+            app(StoreCreditService::class)->redeemForInvoice($user, $partyId, $invoice, $amount, $invoice->exchange_id);
+        }
         $targetTreasury = $this->resolveChannelTreasury($user, $method, $context);
         $this->persistInvoicePaymentRow($user, $invoice, $partyId, $context, $targetTreasury, $paymentType, $amount->getAmount(), $method, $notes);
         $this->applyInvoiceTreasuryImpact($user, $type, $method, $amount, $invoice, $context, $targetTreasury);
@@ -573,25 +607,31 @@ class InvoiceService
     /**
      * الحذف الناعم للفاتورة مع عكس حركات المخزون والقيود المحاسبية
      */
-    public function deleteInvoice(User $user, int $invoiceId): void
+    public function deleteInvoice(User $user, int $invoiceId, bool $internalExchangeReversal = false): void
     {
-        DB::transaction(function () use ($user, $invoiceId) {
+        DB::transaction(function () use ($user, $invoiceId, $internalExchangeReversal) {
             $invoice = Invoice::where('user_id', $user->getAccountId())
                 ->with(['items.product', 'items.variant', 'items.batch'])
+                ->lockForUpdate()
                 ->findOrFail($invoiceId);
+            if ($invoice->exchange_id !== null && !$internalExchangeReversal) {
+                throw new PosDomainException('لا يمكن حذف فاتورة مرتبطة بسند استبدال بشكل منفرد؛ يجب إلغاء سند الاستبدال بالكامل.', 'EXCHANGE_INVOICE_PROTECTED', 422);
+            }
             $invoiceTypeStr = $invoice->type instanceof \BackedEnum ? $invoice->type->value : (string) $invoice->type;
 
             $this->reverseInvoiceStock($user, $invoice, $invoiceTypeStr);
-            $this->reverseInvoiceFinancials($user, $invoice, $invoiceTypeStr);
-            if ($invoice->promotion_id) {
-                Promotion::where('user_id', $user->getAccountId())
-                    ->whereKey($invoice->promotion_id)
-                    ->where('used_count', '>', 0)
-                    ->decrement('used_count');
-            }
+            $this->reverseInvoiceFinancials($user, $invoice, $invoiceTypeStr, $internalExchangeReversal);
+            $this->decrementUsedPromotionOnDelete($user->getAccountId(), $invoice->promotion_id);
             $invoice->items()->delete();
             $invoice->delete();
         });
+    }
+
+    private function decrementUsedPromotionOnDelete(int $accountId, ?int $promotionId): void
+    {
+        if ($promotionId) {
+            Promotion::where('user_id', $accountId)->whereKey($promotionId)->where('used_count', '>', 0)->decrement('used_count');
+        }
     }
 
     private function reverseInvoiceStock(User $user, Invoice $invoice, string $invoiceTypeStr): void
@@ -601,7 +641,7 @@ class InvoiceService
             InvoiceType::PURCHASE->value, InvoiceType::SALE_RETURN->value => StockMovementType::OUT->value,
         };
         foreach ($invoice->items as $item) {
-            if (!$item->product) {
+            if (!$item->product || ($invoiceTypeStr === InvoiceType::SALE_RETURN->value && str_contains((string) $item->notes, '[تالف - معزول عن المخزون]'))) {
                 continue;
             }
             $stockQty = $this->resolveItemStockQuantity($item->product, $item->unit_name, Quantity::of($item->quantity)->toFloat());
@@ -610,11 +650,14 @@ class InvoiceService
         }
     }
 
-    private function reverseInvoiceFinancials(User $user, Invoice $invoice, string $invoiceTypeStr): void
+    private function reverseInvoiceFinancials(User $user, Invoice $invoice, string $invoiceTypeStr, bool $internalExchangeReversal = false): void
     {
         if ($invoice->party_id) {
             $party = Party::where('user_id', $user->getAccountId())->findOrFail($invoice->party_id);
             $this->reversePartyLedgerForInvoice($user, $party, $invoice, $invoiceTypeStr);
+        }
+        if (!$internalExchangeReversal) {
+            app(StoreCreditService::class)->restoreRedemptionForInvoice($user, $invoice);
         }
         $this->reverseTreasuryTransactionsForInvoice($user, $invoice);
         Payment::where('user_id', $user->getAccountId())->where('invoice_id', $invoice->id)->delete();
@@ -664,8 +707,13 @@ class InvoiceService
         app(BranchScopeService::class)->applyBranchFilter($query, $user, 'branch_id', !empty($filters['branch_id']) ? (int) $filters['branch_id'] : null);
 
         if (!empty($filters['search'])) {
-            $search = $filters['search'];
-            $query->where(fn($q) => $q->where('invoice_number', 'like', "%{$search}%")->orWhereHas('party', fn($pq) => $pq->where('name', 'like', "%{$search}%")));
+            $search = trim((string) $filters['search']);
+            $query->where(fn ($q) => $q->where('invoice_number', 'like', "%{$search}%")
+                ->orWhereHas('party', fn ($pq) => $pq->where('name', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%")
+                    ->orWhere('phone2', 'like', "%{$search}%"))
+                ->orWhereHas('onlineOrder', fn ($oq) => $oq->where('customer_phone', 'like', "%{$search}%")
+                    ->orWhere('external_order_number', 'like', "%{$search}%")));
         }
 
         return $query;
@@ -850,6 +898,13 @@ class InvoiceService
         }
 
         return array_values(array_unique(array_filter($candidates, fn (string $v) => $v !== '')));
+    }
+
+    public function enrichReturnableQuantitiesForUser(User $user, Invoice $invoice): Invoice
+    {
+        $this->enrichItemsWithReturnableQuantities($user->getAccountId(), $invoice);
+
+        return $invoice;
     }
 
     public function updateSalesperson(Invoice $invoice, ?int $salespersonId): Invoice

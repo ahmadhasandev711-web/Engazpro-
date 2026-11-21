@@ -12,6 +12,7 @@ import {
   Building2,
   ShoppingBag,
   RotateCcw,
+  ArrowLeftRight,
   X,
 } from 'lucide-react';
 import { formatCurrency, PromotionEvaluation } from '@pos-mandob/shared';
@@ -722,8 +723,16 @@ export const PosPage: React.FC = () => {
           )}
         </div>
 
-        {/* Right: Actions (Held carts, Fullscreen) */}
+        {/* Right: Actions (Exchange, Held carts, Fullscreen) */}
         <div className="flex items-center gap-2">
+          <Link
+            to="/exchanges/new"
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-brand-soft hover:bg-brand-soft/80 text-brand-ink border border-brand/25 rounded-xl text-xs font-bold transition-colors"
+            title="فتح محرك الاستبدال الذكي"
+          >
+            <ArrowLeftRight className="w-4 h-4 text-brand" />
+            <span className="hidden sm:inline">استبدال</span>
+          </Link>
           {/* Held Carts Button */}
           <button
             type="button"

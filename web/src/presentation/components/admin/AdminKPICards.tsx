@@ -1,5 +1,5 @@
 import React from 'react';
-import { Store, Key, CreditCard, Layers } from 'lucide-react';
+import { Store, Key, CreditCard, Activity } from 'lucide-react';
 import { formatCurrency, AdminStatsData } from '@pos-mandob/shared';
 import { StatCard } from '../ui';
 
@@ -10,6 +10,7 @@ interface AdminKPICardsProps {
 export const AdminKPICards: React.FC<AdminKPICardsProps> = ({ stats }) => {
   const recordedRevenue = stats?.financials.recorded_revenue_egp ?? 0;
   const estimatedRevenue = stats?.financials.estimated_revenue_egp ?? 0;
+  const ops = stats?.operations;
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
@@ -56,14 +57,17 @@ export const AdminKPICards: React.FC<AdminKPICardsProps> = ({ stats }) => {
       />
 
       <StatCard
-        label="نشاط المنصة الكلي"
-        value={stats?.activity.invoices ?? 0}
-        tone="warn"
-        icon={<Layers className="w-4 h-4" />}
+        label="متابعة المنصة والطابور"
+        value={ops?.trial_active ?? 0}
+        tone={(ops?.failed_jobs ?? 0) > 0 || (ops?.pending_reset_requests ?? 0) > 0 ? 'bad' : 'warn'}
+        icon={<Activity className="w-4 h-4" />}
         hint={
-          <div className="flex items-center justify-between gap-2 text-[11px] font-medium text-muted pt-2 border-t border-line">
-            <span>{stats?.activity.products ?? 0} صنف</span>
-            <span>{stats?.activity.parties ?? 0} عميل ومورد</span>
+          <div className="flex items-center justify-between gap-2 text-[11px] font-bold pt-2 border-t border-line flex-wrap">
+            <span className="text-warn">قرب الانتهاء: {ops?.expiring_7d ?? 0}</span>
+            <span className="text-brand-ink">طلبات متاجر: {ops?.pending_inquiries ?? 0}</span>
+            <span className={(ops?.failed_jobs ?? 0) > 0 ? 'text-bad' : 'text-muted'}>
+              فشل طابور: {ops?.failed_jobs ?? 0}
+            </span>
           </div>
         }
       />

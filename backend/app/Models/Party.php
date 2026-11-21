@@ -23,6 +23,7 @@ class Party extends Model
         'phone2',
         'address',
         'balance',
+        'store_credit_balance',
         'notes',
         'crm_tier_override',
         'wc_customer_id',
@@ -34,6 +35,7 @@ class Party extends Model
         'wc_customer_id' => 'integer',
         'shopify_customer_id' => 'integer',
         'balance' => 'decimal:2',
+        'store_credit_balance' => 'decimal:2',
         'crm_tier_override' => CustomerTier::class,
     ];
 
@@ -70,6 +72,11 @@ class Party extends Model
     public function courierOrders(): HasMany
     {
         return $this->hasMany(OnlineOrder::class, 'courier_party_id');
+    }
+
+    public function storeCreditTransactions(): HasMany
+    {
+        return $this->hasMany(StoreCreditTransaction::class)->latest();
     }
 
     public function scopeCustomers(Builder $query): Builder

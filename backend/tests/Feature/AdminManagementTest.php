@@ -51,7 +51,7 @@ class AdminManagementTest extends TestCase
                 'users' => ['total', 'merchants', 'admins'],
                 'subscriptions' => ['active', 'expired', 'trial', 'paid'],
                 'licenses' => ['total', 'unused', 'used'],
-                'activity' => ['invoices', 'products', 'parties'],
+                'operations' => ['trial_active', 'expiring_7d', 'pending_inquiries', 'pending_reset_requests', 'pending_jobs', 'failed_jobs'],
                 'financials' => ['estimated_revenue_egp'],
             ],
         ]);

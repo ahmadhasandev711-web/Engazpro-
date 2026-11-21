@@ -17,6 +17,9 @@ import {
   UserX,
   Building2,
   Banknote,
+  Copy,
+  Check,
+  AtSign,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { apiClient } from '../../data/api/client';
@@ -36,6 +39,7 @@ export const EmployeesPage: React.FC = () => {
   const queryClient = useQueryClient();
   const { user, isOwnerOrAdmin, isManager } = usePermissions();
   const [search, setSearch] = useState('');
+  const [copiedCode, setCopiedCode] = useState(false);
   const [roleFilter, setRoleFilter] = useState<'ALL' | 'CASHIER' | 'SALES' | 'MANDOB' | 'MANAGEMENT'>('ALL');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<EmployeeItem | null>(null);
@@ -79,6 +83,25 @@ export const EmployeesPage: React.FC = () => {
     queryFn: async () => {
       const res = await apiClient.get('/employees');
       return res.data;
+    },
+  });
+
+  const { data: resetRequests = [] } = useQuery<any[]>({
+    queryKey: ['employee-reset-requests', user?.id],
+    queryFn: async () => {
+      const res = await apiClient.get('/employees/reset-requests');
+      return Array.isArray(res.data?.data) ? res.data.data : [];
+    },
+    enabled: isOwnerOrAdmin || isManager,
+  });
+
+  const dismissResetMutation = useMutation({
+    mutationFn: async (requestId: number) => {
+      const res = await apiClient.post(`/employees/reset-requests/${requestId}/dismiss`);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employee-reset-requests'] });
     },
   });
 
@@ -188,6 +211,7 @@ export const EmployeesPage: React.FC = () => {
     },
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.invalidateQueries({ queryKey: ['employee-reset-requests'] });
       queryClient.invalidateQueries({ queryKey: ['payroll'] });
       setIsModalOpen(false);
       setEditingEmployee(null);
@@ -369,6 +393,31 @@ export const EmployeesPage: React.FC = () => {
         />
       </div>
 
+      {user?.store_code && (
+        <div className="bg-brand-soft/60 border border-brand/25 px-4 py-2.5 rounded-2xl flex items-center justify-between gap-3 flex-wrap text-xs">
+          <div className="flex items-center gap-2 text-ink font-bold">
+            <AtSign className="w-4 h-4 text-brand shrink-0" />
+            <span>معرّف المتجر لدخول الموظفين مع رقم الهاتف:</span>
+            <span className="font-mono font-black text-brand bg-panel px-2.5 py-0.5 rounded-lg border border-brand/25" dir="ltr">
+              {user.store_code}
+            </span>
+          </div>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              navigator.clipboard?.writeText(user.store_code || '');
+              setCopiedCode(true);
+              setTimeout(() => setCopiedCode(false), 2000);
+            }}
+            leftIcon={copiedCode ? <Check className="w-3.5 h-3.5 text-ok" /> : <Copy className="w-3.5 h-3.5 text-brand" />}
+          >
+            {copiedCode ? 'تم نسخ المعرّف' : 'نسخ المعرّف'}
+          </Button>
+        </div>
+      )}
+
       {/* Mobile Compact Hero Bar (md:hidden) */}
       <div className="md:hidden bg-panel p-3 rounded-2xl border border-line shadow-xs flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
@@ -447,6 +496,51 @@ export const EmployeesPage: React.FC = () => {
           icon={<Wallet className="w-4 h-4" />}
         />
       </div>
+
+      {/* Staff Password Reset Requests Banner */}
+      {resetRequests.length > 0 && (
+        <div className="bg-warn-soft/40 border border-warn/40 rounded-2xl p-4 space-y-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <h3 className="text-sm font-black text-ink flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-warn shrink-0" />
+              <span>طلبات استعادة كلمة المرور من فريق العمل ({resetRequests.length})</span>
+            </h3>
+            <Badge tone="warn">يتطلب تعيين كلمة مرور جديدة</Badge>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+            {resetRequests.map((req: any) => {
+              const targetEmp = employees.find((e) => e.id === req.user_id);
+              return (
+                <div key={req.id} className="p-3 bg-panel border border-line rounded-xl flex items-center justify-between gap-3 text-xs">
+                  <div className="min-w-0">
+                    <div className="font-bold text-ink">{req.user?.name || targetEmp?.name || 'موظف'}</div>
+                    <div className="font-mono text-muted">{req.phone}</div>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {targetEmp && (
+                      <Button
+                        size="sm"
+                        variant="primary"
+                        onClick={() => openEditModal(targetEmp)}
+                      >
+                        تعيين باسوورد
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => dismissResetMutation.mutate(req.id)}
+                      aria-label="تجاهل"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Filters & Search */}
       <div className="bg-panel p-2.5 sm:p-4 rounded-2xl border border-line shadow-xs flex flex-col md:flex-row items-center justify-between gap-3">

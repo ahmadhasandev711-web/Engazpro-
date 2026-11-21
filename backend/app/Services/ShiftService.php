@@ -95,7 +95,7 @@ class ShiftService
         $creditSales = Money::of(Invoice::withoutGlobalScope(StoreScope::class)->where('shift_id', $shiftId)->where('type', InvoiceType::SALE)->sum('remaining_amount'));
         $cashReceipts = $this->sumShiftCashVouchers($shiftId, PaymentType::RECEIPT);
         $cashPayments = $this->sumShiftCashVouchers($shiftId, PaymentType::PAYMENT);
-        $cashReturns = Money::of(Invoice::withoutGlobalScope(StoreScope::class)->where('shift_id', $shiftId)->where('type', InvoiceType::SALE_RETURN)->sum('paid_amount'));
+        $cashReturns = $this->sumShiftCashReturns($shiftId);
         $expenses = Money::of(Expense::withoutGlobalScope(StoreScope::class)->where('shift_id', $shiftId)->sum('amount'));
         $expectedCash = Money::of($shift->opening_balance)->add($cashSales)->add($cashReceipts)->subtract($cashReturns)->subtract($expenses)->subtract($cashPayments);
 
@@ -125,6 +125,15 @@ class ShiftService
         $direct = Invoice::withoutGlobalScope(StoreScope::class)->where('shift_id', $shiftId)->where('type', InvoiceType::SALE)->whereIn('payment_method', $methods)->sum('paid_amount');
         $split = Payment::withoutGlobalScope(StoreScope::class)->where('shift_id', $shiftId)->where('type', PaymentType::RECEIPT->value)->whereIn('method', $methods)
             ->whereHas('invoice', fn($q) => $q->where('payment_method', PaymentMethod::SPLIT->value))->sum('amount');
+
+        return Money::of($direct)->add(Money::of($split));
+    }
+
+    private function sumShiftCashReturns(int $shiftId): Money
+    {
+        $direct = Invoice::withoutGlobalScope(StoreScope::class)->where('shift_id', $shiftId)->where('type', InvoiceType::SALE_RETURN)->where('payment_method', PaymentMethod::CASH->value)->sum('paid_amount');
+        $split = Payment::withoutGlobalScope(StoreScope::class)->where('shift_id', $shiftId)->where('type', PaymentType::PAYMENT->value)->where('method', PaymentMethod::CASH->value)
+            ->whereHas('invoice', fn ($q) => $q->where('type', InvoiceType::SALE_RETURN)->where('payment_method', PaymentMethod::SPLIT->value))->sum('amount');
 
         return Money::of($direct)->add(Money::of($split));
     }

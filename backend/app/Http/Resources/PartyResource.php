@@ -26,6 +26,7 @@ class PartyResource extends JsonResource
             'phone2' => $this->phone2,
             'address' => $this->address,
             'balance' => Money::of($this->balance ?? 0)->getAmount(),
+            'store_credit_balance' => Money::of($this->store_credit_balance ?? 0)->getAmount(),
             'notes' => $this->notes,
             'crm_tier_override' => $this->crm_tier_override instanceof \BackedEnum ? $this->crm_tier_override->value : $this->crm_tier_override,
             'crm_metrics' => $this->resource->getAttribute('crm_metrics'),

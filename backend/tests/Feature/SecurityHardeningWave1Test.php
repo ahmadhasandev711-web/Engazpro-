@@ -296,6 +296,7 @@ class SecurityHardeningWave1Test extends TestCase
     public function test_login_rate_limiting_triggers_429_on_sixth_attempt(): void
     {
         $payload = [
+            'store_code' => 'tia',
             'phone' => '01099999999',
             'password' => 'wrongpassword',
         ];

@@ -31,6 +31,11 @@ const ACTION_OPTIONS = [
   { value: 'ADMIN_ACCESS_DENIED', label: 'رفض وصول إداري' },
   { value: 'INQUIRY_UPDATED', label: 'تحديث طلب متجر' },
   { value: 'INQUIRY_DELETED', label: 'حذف طلب متجر' },
+  { value: 'STORE_IMPERSONATED', label: 'دخول دعم فني' },
+  { value: 'STORE_UPDATED', label: 'تعديل متجر' },
+  { value: 'STORE_ECOMMERCE_CONFIGURED', label: 'إعداد ربط أونلاين' },
+  { value: 'STORE_ECOMMERCE_REMOVED', label: 'إزالة ربط أونلاين' },
+  { value: 'QUEUE_JOB_RETRIED', label: 'إعادة مهمة طابور' },
 ];
 
 const ACTION_META: Record<string, { label: string; tone: BadgeTone }> = {
@@ -46,6 +51,12 @@ const ACTION_META: Record<string, { label: string; tone: BadgeTone }> = {
   ADMIN_ACCESS_DENIED: { label: 'رفض وصول إداري', tone: 'bad' },
   INQUIRY_UPDATED: { label: 'تحديث طلب', tone: 'info' },
   INQUIRY_DELETED: { label: 'حذف طلب', tone: 'warn' },
+  STORE_IMPERSONATED: { label: 'دخول دعم فني', tone: 'brand' },
+  STORE_UPDATED: { label: 'تعديل متجر', tone: 'info' },
+  STORE_ECOMMERCE_CONFIGURED: { label: 'إعداد أونلاين', tone: 'ok' },
+  STORE_ECOMMERCE_REMOVED: { label: 'إزالة أونلاين', tone: 'warn' },
+  QUEUE_JOB_RETRIED: { label: 'إعادة طابور', tone: 'info' },
+  QUEUE_JOBS_FLUSHED: { label: 'تنظيف طابور', tone: 'warn' },
 };
 
 export const AdminAuditLogTab: React.FC<AdminAuditLogTabProps> = ({

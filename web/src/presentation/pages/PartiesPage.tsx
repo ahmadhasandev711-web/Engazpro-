@@ -451,14 +451,21 @@ export const PartiesPage: React.FC = () => {
                           '—'
                         )}
                       </td>
-                      <td className="py-3.5 px-4">
-                        {p.balance === 0 ? (
-                          <span className="text-xs font-bold text-muted tabular-nums">
-                            {formatCurrency(p.balance)}
-                          </span>
-                        ) : (
-                          <Badge tone={balanceTone} className="font-black tabular-nums">
-                            {formatCurrency(p.balance)}
+                      <td className="py-3.5 px-4 space-y-1">
+                        <div>
+                          {p.balance === 0 ? (
+                            <span className="text-xs font-bold text-muted tabular-nums">
+                              {formatCurrency(p.balance)}
+                            </span>
+                          ) : (
+                            <Badge tone={balanceTone} className="font-black tabular-nums">
+                              {formatCurrency(p.balance)}
+                            </Badge>
+                          )}
+                        </div>
+                        {!isSupplier && Number(p.store_credit_balance ?? 0) > 0 && (
+                          <Badge tone="info" className="font-black tabular-nums text-[10px]">
+                            محفظة: {formatCurrency(Number(p.store_credit_balance))}
                           </Badge>
                         )}
                       </td>

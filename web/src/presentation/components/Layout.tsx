@@ -26,11 +26,16 @@ import {
   Moon,
   AlertTriangle,
   Tag,
+  KeyRound,
+  ArrowRight,
 } from 'lucide-react';
+import { apiClient } from '../../data/api/client';
 import { useAuthStore } from '../../data/store/useAuthStore';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useStockAlertsSummary } from '../../hooks/useStockOperations';
 import { useTheme } from '../context/ThemeContext';
+import { useToast } from '../context/ToastContext';
+import { Button, Input } from './ui';
 import { cn } from '../utils/cn';
 import { ActiveShiftBanner } from './shifts/ActiveShiftBanner';
 import { OfflineBanner } from './pwa/OfflineBanner';
@@ -109,13 +114,38 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ groups, onNavigate }) =>
 export const Layout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout } = useAuthStore();
+  const toast = useToast();
+  const { user, logout, impersonation, exitImpersonation } = useAuthStore();
   const { resolvedTheme, toggleTheme } = useTheme();
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+  const [isPwdModalOpen, setIsPwdModalOpen] = useState(false);
+  const [pwdForm, setPwdForm] = useState({ current_password: '', new_password: '', new_password_confirmation: '' });
+  const [pwdSaving, setPwdSaving] = useState(false);
 
   const handleLogout = async () => {
     await logout();
     navigate('/login');
+  };
+
+  const handleExitImpersonation = async () => {
+    await exitImpersonation();
+    toast.success('تم الرجوع إلى لوحة السوبر أدمن');
+    navigate('/admin');
+  };
+
+  const handleChangeOwnPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPwdSaving(true);
+    try {
+      const res = await apiClient.post('/auth/change-password', pwdForm);
+      toast.success(res.data?.message || 'تم تغيير كلمة المرور بنجاح');
+      setIsPwdModalOpen(false);
+      setPwdForm({ current_password: '', new_password: '', new_password_confirmation: '' });
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'تعذر تغيير كلمة المرور، تأكد من كلمة المرور الحالية');
+    } finally {
+      setPwdSaving(false);
+    }
   };
 
   const {
@@ -144,6 +174,7 @@ export const Layout: React.FC = () => {
   const salesGroup: NavItemDef[] = [
     { to: '/dashboard', label: 'الرئيسية', icon: LayoutDashboard },
     { to: '/pos', label: 'نقطة البيع (POS)', icon: Store },
+    { to: '/exchanges', label: 'الاستبدالات والمحفظة', icon: ArrowLeftRight },
     ...(canViewStoreOrders
       ? [
           {
@@ -346,6 +377,22 @@ export const Layout: React.FC = () => {
 
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col overflow-hidden">
+          {impersonation && (
+            <div className="bg-brand text-on-brand px-4 sm:px-6 py-2 flex items-center justify-between gap-3 text-xs font-bold shadow-xs">
+              <span>
+                وضع الدعم الفني: تتصفح الآن متجر <strong>({impersonation.storeName})</strong>
+              </span>
+              <button
+                type="button"
+                onClick={handleExitImpersonation}
+                className="bg-panel text-brand px-3 py-1 rounded-lg font-black inline-flex items-center gap-1.5 hover:bg-surface-2 transition-colors shrink-0 cursor-pointer"
+              >
+                <ArrowRight className="w-3.5 h-3.5" />
+                <span>العودة للسوبر أدمن</span>
+              </button>
+            </div>
+          )}
+
           {/* Grace Period / Expiration Notice Banner */}
           {!isSubscriptionValid && (
             <div className="bg-bad text-on-brand px-4 sm:px-6 py-2.5 flex items-center justify-between text-xs font-bold shadow-xs">
@@ -417,6 +464,18 @@ export const Layout: React.FC = () => {
 
             {/* Header Right Actions */}
             <div className="flex items-center gap-2.5">
+              {/* Change Own Password Button (Available to All Roles) */}
+              <button
+                type="button"
+                onClick={() => setIsPwdModalOpen(true)}
+                aria-label="تغيير كلمة المرور"
+                title="تغيير كلمة المرور"
+                className="min-w-[44px] min-h-[44px] px-2.5 flex items-center justify-center gap-1.5 rounded-xl text-muted hover:text-ink hover:bg-surface-2 transition-colors focus:outline-none focus:ring-2 focus:ring-brand cursor-pointer text-xs font-bold"
+              >
+                <KeyRound className="w-4 h-4" />
+                <span className="hidden md:inline">كلمة المرور</span>
+              </button>
+
               {/* Theme Toggle Button */}
               <button
                 type="button"
@@ -462,6 +521,51 @@ export const Layout: React.FC = () => {
           <MobileBottomNav onOpenDrawer={() => setIsMobileDrawerOpen(true)} />
         </div>
       </div>
+
+      {isPwdModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-canvas/80 backdrop-blur-sm" dir="rtl">
+          <div className="bg-panel border border-line rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-line pb-3">
+              <div className="flex items-center gap-2">
+                <KeyRound className="w-5 h-5 text-brand" />
+                <h3 className="font-black text-base text-ink">تغيير كلمة المرور</h3>
+              </div>
+              <button type="button" onClick={() => setIsPwdModalOpen(false)} aria-label="إغلاق" className="p-2 rounded-lg text-muted hover:bg-surface-2">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <form onSubmit={handleChangeOwnPassword} className="space-y-3">
+              <Input
+                type="password"
+                label="كلمة المرور الحالية"
+                value={pwdForm.current_password}
+                onChange={(e) => setPwdForm({ ...pwdForm, current_password: e.target.value })}
+                required
+              />
+              <Input
+                type="password"
+                label="كلمة المرور الجديدة"
+                value={pwdForm.new_password}
+                onChange={(e) => setPwdForm({ ...pwdForm, new_password: e.target.value })}
+                minLength={6}
+                required
+              />
+              <Input
+                type="password"
+                label="تأكيد كلمة المرور الجديدة"
+                value={pwdForm.new_password_confirmation}
+                onChange={(e) => setPwdForm({ ...pwdForm, new_password_confirmation: e.target.value })}
+                minLength={6}
+                required
+              />
+              <div className="flex justify-end gap-2 pt-2">
+                <Button type="button" variant="secondary" onClick={() => setIsPwdModalOpen(false)}>إلغاء</Button>
+                <Button type="submit" variant="primary" isLoading={pwdSaving}>حفظ كلمة المرور</Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

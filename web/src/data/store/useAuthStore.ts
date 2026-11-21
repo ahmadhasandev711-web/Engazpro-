@@ -3,6 +3,25 @@ import { apiClient } from '../api/client';
 import { queryClient } from '../api/queryClient';
 import { User, LoginInput, RegisterInput } from '@pos-mandob/shared';
 import { secureStorage } from '../../platform/secureStorage';
+import { saveStoreCode } from '../../platform/storeCodeStorage';
+
+const IMPERSONATION_BACKUP_KEY = 'admin_impersonation_backup';
+
+interface ImpersonationBackup {
+  adminToken: string;
+  adminUser: User;
+  storeName: string;
+}
+
+const readImpersonationBackup = (): ImpersonationBackup | null => {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = sessionStorage.getItem(IMPERSONATION_BACKUP_KEY);
+    return raw ? (JSON.parse(raw) as ImpersonationBackup) : null;
+  } catch {
+    return null;
+  }
+};
 
 interface AuthState {
   user: User | null;
@@ -11,11 +30,14 @@ interface AuthState {
   authHydrated: boolean;
   isLoading: boolean;
   error: string | null;
+  impersonation: ImpersonationBackup | null;
   login: (input: LoginInput) => Promise<boolean>;
   register: (input: RegisterInput) => Promise<boolean>;
   logout: () => Promise<void>;
   fetchMe: () => Promise<void>;
   activateSubscriptionCode: (code: string) => Promise<{ success: boolean; message: string }>;
+  startImpersonation: (storeUser: User, storeToken: string) => Promise<void>;
+  exitImpersonation: () => Promise<void>;
   initializeAuth: () => Promise<void>;
 }
 
@@ -26,16 +48,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   authHydrated: false,
   isLoading: false,
   error: null,
+  impersonation: readImpersonationBackup(),
 
   initializeAuth: async () => {
     await secureStorage.whenReady();
     const token = secureStorage.getToken();
     const user = await secureStorage.getUser<User>();
+    const impersonation = readImpersonationBackup();
     if (token) {
-      set({ token, user, isAuthenticated: true, authHydrated: true });
+      set({ token, user, isAuthenticated: true, authHydrated: true, impersonation });
       get().fetchMe().catch(() => {});
     } else {
-      set({ token: null, user: null, isAuthenticated: false, authHydrated: true });
+      set({ token: null, user: null, isAuthenticated: false, authHydrated: true, impersonation: null });
     }
   },
 
@@ -47,6 +71,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       queryClient.clear();
       await secureStorage.setToken(token);
       await secureStorage.setUser(user);
+      saveStoreCode(user?.store_code || input.store_code);
       set({ user, token, isAuthenticated: true, isLoading: false, error: null });
       return true;
     } catch (err: any) {
@@ -71,6 +96,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       queryClient.clear();
       await secureStorage.setToken(token);
       await secureStorage.setUser(user);
+      saveStoreCode(user?.store_code || input.store_code);
       set({ user, token, isAuthenticated: true, isLoading: false, error: null });
       return true;
     } catch (err: any) {
@@ -95,10 +121,60 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch {
       // Ignore errors on logout
     } finally {
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem(IMPERSONATION_BACKUP_KEY);
+      }
       queryClient.clear();
       await secureStorage.clearAuth();
-      set({ user: null, token: null, isAuthenticated: false, error: null });
+      set({ user: null, token: null, isAuthenticated: false, error: null, impersonation: null });
     }
+  },
+
+  startImpersonation: async (storeUser: User, storeToken: string) => {
+    const currentToken = get().token;
+    const currentUser = get().user;
+    if (!currentToken || !currentUser) return;
+
+    const existingBackup = readImpersonationBackup();
+    const backup: ImpersonationBackup = existingBackup ?? {
+      adminToken: currentToken,
+      adminUser: currentUser,
+      storeName: storeUser.name,
+    };
+    const nextBackup: ImpersonationBackup = { ...backup, storeName: storeUser.name };
+
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem(IMPERSONATION_BACKUP_KEY, JSON.stringify(nextBackup));
+    }
+    queryClient.clear();
+    await secureStorage.setToken(storeToken);
+    await secureStorage.setUser(storeUser);
+    set({ user: storeUser, token: storeToken, isAuthenticated: true, impersonation: nextBackup, error: null });
+  },
+
+  exitImpersonation: async () => {
+    const backup = readImpersonationBackup() ?? get().impersonation;
+    if (!backup) return;
+    try {
+      if (get().token) {
+        await apiClient.post('/auth/logout');
+      }
+    } catch {
+      // Ignore logout failure on temporary impersonation token
+    }
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem(IMPERSONATION_BACKUP_KEY);
+    }
+    queryClient.clear();
+    await secureStorage.setToken(backup.adminToken);
+    await secureStorage.setUser(backup.adminUser);
+    set({
+      user: backup.adminUser,
+      token: backup.adminToken,
+      isAuthenticated: true,
+      impersonation: null,
+      error: null,
+    });
   },
 
   fetchMe: async () => {

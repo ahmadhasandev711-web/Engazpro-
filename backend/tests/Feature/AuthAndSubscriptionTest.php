@@ -17,8 +17,10 @@ class AuthAndSubscriptionTest extends TestCase
         config(['pos.trial_days' => 9]);
 
         $response = $this->postJson('/api/auth/register', [
+            'store_code' => 'mandob-test',
             'name' => 'أحمد المندوب',
             'phone' => '01012345678',
+            'email' => 'ahmad.mandob@example.com',
             'password' => 'secret123',
         ]);
 
@@ -57,6 +59,7 @@ class AuthAndSubscriptionTest extends TestCase
         ]);
 
         $response = $this->postJson('/api/auth/login', [
+            'store_code' => $user->store_code,
             'phone' => '01099999999',
             'password' => 'password123',
         ]);
@@ -70,13 +73,15 @@ class AuthAndSubscriptionTest extends TestCase
 
     public function test_user_cannot_login_with_wrong_password(): void
     {
-        User::create([
+        $user = User::create([
+            'store_code' => 'wrong-pass-store',
             'name' => 'تاجر تجريبي',
             'phone' => '01099999999',
             'password' => bcrypt('password123'),
         ]);
 
         $response = $this->postJson('/api/auth/login', [
+            'store_code' => $user->store_code,
             'phone' => '01099999999',
             'password' => 'wrong_password',
         ]);
@@ -164,8 +169,10 @@ class AuthAndSubscriptionTest extends TestCase
         ]);
 
         $response = $this->postJson('/api/auth/register', [
+            'store_code' => 'fashion-online',
             'name' => 'براند فاشون أونلاين',
             'phone' => '01066665555',
+            'email' => 'fashion.online@example.com',
             'password' => 'secret123',
         ]);
 

@@ -3,9 +3,10 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useNavigate } from 'react-router-dom';
 import { RegisterSchema, RegisterInput } from '@pos-mandob/shared';
-import { ArrowLeft, Mail, Phone, Sparkles, Store, Zap } from 'lucide-react';
+import { ArrowLeft, AtSign, Mail, Phone, Sparkles, Store, Zap } from 'lucide-react';
 import { useAuthStore } from '../../data/store/useAuthStore';
 import { usePageMeta } from '../../hooks/usePageMeta';
+import { normalizeStoreCodeInput } from '../../platform/storeCodeStorage';
 import { AuthShell } from '../components/auth/AuthShell';
 import { PasswordField } from '../components/auth/PasswordField';
 import { Button, Input } from '../components/ui';
@@ -91,6 +92,21 @@ export const RegisterPage: React.FC = () => {
     >
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <Input
+          {...register('store_code')}
+          type="text"
+          label="معرّف المتجر الفريد (لدخولك ودخول موظفيك)"
+          placeholder="tia"
+          dir="ltr"
+          leftIcon={<AtSign className="w-4 h-4" />}
+          helperText="أحرف إنجليزية وأرقام بدون مسافات (مثال: tia أو tia-fashion) — يتيح لك فتح أكثر من متجر بنفس رقمك."
+          error={errors.store_code?.message}
+          onInput={(e) => {
+            e.currentTarget.value = normalizeStoreCodeInput(e.currentTarget.value);
+          }}
+          className="text-right font-mono"
+        />
+
+        <Input
           {...register('name')}
           type="text"
           label="الاسم التجاري أو اسمك"
@@ -111,11 +127,9 @@ export const RegisterPage: React.FC = () => {
         />
 
         <Input
-          {...register('email', {
-            setValueAs: (v: string) => (typeof v === 'string' && v.trim() === '' ? null : v),
-          })}
+          {...register('email')}
           type="email"
-          label="البريد الإلكتروني (اختياري)"
+          label="البريد الإلكتروني (مطلوب لاستعادة كلمة المرور)"
           placeholder="name@example.com"
           dir="ltr"
           leftIcon={<Mail className="w-4 h-4" />}

@@ -31,6 +31,8 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:30,1');
     Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
+    Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:5,5');
+    Route::post('/reset-password-otp', [AuthController::class, 'resetPasswordWithOtp'])->middleware('throttle:10,5');
 });
 
 // WooCommerce Incoming Webhooks (Public endpoint with HMAC signature verification)
@@ -93,6 +95,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
         Route::post('parties/{party}/interactions', [\App\Http\Controllers\Api\PartyCrmController::class, 'storeInteraction']);
         Route::delete('parties/{party}/interactions/{interaction}', [\App\Http\Controllers\Api\PartyCrmController::class, 'destroyInteraction']);
         Route::patch('parties/{party}/tier', [\App\Http\Controllers\Api\PartyCrmController::class, 'updateTier']);
+        Route::get('parties/{partyId}/store-credit', [\App\Http\Controllers\Api\ExchangeController::class, 'partyStoreCredit']);
         Route::apiResource('parties', PartyController::class);
 
         // Couriers Management & Shipment Manifest (إدارة شركات الشحن وكشف البوالص والتسويات)
@@ -107,6 +110,15 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
         Route::patch('invoices/{id}/salesperson', [InvoiceController::class, 'updateSalesperson']);
         Route::apiResource('invoices', InvoiceController::class)->except(['update']);
 
+        // Smart Exchange Engine & Store Credit (محرك الاستبدال الذكي)
+        Route::prefix('exchanges')->group(function () {
+            Route::get('lookup-invoices', [\App\Http\Controllers\Api\ExchangeController::class, 'lookupInvoices']);
+            Route::get('/', [\App\Http\Controllers\Api\ExchangeController::class, 'index']);
+            Route::post('/', [\App\Http\Controllers\Api\ExchangeController::class, 'store']);
+            Route::post('/{id}/cancel', [\App\Http\Controllers\Api\ExchangeController::class, 'cancel']);
+            Route::get('/{id}', [\App\Http\Controllers\Api\ExchangeController::class, 'show']);
+        });
+
         // Promotions & Coupons Engine
         Route::post('promotions/evaluate', [PromotionController::class, 'evaluate']);
         Route::apiResource('promotions', PromotionController::class)->except(['show']);
@@ -119,6 +131,8 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
         Route::apiResource('expense-categories', \App\Http\Controllers\Api\ExpenseCategoryController::class);
 
         // Employees & Team Members (إدارة فريق العمل والمناديب)
+        Route::get('employees/reset-requests', [EmployeeController::class, 'passwordResetRequests']);
+        Route::post('employees/reset-requests/{resetRequest}/dismiss', [EmployeeController::class, 'dismissPasswordResetRequest']);
         Route::apiResource('employees', EmployeeController::class);
 
         // Payroll & Sales Commissions (مسير الرواتب وعمولات المبيعات والتسويات)
@@ -226,6 +240,8 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
                 Route::post('/{id}/cancel', [\App\Http\Controllers\Api\OnlineOrderController::class, 'cancel']);
                 Route::get('/{id}/branch-availability', [\App\Http\Controllers\Api\OnlineOrderController::class, 'branchAvailability']);
                 Route::post('/{id}/transfer-branch', [\App\Http\Controllers\Api\OnlineOrderController::class, 'transferBranch']);
+                Route::post('/{id}/swap-items', [\App\Http\Controllers\Api\ExchangeController::class, 'swapOnlineOrderItems']);
+                Route::post('/{id}/exchange', [\App\Http\Controllers\Api\ExchangeController::class, 'createOnlineOrderExchange']);
             });
 
             // Shopify Integration (ربط ومزامنة متجر شوبيفاي)
@@ -273,5 +289,23 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
         Route::get('/inquiries', [\App\Http\Controllers\Api\StoreInquiryController::class, 'index']);
         Route::patch('/inquiries/{id}', [\App\Http\Controllers\Api\StoreInquiryController::class, 'update']);
         Route::delete('/inquiries/{id}', [\App\Http\Controllers\Api\StoreInquiryController::class, 'destroy']);
+
+        // Super Admin Deep Store Control, Impersonation, E-Commerce & Queue Monitoring
+        Route::get('/users/{user}/manage', [\App\Http\Controllers\Api\AdminStoreControlController::class, 'showStore']);
+        Route::put('/users/{user}/profile', [\App\Http\Controllers\Api\AdminStoreControlController::class, 'updateProfile']);
+        Route::put('/users/{user}/ecommerce/woocommerce', [\App\Http\Controllers\Api\AdminStoreControlController::class, 'configureWooCommerce']);
+        Route::put('/users/{user}/ecommerce/shopify', [\App\Http\Controllers\Api\AdminStoreControlController::class, 'configureShopify']);
+        Route::post('/users/{user}/ecommerce/test', [\App\Http\Controllers\Api\AdminStoreControlController::class, 'testConnection']);
+        Route::delete('/users/{user}/ecommerce/{platform}', [\App\Http\Controllers\Api\AdminStoreControlController::class, 'removeIntegration']);
+        Route::post('/users/{user}/impersonate', [\App\Http\Controllers\Api\AdminStoreControlController::class, 'impersonate']);
+        Route::post('/users/{user}/staff/{staff}/reset-password', [\App\Http\Controllers\Api\AdminStoreControlController::class, 'resetStaffPassword']);
+        Route::post('/users/{user}/staff/{staff}/toggle-status', [\App\Http\Controllers\Api\AdminStoreControlController::class, 'toggleStaffStatus']);
+        Route::post('/users/{user}/staff/{staff}/force-logout', [\App\Http\Controllers\Api\AdminStoreControlController::class, 'forceLogoutStaff']);
+        Route::get('/system/queue', [\App\Http\Controllers\Api\AdminStoreControlController::class, 'queueOverview']);
+        Route::post('/system/queue/retry/{uuid}', [\App\Http\Controllers\Api\AdminStoreControlController::class, 'retryFailedJob']);
+        Route::post('/system/queue/retry-all', [\App\Http\Controllers\Api\AdminStoreControlController::class, 'retryAllFailedJobs']);
+        Route::post('/system/queue/flush', [\App\Http\Controllers\Api\AdminStoreControlController::class, 'flushFailedJobs']);
+        Route::get('/password-reset-requests', [\App\Http\Controllers\Api\AdminStoreControlController::class, 'passwordResetRequests']);
+        Route::post('/password-reset-requests/{resetRequest}/dismiss', [\App\Http\Controllers\Api\AdminStoreControlController::class, 'dismissPasswordResetRequest']);
     });
 });

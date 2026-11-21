@@ -8,6 +8,7 @@ import {
   AlertCircle,
   CheckCircle2,
   RotateCcw,
+  ArrowLeftRight,
 } from 'lucide-react';
 import { formatCurrency } from '@pos-mandob/shared';
 import { useHaptic } from '../../hooks/useHaptic';
@@ -23,6 +24,7 @@ interface InvoiceMobileCardProps {
   onPrintReceipt: (invoiceId: number) => void;
   onDeleteInvoice: (invoiceId: number, invoiceNumber: string) => void;
   onQuickReturn?: (invoice: any) => void;
+  onExchange?: (invoice: any) => void;
 }
 
 /**
@@ -40,6 +42,7 @@ export const InvoiceMobileCard: React.FC<InvoiceMobileCardProps> = ({
   onPrintReceipt,
   onDeleteInvoice,
   onQuickReturn,
+  onExchange,
 }) => {
   const { selection } = useHaptic();
 
@@ -183,6 +186,23 @@ export const InvoiceMobileCard: React.FC<InvoiceMobileCardProps> = ({
             title="عمل مرتجع لهذه الفاتورة"
           >
             مرتجع
+          </Button>
+        )}
+
+        {!isReturn && invoice.return_status !== 'FULL' && onExchange && (
+          <Button
+            type="button"
+            variant="secondary"
+            size="md"
+            onClick={() => {
+              selection();
+              onExchange(invoice);
+            }}
+            leftIcon={<ArrowLeftRight className="w-3.5 h-3.5 text-brand" />}
+            className="text-xs font-bold border-brand/30 bg-brand-soft text-brand-ink hover:bg-brand-soft/80 px-3"
+            title="استبدال لهذه الفاتورة"
+          >
+            استبدال
           </Button>
         )}
 

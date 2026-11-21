@@ -26,7 +26,9 @@ declare enum PaymentMethod {
     TRANSFER = "TRANSFER",
     CREDIT = "CREDIT",
     SPLIT = "SPLIT",
-    COURIER_COD = "COURIER_COD"
+    COURIER_COD = "COURIER_COD",
+    STORE_CREDIT = "STORE_CREDIT",
+    EXCHANGE_OFFSET = "EXCHANGE_OFFSET"
 }
 declare enum PartyType {
     CUSTOMER = "CUSTOMER",
@@ -215,6 +217,34 @@ declare enum PromotionSyncSource {
     WOOCOMMERCE = "WC_STORE",
     SHOPIFY = "SHOPIFY_STORE"
 }
+declare enum ExchangeSource {
+    POS = "POS",
+    ONLINE_ORDER = "ONLINE_ORDER"
+}
+declare enum ExchangeStatus {
+    COMPLETED = "COMPLETED",
+    AWAITING_COURIER_PICKUP = "AWAITING_COURIER_PICKUP",
+    CANCELLED = "CANCELLED"
+}
+declare enum ExchangeSettlementType {
+    EVEN_EXCHANGE = "EVEN_EXCHANGE",
+    CUSTOMER_PAYS = "CUSTOMER_PAYS",
+    REFUND_CASH = "REFUND_CASH",
+    STORE_CREDIT = "STORE_CREDIT"
+}
+declare enum ReturnItemCondition {
+    SELLABLE = "SELLABLE",
+    DAMAGED = "DAMAGED"
+}
+declare enum ExchangeItemDirection {
+    RETURNED = "RETURNED",
+    REPLACEMENT = "REPLACEMENT"
+}
+declare enum StoreCreditTransactionType {
+    EARNED = "EARNED",
+    REDEEMED = "REDEEMED",
+    ADJUSTMENT = "ADJUSTMENT"
+}
 
 interface BaseEntity {
     id: number;
@@ -229,6 +259,7 @@ interface StoreIdentity {
     currency: string;
 }
 interface User extends BaseEntity {
+    store_code?: string;
     name: string;
     phone: string;
     email?: string | null;
@@ -359,6 +390,7 @@ interface Party extends BaseEntity {
     phone2?: string | null;
     address?: string | null;
     balance: number;
+    store_credit_balance?: number;
     notes?: string | null;
     invoices_count?: number;
     interactions_count?: number;
@@ -415,6 +447,7 @@ interface Invoice extends BaseEntity {
     branch?: Branch | null;
     parent_invoice_id?: number | null;
     parent_invoice_number?: string | null;
+    exchange_id?: number | null;
     promotion_id?: number | null;
     coupon_code?: string | null;
     promotion_discount?: number;
@@ -732,10 +765,13 @@ interface AdminStatsData {
         used: number;
         revoked?: number;
     };
-    activity: {
-        invoices: number;
-        products: number;
-        parties: number;
+    operations: {
+        trial_active: number;
+        expiring_7d: number;
+        pending_inquiries: number;
+        pending_reset_requests: number;
+        pending_jobs: number;
+        failed_jobs: number;
     };
     financials: {
         estimated_revenue_egp: number;
@@ -875,6 +911,8 @@ interface OnlineOrder extends BaseEntity {
     tracking_number?: string | null;
     shipped_at?: string | null;
     invoice_id?: number | null;
+    is_exchange?: boolean;
+    exchange_id?: number | null;
     status: string;
     call_confirmed_at?: string | null;
     call_confirmed_by?: string | null;
@@ -1101,32 +1139,101 @@ interface ReceivablesPayablesReportData {
     top_suppliers: ReceivablesPayablesBucketParty[];
     top_couriers: ReceivablesPayablesBucketParty[];
 }
+interface ExchangeItemRow {
+    id: number;
+    direction: 'RETURNED' | 'REPLACEMENT';
+    product_id: number;
+    product_variant_id?: number | null;
+    product_name: string;
+    variant_name?: string | null;
+    quantity: number;
+    unit_price: number;
+    total: number;
+    condition?: 'SELLABLE' | 'DAMAGED' | null;
+    received_into_stock_at?: string | null;
+}
+interface ExchangeRecord {
+    id: number;
+    exchange_number: string;
+    source: 'POS' | 'ONLINE_ORDER';
+    status: 'COMPLETED' | 'AWAITING_COURIER_PICKUP' | 'CANCELLED';
+    branch_id?: number | null;
+    branch_name?: string | null;
+    party_id?: number | null;
+    party_name?: string | null;
+    party_phone?: string | null;
+    salesperson_id?: number | null;
+    salesperson_name?: string | null;
+    created_by?: number | null;
+    created_by_name?: string | null;
+    original_invoice_id?: number | null;
+    original_invoice_number?: string | null;
+    original_online_order_id?: number | null;
+    original_online_order_number?: string | null;
+    return_invoice_id?: number | null;
+    return_invoice_number?: string | null;
+    replacement_invoice_id?: number | null;
+    replacement_invoice_number?: string | null;
+    replacement_online_order_id?: number | null;
+    replacement_online_order_number?: string | null;
+    return_total: number;
+    replacement_total: number;
+    exchange_shipping_fee: number;
+    store_credit_used: number;
+    net_amount: number;
+    settlement_type: 'EVEN_EXCHANGE' | 'CUSTOMER_PAYS' | 'REFUND_CASH' | 'STORE_CREDIT';
+    payment_method?: string | null;
+    completed_at?: string | null;
+    created_at?: string | null;
+    notes?: string | null;
+    items?: ExchangeItemRow[];
+}
+interface StoreCreditTransactionRecord {
+    id: number;
+    type: 'EARNED' | 'REDEEMED' | 'ADJUSTMENT';
+    amount: number;
+    balance_after: number;
+    exchange_id?: number | null;
+    exchange_number?: string | null;
+    invoice_id?: number | null;
+    invoice_number?: string | null;
+    created_by_name?: string | null;
+    expires_at?: string | null;
+    notes?: string | null;
+    created_at?: string | null;
+}
 
 declare const LoginSchema: z.ZodObject<{
+    store_code: z.ZodString;
     phone: z.ZodString;
     password: z.ZodString;
 }, "strip", z.ZodTypeAny, {
+    store_code: string;
     phone: string;
     password: string;
 }, {
+    store_code: string;
     phone: string;
     password: string;
 }>;
 declare const RegisterSchema: z.ZodObject<{
+    store_code: z.ZodEffects<z.ZodString, string, string>;
     name: z.ZodString;
     phone: z.ZodString;
     password: z.ZodString;
-    email: z.ZodNullable<z.ZodOptional<z.ZodString>>;
+    email: z.ZodString;
 }, "strip", z.ZodTypeAny, {
+    store_code: string;
     phone: string;
     password: string;
     name: string;
-    email?: string | null | undefined;
+    email: string;
 }, {
+    store_code: string;
     phone: string;
     password: string;
     name: string;
-    email?: string | null | undefined;
+    email: string;
 }>;
 declare const CategorySchema: z.ZodObject<{
     name: z.ZodString;
@@ -1537,6 +1644,7 @@ declare const InvoiceSchema: z.ZodEffects<z.ZodObject<{
     parent_invoice_id: z.ZodNullable<z.ZodOptional<z.ZodNumber>>;
 }, "strip", z.ZodTypeAny, {
     type: InvoiceType;
+    date: string;
     items: {
         product_id: number;
         quantity: number;
@@ -1550,7 +1658,6 @@ declare const InvoiceSchema: z.ZodEffects<z.ZodObject<{
         unit_name?: string | null | undefined;
         is_sub_unit?: boolean | null | undefined;
     }[];
-    date: string;
     discount: number;
     tax: number;
     paid_amount: number;
@@ -1562,6 +1669,7 @@ declare const InvoiceSchema: z.ZodEffects<z.ZodObject<{
     parent_invoice_id?: number | null | undefined;
 }, {
     type: InvoiceType;
+    date: string;
     items: {
         product_id: number;
         quantity: number;
@@ -1575,7 +1683,6 @@ declare const InvoiceSchema: z.ZodEffects<z.ZodObject<{
         unit_name?: string | null | undefined;
         is_sub_unit?: boolean | null | undefined;
     }[];
-    date: string;
     notes?: string | null | undefined;
     party_id?: number | null | undefined;
     courier_party_id?: number | null | undefined;
@@ -1587,6 +1694,7 @@ declare const InvoiceSchema: z.ZodEffects<z.ZodObject<{
     parent_invoice_id?: number | null | undefined;
 }>, {
     type: InvoiceType;
+    date: string;
     items: {
         product_id: number;
         quantity: number;
@@ -1600,7 +1708,6 @@ declare const InvoiceSchema: z.ZodEffects<z.ZodObject<{
         unit_name?: string | null | undefined;
         is_sub_unit?: boolean | null | undefined;
     }[];
-    date: string;
     discount: number;
     tax: number;
     paid_amount: number;
@@ -1612,6 +1719,7 @@ declare const InvoiceSchema: z.ZodEffects<z.ZodObject<{
     parent_invoice_id?: number | null | undefined;
 }, {
     type: InvoiceType;
+    date: string;
     items: {
         product_id: number;
         quantity: number;
@@ -1625,7 +1733,6 @@ declare const InvoiceSchema: z.ZodEffects<z.ZodObject<{
         unit_name?: string | null | undefined;
         is_sub_unit?: boolean | null | undefined;
     }[];
-    date: string;
     notes?: string | null | undefined;
     party_id?: number | null | undefined;
     courier_party_id?: number | null | undefined;
@@ -1926,4 +2033,4 @@ declare class Money {
     toString(): string;
 }
 
-export { type AdminAuditLogItem, type AdminStatsData, type ApiResponse, BarcodeFormat, BarcodeLabelSize, type BarcodePrintItemInput, BarcodePrintItemSchema, type BarcodePrintRequestInput, BarcodePrintRequestSchema, type BaseEntity, type Branch, type BranchInput, BranchSchema, type BranchStock, BranchType, type CalculationItem, type CashFlowReportData, type CashFlowTransaction, type CashFlowTransactionsResponse, type Category, CategorySchema, CommissionType, CrmRiskLevel, CustomerInteractionChannel, CustomerTier, type DashboardSummary, EcommercePlatform, EmployeeAdjustmentType, type EmployeeInput, EmployeeSchema, type Expense, type ExpenseInput, ExpenseSchema, type ExpiringBatchAlertItem, ExpiryStatus, type FinancialClosingReportData, type Invoice, type InvoiceCalculations, type InvoiceInput, type InvoiceItem, type InvoiceItemInput, InvoiceItemSchema, InvoiceReturnStatus, InvoiceSchema, InvoiceType, type LedgerEntry, LedgerSource, type LicenseKey, type LoginInput, LoginSchema, type LowStockAlertItem, Money, type OnlineOrder, OnlineOrderCallStatus, type OnlineOrderItem, OrderCancelReason, type PaginatedResponse, type Party, type PartyCrmMetrics, type PartyInput, type PartyInteraction, PartySchema, PartyType, type Payment, type PaymentInput, PaymentMethod, PaymentSchema, type Product, type ProductBatch, type ProductInput, ProductSchema, ProductType, type ProductVariant, type ProductVariantInput, ProductVariantSchema, type ProfitReportData, type Promotion, PromotionDiscountType, type PromotionEvaluation, PromotionSyncSource, PromotionType, type PurchaseReportData, type ReceivablesPayablesAgingBuckets, type ReceivablesPayablesBucketParty, type ReceivablesPayablesReportData, type RegisterInput, RegisterSchema, type SalesReportData, ShiftStatus, ShopifyAuthMode, type SplitPaymentItem, StockAdjustmentMode, type StockAlertsResponse, type StockAlertsSummary, type StockMovement, type StockMovementRecord, StockMovementSource, StockMovementType, type StockReportData, type StockReportItem, type StockTransfer, type StockTransferInput, type StockTransferItem, type StockTransferItemInput, StockTransferItemSchema, StockTransferSchema, StockTransferStatus, type StoreIdentity, type Subscription, SubscriptionPlan, SubscriptionStatus, type Treasury, type TreasuryBreakdown, TreasuryTransactionSource, TreasuryTransactionType, TreasuryType, type Unit, type User, UserRole, UserStatus, type WcOrder, type WcOrderItem, WcOrderStatus, WcPaymentStatus, calculateInvoiceTotals, calculateNetProfit, calculatePartyBalanceImpact, formatCurrency, formatDate, formatDateTime, formatNumber, getPaymentMethodLabel };
+export { type AdminAuditLogItem, type AdminStatsData, type ApiResponse, BarcodeFormat, BarcodeLabelSize, type BarcodePrintItemInput, BarcodePrintItemSchema, type BarcodePrintRequestInput, BarcodePrintRequestSchema, type BaseEntity, type Branch, type BranchInput, BranchSchema, type BranchStock, BranchType, type CalculationItem, type CashFlowReportData, type CashFlowTransaction, type CashFlowTransactionsResponse, type Category, CategorySchema, CommissionType, CrmRiskLevel, CustomerInteractionChannel, CustomerTier, type DashboardSummary, EcommercePlatform, EmployeeAdjustmentType, type EmployeeInput, EmployeeSchema, ExchangeItemDirection, type ExchangeItemRow, type ExchangeRecord, ExchangeSettlementType, ExchangeSource, ExchangeStatus, type Expense, type ExpenseInput, ExpenseSchema, type ExpiringBatchAlertItem, ExpiryStatus, type FinancialClosingReportData, type Invoice, type InvoiceCalculations, type InvoiceInput, type InvoiceItem, type InvoiceItemInput, InvoiceItemSchema, InvoiceReturnStatus, InvoiceSchema, InvoiceType, type LedgerEntry, LedgerSource, type LicenseKey, type LoginInput, LoginSchema, type LowStockAlertItem, Money, type OnlineOrder, OnlineOrderCallStatus, type OnlineOrderItem, OrderCancelReason, type PaginatedResponse, type Party, type PartyCrmMetrics, type PartyInput, type PartyInteraction, PartySchema, PartyType, type Payment, type PaymentInput, PaymentMethod, PaymentSchema, type Product, type ProductBatch, type ProductInput, ProductSchema, ProductType, type ProductVariant, type ProductVariantInput, ProductVariantSchema, type ProfitReportData, type Promotion, PromotionDiscountType, type PromotionEvaluation, PromotionSyncSource, PromotionType, type PurchaseReportData, type ReceivablesPayablesAgingBuckets, type ReceivablesPayablesBucketParty, type ReceivablesPayablesReportData, type RegisterInput, RegisterSchema, ReturnItemCondition, type SalesReportData, ShiftStatus, ShopifyAuthMode, type SplitPaymentItem, StockAdjustmentMode, type StockAlertsResponse, type StockAlertsSummary, type StockMovement, type StockMovementRecord, StockMovementSource, StockMovementType, type StockReportData, type StockReportItem, type StockTransfer, type StockTransferInput, type StockTransferItem, type StockTransferItemInput, StockTransferItemSchema, StockTransferSchema, StockTransferStatus, type StoreCreditTransactionRecord, StoreCreditTransactionType, type StoreIdentity, type Subscription, SubscriptionPlan, SubscriptionStatus, type Treasury, type TreasuryBreakdown, TreasuryTransactionSource, TreasuryTransactionType, TreasuryType, type Unit, type User, UserRole, UserStatus, type WcOrder, type WcOrderItem, WcOrderStatus, WcPaymentStatus, calculateInvoiceTotals, calculateNetProfit, calculatePartyBalanceImpact, formatCurrency, formatDate, formatDateTime, formatNumber, getPaymentMethodLabel };

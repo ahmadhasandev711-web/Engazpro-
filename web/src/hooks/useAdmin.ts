@@ -404,3 +404,357 @@ export const useDeleteInquiry = () => {
     },
   });
 };
+
+export interface StoreManageDetails {
+  owner: {
+    id: number;
+    store_code?: string;
+    name: string;
+    business_name?: string | null;
+    phone: string;
+    email?: string | null;
+    status: string;
+    ecommerce_enabled: boolean;
+    subscription?: {
+      id: number;
+      plan: string;
+      status: string;
+      end_date: string;
+    } | null;
+  };
+  branches: Array<{
+    id: number;
+    name: string;
+    code: string;
+    is_main: boolean;
+    is_active: boolean;
+  }>;
+  woocommerce?: {
+    id: number;
+    store_url: string;
+    has_credentials: boolean;
+    has_webhook_secret: boolean;
+    online_branch_id?: number | null;
+    auto_sync_stock: boolean;
+    auto_sync_prices: boolean;
+    auto_sync_promotions: boolean;
+    is_active: boolean;
+    last_synced_at?: string | null;
+  } | null;
+  shopify?: {
+    id: number;
+    shop_domain: string;
+    has_token: boolean;
+    has_webhook_secret: boolean;
+    online_branch_id?: number | null;
+    auto_sync_stock: boolean;
+    auto_sync_prices: boolean;
+    auto_sync_promotions: boolean;
+    is_active: boolean;
+    last_synced_at?: string | null;
+  } | null;
+}
+
+export const useStoreManageDetails = (userId: number | null) => {
+  return useQuery<StoreManageDetails>({
+    queryKey: ['admin-store-manage', userId],
+    queryFn: async () => {
+      if (!userId) throw new Error('No store selected');
+      const res = await apiClient.get(`/admin/users/${userId}/manage`);
+      return res.data.data;
+    },
+    enabled: !!userId,
+  });
+};
+
+export const useUpdateMerchantProfile = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      userId,
+      payload,
+    }: {
+      userId: number;
+      payload: { store_code?: string; name: string; business_name?: string; phone: string; email?: string; plan?: string };
+    }) => {
+      const res = await apiClient.put(`/admin/users/${userId}/profile`, payload);
+      return res.data;
+    },
+    onSuccess: (_d, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-store-manage', vars.userId] });
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-audit-logs'] });
+    },
+  });
+};
+
+export const useConfigureStoreWooCommerce = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      userId,
+      payload,
+    }: {
+      userId: number;
+      payload: {
+        store_url: string;
+        consumer_key?: string;
+        consumer_secret?: string;
+        webhook_secret?: string;
+        online_branch_id?: number | null;
+        auto_sync_stock: boolean;
+        auto_sync_prices: boolean;
+        auto_sync_promotions: boolean;
+        is_active: boolean;
+      };
+    }) => {
+      const res = await apiClient.put(`/admin/users/${userId}/ecommerce/woocommerce`, payload);
+      return res.data;
+    },
+    onSuccess: (_d, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-store-manage', vars.userId] });
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-audit-logs'] });
+    },
+  });
+};
+
+export const useConfigureStoreShopify = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      userId,
+      payload,
+    }: {
+      userId: number;
+      payload: {
+        shop_domain: string;
+        access_token?: string;
+        client_id?: string;
+        client_secret?: string;
+        webhook_secret?: string;
+        online_branch_id?: number | null;
+        auto_sync_stock: boolean;
+        auto_sync_prices: boolean;
+        auto_sync_promotions: boolean;
+        is_active: boolean;
+      };
+    }) => {
+      const res = await apiClient.put(`/admin/users/${userId}/ecommerce/shopify`, payload);
+      return res.data;
+    },
+    onSuccess: (_d, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-store-manage', vars.userId] });
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-audit-logs'] });
+    },
+  });
+};
+
+export const useRemoveStoreEcommerce = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      userId,
+      platform,
+      disableAddon = false,
+    }: {
+      userId: number;
+      platform: 'woocommerce' | 'shopify';
+      disableAddon?: boolean;
+    }) => {
+      const res = await apiClient.delete(
+        `/admin/users/${userId}/ecommerce/${platform}?disable_addon=${disableAddon ? 'true' : 'false'}`
+      );
+      return res.data;
+    },
+    onSuccess: (_d, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-store-manage', vars.userId] });
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-audit-logs'] });
+    },
+  });
+};
+
+export const useTestStoreEcommerce = () => {
+  return useMutation({
+    mutationFn: async (userId: number) => {
+      const res = await apiClient.post(`/admin/users/${userId}/ecommerce/test`);
+      return res.data;
+    },
+  });
+};
+
+export const useImpersonateStore = () => {
+  return useMutation({
+    mutationFn: async (userId: number) => {
+      const res = await apiClient.post(`/admin/users/${userId}/impersonate`);
+      return res.data.data as { user: User; token: string; impersonated_by: string };
+    },
+  });
+};
+
+export const useResetStaffPassword = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ ownerId, staffId, password }: { ownerId: number; staffId: number; password: string }) => {
+      const res = await apiClient.post(`/admin/users/${ownerId}/staff/${staffId}/reset-password`, { password });
+      return res.data;
+    },
+    onSuccess: (_d, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-store-staff', vars.ownerId] });
+      queryClient.invalidateQueries({ queryKey: ['admin-password-reset-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-audit-logs'] });
+    },
+  });
+};
+
+export const useToggleStaffStatus = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ ownerId, staffId }: { ownerId: number; staffId: number }) => {
+      const res = await apiClient.post(`/admin/users/${ownerId}/staff/${staffId}/toggle-status`);
+      return res.data;
+    },
+    onSuccess: (_d, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-store-staff', vars.ownerId] });
+      queryClient.invalidateQueries({ queryKey: ['admin-audit-logs'] });
+    },
+  });
+};
+
+export const useForceLogoutStaff = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ ownerId, staffId }: { ownerId: number; staffId: number }) => {
+      const res = await apiClient.post(`/admin/users/${ownerId}/staff/${staffId}/force-logout`);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-audit-logs'] });
+    },
+  });
+};
+
+export interface QueueOverviewData {
+  pending_count: number;
+  failed_count: number;
+  failed_items: Array<{
+    id: number;
+    uuid: string;
+    queue: string;
+    job_name: string;
+    error_summary: string;
+    failed_at: string;
+  }>;
+}
+
+export const useAdminQueueOverview = () => {
+  return useQuery<QueueOverviewData>({
+    queryKey: ['admin-queue-overview'],
+    queryFn: async () => {
+      const res = await apiClient.get('/admin/system/queue');
+      return res.data.data;
+    },
+  });
+};
+
+export const useRetryFailedJob = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (uuid: string) => {
+      const res = await apiClient.post(`/admin/system/queue/retry/${uuid}`);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-queue-overview'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-audit-logs'] });
+    },
+  });
+};
+
+export const useRetryAllFailedJobs = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const res = await apiClient.post('/admin/system/queue/retry-all');
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-queue-overview'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-audit-logs'] });
+    },
+  });
+};
+
+export const useFlushFailedJobs = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const res = await apiClient.post('/admin/system/queue/flush');
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-queue-overview'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-audit-logs'] });
+    },
+  });
+};
+
+export interface PasswordResetRequestItem {
+  id: number;
+  user_id: number | null;
+  owner_id: number | null;
+  phone: string;
+  requester_role?: string | null;
+  status: string;
+  notes?: string | null;
+  created_at: string;
+  user?: {
+    id: number;
+    name: string;
+    phone: string;
+    email?: string | null;
+    business_name?: string | null;
+    role?: string | null;
+    branch?: { id: number; name: string } | null;
+  } | null;
+}
+
+export const useAdminPasswordResetRequests = () => {
+  return useQuery<PasswordResetRequestItem[]>({
+    queryKey: ['admin-password-reset-requests'],
+    queryFn: async () => {
+      const res = await apiClient.get('/admin/password-reset-requests');
+      return Array.isArray(res.data.data) ? res.data.data : [];
+    },
+  });
+};
+
+export const useDismissAdminPasswordResetRequest = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (requestId: number) => {
+      const res = await apiClient.post(`/admin/password-reset-requests/${requestId}/dismiss`);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-password-reset-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
+    },
+  });
+};

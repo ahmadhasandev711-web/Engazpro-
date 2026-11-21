@@ -11,8 +11,9 @@ import {
   Sun,
   Moon,
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { User } from '@pos-mandob/shared';
+import { useAuthStore } from '../../data/store/useAuthStore';
 import {
   AdminUserStatusFilter,
   useAdminStats,
@@ -27,6 +28,7 @@ import {
   useToggleUserStatus,
   useToggleUserEcommerce,
   useResetUserPassword,
+  useImpersonateStore,
   useAdminPricing,
   useUpdateAdminPricing,
   type UpdatePlatformPricingPayload,
@@ -39,6 +41,7 @@ import { SystemHealthTab } from '../components/admin/SystemHealthTab';
 import { StoreInquiriesTab } from '../components/admin/StoreInquiriesTab';
 import { ExtendSubscriptionModal } from '../components/admin/ExtendSubscriptionModal';
 import { StoreStaffModal } from '../components/admin/StoreStaffModal';
+import { StoreManageModal } from '../components/admin/StoreManageModal';
 import { ResetPasswordModal } from '../components/admin/ResetPasswordModal';
 import { Badge, Button, PageHeader, Tabs } from '../components/ui';
 import { useToast } from '../context/ToastContext';
@@ -47,7 +50,9 @@ import { useTheme } from '../context/ThemeContext';
 type AdminTab = 'licenses' | 'users' | 'audit' | 'system' | 'inquiries';
 
 export const AdminDashboardPage: React.FC = () => {
+  const navigate = useNavigate();
   const toast = useToast();
+  const { startImpersonation } = useAuthStore();
   const { resolvedTheme, toggleTheme } = useTheme();
 
   const [activeTab, setActiveTab] = useState<AdminTab>('licenses');
@@ -66,6 +71,7 @@ export const AdminDashboardPage: React.FC = () => {
   const [selectedUserForExtend, setSelectedUserForExtend] = useState<User | null>(null);
   const [selectedUserForResetPassword, setSelectedUserForResetPassword] = useState<User | null>(null);
   const [inspectedStoreId, setInspectedStoreId] = useState<number | null>(null);
+  const [managedStoreId, setManagedStoreId] = useState<number | null>(null);
 
   const { data: statsData, isLoading: isLoadingStats, refetch: refetchStats } = useAdminStats();
   const { data: licensesPageData, isLoading: isLoadingLicenses, refetch: refetchLicenses } = useAdminLicenses(
@@ -104,6 +110,19 @@ export const AdminDashboardPage: React.FC = () => {
     }
   };
   const resetPasswordMutation = useResetUserPassword();
+  const impersonateMutation = useImpersonateStore();
+
+  const handleImpersonate = (userId: number) => {
+    impersonateMutation.mutate(userId, {
+      onSuccess: async (payload) => {
+        setManagedStoreId(null);
+        await startImpersonation(payload.user, payload.token);
+        toast.success(`تم الدخول بوضع الدعم الفني إلى متجر (${payload.user.name})`);
+        navigate('/dashboard');
+      },
+      onError: (err: any) => toast.error(err.response?.data?.message || 'تعذر الدخول إلى حساب المتجر'),
+    });
+  };
 
   const handleGenerate = (payload: {
     count: number;
@@ -180,7 +199,8 @@ export const AdminDashboardPage: React.FC = () => {
     toggleStatusMutation.isPending ||
     toggleEcommerceMutation.isPending ||
     revokeSubscriptionMutation.isPending ||
-    forceLogoutMutation.isPending;
+    forceLogoutMutation.isPending ||
+    impersonateMutation.isPending;
 
   return (
     <div className="min-h-screen bg-canvas text-ink pb-16 transition-colors" dir="rtl">
@@ -334,6 +354,8 @@ export const AdminDashboardPage: React.FC = () => {
             onSelectUserForExtend={setSelectedUserForExtend}
             onSelectUserForResetPassword={setSelectedUserForResetPassword}
             onInspectStore={(uid) => setInspectedStoreId(uid)}
+            onManageStore={(uid) => setManagedStoreId(uid)}
+            onImpersonateStore={handleImpersonate}
             onToggleStatus={handleToggleStatus}
             onToggleEcommerce={handleToggleEcommerce}
             onRevokeSubscription={handleRevokeSubscription}
@@ -363,7 +385,9 @@ export const AdminDashboardPage: React.FC = () => {
           />
         )}
 
-        {activeTab === 'system' && <SystemHealthTab stats={statsData} />}
+        {activeTab === 'system' && (
+          <SystemHealthTab stats={statsData} onSelectUserForResetPassword={setSelectedUserForResetPassword} />
+        )}
 
         {activeTab === 'inquiries' && <StoreInquiriesTab />}
       </main>
@@ -387,6 +411,15 @@ export const AdminDashboardPage: React.FC = () => {
       )}
 
       {inspectedStoreId && <StoreStaffModal userId={inspectedStoreId} onClose={() => setInspectedStoreId(null)} />}
+
+      {managedStoreId && (
+        <StoreManageModal
+          userId={managedStoreId}
+          onClose={() => setManagedStoreId(null)}
+          onImpersonate={handleImpersonate}
+          isImpersonating={impersonateMutation.isPending}
+        />
+      )}
     </div>
   );
 };

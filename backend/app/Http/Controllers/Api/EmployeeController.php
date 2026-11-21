@@ -7,8 +7,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreEmployeeRequest;
 use App\Http\Requests\UpdateEmployeeRequest;
 use App\Http\Resources\UserResource;
+use App\Models\PasswordResetRequest;
 use App\Models\User;
 use App\Services\EmployeeService;
+use App\Services\PasswordRecoveryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -16,7 +18,8 @@ use Illuminate\Support\Facades\Gate;
 class EmployeeController extends Controller
 {
     public function __construct(
-        protected EmployeeService $employeeService
+        protected EmployeeService $employeeService,
+        protected PasswordRecoveryService $recoveryService
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -56,12 +59,34 @@ class EmployeeController extends Controller
             $validated['branch_id'] = $user->branch_id;
         }
 
-        $updated = $this->employeeService->updateEmployee($employee, $validated);
+        $updated = $this->employeeService->updateEmployee($employee, $validated, $user);
 
         return response()->json([
             'success' => true,
             'message' => 'تم تحديث بيانات الموظف بنجاح',
             'data' => new UserResource($updated),
+        ]);
+    }
+
+    public function passwordResetRequests(Request $request): JsonResponse
+    {
+        Gate::authorize('viewAny', User::class);
+
+        return response()->json([
+            'success' => true,
+            'data' => $this->recoveryService->getPendingRequestsForOwner($request->user()),
+        ]);
+    }
+
+    public function dismissPasswordResetRequest(Request $request, PasswordResetRequest $resetRequest): JsonResponse
+    {
+        Gate::authorize('viewAny', User::class);
+        $updated = $this->recoveryService->dismissRequestForOwner($request->user(), $resetRequest);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم إغلاق طلب الاستعادة بنجاح',
+            'data' => $updated,
         ]);
     }
 

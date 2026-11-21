@@ -14,6 +14,7 @@ class SettingService
     public const KEY_CURRENCY = 'currency';
     public const KEY_MAX_DISCOUNT_PERCENT = 'max_discount_percent';
     public const KEY_ALLOW_NEGATIVE_BRANCH_STOCK = 'allow_negative_branch_stock';
+    public const KEY_ALLOW_CASHIER_UNLINKED_EXCHANGE = 'allow_cashier_unlinked_exchange';
 
     /**
      * Retrieve store identity and currency settings for a user's store account
@@ -29,6 +30,7 @@ class SettingService
                 self::KEY_CURRENCY,
                 self::KEY_MAX_DISCOUNT_PERCENT,
                 self::KEY_ALLOW_NEGATIVE_BRANCH_STOCK,
+                self::KEY_ALLOW_CASHIER_UNLINKED_EXCHANGE,
             ])
             ->pluck('value', 'key');
 
@@ -39,7 +41,20 @@ class SettingService
             'currency' => $settings->get(self::KEY_CURRENCY) ?: 'ج.م',
             'max_discount_percent' => $this->parseMaxDiscountPercent($settings->get(self::KEY_MAX_DISCOUNT_PERCENT)),
             'allow_negative_branch_stock' => $this->parseNegativeStockFlag($settings->get(self::KEY_ALLOW_NEGATIVE_BRANCH_STOCK)),
+            'allow_cashier_unlinked_exchange' => $this->parseNegativeStockFlag($settings->get(self::KEY_ALLOW_CASHIER_UNLINKED_EXCHANGE)),
         ];
+    }
+
+    public function allowsCashierUnlinkedExchange(User $user): bool
+    {
+        if ($user->isOwnerOrAdmin() || $user->isManager()) {
+            return true;
+        }
+        $value = Setting::where('user_id', $user->getAccountId())
+            ->where('key', self::KEY_ALLOW_CASHIER_UNLINKED_EXCHANGE)
+            ->value('value');
+
+        return $this->parseNegativeStockFlag($value);
     }
 
     /**
@@ -103,6 +118,9 @@ class SettingService
                 ? ($data['allow_negative_branch_stock'] ? '1' : '0')
                 : null,
         ];
+        if (array_key_exists('allow_cashier_unlinked_exchange', $data)) {
+            $allowedKeys[self::KEY_ALLOW_CASHIER_UNLINKED_EXCHANGE] = $data['allow_cashier_unlinked_exchange'] ? '1' : '0';
+        }
 
         foreach ($allowedKeys as $key => $val) {
             Setting::updateOrCreate(

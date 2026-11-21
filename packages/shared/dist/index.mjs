@@ -30,6 +30,8 @@ var PaymentMethod = /* @__PURE__ */ ((PaymentMethod2) => {
   PaymentMethod2["CREDIT"] = "CREDIT";
   PaymentMethod2["SPLIT"] = "SPLIT";
   PaymentMethod2["COURIER_COD"] = "COURIER_COD";
+  PaymentMethod2["STORE_CREDIT"] = "STORE_CREDIT";
+  PaymentMethod2["EXCHANGE_OFFSET"] = "EXCHANGE_OFFSET";
   return PaymentMethod2;
 })(PaymentMethod || {});
 var PartyType = /* @__PURE__ */ ((PartyType2) => {
@@ -250,18 +252,55 @@ var PromotionSyncSource = /* @__PURE__ */ ((PromotionSyncSource2) => {
   PromotionSyncSource2["SHOPIFY"] = "SHOPIFY_STORE";
   return PromotionSyncSource2;
 })(PromotionSyncSource || {});
+var ExchangeSource = /* @__PURE__ */ ((ExchangeSource2) => {
+  ExchangeSource2["POS"] = "POS";
+  ExchangeSource2["ONLINE_ORDER"] = "ONLINE_ORDER";
+  return ExchangeSource2;
+})(ExchangeSource || {});
+var ExchangeStatus = /* @__PURE__ */ ((ExchangeStatus2) => {
+  ExchangeStatus2["COMPLETED"] = "COMPLETED";
+  ExchangeStatus2["AWAITING_COURIER_PICKUP"] = "AWAITING_COURIER_PICKUP";
+  ExchangeStatus2["CANCELLED"] = "CANCELLED";
+  return ExchangeStatus2;
+})(ExchangeStatus || {});
+var ExchangeSettlementType = /* @__PURE__ */ ((ExchangeSettlementType2) => {
+  ExchangeSettlementType2["EVEN_EXCHANGE"] = "EVEN_EXCHANGE";
+  ExchangeSettlementType2["CUSTOMER_PAYS"] = "CUSTOMER_PAYS";
+  ExchangeSettlementType2["REFUND_CASH"] = "REFUND_CASH";
+  ExchangeSettlementType2["STORE_CREDIT"] = "STORE_CREDIT";
+  return ExchangeSettlementType2;
+})(ExchangeSettlementType || {});
+var ReturnItemCondition = /* @__PURE__ */ ((ReturnItemCondition2) => {
+  ReturnItemCondition2["SELLABLE"] = "SELLABLE";
+  ReturnItemCondition2["DAMAGED"] = "DAMAGED";
+  return ReturnItemCondition2;
+})(ReturnItemCondition || {});
+var ExchangeItemDirection = /* @__PURE__ */ ((ExchangeItemDirection2) => {
+  ExchangeItemDirection2["RETURNED"] = "RETURNED";
+  ExchangeItemDirection2["REPLACEMENT"] = "REPLACEMENT";
+  return ExchangeItemDirection2;
+})(ExchangeItemDirection || {});
+var StoreCreditTransactionType = /* @__PURE__ */ ((StoreCreditTransactionType2) => {
+  StoreCreditTransactionType2["EARNED"] = "EARNED";
+  StoreCreditTransactionType2["REDEEMED"] = "REDEEMED";
+  StoreCreditTransactionType2["ADJUSTMENT"] = "ADJUSTMENT";
+  return StoreCreditTransactionType2;
+})(StoreCreditTransactionType || {});
 
 // src/schemas/index.ts
 import { z } from "zod";
+var STORE_CODE_REGEX = /^[a-z0-9](?:[a-z0-9-]{0,28}[a-z0-9])?$/;
 var LoginSchema = z.object({
+  store_code: z.string().trim().toLowerCase().min(2, "\u0645\u0639\u0631\u0651\u0641 \u0627\u0644\u0645\u062A\u062C\u0631 \u0644\u0627 \u064A\u0642\u0644 \u0639\u0646 \u062D\u0631\u0641\u064A\u0646").max(30, "\u0645\u0639\u0631\u0651\u0641 \u0627\u0644\u0645\u062A\u062C\u0631 \u0644\u0627 \u064A\u062A\u062C\u0627\u0648\u0632 30 \u062D\u0631\u0641\u0627\u064B").regex(STORE_CODE_REGEX, "\u0623\u062D\u0631\u0641 \u0625\u0646\u062C\u0644\u064A\u0632\u064A\u0629 \u0635\u063A\u064A\u0631\u0629 \u0648\u0623\u0631\u0642\u0627\u0645 \u0648\u0634\u0631\u0637\u0629 (-) \u0641\u0642\u0637 \u0628\u062F\u0648\u0646 \u0645\u0633\u0627\u0641\u0627\u062A"),
   phone: z.string().min(8, "\u0631\u0642\u0645 \u0627\u0644\u0647\u0627\u062A\u0641 \u064A\u062C\u0628 \u0623\u0646 \u064A\u0643\u0648\u0646 8 \u0623\u0631\u0642\u0627\u0645 \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644"),
   password: z.string().min(6, "\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u064A\u062C\u0628 \u0623\u0646 \u062A\u0643\u0648\u0646 6 \u0623\u062D\u0631\u0641 \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644")
 });
 var RegisterSchema = z.object({
+  store_code: z.string().trim().toLowerCase().min(2, "\u0645\u0639\u0631\u0651\u0641 \u0627\u0644\u0645\u062A\u062C\u0631 \u0644\u0627 \u064A\u0642\u0644 \u0639\u0646 \u062D\u0631\u0641\u064A\u0646").max(30, "\u0645\u0639\u0631\u0651\u0641 \u0627\u0644\u0645\u062A\u062C\u0631 \u0644\u0627 \u064A\u062A\u062C\u0627\u0648\u0632 30 \u062D\u0631\u0641\u0627\u064B").regex(STORE_CODE_REGEX, "\u0623\u062D\u0631\u0641 \u0625\u0646\u062C\u0644\u064A\u0632\u064A\u0629 \u0635\u063A\u064A\u0631\u0629 \u0648\u0623\u0631\u0642\u0627\u0645 \u0648\u0634\u0631\u0637\u0629 (-) \u0641\u0642\u0637 \u0628\u062F\u0648\u0646 \u0645\u0633\u0627\u0641\u0627\u062A").refine((v) => v !== "ebms", "\u0645\u0639\u0631\u0651\u0641 \u0627\u0644\u0645\u062A\u062C\u0631 \u0645\u062D\u062C\u0648\u0632 \u0644\u0644\u0646\u0638\u0627\u0645"),
   name: z.string().min(2, "\u0627\u0644\u0627\u0633\u0645 \u0645\u0637\u0644\u0648\u0628"),
   phone: z.string().min(8, "\u0631\u0642\u0645 \u0627\u0644\u0647\u0627\u062A\u0641 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D"),
   password: z.string().min(6, "\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0644\u0627 \u062A\u0642\u0644 \u0639\u0646 6 \u062E\u0627\u0646\u0627\u062A"),
-  email: z.string().email("\u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A \u063A\u064A\u0631 \u0635\u0627\u0644\u062D").optional().nullable()
+  email: z.string().min(1, "\u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A \u0645\u0637\u0644\u0648\u0628 \u0644\u0627\u0633\u062A\u0639\u0627\u062F\u0629 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631").email("\u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A \u063A\u064A\u0631 \u0635\u0627\u0644\u062D")
 });
 var CategorySchema = z.object({
   name: z.string().min(1, "\u0627\u0633\u0645 \u0627\u0644\u062A\u0635\u0646\u064A\u0641 \u0645\u0637\u0644\u0648\u0628")
@@ -658,6 +697,10 @@ export {
   EcommercePlatform,
   EmployeeAdjustmentType,
   EmployeeSchema,
+  ExchangeItemDirection,
+  ExchangeSettlementType,
+  ExchangeSource,
+  ExchangeStatus,
   ExpenseSchema,
   ExpiryStatus,
   InvoiceItemSchema,
@@ -680,6 +723,7 @@ export {
   PromotionSyncSource,
   PromotionType,
   RegisterSchema,
+  ReturnItemCondition,
   ShiftStatus,
   ShopifyAuthMode,
   StockAdjustmentMode,
@@ -688,6 +732,7 @@ export {
   StockTransferItemSchema,
   StockTransferSchema,
   StockTransferStatus,
+  StoreCreditTransactionType,
   SubscriptionPlan,
   SubscriptionStatus,
   TreasuryTransactionSource,

@@ -195,7 +195,9 @@ class DashboardService
         $cashPurchaseReturns = $isEmployee ? 0.0 : ($cashByType[InvoiceType::PURCHASE_RETURN->value] ?? 0.0);
         $cashPurchases = $isEmployee ? 0.0 : ($cashByType[InvoiceType::PURCHASE->value] ?? 0.0);
         $cashPayments = $this->sumDailyCashVouchers($user, $isEmployee, $scopedBranchId, $dayRange, PaymentType::PAYMENT->value);
-        $cashSaleReturns = $cashByType[InvoiceType::SALE_RETURN->value] ?? 0.0;
+        $cashSaleReturns = Money::of($cashByType[InvoiceType::SALE_RETURN->value] ?? 0.0)
+            ->add(Money::of($this->sumDailySplitReturnsByMethods($user, $isEmployee, $scopedBranchId, $dayRange, [PaymentMethod::CASH->value])))
+            ->getAmount();
 
         $totalIn = Money::of($cashSales)->add($cashReceipts)->add($cashPurchaseReturns);
         $totalOut = Money::of($cashPurchases)->add($cashPayments)->add($cashSaleReturns)->add($todayExpenses);
@@ -219,6 +221,17 @@ class DashboardService
             ->sum('amount');
 
         return Money::of($direct ?? 0)->add(Money::of($split ?? 0))->getAmount();
+    }
+
+    private function sumDailySplitReturnsByMethods(User $user, bool $isEmployee, ?int $branchId, array $dayRange, array $methods): float
+    {
+        $split = Payment::where('type', PaymentType::PAYMENT->value)->whereIn('method', $methods)
+            ->whereHas('invoice', fn ($q) => $q->where('type', InvoiceType::SALE_RETURN->value)->where('payment_method', PaymentMethod::SPLIT->value)->when($branchId !== null, fn ($inv) => $inv->where('branch_id', $branchId)))
+            ->whereBetween('date', $dayRange)->when($isEmployee, fn ($q) => $q->where('created_by', $user->id))
+            ->when($branchId !== null, fn ($q) => $q->where(fn ($sub) => $sub->whereHas('treasury', fn ($t) => $t->where('branch_id', $branchId))->orWhereHas('creator', fn ($c) => $c->where('branch_id', $branchId))))
+            ->sum('amount');
+
+        return Money::of($split ?? 0)->getAmount();
     }
 
     private function sumDailyCashVouchers(User $user, bool $isEmployee, ?int $branchId, array $dayRange, string $type): float

@@ -18,6 +18,12 @@ enum AdminAuditAction: string
     case INQUIRY_UPDATED = 'INQUIRY_UPDATED';
     case INQUIRY_DELETED = 'INQUIRY_DELETED';
     case PRICING_UPDATED = 'PRICING_UPDATED';
+    case STORE_IMPERSONATED = 'STORE_IMPERSONATED';
+    case STORE_UPDATED = 'STORE_UPDATED';
+    case STORE_ECOMMERCE_CONFIGURED = 'STORE_ECOMMERCE_CONFIGURED';
+    case STORE_ECOMMERCE_REMOVED = 'STORE_ECOMMERCE_REMOVED';
+    case QUEUE_JOB_RETRIED = 'QUEUE_JOB_RETRIED';
+    case QUEUE_JOBS_FLUSHED = 'QUEUE_JOBS_FLUSHED';
 
     public function label(): string
     {
@@ -36,6 +42,12 @@ enum AdminAuditAction: string
             self::INQUIRY_UPDATED => 'تحديث طلب متجر',
             self::INQUIRY_DELETED => 'حذف طلب متجر',
             self::PRICING_UPDATED => 'تحديث تسعير المنصة',
+            self::STORE_IMPERSONATED => 'دخول دعم فني لمتجر',
+            self::STORE_UPDATED => 'تعديل بيانات أو باقة متجر',
+            self::STORE_ECOMMERCE_CONFIGURED => 'إعداد ربط متجر إلكتروني',
+            self::STORE_ECOMMERCE_REMOVED => 'إزالة ربط متجر إلكتروني',
+            self::QUEUE_JOB_RETRIED => 'إعادة تشغيل مهمة طابور',
+            self::QUEUE_JOBS_FLUSHED => 'تنظيف المهام الفاشلة',
         };
     }
 }

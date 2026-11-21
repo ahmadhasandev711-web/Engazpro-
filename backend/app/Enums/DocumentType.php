@@ -11,6 +11,7 @@ enum DocumentType: string
     case TRANSFER = 'TRANSFER';
     case SHIFT = 'SHIFT';
     case BRANCH = 'BRANCH';
+    case EXCHANGE = 'EXCHANGE';
 
     public function label(): string
     {
@@ -22,6 +23,7 @@ enum DocumentType: string
             self::TRANSFER => 'تحويل مخزني',
             self::SHIFT => 'وردية كاشير',
             self::BRANCH => 'كود فرع',
+            self::EXCHANGE => 'سند استبدال',
         };
     }
 }

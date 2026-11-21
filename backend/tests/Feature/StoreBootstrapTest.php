@@ -19,6 +19,7 @@ class StoreBootstrapTest extends TestCase
     public function test_new_user_registration_automatically_bootstraps_complete_store(): void
     {
         $payload = [
+            'store_code' => 'alnoor',
             'name' => 'متجر النور للملابس',
             'phone' => '01099887766',
             'email' => 'alnoor.store@test.com',

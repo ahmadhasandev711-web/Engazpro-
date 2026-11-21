@@ -41,6 +41,7 @@ import { Button } from '../ui/Button';
 import { EmptyState } from '../ui/EmptyState';
 import { CustomerRiskBadge } from '../crm/CustomerRiskBadge';
 import { PartyCrmModal } from '../crm/PartyCrmModal';
+import { OnlineOrderExchangeModal } from './OnlineOrderExchangeModal';
 import { cn } from '../../utils/cn';
 import type { WcOrdersViewModel } from './types';
 
@@ -52,6 +53,7 @@ interface WcOrderDetailsPanelProps {
 
 export const WcOrderDetailsPanel: React.FC<WcOrderDetailsPanelProps> = ({ vm, onClose, isAside = false }) => {
   const [crmPartyId, setCrmPartyId] = React.useState<number | null>(null);
+  const [exchangeModalMode, setExchangeModalMode] = React.useState<'SWAP' | 'EXCHANGE' | null>(null);
   const {
     isManager,
     isMandob,
@@ -130,6 +132,11 @@ export const WcOrderDetailsPanel: React.FC<WcOrderDetailsPanelProps> = ({ vm, on
               </h2>
               {getCallConfirmedBadge(order)}
               {getStatusBadge(order.status)}
+              {order.is_exchange && (
+                <span className="px-2 py-0.5 rounded-full text-[11px] font-black bg-brand-soft text-brand-ink border border-brand/20">
+                  شحنة استبدال
+                </span>
+              )}
             </div>
             {(order.order_date || order.created_at) && (
               <p className="text-2xs text-muted font-medium flex items-center gap-1 mt-0.5">
@@ -608,6 +615,35 @@ export const WcOrderDetailsPanel: React.FC<WcOrderDetailsPanelProps> = ({ vm, on
             </Button>
           )}
 
+        {!isMandob &&
+          (order.status === WcOrderStatus.PENDING_CONFIRMATION ||
+            order.status === WcOrderStatus.CONFIRMED ||
+            order.status === WcOrderStatus.PREPARING) && (
+            <Button
+              variant="secondary"
+              size="md"
+              onClick={() => setExchangeModalMode('SWAP')}
+              leftIcon={<ArrowLeftRight className="w-4 h-4 text-info" />}
+              className="w-full min-h-[40px] font-bold text-xs text-info border-info/30 bg-info-soft/40 hover:bg-info-soft"
+            >
+              تبديل مقاس/صنف قبل الشحن
+            </Button>
+          )}
+
+        {!isMandob &&
+          !order.is_exchange &&
+          (order.status === WcOrderStatus.DELIVERED || order.status === WcOrderStatus.PARTIALLY_DELIVERED) && (
+            <Button
+              variant="primary"
+              size="md"
+              onClick={() => setExchangeModalMode('EXCHANGE')}
+              leftIcon={<ArrowLeftRight className="w-4 h-4" />}
+              className="w-full min-h-[42px] font-black text-xs"
+            >
+              إنشاء شحنة استبدال للأوردر
+            </Button>
+          )}
+
         {order.status === WcOrderStatus.DISPATCHED && (
           <div className="grid grid-cols-2 gap-2">
             <Button
@@ -694,6 +730,11 @@ export const WcOrderDetailsPanel: React.FC<WcOrderDetailsPanelProps> = ({ vm, on
             : null
       }
       onClose={() => setCrmPartyId(null)}
+    />
+    <OnlineOrderExchangeModal
+      order={exchangeModalMode ? order : null}
+      mode={exchangeModalMode}
+      onClose={() => setExchangeModalMode(null)}
     />
     </>
   );

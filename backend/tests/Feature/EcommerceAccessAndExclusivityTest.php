@@ -219,8 +219,10 @@ class EcommerceAccessAndExclusivityTest extends TestCase
         $admin = User::factory()->create(['is_admin' => true, 'role' => UserRole::ADMIN]);
 
         $regRes = $this->postJson('/api/auth/register', [
+            'store_code' => 'trial-fashion',
             'name' => 'تاجر تجربة متكاملة',
             'phone' => '01091919191',
+            'email' => 'trial.merchant@example.com',
             'password' => 'secret123',
         ])->assertStatus(201);
 

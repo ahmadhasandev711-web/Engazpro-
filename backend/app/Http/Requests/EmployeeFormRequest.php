@@ -6,6 +6,7 @@ use App\Enums\CommissionType;
 use App\Enums\UserRole;
 use App\Models\Branch;
 use App\Models\User;
+use App\Support\PhoneNormalizer;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -37,8 +38,9 @@ abstract class EmployeeFormRequest extends FormRequest
     protected function sharedRules(User $actor, ?int $ignoreUserId = null): array
     {
         $accountId = $actor->getAccountId();
-        $phoneRule = Rule::unique('users', 'phone');
-        $emailRule = Rule::unique('users', 'email');
+        $storeCode = (string) (User::whereKey($accountId)->value('store_code') ?? $actor->store_code);
+        $phoneRule = Rule::unique('users', 'phone')->where(fn ($q) => $q->where('store_code', $storeCode));
+        $emailRule = Rule::unique('users', 'email')->where(fn ($q) => $q->where('store_code', $storeCode));
         if ($ignoreUserId !== null) {
             $phoneRule->ignore($ignoreUserId);
             $emailRule->ignore($ignoreUserId);
@@ -58,9 +60,19 @@ abstract class EmployeeFormRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        $merged = [];
+        if ($this->has('phone')) {
+            $merged['phone'] = PhoneNormalizer::canonical((string) $this->input('phone'));
+        }
+        if ($this->filled('email')) {
+            $merged['email'] = strtolower(trim((string) $this->input('email')));
+        }
         $actor = $this->user();
         if ($actor && $actor->isBranchScoped() && $actor->branch_id !== null && !$this->filled('branch_id')) {
-            $this->merge(['branch_id' => $actor->branch_id]);
+            $merged['branch_id'] = $actor->branch_id;
+        }
+        if ($merged !== []) {
+            $this->merge($merged);
         }
     }
 

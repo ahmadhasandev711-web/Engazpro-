@@ -39,7 +39,7 @@ class PayrollService
         $saleReturnsMoney = Money::of($this->buildMonthlyInvoiceTypeQuery($employee, InvoiceType::SALE_RETURN, $startDate, $endDate)->sum('total') ?? 0);
         $netSalesMoney = $grossSalesMoney->subtract($saleReturnsMoney);
         $totalSalesAmount = $netSalesMoney->isNegative() ? 0.0 : $netSalesMoney->getAmount();
-        $invoicesCount = (int) $salesQuery->count();
+        $invoicesCount = (int) (clone $salesQuery)->whereNull('exchange_id')->count();
 
         $commissionType = $employee->commission_type instanceof CommissionType
             ? $employee->commission_type

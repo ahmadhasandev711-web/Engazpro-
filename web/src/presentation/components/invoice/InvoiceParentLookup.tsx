@@ -9,6 +9,9 @@ interface InvoiceParentLookupProps {
   invoiceLookupNumber: string;
   isSearchingInvoice: boolean;
   isPurchaseReturn?: boolean;
+  allowPhoneAndNameSearch?: boolean;
+  lookupMatches?: Invoice[];
+  onSelectLookupMatch?: (invoice: Invoice) => void;
   onSearchNumberChange: (value: string) => void;
   onSearchInvoice: () => void;
   onClearParentInvoice: () => void;
@@ -20,6 +23,9 @@ export const InvoiceParentLookup: React.FC<InvoiceParentLookupProps> = ({
   invoiceLookupNumber,
   isSearchingInvoice,
   isPurchaseReturn = false,
+  allowPhoneAndNameSearch = false,
+  lookupMatches = [],
+  onSelectLookupMatch,
   onSearchNumberChange,
   onSearchInvoice,
   onClearParentInvoice,
@@ -57,7 +63,11 @@ export const InvoiceParentLookup: React.FC<InvoiceParentLookupProps> = ({
         <div className="flex-1">
           <Input
             type="text"
-            placeholder={`أدخل رقم الفاتورة (مثال: 1 أو 001 أو ${sampleNumber})...`}
+            placeholder={
+              allowPhoneAndNameSearch
+                ? `رقم فاتورة (17 أو ${sampleNumber}) أو رقم موبايل العميل / اسمه ثم Enter...`
+                : `أدخل رقم الفاتورة (مثال: 1 أو 001 أو ${sampleNumber})...`
+            }
             value={invoiceLookupNumber}
             onChange={(e) => onSearchNumberChange(e.target.value)}
             onKeyDown={handleLookupKeyDown}
@@ -73,9 +83,31 @@ export const InvoiceParentLookup: React.FC<InvoiceParentLookupProps> = ({
           isLoading={isSearchingInvoice}
           className="bg-warn text-on-brand hover:opacity-95 shrink-0 font-bold"
         >
-          {isSearchingInvoice ? 'جاري البحث...' : 'استيراد الفاتورة'}
+          {isSearchingInvoice ? 'جاري البحث...' : 'بحث وجلب الفاتورة'}
         </Button>
       </div>
+
+      {!parentInvoice && lookupMatches.length > 0 && onSelectLookupMatch && (
+        <div className="space-y-1.5 pt-1">
+          <p className="text-xs font-bold text-ink">اختر الفاتورة المطابقة ({lookupMatches.length}):</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {lookupMatches.map((inv) => (
+              <button
+                key={inv.id}
+                type="button"
+                onClick={() => onSelectLookupMatch(inv)}
+                className="p-2.5 rounded-xl bg-panel border border-line hover:border-brand text-right text-xs flex items-center justify-between gap-2 transition-colors"
+              >
+                <div>
+                  <div className="font-black text-brand tabular-nums">{inv.invoice_number}</div>
+                  <div className="text-muted text-[11px]">{inv.party_name || 'عميل نقدي'} • {inv.date}</div>
+                </div>
+                <span className="font-black tabular-nums text-ink">{formatCurrency(inv.total)}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {parentInvoice && (
         <Card className="p-3 border-warn/30 mt-2 space-y-2">

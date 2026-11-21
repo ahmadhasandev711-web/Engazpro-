@@ -34,6 +34,8 @@ class OnlineOrder extends Model
         'tracking_number',
         'shipped_at',
         'invoice_id',
+        'is_exchange',
+        'exchange_id',
         'status',
         'call_confirmed_at',
         'call_confirmed_by',
@@ -87,6 +89,7 @@ class OnlineOrder extends Model
         'tax_total' => 'decimal:2',
         'total' => 'decimal:2',
         'shipped_at' => 'datetime',
+        'is_exchange' => 'boolean',
         'coupon_codes' => 'array',
         'discount_breakdown' => 'array',
         'items_snapshot' => 'array',
@@ -146,6 +149,11 @@ class OnlineOrder extends Model
     public function invoice(): BelongsTo
     {
         return $this->belongsTo(Invoice::class);
+    }
+
+    public function exchange(): BelongsTo
+    {
+        return $this->belongsTo(Exchange::class);
     }
 
     public function items(): HasMany

@@ -13,6 +13,8 @@ import {
   ChevronRight,
   ChevronLeft,
   Globe,
+  Sliders,
+  LogIn,
 } from 'lucide-react';
 import { formatDate, User } from '@pos-mandob/shared';
 import clsx from 'clsx';
@@ -34,6 +36,8 @@ interface UsersManagementTabProps {
   onSelectUserForExtend: (user: User) => void;
   onSelectUserForResetPassword: (user: User) => void;
   onInspectStore: (userId: number) => void;
+  onManageStore: (userId: number) => void;
+  onImpersonateStore: (userId: number) => void;
   onToggleStatus: (user: User) => void;
   onToggleEcommerce: (user: User) => void;
   onRevokeSubscription: (user: User) => void;
@@ -63,6 +67,8 @@ export const UsersManagementTab: React.FC<UsersManagementTabProps> = ({
   onSelectUserForExtend,
   onSelectUserForResetPassword,
   onInspectStore,
+  onManageStore,
+  onImpersonateStore,
   onToggleStatus,
   onToggleEcommerce,
   onRevokeSubscription,
@@ -184,7 +190,6 @@ export const UsersManagementTab: React.FC<UsersManagementTabProps> = ({
                 <th className="px-4 py-3.5">الهاتف والطاقم</th>
                 <th className="px-4 py-3.5">الحالة</th>
                 <th className="px-4 py-3.5">الاشتراك</th>
-                <th className="px-4 py-3.5">النشاط</th>
                 <th className="px-4 py-3.5 text-center">إجراءات الإدارة</th>
               </tr>
             </thead>
@@ -196,6 +201,7 @@ export const UsersManagementTab: React.FC<UsersManagementTabProps> = ({
                     <td className="px-4 py-3.5">
                       <div className="font-bold text-ink flex items-center gap-2 flex-wrap">
                         <span>{usr.name}</span>
+                        {usr.store_code && <Badge tone="neutral" className="font-mono">{usr.store_code}</Badge>}
                         {isAdminAccount && <Badge tone="warn">مدير عام</Badge>}
                       </div>
                       {usr.business_name && usr.business_name !== usr.name && (
@@ -247,13 +253,31 @@ export const UsersManagementTab: React.FC<UsersManagementTabProps> = ({
                       </div>
                     </td>
 
-                    <td className="px-4 py-3.5 text-muted font-mono">
-                      <div>{usr.invoices_count || 0} فاتورة</div>
-                      <div>{usr.products_count || 0} صنف</div>
-                    </td>
-
                     <td className="px-4 py-3.5">
                       <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                        {!isAdminAccount && (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="primary"
+                              onClick={() => onManageStore(usr.id)}
+                              leftIcon={<Sliders className="w-3.5 h-3.5" />}
+                            >
+                              إدارة المتجر
+                            </Button>
+
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              disabled={!isStoreActive || isMutating}
+                              onClick={() => onImpersonateStore(usr.id)}
+                              leftIcon={<LogIn className="w-3.5 h-3.5 text-brand" />}
+                            >
+                              دخول
+                            </Button>
+                          </>
+                        )}
+
                         <Button
                           size="sm"
                           variant="secondary"
@@ -377,6 +401,25 @@ export const UsersManagementTab: React.FC<UsersManagementTabProps> = ({
                     </Button>
                     {!isAdminAccount && (
                       <>
+                        <Button
+                          size="sm"
+                          variant="primary"
+                          className="min-h-[44px]"
+                          onClick={() => onManageStore(usr.id)}
+                          leftIcon={<Sliders className="w-3.5 h-3.5" />}
+                        >
+                          إدارة المتجر
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          className="min-h-[44px]"
+                          disabled={!isStoreActive || isMutating}
+                          onClick={() => onImpersonateStore(usr.id)}
+                          leftIcon={<LogIn className="w-3.5 h-3.5 text-brand" />}
+                        >
+                          دخول للمتجر
+                        </Button>
                         <Button
                           size="sm"
                           variant="secondary"

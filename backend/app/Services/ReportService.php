@@ -335,7 +335,8 @@ class ReportService
 
         $purchases = Money::of($this->applyDateBounds($invQ(InvoiceType::PURCHASE->value), $fromDate, $toDate)->sum('paid_amount') ?? 0);
         $payments = Money::of($this->applyDateBounds($payQ(PaymentType::PAYMENT->value)->whereNull('invoice_id'), $fromDate, $toDate)->sum('amount') ?? 0);
-        $saleReturns = Money::of($this->applyDateBounds($invQ(InvoiceType::SALE_RETURN->value), $fromDate, $toDate)->sum('paid_amount') ?? 0);
+        $splitSaleReturns = Money::of($this->applyDateBounds($payQ(PaymentType::PAYMENT->value)->whereHas('invoice', fn ($q) => $q->where('type', InvoiceType::SALE_RETURN->value)->where('payment_method', PaymentMethod::SPLIT->value)), $fromDate, $toDate)->sum('amount') ?? 0);
+        $saleReturns = Money::of($this->applyDateBounds($invQ(InvoiceType::SALE_RETURN->value), $fromDate, $toDate)->sum('paid_amount') ?? 0)->add($splitSaleReturns);
         $expenses = $includeExpenses ? Money::of($this->applyDateBounds($expQ, $fromDate, $toDate)->sum('amount') ?? 0) : Money::zero();
         $totalOutflow = $purchases->add($payments)->add($saleReturns)->add($expenses);
 

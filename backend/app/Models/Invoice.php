@@ -28,6 +28,7 @@ class Invoice extends Model
         'party_id',
         'courier_party_id',
         'parent_invoice_id',
+        'exchange_id',
         'promotion_id',
         'coupon_code',
         'date',
@@ -107,6 +108,11 @@ class Invoice extends Model
     public function returnInvoices(): HasMany
     {
         return $this->hasMany(Invoice::class, 'parent_invoice_id');
+    }
+
+    public function exchange(): BelongsTo
+    {
+        return $this->belongsTo(Exchange::class);
     }
 
     public function promotion(): BelongsTo

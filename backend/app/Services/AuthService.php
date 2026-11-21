@@ -8,6 +8,8 @@ use App\Enums\UserStatus;
 use App\Exceptions\PosDomainException;
 use App\Models\Subscription;
 use App\Models\User;
+use App\Support\PhoneNormalizer;
+use App\Support\StoreCode;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -21,14 +23,17 @@ class AuthService
 
     public function registerOwner(array $validated, int $trialDays): array
     {
-        $user = DB::transaction(function () use ($validated, $trialDays) {
-            $user = User::create([
+        $storeCode = StoreCode::normalize($validated['store_code']);
+        $user = DB::transaction(function () use ($validated, $trialDays, $storeCode) {
+            $user = new User([
+                'store_code' => $storeCode,
                 'name' => $validated['name'],
                 'phone' => $validated['phone'],
                 'email' => $validated['email'] ?? null,
                 'password' => Hash::make($validated['password']),
                 'status' => UserStatus::ACTIVE,
             ]);
+            $user->owned_store_code = $storeCode;
             $user->role = UserRole::OWNER;
             $user->ecommerce_enabled = true;
             $user->save();
@@ -45,9 +50,9 @@ class AuthService
         ];
     }
 
-    public function login(string $identifier, string $password): array
+    public function login(string $storeCode, string $identifier, string $password): array
     {
-        $user = $this->findByPhoneOrEmail($identifier);
+        $user = $this->findByStoreAndIdentifier($storeCode, $identifier);
 
         if (!$user || !Hash::check($password, $user->password)) {
             throw new PosDomainException('بيانات الدخول أو كلمة المرور غير صحيحة', 'INVALID_CREDENTIALS', 422);
@@ -88,29 +93,18 @@ class AuthService
         ]);
     }
 
-    protected function findByPhoneOrEmail(string $identifier): ?User
+    protected function findByStoreAndIdentifier(string $storeCode, string $identifier): ?User
     {
-        return User::where(function ($q) use ($identifier) {
-            $q->where('phone', $identifier)->orWhere('email', $identifier);
-            foreach ($this->phoneVariants($identifier) as $variant) {
-                $q->orWhere('phone', $variant);
-            }
+        $code = StoreCode::normalize($storeCode);
+        $query = StoreCode::isAdminCode($code)
+            ? User::where('is_admin', true)
+            : User::where('store_code', $code);
+
+        $variants = PhoneNormalizer::variants($identifier);
+        $lowerEmail = strtolower(trim($identifier));
+
+        return $query->where(function ($q) use ($lowerEmail, $variants) {
+            $q->whereIn('phone', $variants)->orWhere('email', $lowerEmail);
         })->first();
-    }
-
-    /** @return list<string> */
-    protected function phoneVariants(string $identifier): array
-    {
-        if (str_starts_with($identifier, '01') && strlen($identifier) === 11) {
-            return ['2' . $identifier, '+2' . $identifier];
-        }
-        if (str_starts_with($identifier, '201') && strlen($identifier) === 12) {
-            return ['0' . substr($identifier, 2), '+' . $identifier];
-        }
-        if (str_starts_with($identifier, '+201') && strlen($identifier) === 13) {
-            return ['0' . substr($identifier, 3), substr($identifier, 1)];
-        }
-
-        return [];
     }
 }

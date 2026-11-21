@@ -62,7 +62,7 @@ class MultiUserAndRoleTest extends TestCase
         ]);
     }
 
-    public function test_employee_can_login_without_company_code_and_inherits_subscription(): void
+    public function test_employee_logs_in_with_store_code_and_inherits_subscription(): void
     {
         $owner = $this->createOwnerWithSubscription();
 
@@ -75,8 +75,8 @@ class MultiUserAndRoleTest extends TestCase
             'status' => 'ACTIVE',
         ]);
 
-        // Employee logs in using only their phone and password
         $response = $this->postJson('/api/auth/login', [
+            'store_code' => $owner->store_code,
             'phone' => '01033333333',
             'password' => 'password123',
         ]);
@@ -102,6 +102,7 @@ class MultiUserAndRoleTest extends TestCase
         ]);
 
         $response = $this->postJson('/api/auth/login', [
+            'store_code' => $owner->store_code,
             'phone' => '01044444444',
             'password' => 'password123',
         ]);
