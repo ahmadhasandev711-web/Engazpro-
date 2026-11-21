@@ -53,7 +53,7 @@ export const ShiftZReportModal: React.FC<ShiftZReportModalProps> = ({
   if (!isOpen || !shift) return null;
 
   const storeIdentity = user?.store_identity;
-  const storeName = storeIdentity?.business_name || (user as any)?.store_name || user?.name || 'متجر إنجاز برو';
+  const storeName = storeIdentity?.business_name || (user as any)?.store_name || user?.name || 'متجر EBMS';
   const storePhone = storeIdentity?.store_phone || user?.phone;
   const storeAddress = storeIdentity?.store_address;
 

@@ -79,7 +79,7 @@ export const ReportsPage: React.FC = () => {
   const user = useAuthStore((state) => state.user);
   const { canViewProfitReport, canViewPurchaseReport, canViewReceivablesPayablesReport } = usePermissions();
   const storeIdentity = user?.store_identity;
-  const storeName = storeIdentity?.business_name || (user as any)?.store_name || user?.name || 'متجر إنجاز برو';
+  const storeName = storeIdentity?.business_name || (user as any)?.store_name || user?.name || 'متجر EBMS';
   const storePhone = storeIdentity?.store_phone || user?.phone;
   const storeAddress = storeIdentity?.store_address;
 
@@ -404,7 +404,7 @@ export const ReportsPage: React.FC = () => {
         <div className="border-b-2 border-paper-ink pb-4 mb-5 flex items-start justify-between">
           <div className="space-y-1">
             <h1 className="text-xl font-black text-paper-ink">{storeName}</h1>
-            <p className="text-xs font-bold text-paper-muted">نظام إنجاز برو لإدارة نقاط البيع والمخازن</p>
+            <p className="text-xs font-bold text-paper-muted">نظام EBMS لإدارة نقاط البيع والمخازن</p>
             {storePhone && <p className="text-[11px] text-paper-muted font-mono">الهاتف: {storePhone}</p>}
             {storeAddress && <p className="text-[11px] text-paper-muted">{storeAddress}</p>}
           </div>

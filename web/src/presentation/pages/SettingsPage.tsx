@@ -426,7 +426,7 @@ export const SettingsPage: React.FC = () => {
                 <ShieldCheck className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="font-bold text-base text-ink">الاشتراك السنوي - إنجاز برو</h3>
+                <h3 className="font-bold text-base text-ink">الاشتراك السنوي - EBMS</h3>
                 <p className="text-xs text-muted">خطة المنظومة السحابية وإدارة المبيعات الشاملة</p>
               </div>
             </div>
@@ -524,7 +524,7 @@ export const SettingsPage: React.FC = () => {
                 </p>
               </div>
               <a
-                href="https://wa.me/201125030642?text=مرحباً،%20قمت%20بتحويل%20رسوم%20اشتراك%20إنجاز%20برو%20وأريد%20كود%20التفعيل"
+                href="https://wa.me/201125030642?text=مرحباً،%20قمت%20بتحويل%20رسوم%20اشتراك%20EBMS%20وأريد%20كود%20التفعيل"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="min-h-[44px] inline-flex items-center justify-center gap-2 bg-ok-soft hover:bg-ok-soft/80 text-ok border border-ok/30 font-bold py-2 px-3 rounded-xl transition-colors text-xs"

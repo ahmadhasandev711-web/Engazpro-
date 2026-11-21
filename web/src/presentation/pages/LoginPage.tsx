@@ -19,7 +19,7 @@ const LOGIN_FEATURES = [
   'يعمل كتطبيق PWA خفيف وسريع على أي كمبيوتر أو موبايل',
 ] as const;
 
-/** Store owner / staff login screen built on EngazPRO AuthShell. */
+/** Store owner / staff login screen built on EBMS AuthShell. */
 export const LoginPage: React.FC = () => {
   usePageMeta({
     title: 'تسجيل الدخول — EBMS | Easy Work',
@@ -121,7 +121,7 @@ export const LoginPage: React.FC = () => {
       showcaseFooter={
         <div className="p-4 rounded-2xl bg-surface-2/70 border border-line text-xs space-y-2">
           <p className="italic text-ink leading-relaxed">
-            «إنجاز برو حل مشكلة تداخل تحويلات إنستاباي مع فلوس الدرج. دلوقتي تقفيل الوردية اليومية بياخد دقيقة واحدة بدون أي لخبطة.»
+            «EBMS حل مشكلة تداخل تحويلات إنستاباي مع فلوس الدرج. دلوقتي تقفيل الوردية اليومية بياخد دقيقة واحدة بدون أي لخبطة.»
           </p>
           <div className="flex items-center justify-between text-xs text-muted font-bold pt-2 border-t border-line">
             <span>أحمد فؤاد — مالك مجموعة محلات تجزئة</span>
@@ -130,7 +130,7 @@ export const LoginPage: React.FC = () => {
         </div>
       }
       securityNote="سيرفرات سحابية آمنة ومشفرة 100%"
-      supportHref="https://wa.me/201125030642?text=مرحباً،%20أحتاج%20مساعدة%20في%20تسجيل%20الدخول%20لنظام%20إنجاز%20برو"
+      supportHref="https://wa.me/201125030642?text=مرحباً،%20أحتاج%20مساعدة%20في%20تسجيل%20الدخول%20لنظام%20EBMS"
       supportLabel="الدعم الفني المباشر"
       formTitle="تسجيل الدخول للنظام"
       formSubtitle="أدخل رقم الهاتف المسجل وكلمة المرور للوصول إلى لوحة التحكم."
@@ -166,10 +166,10 @@ export const LoginPage: React.FC = () => {
           {...register('store_code')}
           type="text"
           label="معرّف المتجر"
-          placeholder="tia"
+          placeholder="ebms"
           dir="ltr"
           leftIcon={<AtSign className="w-4 h-4" />}
-          helperText="يُحفظ تلقائياً على هذا الجهاز بعد أول دخول (مثل: tia)"
+          helperText="يُحفظ تلقائياً على هذا الجهاز بعد أول دخول (مثل: ebms-shop)"
           error={errors.store_code?.message}
           onInput={(e) => {
             e.currentTarget.value = normalizeStoreCodeInput(e.currentTarget.value);
@@ -240,7 +240,7 @@ export const LoginPage: React.FC = () => {
                   type="text"
                   label="معرّف المتجر"
                   dir="ltr"
-                  placeholder="tia"
+                  placeholder="ebms"
                   value={recStoreCode}
                   onChange={(e) => setRecStoreCode(normalizeStoreCodeInput(e.target.value))}
                   className="text-right font-mono"

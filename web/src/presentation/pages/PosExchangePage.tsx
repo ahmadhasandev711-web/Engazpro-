@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
 import {
   ExchangeRecord,
   Invoice,
@@ -18,10 +17,17 @@ import {
   CheckCircle2,
   Plus,
 } from 'lucide-react';
-import { apiClient } from '../../data/api/client';
 import { fetchPartySelectOptions } from '../../data/api/asyncOptionLoaders';
 import { usePermissions } from '../../hooks/usePermissions';
-import { useExchangeLookup, useExecutePosExchange, usePartyStoreCredit } from '../../hooks/useExchange';
+import {
+  useExchangeLookup,
+  useExchangeStaffList,
+  useExecutePosExchange,
+  useFetchInvoiceById,
+  useFetchReturnableSaleInvoice,
+  usePartyStoreCredit,
+  useStoreIdentity,
+} from '../../hooks/useExchange';
 import { useToast } from '../context/ToastContext';
 import { AsyncSearchSelect, Badge, Button, Card, Input, PageHeader } from '../components/ui';
 import { InvoiceParentLookup } from '../components/invoice/InvoiceParentLookup';
@@ -55,17 +61,11 @@ export const PosExchangePage: React.FC = () => {
 
   const lookupMutation = useExchangeLookup();
   const executeMutation = useExecutePosExchange();
+  const fetchInvoiceMutation = useFetchInvoiceById();
+  const fetchReturnableMutation = useFetchReturnableSaleInvoice();
 
-  const { data: identityData } = useQuery({
-    queryKey: ['store-identity'],
-    queryFn: async () => (await apiClient.get('/settings/store-identity')).data?.data,
-  });
-
-  const { data: staffData = [] } = useQuery<any[]>({
-    queryKey: ['employees-for-exchange'],
-    queryFn: async () => (await apiClient.get('/employees')).data?.data || [],
-    enabled: canOverrideSalesperson,
-  });
+  const { data: identityData } = useStoreIdentity();
+  const { data: staffData = [] } = useExchangeStaffList(canOverrideSalesperson);
 
   const { data: walletInfo } = usePartyStoreCredit(selectedParty?.id);
 
@@ -73,10 +73,9 @@ export const PosExchangePage: React.FC = () => {
   const prefillInvoiceId = searchParams.get('invoiceId');
   useEffect(() => {
     if (!prefillInvoiceId) return;
-    apiClient
-      .get(`/invoices/${prefillInvoiceId}`)
-      .then((res) => {
-        const inv: Invoice | undefined = res.data?.data;
+    fetchInvoiceMutation
+      .mutateAsync(prefillInvoiceId)
+      .then((inv) => {
         if (inv) {
           applySelectedParentInvoice(inv);
         }
@@ -88,10 +87,7 @@ export const PosExchangePage: React.FC = () => {
 
   const applySelectedParentInvoice = async (inv: Invoice) => {
     try {
-      const res = await apiClient.get(`/invoices/by-number/${encodeURIComponent(inv.invoice_number)}`, {
-        params: { for_return: 1, return_type: 'SALE_RETURN' },
-      });
-      const enriched: Invoice = res.data?.data || inv;
+      const enriched: Invoice = (await fetchReturnableMutation.mutateAsync(inv.invoice_number)) || inv;
       setParentInvoice(enriched);
       setLookupMatches([]);
       setReturnedItems([]);

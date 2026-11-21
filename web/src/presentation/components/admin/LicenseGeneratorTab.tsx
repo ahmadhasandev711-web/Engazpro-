@@ -110,10 +110,10 @@ export const LicenseGeneratorTab: React.FC<LicenseGeneratorTabProps> = ({
 
   const handleSendWhatsApp = (code: string, duration: number) => {
     const text = encodeURIComponent(
-      `مرحباً بك في نظام *إنجاز برو* لإدارة الحسابات والمبيعات!\n\n` +
+      `مرحباً بك في نظام *EBMS* لإدارة الحسابات والمبيعات!\n\n` +
         `كود تفعيل اشتراكك الخاص هو:\n*${code}*\n\n` +
         `صالح لمدة: *${duration} يوم* (${duration >= 365 ? 'سنة كاملة' : `${duration} يوم`})\n\n` +
-        `طريقة التفعيل:\n1. افتح نظام إنجاز برو.\n2. ادخل على الإعدادات -> تفعيل الاشتراك.\n3. الصق الكود واضغط تفعيل.`
+        `طريقة التفعيل:\n1. افتح نظام EBMS.\n2. ادخل على الإعدادات -> تفعيل الاشتراك.\n3. الصق الكود واضغط تفعيل.`
     );
     window.open(`https://wa.me/?text=${text}`, '_blank');
   };

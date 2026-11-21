@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\IndexExchangeRequest;
 use App\Http\Requests\StoreExchangeRequest;
 use App\Http\Requests\StoreOnlineExchangeRequest;
 use App\Http\Requests\SwapOnlineOrderItemsRequest;
@@ -33,9 +34,9 @@ class ExchangeController extends Controller
         private readonly OnlineOrderQueryService $onlineOrderQueryService,
     ) {}
 
-    public function index(Request $request): JsonResponse
+    public function index(IndexExchangeRequest $request): JsonResponse
     {
-        $exchanges = $this->queryService->paginateForUser($request->user(), $request->all());
+        $exchanges = $this->queryService->paginateForUser($request->user(), $request->validated());
 
         return response()->json([
             'success' => true,

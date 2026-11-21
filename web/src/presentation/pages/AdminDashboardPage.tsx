@@ -258,7 +258,7 @@ export const AdminDashboardPage: React.FC = () => {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 sm:mt-8 space-y-6">
         <PageHeader
-          title="لوحة قيادة منصة إنجاز برو"
+          title="لوحة قيادة منصة EBMS"
           description="إدارة الاشتراكات، بنك الأكواد، حماية الجلسات، وسجل التدقيق السيادي."
           badge={
             <Badge tone="ok" dot>

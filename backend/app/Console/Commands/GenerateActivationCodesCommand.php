@@ -23,7 +23,7 @@ class GenerateActivationCodesCommand extends Command
      *
      * @var string
      */
-    protected $description = 'توليد أكواد تفعيل اشتراكات فريدة ومؤمنة لنظام إنجاز برو';
+    protected $description = 'توليد أكواد تفعيل اشتراكات فريدة ومؤمنة لنظام EBMS';
 
     /**
      * Execute the console command.

@@ -112,6 +112,63 @@
     page-break-inside: avoid;
     break-inside: avoid;
   }
+
+  /* Unified 80mm Thermal Receipt Isolation (POS & Exchange Receipts) */
+  body:has(.thermal-receipt-sheet) *:not(:has(.thermal-receipt-sheet)):not(.thermal-receipt-sheet):not(.thermal-receipt-sheet *):not(style) {
+    display: none !important;
+  }
+  body:has(.thermal-receipt-sheet) #root,
+  body:has(.thermal-receipt-sheet) *:has(.thermal-receipt-sheet) {
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: white !important;
+    overflow: visible !important;
+    transform: none !important;
+  }
+  .thermal-receipt-sheet,
+  .thermal-receipt-sheet * {
+    visibility: visible !important;
+    color: black !important;
+  }
+  .thermal-receipt-sheet {
+    position: relative !important;
+    display: block !important;
+    margin: 0 auto !important;
+    width: 94% !important;
+    max-width: 72mm !important;
+    box-sizing: border-box !important;
+    padding: 2mm 4mm !important;
+    background: white !important;
+    border: none !important;
+    box-shadow: none !important;
+    font-family: 'IBM Plex Sans Arabic', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif !important;
+    font-size: 11px !important;
+    line-height: 1.35 !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+  .thermal-receipt-sheet table {
+    width: 100% !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+  }
+  .thermal-receipt-sheet th,
+  .thermal-receipt-sheet td {
+    padding-left: 2px !important;
+    padding-right: 2px !important;
+    word-break: break-word !important;
+  }
 }
 
 .barcode-label-hairline {

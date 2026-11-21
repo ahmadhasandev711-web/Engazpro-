@@ -319,12 +319,12 @@ class WooCommerceApiClient implements WooCommerceApiClientInterface
             $listResp = Http::timeout(15)->withBasicAuth($config->consumer_key, $config->consumer_secret)->get($webhooksUrl, ['per_page' => 100]);
             $existing = $listResp->successful() ? (array) $listResp->json() : [];
 
-            $this->ensureWebhookTopic($config, $webhooksUrl, $deliveryUrl, $existing, 'order.created', 'إنجاز برو - مزامنة الطلبيات اللحظية');
-            $this->ensureWebhookTopic($config, $webhooksUrl, $deliveryUrl, $existing, 'order.updated', 'إنجاز برو - تحديث الطلبيات');
-            $this->ensureWebhookTopic($config, $webhooksUrl, $deliveryUrl, $existing, 'product.updated', 'إنجاز برو - تحديث أسعار ومنتجات المتجر');
-            $this->ensureWebhookTopic($config, $webhooksUrl, $deliveryUrl, $existing, 'coupon.created', 'إنجاز برو - مزامنة كوبونات المتجر (إنشاء)');
-            $this->ensureWebhookTopic($config, $webhooksUrl, $deliveryUrl, $existing, 'coupon.updated', 'إنجاز برو - مزامنة كوبونات المتجر (تحديث)');
-            $this->ensureWebhookTopic($config, $webhooksUrl, $deliveryUrl, $existing, 'coupon.deleted', 'إنجاز برو - مزامنة كوبونات المتجر (حذف)');
+            $this->ensureWebhookTopic($config, $webhooksUrl, $deliveryUrl, $existing, 'order.created', 'EBMS - مزامنة الطلبيات اللحظية');
+            $this->ensureWebhookTopic($config, $webhooksUrl, $deliveryUrl, $existing, 'order.updated', 'EBMS - تحديث الطلبيات');
+            $this->ensureWebhookTopic($config, $webhooksUrl, $deliveryUrl, $existing, 'product.updated', 'EBMS - تحديث أسعار ومنتجات المتجر');
+            $this->ensureWebhookTopic($config, $webhooksUrl, $deliveryUrl, $existing, 'coupon.created', 'EBMS - مزامنة كوبونات المتجر (إنشاء)');
+            $this->ensureWebhookTopic($config, $webhooksUrl, $deliveryUrl, $existing, 'coupon.updated', 'EBMS - مزامنة كوبونات المتجر (تحديث)');
+            $this->ensureWebhookTopic($config, $webhooksUrl, $deliveryUrl, $existing, 'coupon.deleted', 'EBMS - مزامنة كوبونات المتجر (حذف)');
 
             return true;
         } catch (Exception $e) {

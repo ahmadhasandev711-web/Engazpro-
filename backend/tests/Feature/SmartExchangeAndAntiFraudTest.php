@@ -531,5 +531,21 @@ class SmartExchangeAndAntiFraudTest extends TestCase
         $this->assertEquals(10.0, (float) $this->sizeL->fresh()->quantity);
         $this->assertEquals(10.0, (float) $this->sizeM->fresh()->quantity);
         $this->assertEquals(1000.0, (float) $this->drawer->fresh()->balance);
+
+        // Date-range filtering & validation on /api/exchanges (defaults/custom range & N+1-free resource shape)
+        Exchange::whereKey($ex1->id)->update(['created_at' => now()->subDays(5)]);
+        $today = now()->toDateString();
+
+        $todayList = $this->getJson("/api/exchanges?date_from={$today}&date_to={$today}&per_page=10")
+            ->assertOk()
+            ->json('data');
+        $todayNumbers = collect($todayList)->pluck('exchange_number')->all();
+        $this->assertContains($posEx['exchange_number'], $todayNumbers);
+        $this->assertContains('EXC-90002', $todayNumbers);
+        $this->assertNotContains('EXC-90001', $todayNumbers);
+
+        // Reject invalid date_to < date_from via IndexExchangeRequest
+        $this->getJson('/api/exchanges?date_from=2026-11-20&date_to=2026-11-10')
+            ->assertStatus(422);
     }
 }

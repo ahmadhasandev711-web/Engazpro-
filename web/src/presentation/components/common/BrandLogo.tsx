@@ -9,9 +9,9 @@ interface BrandLogoProps {
 }
 
 const SIZE_MAP = {
-  sm: { icon: 'w-7 h-7 rounded-lg', text: 'text-base', pro: 'text-2xs px-1.5 py-0.5', ar: 'text-2xs' },
-  md: { icon: 'w-8 h-8 rounded-xl', text: 'text-lg sm:text-xl', pro: 'text-2xs px-1.5 py-0.5', ar: 'text-xs' },
-  lg: { icon: 'w-10 h-10 rounded-xl', text: 'text-2xl sm:text-3xl', pro: 'text-xs px-2 py-0.5', ar: 'text-xs' },
+  sm: { icon: 'w-7 h-7 rounded-lg', text: 'text-base', ar: 'text-2xs' },
+  md: { icon: 'w-8 h-8 rounded-xl', text: 'text-lg sm:text-xl', ar: 'text-xs' },
+  lg: { icon: 'w-10 h-10 rounded-xl', text: 'text-2xl sm:text-3xl', ar: 'text-xs' },
 } as const;
 
 export const BrandLogo: React.FC<BrandLogoProps> = ({
@@ -27,19 +27,16 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
       {showIcon && (
         <img
           src="/icons/icon-192.svg"
-          alt="Engaz PRO"
+          alt="EBMS"
           className={cn('shrink-0 shadow-xs object-contain', s.icon)}
         />
       )}
       <span className={cn('font-black tracking-tight text-ink font-sans flex items-center', s.text)} dir="ltr">
-        Engaz<span className="text-brand">.</span>
-        <span className={cn('ml-1 font-black bg-brand-soft text-brand-ink border border-brand/20 rounded-md shadow-2xs', s.pro)}>
-          PRO
-        </span>
+        EBMS<span className="text-brand">.</span>
       </span>
       {showArabic && (
         <span className={cn('font-bold text-muted border-r border-line pr-2 mr-0.5', s.ar)}>
-          إنجاز برو
+          إدارة الأعمال
         </span>
       )}
     </span>

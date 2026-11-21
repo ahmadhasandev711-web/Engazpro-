@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ExchangeRecord, Invoice, OnlineOrder, StoreCreditTransactionRecord } from '@pos-mandob/shared';
 import { apiClient } from '../data/api/client';
+import { useAuthStore } from '../data/store/useAuthStore';
 
 export interface ExecutePosExchangePayload {
   original_invoice_id?: number | null;
@@ -32,12 +33,94 @@ export interface ExecutePosExchangePayload {
   notes?: string;
 }
 
-export function useExchanges(filters: Record<string, unknown>) {
+export interface ExchangeListFilters {
+  search?: string;
+  source?: string;
+  status?: string;
+  branch_id?: number;
+  date_from?: string;
+  date_to?: string;
+  per_page?: number;
+  page?: number;
+}
+
+export function useExchanges(filters: ExchangeListFilters) {
+  const userId = useAuthStore((s) => s.user?.id);
+
   return useQuery<{ data: ExchangeRecord[]; meta: any }>({
-    queryKey: ['exchanges', filters],
+    queryKey: ['exchanges', userId, filters],
     queryFn: async () => {
       const res = await apiClient.get('/exchanges', { params: filters });
       return { data: res.data?.data || [], meta: res.data?.meta };
+    },
+    placeholderData: (previousData) => previousData,
+  });
+}
+
+export function useFetchExchangeDetail() {
+  return useMutation<ExchangeRecord, any, number>({
+    mutationFn: async (exchangeId: number) => {
+      const res = await apiClient.get(`/exchanges/${exchangeId}`);
+      return res.data?.data;
+    },
+  });
+}
+
+export function useStoreIdentity() {
+  const userId = useAuthStore((s) => s.user?.id);
+
+  return useQuery({
+    queryKey: ['store-identity', userId],
+    queryFn: async () => (await apiClient.get('/settings/store-identity')).data?.data,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useExchangeStaffList(enabled: boolean) {
+  const userId = useAuthStore((s) => s.user?.id);
+
+  return useQuery<any[]>({
+    queryKey: ['employees-for-exchange', userId],
+    queryFn: async () => (await apiClient.get('/employees')).data?.data || [],
+    enabled,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useExchangeCatalog(branchId?: number | null, search?: string) {
+  const userId = useAuthStore((s) => s.user?.id);
+
+  return useQuery<any[]>({
+    queryKey: ['exchange-catalog', userId, branchId ?? null, search || ''],
+    queryFn: async () => {
+      const res = await apiClient.get('/products/pos-catalog', {
+        params: {
+          per_page: 12,
+          branch_id: branchId || undefined,
+          search: search || undefined,
+        },
+      });
+      return res.data?.data || [];
+    },
+  });
+}
+
+export function useFetchInvoiceById() {
+  return useMutation<Invoice, any, string | number>({
+    mutationFn: async (invoiceId) => {
+      const res = await apiClient.get(`/invoices/${invoiceId}`);
+      return res.data?.data;
+    },
+  });
+}
+
+export function useFetchReturnableSaleInvoice() {
+  return useMutation<Invoice, any, string>({
+    mutationFn: async (invoiceNumber) => {
+      const res = await apiClient.get(`/invoices/by-number/${encodeURIComponent(invoiceNumber)}`, {
+        params: { for_return: 1, return_type: 'SALE_RETURN' },
+      });
+      return res.data?.data;
     },
   });
 }

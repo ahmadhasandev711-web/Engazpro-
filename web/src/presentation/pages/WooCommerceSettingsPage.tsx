@@ -339,7 +339,7 @@ export const WooCommerceSettingsPage: React.FC = () => {
   const quickSyncActions = [
     {
       key: 'customers',
-      title: 'استيراد عملاء المتجر إلى إنجاز برو',
+      title: 'استيراد عملاء المتجر إلى EBMS',
       subtitle: 'سحب عملاء ووكومرس لبناء قاعدة بيانات تسويقية',
       icon: Users,
       isPending: syncCustomersMutation.isPending,
@@ -725,7 +725,7 @@ export const WooCommerceSettingsPage: React.FC = () => {
                     </div>
                     <div>
                       <span className="text-xs font-black block">استيراد الأصناف من ووكومرس</span>
-                      <span className="text-2xs opacity-90 block">سحب المنتجات والمقاسات والألوان لإنجاز برو</span>
+                      <span className="text-2xs opacity-90 block">سحب المنتجات والمقاسات والألوان لـ EBMS</span>
                     </div>
                   </div>
                 </button>

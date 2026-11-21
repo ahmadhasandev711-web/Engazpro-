@@ -105,7 +105,7 @@ export const StoreInquiriesTab: React.FC = () => {
       clean = '2' + clean;
     }
     const msg = encodeURIComponent(
-      `أهلاً بك يا أستاذ ${name}، بخصوص طلبك لتصميم وتطوير متجر إلكتروني متكامل عبر إنجاز برو.`
+      `أهلاً بك يا أستاذ ${name}، بخصوص طلبك لتصميم وتطوير متجر إلكتروني متكامل عبر EBMS.`
     );
     window.open(`https://wa.me/${clean}?text=${msg}`, '_blank');
   };

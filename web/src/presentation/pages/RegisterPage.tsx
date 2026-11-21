@@ -18,7 +18,7 @@ const REGISTER_FEATURES = [
   'مزامنة فورية وتلقائية مع متجر ووكومرس الإلكتروني',
 ] as const;
 
-/** Store trial registration screen built on EngazPRO AuthShell. */
+/** Store trial registration screen built on EBMS AuthShell. */
 export const RegisterPage: React.FC = () => {
   usePageMeta({
     title: 'ابدأ تجربة مجانية 14 يوم — EBMS | Easy Work',
@@ -47,7 +47,7 @@ export const RegisterPage: React.FC = () => {
       badgeText="تجربة مجانية كاملة لمدة 14 يوم بكافة المميزات"
       headline="ابدأ نقلة نوعية"
       accentHeadline="في إدارة نشاطك التجاري"
-      description="انضم الآن لمئات التجار وأصحاب الفروع والمناديب الذين يديرون عملياتهم اليومية بدقة وسرعة قياسية عبر إنجاز برو."
+      description="انضم الآن إلى التجار وأصحاب الفروع والمناديب الذين يديرون عملياتهم اليومية بدقة وسرعة قياسية عبر EBMS."
       features={REGISTER_FEATURES}
       showcaseFooter={
         <div className="p-4 rounded-2xl bg-ok-soft/70 border border-ok/30 text-xs text-ink flex items-start gap-3">
@@ -58,7 +58,7 @@ export const RegisterPage: React.FC = () => {
         </div>
       }
       securityNote="حماية وتشفير متكامل لقواعد البيانات"
-      supportHref="https://wa.me/201125030642?text=مرحباً،%20أريد%20الاستفسار%20عن%20فتح%20حساب%20جديد%20في%20إنجاز%20برو"
+      supportHref="https://wa.me/201125030642?text=مرحباً،%20أريد%20الاستفسار%20عن%20فتح%20حساب%20جديد%20في%20EBMS"
       supportLabel="تحدث مع المبيعات"
       formTitle="إنشاء حساب تجريبي جديد"
       formHeaderExtra={
@@ -95,10 +95,10 @@ export const RegisterPage: React.FC = () => {
           {...register('store_code')}
           type="text"
           label="معرّف المتجر الفريد (لدخولك ودخول موظفيك)"
-          placeholder="tia"
+          placeholder="ebms-shop"
           dir="ltr"
           leftIcon={<AtSign className="w-4 h-4" />}
-          helperText="أحرف إنجليزية وأرقام بدون مسافات (مثال: tia أو tia-fashion) — يتيح لك فتح أكثر من متجر بنفس رقمك."
+          helperText="أحرف إنجليزية وأرقام بدون مسافات (مثال: ebms-shop أو ebms-fashion) — يتيح لك فتح أكثر من متجر بنفس رقمك."
           error={errors.store_code?.message}
           onInput={(e) => {
             e.currentTarget.value = normalizeStoreCodeInput(e.currentTarget.value);

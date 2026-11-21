@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ExchangeRecord, ExchangeSettlementType, ExchangeSource, ExchangeStatus, formatCurrency } from '@pos-mandob/shared';
 import { ArrowLeftRight, Plus, Printer, Search, XCircle } from 'lucide-react';
-import { useCancelExchange, useExchanges } from '../../hooks/useExchange';
+import { useCancelExchange, useExchanges, useFetchExchangeDetail } from '../../hooks/useExchange';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useConfirm } from '../context/ConfirmContext';
 import { useToast } from '../context/ToastContext';
 import { Badge, Button, Card, DataTable, EmptyState, PageHeader } from '../components/ui';
+import { DateRangeFilter, calculatePresetDates } from '../components/common/DateRangeFilter';
 import { PaginationBar } from '../components/common/PaginationBar';
 import { ExchangeReceiptModal } from '../components/exchange/ExchangeReceiptModal';
 
@@ -17,22 +18,43 @@ export const ExchangesPage: React.FC = () => {
   const toast = useToast();
   const { isOwnerOrAdmin } = usePermissions();
   const cancelMutation = useCancelExchange();
+  const detailMutation = useFetchExchangeDetail();
+
+  const defaultDates = calculatePresetDates('today');
+  const [fromDate, setFromDate] = useState(defaultDates.from);
+  const [toDate, setToDate] = useState(defaultDates.to);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebouncedValue(search.trim(), 350);
   const [source, setSource] = useState('');
   const [status, setStatus] = useState('');
   const [page, setPage] = useState(1);
+  const [loadingDetailId, setLoadingDetailId] = useState<number | null>(null);
   const [selectedExchange, setSelectedExchange] = useState<ExchangeRecord | null>(null);
 
   const { data, isLoading, isFetching } = useExchanges({
     search: debouncedSearch || undefined,
     source: source || undefined,
     status: status || undefined,
+    date_from: fromDate || undefined,
+    date_to: toDate || undefined,
+    per_page: 20,
     page,
   });
 
   const exchanges = data?.data || [];
   const meta = data?.meta;
+
+  const handleOpenReceipt = async (ex: ExchangeRecord) => {
+    setLoadingDetailId(ex.id);
+    try {
+      const detail = await detailMutation.mutateAsync(ex.id);
+      setSelectedExchange(detail || ex);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'تعذر جلب تفاصيل إيصال الاستبدال');
+    } finally {
+      setLoadingDetailId(null);
+    }
+  };
 
   const renderStatusBadge = (s: string) => {
     if (s === ExchangeStatus.COMPLETED) return <Badge tone="ok">مكتمل</Badge>;
@@ -65,47 +87,62 @@ export const ExchangesPage: React.FC = () => {
         }
       />
 
-      <Card className="p-4 flex flex-wrap gap-3 items-center">
-        <div className="relative flex-1 min-w-[220px]">
-          <Search className="w-4 h-4 text-muted absolute right-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            value={search}
+      <Card className="p-4 space-y-3">
+        <div className="flex flex-wrap gap-3 items-center">
+          <div className="relative flex-1 min-w-[220px]">
+            <Search className="w-4 h-4 text-muted absolute right-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+              placeholder="بحث برقم الاستبدال أو الفاتورة أو اسم/موبايل العميل..."
+              className="w-full min-h-[42px] pr-9 pl-3 bg-panel border border-line rounded-xl text-xs text-ink focus:outline-none focus:ring-2 focus:ring-brand"
+            />
+          </div>
+
+          <select
+            value={source}
             onChange={(e) => {
-              setSearch(e.target.value);
+              setSource(e.target.value);
               setPage(1);
             }}
-            placeholder="بحث برقم الاستبدال أو الفاتورة أو اسم/موبايل العميل..."
-            className="w-full min-h-[42px] pr-9 pl-3 bg-panel border border-line rounded-xl text-xs text-ink focus:outline-none focus:ring-2 focus:ring-brand"
-          />
+            className="min-h-[42px] px-3 rounded-xl border border-line bg-panel text-xs font-bold"
+          >
+            <option value="">كل المصادر</option>
+            <option value={ExchangeSource.POS}>نقطة البيع (POS)</option>
+            <option value={ExchangeSource.ONLINE_ORDER}>طلبات أونلاين</option>
+          </select>
+
+          <select
+            value={status}
+            onChange={(e) => {
+              setStatus(e.target.value);
+              setPage(1);
+            }}
+            className="min-h-[42px] px-3 rounded-xl border border-line bg-panel text-xs font-bold"
+          >
+            <option value="">كل الحالات</option>
+            <option value={ExchangeStatus.COMPLETED}>مكتمل</option>
+            <option value={ExchangeStatus.AWAITING_COURIER_PICKUP}>بانتظار الشحنة</option>
+            <option value={ExchangeStatus.CANCELLED}>ملغي</option>
+          </select>
         </div>
 
-        <select
-          value={source}
-          onChange={(e) => {
-            setSource(e.target.value);
-            setPage(1);
-          }}
-          className="min-h-[42px] px-3 rounded-xl border border-line bg-panel text-xs font-bold"
-        >
-          <option value="">كل المصادر</option>
-          <option value={ExchangeSource.POS}>نقطة البيع (POS)</option>
-          <option value={ExchangeSource.ONLINE_ORDER}>طلبات أونلاين</option>
-        </select>
-
-        <select
-          value={status}
-          onChange={(e) => {
-            setStatus(e.target.value);
-            setPage(1);
-          }}
-          className="min-h-[42px] px-3 rounded-xl border border-line bg-panel text-xs font-bold"
-        >
-          <option value="">كل الحالات</option>
-          <option value={ExchangeStatus.COMPLETED}>مكتمل</option>
-          <option value={ExchangeStatus.AWAITING_COURIER_PICKUP}>بانتظار الشحنة</option>
-          <option value={ExchangeStatus.CANCELLED}>ملغي</option>
-        </select>
+        <div className="pt-2 border-t border-line w-full min-w-0 max-w-full overflow-hidden">
+          <DateRangeFilter
+            fromDate={fromDate}
+            toDate={toDate}
+            defaultPreset="today"
+            onChange={(from, to) => {
+              setFromDate(from);
+              setToDate(to);
+              setPage(1);
+            }}
+          />
+        </div>
       </Card>
 
       <Card className="overflow-hidden p-0">
@@ -115,7 +152,7 @@ export const ExchangesPage: React.FC = () => {
           <EmptyState
             icon={<ArrowLeftRight className="w-8 h-8 text-muted" />}
             title="لا توجد عمليات استبدال مسجلة"
-            description="يمكنك تنفيذ أول عملية استبدال من الكاشير أو من سطر أي فاتورة مبيعات."
+            description="لا توجد عمليات استبدال مطابقة للفترة أو الفلاتر المحددة."
           />
         ) : (
           <>
@@ -157,13 +194,11 @@ export const ExchangesPage: React.FC = () => {
                           type="button"
                           variant="ghost"
                           size="md"
-                          onClick={async () => {
-                            const res = await import('../../data/api/client').then((m) => m.apiClient.get(`/exchanges/${ex.id}`));
-                            setSelectedExchange(res.data?.data || ex);
-                          }}
+                          disabled={loadingDetailId === ex.id}
+                          onClick={() => handleOpenReceipt(ex)}
                           title="معاينة وطباعة الإيصال"
                         >
-                          <Printer className="w-4 h-4 text-brand" />
+                          <Printer className={`w-4 h-4 text-brand ${loadingDetailId === ex.id ? 'animate-pulse' : ''}`} />
                         </Button>
                         {isOwnerOrAdmin && ex.status !== ExchangeStatus.CANCELLED && (
                           <Button

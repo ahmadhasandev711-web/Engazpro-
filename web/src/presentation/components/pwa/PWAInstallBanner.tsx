@@ -36,7 +36,7 @@ export const PWAInstallBanner: React.FC = () => {
       setIsInstalling(false);
     } else {
       // For browsers that haven't triggered prompt yet, inform them
-      toast.info('لتثبيت التطبيق على جهازك: اضغط على أيقونة التثبيت ⊕ في شريط عنوان المتصفح أو اختر "تثبيت تطبيق إنجاز برو" من خيارات المتصفح.');
+      toast.info('لتثبيت التطبيق على جهازك: اضغط على أيقونة التثبيت ⊕ في شريط عنوان المتصفح أو اختر "تثبيت تطبيق EBMS" من خيارات المتصفح.');
     }
   };
 
@@ -61,7 +61,7 @@ export const PWAInstallBanner: React.FC = () => {
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="text-sm sm:text-base font-black text-ink">
-                  حمّل تطبيق إنجاز برو على جهازك (موبايل أو كمبيوتر)
+                  حمّل تطبيق EBMS على جهازك (موبايل أو كمبيوتر)
                 </h3>
                 <Badge tone="ok" className="gap-1 text-2xs font-bold">
                   <Monitor className="w-3 h-3 hidden sm:inline" />

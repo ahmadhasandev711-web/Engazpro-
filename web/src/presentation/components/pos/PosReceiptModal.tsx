@@ -25,7 +25,7 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
   if (!isOpen || !invoice) return null;
 
   const storeIdentity = user?.store_identity;
-  const storeName = storeIdentity?.business_name || (user as any)?.store_name || user?.name || 'متجر إنجاز برو';
+  const storeName = storeIdentity?.business_name || (user as any)?.store_name || user?.name || 'متجر EBMS';
   const storePhone = storeIdentity?.store_phone || user?.phone;
   const storeAddress = storeIdentity?.store_address;
   const currencySymbol = storeIdentity?.currency || 'ج.م';
@@ -80,7 +80,7 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
           <div
             ref={printRef}
             id="pos-thermal-receipt"
-            className="w-full bg-paper p-5 rounded-2xl border border-paper-line shadow-sm text-paper-ink font-sans text-xs leading-relaxed"
+            className="thermal-receipt-sheet w-full bg-paper p-5 rounded-2xl border border-paper-line shadow-sm text-paper-ink font-sans text-xs leading-relaxed"
             dir="rtl"
           >
             {/* Header Branding */}
@@ -218,7 +218,7 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
             {/* Footer QR simulation & Thank you */}
             <div className="pt-3 text-center space-y-1 text-2xs text-paper-muted">
               <p className="font-sans font-bold text-paper-ink">شكراً لزيارتكم ونسعد بخدمتكم دائماً!</p>
-              <p className="font-mono text-2xs">نظام إنجاز برو لإدارة نقاط البيع والمخازن</p>
+              <p className="font-mono text-2xs">نظام EBMS لإدارة نقاط البيع والمخازن</p>
             </div>
           </div>
         </div>
@@ -269,82 +269,6 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
           )}
         </div>
       </div>
-
-      {/* Embedded Print CSS for thermal receipt printers (Calibrated to auto paper width, safe margins, strict 1-page output) */}
-      <style>{`
-        @media print {
-          @page {
-            size: auto;
-            margin: 0 !important;
-          }
-          html, body {
-            margin: 0 !important;
-            padding: 0 !important;
-            width: 100% !important;
-            height: auto !important;
-            min-height: 0 !important;
-            max-height: 100% !important;
-            overflow: hidden !important;
-            background: white !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-          body *:not(:has(#pos-thermal-receipt)):not(#pos-thermal-receipt):not(#pos-thermal-receipt *):not(style) {
-            display: none !important;
-          }
-          #root, body *:has(#pos-thermal-receipt) {
-            position: static !important;
-            display: block !important;
-            width: 100% !important;
-            max-width: 100% !important;
-            height: auto !important;
-            min-height: 0 !important;
-            max-height: none !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            border: none !important;
-            box-shadow: none !important;
-            background: white !important;
-            overflow: visible !important;
-            transform: none !important;
-          }
-          #pos-thermal-receipt, #pos-thermal-receipt * {
-            visibility: visible !important;
-          }
-          #pos-thermal-receipt {
-            position: relative !important;
-            display: block !important;
-            margin: 0 auto !important;
-            width: 94% !important;
-            max-width: 70mm !important;
-            box-sizing: border-box !important;
-            padding: 2mm 4mm !important;
-            border: none !important;
-            box-shadow: none !important;
-            font-family: 'IBM Plex Sans Arabic', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif !important;
-            font-size: 11px !important;
-            line-height: 1.35 !important;
-            color: black !important;
-            page-break-after: avoid !important;
-            break-after: avoid !important;
-            page-break-inside: avoid !important;
-            break-inside: avoid !important;
-          }
-          #pos-thermal-receipt table {
-            width: 100% !important;
-            table-layout: fixed !important;
-            border-collapse: collapse !important;
-          }
-          #pos-thermal-receipt th, #pos-thermal-receipt td {
-            padding-left: 2px !important;
-            padding-right: 2px !important;
-            word-break: break-word !important;
-          }
-          .no-print {
-            display: none !important;
-          }
-        }
-      `}</style>
     </div>
   );
 };

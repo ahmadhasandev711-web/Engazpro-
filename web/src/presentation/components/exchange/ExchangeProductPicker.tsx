@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { formatCurrency } from '@pos-mandob/shared';
 import { Search, Plus, Package } from 'lucide-react';
-import { apiClient } from '../../../data/api/client';
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue';
+import { useExchangeCatalog } from '../../../hooks/useExchange';
 
 export interface SelectedExchangeVariantItem {
   product_id: number;
@@ -29,19 +28,7 @@ export const ExchangeProductPicker: React.FC<ExchangeProductPickerProps> = ({
   const [search, setSearch] = useState('');
   const debounced = useDebouncedValue(search.trim(), 350);
 
-  const { data: products = [], isFetching } = useQuery<any[]>({
-    queryKey: ['exchange-catalog', branchId, debounced],
-    queryFn: async () => {
-      const res = await apiClient.get('/products/pos-catalog', {
-        params: {
-          per_page: 12,
-          branch_id: branchId || undefined,
-          search: debounced || undefined,
-        },
-      });
-      return res.data?.data || [];
-    },
-  });
+  const { data: products = [], isFetching } = useExchangeCatalog(branchId, debounced);
 
   return (
     <div className="space-y-2.5">
