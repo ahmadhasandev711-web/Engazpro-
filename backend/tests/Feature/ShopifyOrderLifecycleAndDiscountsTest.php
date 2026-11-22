@@ -323,4 +323,43 @@ class ShopifyOrderLifecycleAndDiscountsTest extends TestCase
         $res = app(\App\Services\OnlineOrders\Adapters\ShopifyOrderAdapter::class)->fetchRecentPayloads($this->owner, 10);
         $this->assertSame([], $res);
     }
+
+    public function test_get_order_by_id_falls_back_to_no_pii_query_on_pcd_denial(): void
+    {
+        $integration = ShopifyIntegration::where('user_id', $this->owner->id)->firstOrFail();
+        $calls = [];
+
+        \Illuminate\Support\Facades\Http::fake(function ($request) use (&$calls) {
+            $body = $request->data();
+            $query = (string) ($body['query'] ?? '');
+            $calls[] = $query;
+
+            if (str_contains($query, 'FetchOrderById(')) {
+                return \Illuminate\Support\Facades\Http::response([
+                    'errors' => [[
+                        'message' => 'This app is not approved to access Protected Customer Data.',
+                        'extensions' => ['code' => 'ACCESS_DENIED'],
+                    ]],
+                ], 200);
+            }
+
+            return \Illuminate\Support\Facades\Http::response([
+                'data' => [
+                    'order' => [
+                        'id' => 'gid://shopify/Order/6009999',
+                        'name' => '#1099',
+                        'lineItems' => ['edges' => []],
+                    ],
+                ],
+            ], 200);
+        });
+
+        $order = app(\App\Services\Shopify\ShopifyGraphqlClient::class)->getOrderById($integration, 'gid://shopify/Order/6009999');
+
+        $this->assertNotNull($order);
+        $this->assertSame('#1099', $order['name']);
+        $this->assertCount(2, $calls);
+        $this->assertStringContainsString('FetchOrderByIdNoPii', $calls[1]);
+        $this->assertStringContainsString('PCD', (string) $integration->fresh()->last_error);
+    }
 }

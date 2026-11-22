@@ -246,4 +246,22 @@ class ShopifyMultiLocationStockPushTest extends TestCase
         $this->assertContains('gid://shopify/Location/101', $pushedLocations);
         $this->assertContains('gid://shopify/Location/102', $pushedLocations);
     }
+
+    public function test_push_product_stock_returns_clear_message_when_inventory_not_tracked(): void
+    {
+        $mock = Mockery::mock(ShopifyGraphqlClientInterface::class);
+        $mock->shouldNotReceive('setInventoryQuantities');
+        $this->app->instance(ShopifyGraphqlClientInterface::class, $mock);
+
+        $product = Product::withoutEvents(fn () => Product::create([
+            'user_id' => $this->owner->id, 'name' => 'أقراط بدون تتبع مخزون', 'purchase_price' => 30, 'sale_price' => 80,
+            'quantity' => 5, 'unit' => 'قطعة', 'type' => ProductType::STANDARD->value,
+            'shopify_product_id' => 5120, 'shopify_variant_id' => 6120, 'shopify_inventory_item_id' => 7120, 'shopify_tracked' => false,
+        ]));
+
+        $res = $this->actingAs($this->owner)->postJson("/api/shopify/products/{$product->id}/push-stock");
+        $res->assertOk()
+            ->assertJsonPath('data.pushed_entries', 0);
+        $this->assertStringContainsString('Track quantity', (string) $res->json('message'));
+    }
 }

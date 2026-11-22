@@ -145,7 +145,15 @@ class ShopifyGraphqlClient implements ShopifyGraphqlClientInterface
 
     public function getOrderById(ShopifyIntegration $integration, string $orderGid): ?array
     {
-        $data = $this->query($integration, ShopifyGraphqlQueries::ORDER_BY_ID, ['id' => $orderGid]);
+        try {
+            $data = $this->query($integration, ShopifyGraphqlQueries::ORDER_BY_ID, ['id' => $orderGid]);
+        } catch (ShopifyConnectionException $e) {
+            if (!$this->isPiiAccessDenied($e->getMessage())) {
+                throw $e;
+            }
+            $integration->update(['last_error' => 'تنبيه صلاحيات Shopify (PCD): تم جلب تفاصيل الطلب بدون بيانات العملاء الحساسة (الهاتف/الإيميل).']);
+            $data = $this->query($integration, ShopifyGraphqlQueries::ORDER_BY_ID_NO_PII, ['id' => $orderGid]);
+        }
 
         return !empty($data['order']) && is_array($data['order']) ? $data['order'] : null;
     }
@@ -250,12 +258,12 @@ class ShopifyGraphqlClient implements ShopifyGraphqlClientInterface
         $this->runDiscountMutation($integration, ShopifyGraphqlQueries::DISCOUNT_AUTOMATIC_DELETE, 'discountAutomaticDelete', ['id' => $discountGid], null, $discountGid);
     }
 
-    public function getCodeDiscountsPage(ShopifyIntegration $integration, ?string $cursor = null, int $first = 50): array
+    public function getCodeDiscountsPage(ShopifyIntegration $integration, ?string $cursor = null, int $first = 25): array
     {
         return $this->fetchDiscountsPage($integration, ShopifyGraphqlQueries::CODE_DISCOUNT_NODES_PAGE, 'codeDiscountNodes', $cursor, $first);
     }
 
-    public function getAutomaticDiscountsPage(ShopifyIntegration $integration, ?string $cursor = null, int $first = 50): array
+    public function getAutomaticDiscountsPage(ShopifyIntegration $integration, ?string $cursor = null, int $first = 25): array
     {
         return $this->fetchDiscountsPage($integration, ShopifyGraphqlQueries::AUTOMATIC_DISCOUNT_NODES_PAGE, 'automaticDiscountNodes', $cursor, $first);
     }

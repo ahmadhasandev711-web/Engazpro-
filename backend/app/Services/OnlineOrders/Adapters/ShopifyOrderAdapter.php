@@ -55,7 +55,7 @@ class ShopifyOrderAdapter implements StorePlatformOrderAdapterInterface
         $collected = [];
         $cap = max(1, min($limit, 250));
         do {
-            $batchSize = min(25, $cap - count($collected));
+            $batchSize = min(10, $cap - count($collected));
             $page = $this->graphqlClient->getOrdersPage($integration, $cursor, $batchSize, 'status:open -fulfillment_status:fulfilled');
             $collected = array_merge($collected, $page['orders']);
             $cursor = $page['end_cursor'];

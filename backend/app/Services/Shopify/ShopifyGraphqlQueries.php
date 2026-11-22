@@ -118,7 +118,7 @@ query FetchOrders($first: Int!, $after: String, $query: String) {
         currentTotalTaxSet { shopMoney { amount } }
         customer { id firstName lastName email phone }
         shippingAddress { firstName lastName phone address1 address2 city province }
-        discountApplications(first: 10) {
+        discountApplications(first: 5) {
           edges { node { allocationMethod targetType value { ... on MoneyV2 { amount } ... on PricingPercentageValue { percentage } } } }
         }
         lineItems(first: 25) {
@@ -155,7 +155,7 @@ query FetchOrdersNoPii($first: Int!, $after: String, $query: String) {
         currentTotalDiscountsSet { shopMoney { amount } }
         totalShippingPriceSet { shopMoney { amount } }
         currentTotalTaxSet { shopMoney { amount } }
-        discountApplications(first: 10) {
+        discountApplications(first: 5) {
           edges { node { allocationMethod targetType value { ... on MoneyV2 { amount } ... on PricingPercentageValue { percentage } } } }
         }
         lineItems(first: 25) {
@@ -191,10 +191,10 @@ query FetchOrderById($id: ID!) {
     currentTotalTaxSet { shopMoney { amount } }
     customer { id firstName lastName email phone }
     shippingAddress { firstName lastName phone address1 address2 city province }
-    discountApplications(first: 10) {
+    discountApplications(first: 5) {
       edges { node { allocationMethod targetType value { ... on MoneyV2 { amount } ... on PricingPercentageValue { percentage } } } }
     }
-    lineItems(first: 50) {
+    lineItems(first: 25) {
       edges {
         node {
           id title quantity currentQuantity sku
@@ -207,7 +207,39 @@ query FetchOrderById($id: ID!) {
         }
       }
     }
-    fulfillmentOrders(first: 10) {
+    fulfillmentOrders(first: 5) {
+      edges { node { id status assignedLocation { location { id name } } } }
+    }
+  }
+}
+GRAPHQL;
+
+    public const ORDER_BY_ID_NO_PII = <<<'GRAPHQL'
+query FetchOrderByIdNoPii($id: ID!) {
+  order(id: $id) {
+    id name createdAt displayFinancialStatus displayFulfillmentStatus cancelledAt note
+    taxesIncluded currencyCode paymentGatewayNames discountCodes
+    currentTotalPriceSet { shopMoney { amount currencyCode } }
+    currentTotalDiscountsSet { shopMoney { amount } }
+    totalShippingPriceSet { shopMoney { amount } }
+    currentTotalTaxSet { shopMoney { amount } }
+    discountApplications(first: 5) {
+      edges { node { allocationMethod targetType value { ... on MoneyV2 { amount } ... on PricingPercentageValue { percentage } } } }
+    }
+    lineItems(first: 25) {
+      edges {
+        node {
+          id title quantity currentQuantity sku
+          originalUnitPriceSet { shopMoney { amount } }
+          product { id }
+          variant {
+            id title price compareAtPrice
+            media(first: 1) { nodes { ... on MediaImage { image { url } } preview { image { url } } } }
+          }
+        }
+      }
+    }
+    fulfillmentOrders(first: 5) {
       edges { node { id status assignedLocation { location { id name } } } }
     }
   }

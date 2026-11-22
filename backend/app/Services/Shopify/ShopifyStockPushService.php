@@ -76,8 +76,11 @@ class ShopifyStockPushService
 
         $product->loadMissing('variants');
         $res = $this->pushProduct($integration, $product);
+        $message = $res['pushed_entries'] > 0
+            ? "تم دفع رصيد '{$product->name}' إلى {$res['locations_count']} موقع على Shopify بنجاح"
+            : "لم يتم دفع رصيد للصنف '{$product->name}' لأن تتبع المخزون (Track quantity) غير مفعّل على Shopify أو لم يتم ربط موقع بفرع نشط.";
 
-        return ['pushed_entries' => $res['pushed_entries'], 'locations_count' => $res['locations_count'], 'message' => "تم دفع رصيد '{$product->name}' إلى {$res['locations_count']} موقع على Shopify بنجاح"];
+        return ['pushed_entries' => $res['pushed_entries'], 'locations_count' => $res['locations_count'], 'message' => $message];
     }
 
     private function pushChunkWithRecovery(ShopifyIntegration $integration, array $chunk, string $refUri): int

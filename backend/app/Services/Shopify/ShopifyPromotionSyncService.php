@@ -66,11 +66,11 @@ class ShopifyPromotionSyncService
         $stats = ['imported' => 0, 'updated' => 0, 'skipped' => 0];
 
         EcommerceSyncEchoGuard::suppressDuring($user->getAccountId(), function () use ($user, $integration, &$stats): void {
-            $this->pullPagedNodes($integration, fn ($c) => $this->graphqlClient->getCodeDiscountsPage($integration, $c, 50), function (array $node) use ($user, $integration, &$stats): void {
+            $this->pullPagedNodes($integration, fn ($c) => $this->graphqlClient->getCodeDiscountsPage($integration, $c, 25), function (array $node) use ($user, $integration, &$stats): void {
                 $outcome = $this->ingestCodeDiscountNode($user->getAccountId(), $integration, $node['id'] ?? '', (array) ($node['codeDiscount'] ?? []));
                 $stats[$outcome]++;
             });
-            $this->pullPagedNodes($integration, fn ($c) => $this->graphqlClient->getAutomaticDiscountsPage($integration, $c, 50), function (array $node) use ($user, $integration, &$stats): void {
+            $this->pullPagedNodes($integration, fn ($c) => $this->graphqlClient->getAutomaticDiscountsPage($integration, $c, 25), function (array $node) use ($user, $integration, &$stats): void {
                 $outcome = $this->ingestAutomaticBxgyNode($user->getAccountId(), $integration, $node['id'] ?? '', (array) ($node['automaticDiscount'] ?? []));
                 $stats[$outcome]++;
             });
