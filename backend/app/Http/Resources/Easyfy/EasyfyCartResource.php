@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Easyfy;
 
+use App\Services\Easyfy\EasyfyMediaService;
 use App\Services\Easyfy\EasyfyPricingService;
 use App\Support\Money;
 use Illuminate\Http\Request;
@@ -33,7 +34,7 @@ class EasyfyCartResource extends JsonResource
             'id' => $item->id, 'product_id' => $item->product_id, 'variant_id' => $item->variant_id,
             'product_name' => $item->product?->name, 'product_slug' => $item->product?->slug,
             'stock_mode' => $item->product?->stock_mode?->value, 'variant_label' => $item->variant?->label,
-            'sku' => $item->variant?->sku, 'image_path' => $item->product?->images->first()?->image_path,
+            'sku' => $item->variant?->sku, 'image_path' => EasyfyMediaService::toPublicUrl($item->product?->images->first()?->image_path),
             'quantity' => (int) $item->quantity,
             'min_order_qty' => (int) max($item->variant?->min_order_qty ?? 1, $item->product?->min_order_qty ?? 1),
             'allow_custom_note' => (bool) ($item->product?->allow_custom_note ?? false),

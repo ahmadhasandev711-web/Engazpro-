@@ -73,4 +73,17 @@ class EasyfyMediaService
 
         return in_array($ext, $allowed, true) ? $ext : $allowed[0];
     }
+
+    public static function toPublicUrl(?string $imagePath): ?string
+    {
+        if ($imagePath === null || trim($imagePath) === '') {
+            return null;
+        }
+        $trimmed = trim($imagePath);
+        if (str_starts_with($trimmed, 'http://') || str_starts_with($trimmed, 'https://')) {
+            return $trimmed;
+        }
+
+        return str_starts_with($trimmed, '/') ? url($trimmed) : $trimmed;
+    }
 }

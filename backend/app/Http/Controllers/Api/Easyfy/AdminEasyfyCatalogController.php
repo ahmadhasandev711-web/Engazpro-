@@ -10,6 +10,7 @@ use App\Http\Resources\Easyfy\EasyfyCategoryResource;
 use App\Http\Resources\Easyfy\EasyfyProductResource;
 use App\Services\Easyfy\EasyfyCatalogAdminService;
 use App\Services\Easyfy\EasyfyCatalogQueryService;
+use App\Services\Easyfy\EasyfyMediaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -97,7 +98,17 @@ class AdminEasyfyCatalogController extends Controller
             $request->validated('variant_id') ? (int) $request->validated('variant_id') : null
         );
 
-        return response()->json(['success' => true, 'data' => $img], 201);
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'id' => $img->id,
+                'product_id' => $img->product_id,
+                'variant_id' => $img->variant_id,
+                'image_path' => EasyfyMediaService::toPublicUrl($img->image_path),
+                'is_primary' => (bool) $img->is_primary,
+                'sort_order' => (int) $img->sort_order,
+            ],
+        ], 201);
     }
 
     public function setPrimaryImage(int $productId, int $imageId): JsonResponse

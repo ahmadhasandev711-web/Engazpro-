@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Easyfy;
 
+use App\Services\Easyfy\EasyfyMediaService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -35,7 +36,7 @@ class EasyfyProductResource extends JsonResource
     {
         return $this->images->map(fn ($img) => [
             'id' => $img->id,
-            'image_path' => $img->image_path,
+            'image_path' => EasyfyMediaService::toPublicUrl($img->image_path),
             'variant_id' => $img->variant_id,
             'is_primary' => (bool) $img->is_primary,
             'sort_order' => (int) $img->sort_order,

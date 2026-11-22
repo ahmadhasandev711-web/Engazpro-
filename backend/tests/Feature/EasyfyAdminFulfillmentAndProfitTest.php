@@ -99,8 +99,10 @@ class EasyfyAdminFulfillmentAndProfitTest extends TestCase
         ])->assertStatus(201);
 
         $imagePath = $imgRes->json('data.image_path');
-        Storage::disk('public')->assertExists(str_replace('/storage/', '', $imagePath));
-        $this->get($imagePath)->assertOk();
+        $this->assertStringStartsWith('http', $imagePath);
+        $urlPath = (string) parse_url($imagePath, PHP_URL_PATH);
+        Storage::disk('public')->assertExists(ltrim(str_replace('/storage/', '', $urlPath), '/'));
+        $this->get($urlPath)->assertOk();
 
         $this->postJson("/api/admin/easyfy/inventory/{$variantId}/adjust", [
             'type' => EasyfyStockMovementType::RESTOCK->value,
