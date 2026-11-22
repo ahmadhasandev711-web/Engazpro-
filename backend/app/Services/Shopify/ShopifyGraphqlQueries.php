@@ -16,7 +16,7 @@ query FetchProducts($first: Int!, $after: String) {
       node {
         id title productType hasOnlyDefaultVariant status
         featuredMedia { preview { image { url } } }
-        variants(first: 50) {
+        variants(first: 20) {
           pageInfo { hasNextPage endCursor }
           edges {
             node {
@@ -25,7 +25,7 @@ query FetchProducts($first: Int!, $after: String) {
               media(first: 1) { nodes { ... on MediaImage { image { url } } preview { image { url } } } }
               inventoryItem {
                 id tracked
-                inventoryLevels(first: 20) {
+                inventoryLevels(first: 10) {
                   nodes { location { id name } quantities(names: ["available"]) { quantity } }
                 }
               }
@@ -50,7 +50,7 @@ query FetchProductVariants($id: ID!, $first: Int!, $after: String) {
           media(first: 1) { nodes { ... on MediaImage { image { url } } preview { image { url } } } }
           inventoryItem {
             id tracked
-            inventoryLevels(first: 20) {
+            inventoryLevels(first: 10) {
               nodes { location { id name } quantities(names: ["available"]) { quantity } }
             }
           }
@@ -66,7 +66,7 @@ query FetchProductById($id: ID!) {
   product(id: $id) {
     id title productType hasOnlyDefaultVariant status
     featuredMedia { preview { image { url } } }
-    variants(first: 50) {
+    variants(first: 20) {
       pageInfo { hasNextPage endCursor }
       edges {
         node {
@@ -75,7 +75,7 @@ query FetchProductById($id: ID!) {
           media(first: 1) { nodes { ... on MediaImage { image { url } } preview { image { url } } } }
           inventoryItem {
             id tracked
-            inventoryLevels(first: 20) {
+            inventoryLevels(first: 10) {
               nodes { location { id name } quantities(names: ["available"]) { quantity } }
             }
           }
@@ -121,7 +121,7 @@ query FetchOrders($first: Int!, $after: String, $query: String) {
         discountApplications(first: 10) {
           edges { node { allocationMethod targetType value { ... on MoneyV2 { amount } ... on PricingPercentageValue { percentage } } } }
         }
-        lineItems(first: 50) {
+        lineItems(first: 25) {
           edges {
             node {
               id title quantity currentQuantity sku
@@ -134,7 +134,7 @@ query FetchOrders($first: Int!, $after: String, $query: String) {
             }
           }
         }
-        fulfillmentOrders(first: 10) {
+        fulfillmentOrders(first: 5) {
           edges { node { id status assignedLocation { location { id name } } } }
         }
       }
@@ -158,7 +158,7 @@ query FetchOrdersNoPii($first: Int!, $after: String, $query: String) {
         discountApplications(first: 10) {
           edges { node { allocationMethod targetType value { ... on MoneyV2 { amount } ... on PricingPercentageValue { percentage } } } }
         }
-        lineItems(first: 50) {
+        lineItems(first: 25) {
           edges {
             node {
               id title quantity currentQuantity sku
@@ -171,7 +171,7 @@ query FetchOrdersNoPii($first: Int!, $after: String, $query: String) {
             }
           }
         }
-        fulfillmentOrders(first: 10) {
+        fulfillmentOrders(first: 5) {
           edges { node { id status assignedLocation { location { id name } } } }
         }
       }

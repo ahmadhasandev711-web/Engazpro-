@@ -35,7 +35,7 @@ class ShopifyProductImportService
         $totals = ['imported' => 0, 'updated' => 0, 'errors' => []];
 
         do {
-            $res = $this->importPage($user, $integration, $cursor, 25, $importStock);
+            $res = $this->importPage($user, $integration, $cursor, 10, $importStock);
             $totals['imported'] += $res['imported'];
             $totals['updated'] += $res['updated'];
             $totals['errors'] = array_merge($totals['errors'], $res['errors']);
@@ -45,7 +45,7 @@ class ShopifyProductImportService
         return $totals;
     }
 
-    public function importPage(User $user, ShopifyIntegration $integration, ?string $cursor = null, int $first = 25, bool $importStock = false): array
+    public function importPage(User $user, ShopifyIntegration $integration, ?string $cursor = null, int $first = 10, bool $importStock = false): array
     {
         return ShopifyStockSyncGate::suppressDuring($integration->user_id, function () use ($user, $integration, $cursor, $first, $importStock) {
             return $this->processImportPage($user, $integration, $cursor, $first, $importStock);

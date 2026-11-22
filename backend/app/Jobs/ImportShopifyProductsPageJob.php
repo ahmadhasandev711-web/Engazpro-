@@ -13,6 +13,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class ImportShopifyProductsPageJob implements ShouldQueue
 {
@@ -45,13 +46,14 @@ class ImportShopifyProductsPageJob implements ShouldQueue
             ->firstOrFail();
 
         try {
-            $result = $importService->importPage($user, $integration, $this->cursor, 50, $this->importStock);
+            $result = $importService->importPage($user, $integration, $this->cursor, 10, $this->importStock);
             if ($result['has_more'] && !empty($result['end_cursor'])) {
                 self::dispatch($this->accountId, $this->actingUserId, $result['end_cursor'], $this->importStock);
             }
 
             return $result;
         } catch (\Throwable $e) {
+            $integration->update(['last_error' => Str::limit($e->getMessage(), 250)]);
             Log::error('ImportShopifyProductsPageJob failed', ['account_id' => $this->accountId, 'exception' => $e]);
             throw $e;
         }

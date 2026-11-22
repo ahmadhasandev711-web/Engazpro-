@@ -57,7 +57,7 @@ class ShopifyGraphqlClient implements ShopifyGraphqlClientInterface
         })->filter(fn ($loc) => $loc['id'] > 0)->values()->all();
     }
 
-    public function getProductsPage(ShopifyIntegration $integration, ?string $cursor = null, int $first = 25): array
+    public function getProductsPage(ShopifyIntegration $integration, ?string $cursor = null, int $first = 10): array
     {
         $data = $this->query($integration, ShopifyGraphqlQueries::PRODUCTS_PAGE, ['first' => $first, 'after' => $cursor]);
         $conn = $data['products'] ?? [];
@@ -122,7 +122,7 @@ class ShopifyGraphqlClient implements ShopifyGraphqlClientInterface
         return $result;
     }
 
-    public function getOrdersPage(ShopifyIntegration $integration, ?string $cursor = null, int $first = 25, ?string $queryFilter = null): array
+    public function getOrdersPage(ShopifyIntegration $integration, ?string $cursor = null, int $first = 15, ?string $queryFilter = null): array
     {
         $vars = ['first' => $first, 'after' => $cursor, 'query' => $queryFilter];
         try {
