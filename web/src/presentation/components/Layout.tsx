@@ -83,7 +83,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ groups, onNavigate }) =>
                   <NavLink
                     key={item.to}
                     to={item.to}
-                    end={item.to === '/'}
+                    end={item.to === '/' || item.to === '/shop'}
                     onClick={onNavigate}
                     className={({ isActive }) =>
                       cn(
@@ -253,10 +253,16 @@ export const Layout: React.FC = () => {
     ? 'مندوب مبيعات'
     : 'كاشير POS';
 
+  const easyfyShopGroup: NavItemDef[] = [
+    { to: '/shop', label: 'متجر Easyfy', icon: ShoppingBag },
+    { to: '/shop/orders', label: 'طلبات المستلزمات', icon: Package },
+  ];
+
   const navGroups: SidebarNavGroup[] = [
     { id: 'sales', title: 'البيع والتشغيل', items: salesGroup },
     { id: 'inventory', title: 'المخزون والفروع', items: inventoryGroup },
     { id: 'accounts', title: 'الحسابات والمالية', items: accountsGroup },
+    { id: 'easyfy-shop', title: 'متجر مستلزمات Easyfy', items: easyfyShopGroup },
     ...(bottomGroup.length > 0
       ? [{ id: 'bottom', title: 'الإعدادات والنظام', items: bottomGroup, isBottom: true }]
       : []),

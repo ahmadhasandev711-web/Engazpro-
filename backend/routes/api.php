@@ -269,8 +269,36 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
 
     });
 
+    // Easyfy Supplies Storefront (متجر مستلزمات التجار - متاح لكل أعضاء المتجر)
+    Route::prefix('easyfy')->group(function () {
+        Route::get('/storefront', [\App\Http\Controllers\Api\Easyfy\EasyfyStorefrontController::class, 'index']);
+        Route::get('/products', [\App\Http\Controllers\Api\Easyfy\EasyfyStorefrontController::class, 'products']);
+        Route::get('/products/{slugOrId}', [\App\Http\Controllers\Api\Easyfy\EasyfyStorefrontController::class, 'showProduct']);
+
+        Route::get('/cart', [\App\Http\Controllers\Api\Easyfy\EasyfyCartController::class, 'show']);
+        Route::post('/cart/items', [\App\Http\Controllers\Api\Easyfy\EasyfyCartController::class, 'addItem']);
+        Route::put('/cart/items/{itemId}', [\App\Http\Controllers\Api\Easyfy\EasyfyCartController::class, 'updateItem']);
+        Route::delete('/cart/items/{itemId}', [\App\Http\Controllers\Api\Easyfy\EasyfyCartController::class, 'removeItem']);
+        Route::post('/cart/items/{itemId}/artwork', [\App\Http\Controllers\Api\Easyfy\EasyfyCartController::class, 'uploadArtwork']);
+        Route::post('/checkout/preview', [\App\Http\Controllers\Api\Easyfy\EasyfyCartController::class, 'previewCheckout']);
+
+        Route::get('/addresses', [\App\Http\Controllers\Api\Easyfy\EasyfyAddressController::class, 'index']);
+        Route::post('/addresses', [\App\Http\Controllers\Api\Easyfy\EasyfyAddressController::class, 'store']);
+        Route::put('/addresses/{id}', [\App\Http\Controllers\Api\Easyfy\EasyfyAddressController::class, 'update']);
+        Route::delete('/addresses/{id}', [\App\Http\Controllers\Api\Easyfy\EasyfyAddressController::class, 'destroy']);
+
+        Route::get('/orders', [\App\Http\Controllers\Api\Easyfy\EasyfyOrderController::class, 'index']);
+        Route::post('/orders', [\App\Http\Controllers\Api\Easyfy\EasyfyOrderController::class, 'store']);
+        Route::get('/orders/{id}', [\App\Http\Controllers\Api\Easyfy\EasyfyOrderController::class, 'show']);
+        Route::post('/orders/{id}/reorder', [\App\Http\Controllers\Api\Easyfy\EasyfyOrderController::class, 'reorder']);
+        Route::post('/orders/{id}/reupload-proof', [\App\Http\Controllers\Api\Easyfy\EasyfyOrderController::class, 'reuploadProof']);
+        Route::get('/orders/{id}/payment-proof', [\App\Http\Controllers\Api\Easyfy\EasyfyOrderController::class, 'paymentProof']);
+        Route::get('/orders/{id}/items/{itemId}/artwork', [\App\Http\Controllers\Api\Easyfy\EasyfyOrderController::class, 'itemArtwork']);
+    });
+
     // Super Admin Routes (حماية مشددة للمدير العام فقط)
     Route::prefix('admin')->middleware(['admin', 'throttle:admin'])->group(function () {
+        Route::get('/overview', [\App\Http\Controllers\Api\Easyfy\AdminEasyfyOverviewController::class, 'index']);
         Route::get('/stats', [\App\Http\Controllers\Api\AdminController::class, 'stats']);
         Route::get('/pricing', [\App\Http\Controllers\Api\AdminController::class, 'getPricing']);
         Route::put('/pricing', [\App\Http\Controllers\Api\AdminController::class, 'updatePricing']);
@@ -307,5 +335,48 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
         Route::post('/system/queue/flush', [\App\Http\Controllers\Api\AdminStoreControlController::class, 'flushFailedJobs']);
         Route::get('/password-reset-requests', [\App\Http\Controllers\Api\AdminStoreControlController::class, 'passwordResetRequests']);
         Route::post('/password-reset-requests/{resetRequest}/dismiss', [\App\Http\Controllers\Api\AdminStoreControlController::class, 'dismissPasswordResetRequest']);
+
+        // Super Admin Easyfy B2B Supplies Store Management
+        Route::prefix('easyfy')->group(function () {
+            Route::get('/categories', [\App\Http\Controllers\Api\Easyfy\AdminEasyfyCatalogController::class, 'categories']);
+            Route::post('/categories', [\App\Http\Controllers\Api\Easyfy\AdminEasyfyCatalogController::class, 'storeCategory']);
+            Route::put('/categories/{id}', [\App\Http\Controllers\Api\Easyfy\AdminEasyfyCatalogController::class, 'updateCategory']);
+            Route::post('/categories/{id}/image', [\App\Http\Controllers\Api\Easyfy\AdminEasyfyCatalogController::class, 'uploadCategoryImage']);
+            Route::delete('/categories/{id}', [\App\Http\Controllers\Api\Easyfy\AdminEasyfyCatalogController::class, 'destroyCategory']);
+
+            Route::get('/products', [\App\Http\Controllers\Api\Easyfy\AdminEasyfyCatalogController::class, 'products']);
+            Route::post('/products', [\App\Http\Controllers\Api\Easyfy\AdminEasyfyCatalogController::class, 'storeProduct']);
+            Route::put('/products/{id}', [\App\Http\Controllers\Api\Easyfy\AdminEasyfyCatalogController::class, 'updateProduct']);
+            Route::delete('/products/{id}', [\App\Http\Controllers\Api\Easyfy\AdminEasyfyCatalogController::class, 'destroyProduct']);
+            Route::post('/products/{id}/images', [\App\Http\Controllers\Api\Easyfy\AdminEasyfyCatalogController::class, 'uploadProductImage']);
+            Route::patch('/products/{productId}/images/{imageId}/primary', [\App\Http\Controllers\Api\Easyfy\AdminEasyfyCatalogController::class, 'setPrimaryImage']);
+            Route::delete('/product-images/{imageId}', [\App\Http\Controllers\Api\Easyfy\AdminEasyfyCatalogController::class, 'destroyProductImage']);
+
+            Route::get('/orders', [\App\Http\Controllers\Api\Easyfy\AdminEasyfyOrderController::class, 'index']);
+            Route::get('/orders/{id}', [\App\Http\Controllers\Api\Easyfy\AdminEasyfyOrderController::class, 'show']);
+            Route::patch('/orders/{id}/status', [\App\Http\Controllers\Api\Easyfy\AdminEasyfyOrderController::class, 'updateStatus']);
+            Route::post('/orders/{id}/verify-payment', [\App\Http\Controllers\Api\Easyfy\AdminEasyfyOrderController::class, 'verifyPayment']);
+            Route::post('/orders/{id}/reject-payment', [\App\Http\Controllers\Api\Easyfy\AdminEasyfyOrderController::class, 'rejectPayment']);
+            Route::patch('/orders/{id}/costs', [\App\Http\Controllers\Api\Easyfy\AdminEasyfyOrderController::class, 'updateCosts']);
+            Route::get('/orders/{id}/payment-proof', [\App\Http\Controllers\Api\Easyfy\AdminEasyfyOrderController::class, 'paymentProof']);
+            Route::get('/orders/{id}/items/{itemId}/artwork', [\App\Http\Controllers\Api\Easyfy\AdminEasyfyOrderController::class, 'itemArtwork']);
+
+            Route::get('/inventory', [\App\Http\Controllers\Api\Easyfy\AdminEasyfyInventoryController::class, 'index']);
+            Route::post('/inventory/{variantId}/adjust', [\App\Http\Controllers\Api\Easyfy\AdminEasyfyInventoryController::class, 'adjust']);
+            Route::get('/analytics/demand', [\App\Http\Controllers\Api\Easyfy\AdminEasyfyOverviewController::class, 'demandReport']);
+
+            Route::get('/coupons', [\App\Http\Controllers\Api\Easyfy\AdminEasyfyConfigController::class, 'coupons']);
+            Route::post('/coupons', [\App\Http\Controllers\Api\Easyfy\AdminEasyfyConfigController::class, 'storeCoupon']);
+            Route::put('/coupons/{id}', [\App\Http\Controllers\Api\Easyfy\AdminEasyfyConfigController::class, 'updateCoupon']);
+            Route::delete('/coupons/{id}', [\App\Http\Controllers\Api\Easyfy\AdminEasyfyConfigController::class, 'destroyCoupon']);
+
+            Route::get('/shipping-zones', [\App\Http\Controllers\Api\Easyfy\AdminEasyfyConfigController::class, 'shippingZones']);
+            Route::post('/shipping-zones', [\App\Http\Controllers\Api\Easyfy\AdminEasyfyConfigController::class, 'storeShippingZone']);
+            Route::put('/shipping-zones/{id}', [\App\Http\Controllers\Api\Easyfy\AdminEasyfyConfigController::class, 'updateShippingZone']);
+            Route::delete('/shipping-zones/{id}', [\App\Http\Controllers\Api\Easyfy\AdminEasyfyConfigController::class, 'destroyShippingZone']);
+
+            Route::get('/settings', [\App\Http\Controllers\Api\Easyfy\AdminEasyfyConfigController::class, 'settings']);
+            Route::put('/settings', [\App\Http\Controllers\Api\Easyfy\AdminEasyfyConfigController::class, 'updateSettings']);
+        });
     });
 });

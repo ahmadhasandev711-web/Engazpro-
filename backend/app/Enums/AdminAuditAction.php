@@ -24,6 +24,13 @@ enum AdminAuditAction: string
     case STORE_ECOMMERCE_REMOVED = 'STORE_ECOMMERCE_REMOVED';
     case QUEUE_JOB_RETRIED = 'QUEUE_JOB_RETRIED';
     case QUEUE_JOBS_FLUSHED = 'QUEUE_JOBS_FLUSHED';
+    case EASYFY_PRODUCT_SAVED = 'EASYFY_PRODUCT_SAVED';
+    case EASYFY_ORDER_STATUS_UPDATED = 'EASYFY_ORDER_STATUS_UPDATED';
+    case EASYFY_PAYMENT_VERIFIED = 'EASYFY_PAYMENT_VERIFIED';
+    case EASYFY_PAYMENT_REJECTED = 'EASYFY_PAYMENT_REJECTED';
+    case EASYFY_STOCK_ADJUSTED = 'EASYFY_STOCK_ADJUSTED';
+    case EASYFY_COUPON_SAVED = 'EASYFY_COUPON_SAVED';
+    case EASYFY_SETTINGS_UPDATED = 'EASYFY_SETTINGS_UPDATED';
 
     public function label(): string
     {
@@ -48,6 +55,21 @@ enum AdminAuditAction: string
             self::STORE_ECOMMERCE_REMOVED => 'إزالة ربط متجر إلكتروني',
             self::QUEUE_JOB_RETRIED => 'إعادة تشغيل مهمة طابور',
             self::QUEUE_JOBS_FLUSHED => 'تنظيف المهام الفاشلة',
+            default => $this->easyfyLabel(),
+        };
+    }
+
+    private function easyfyLabel(): string
+    {
+        return match ($this) {
+            self::EASYFY_PRODUCT_SAVED => 'حفظ منتج بمتجر Easyfy',
+            self::EASYFY_ORDER_STATUS_UPDATED => 'تحديث حالة طلب Easyfy',
+            self::EASYFY_PAYMENT_VERIFIED => 'تأكيد تحويل طلب Easyfy',
+            self::EASYFY_PAYMENT_REJECTED => 'رفض إثبات تحويل Easyfy',
+            self::EASYFY_STOCK_ADJUSTED => 'تعديل مخزون متجر Easyfy',
+            self::EASYFY_COUPON_SAVED => 'حفظ كوبون متجر Easyfy',
+            self::EASYFY_SETTINGS_UPDATED => 'تحديث إعدادات متجر Easyfy',
+            default => $this->value,
         };
     }
 }

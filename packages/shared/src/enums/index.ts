@@ -271,3 +271,5 @@ export enum StoreCreditTransactionType {
   REDEEMED = 'REDEEMED',
   ADJUSTMENT = 'ADJUSTMENT',
 }
+
+export * from './easyfy';

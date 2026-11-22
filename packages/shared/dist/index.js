@@ -31,6 +31,12 @@ __export(index_exports, {
   CrmRiskLevel: () => CrmRiskLevel,
   CustomerInteractionChannel: () => CustomerInteractionChannel,
   CustomerTier: () => CustomerTier,
+  EasyfyCouponType: () => EasyfyCouponType,
+  EasyfyOrderStatus: () => EasyfyOrderStatus,
+  EasyfyPaymentMethod: () => EasyfyPaymentMethod,
+  EasyfyPaymentStatus: () => EasyfyPaymentStatus,
+  EasyfyStockMode: () => EasyfyStockMode,
+  EasyfyStockMovementType: () => EasyfyStockMovementType,
   EcommercePlatform: () => EcommercePlatform,
   EmployeeAdjustmentType: () => EmployeeAdjustmentType,
   EmployeeSchema: () => EmployeeSchema,
@@ -104,6 +110,50 @@ var BarcodeFormat = /* @__PURE__ */ ((BarcodeFormat2) => {
   BarcodeFormat2["EAN13"] = "EAN13";
   return BarcodeFormat2;
 })(BarcodeFormat || {});
+
+// src/enums/easyfy.ts
+var EasyfyStockMode = /* @__PURE__ */ ((EasyfyStockMode2) => {
+  EasyfyStockMode2["TRACKED"] = "TRACKED";
+  EasyfyStockMode2["UNLIMITED"] = "UNLIMITED";
+  EasyfyStockMode2["MADE_TO_ORDER"] = "MADE_TO_ORDER";
+  return EasyfyStockMode2;
+})(EasyfyStockMode || {});
+var EasyfyOrderStatus = /* @__PURE__ */ ((EasyfyOrderStatus2) => {
+  EasyfyOrderStatus2["PENDING"] = "PENDING";
+  EasyfyOrderStatus2["CONFIRMED"] = "CONFIRMED";
+  EasyfyOrderStatus2["PREPARING"] = "PREPARING";
+  EasyfyOrderStatus2["SHIPPED"] = "SHIPPED";
+  EasyfyOrderStatus2["DELIVERED"] = "DELIVERED";
+  EasyfyOrderStatus2["CANCELLED"] = "CANCELLED";
+  return EasyfyOrderStatus2;
+})(EasyfyOrderStatus || {});
+var EasyfyPaymentMethod = /* @__PURE__ */ ((EasyfyPaymentMethod2) => {
+  EasyfyPaymentMethod2["CASH_ON_DELIVERY"] = "CASH_ON_DELIVERY";
+  EasyfyPaymentMethod2["INSTAPAY"] = "INSTAPAY";
+  EasyfyPaymentMethod2["VODAFONE_CASH"] = "VODAFONE_CASH";
+  return EasyfyPaymentMethod2;
+})(EasyfyPaymentMethod || {});
+var EasyfyPaymentStatus = /* @__PURE__ */ ((EasyfyPaymentStatus2) => {
+  EasyfyPaymentStatus2["NOT_REQUIRED"] = "NOT_REQUIRED";
+  EasyfyPaymentStatus2["PENDING_REVIEW"] = "PENDING_REVIEW";
+  EasyfyPaymentStatus2["VERIFIED"] = "VERIFIED";
+  EasyfyPaymentStatus2["REJECTED"] = "REJECTED";
+  return EasyfyPaymentStatus2;
+})(EasyfyPaymentStatus || {});
+var EasyfyCouponType = /* @__PURE__ */ ((EasyfyCouponType2) => {
+  EasyfyCouponType2["PERCENTAGE"] = "PERCENTAGE";
+  EasyfyCouponType2["FIXED"] = "FIXED";
+  EasyfyCouponType2["FREE_SHIPPING"] = "FREE_SHIPPING";
+  return EasyfyCouponType2;
+})(EasyfyCouponType || {});
+var EasyfyStockMovementType = /* @__PURE__ */ ((EasyfyStockMovementType2) => {
+  EasyfyStockMovementType2["OPENING"] = "OPENING";
+  EasyfyStockMovementType2["RESTOCK"] = "RESTOCK";
+  EasyfyStockMovementType2["ORDER_DEDUCTION"] = "ORDER_DEDUCTION";
+  EasyfyStockMovementType2["ORDER_CANCEL_RESTORE"] = "ORDER_CANCEL_RESTORE";
+  EasyfyStockMovementType2["ADJUSTMENT"] = "ADJUSTMENT";
+  return EasyfyStockMovementType2;
+})(EasyfyStockMovementType || {});
 
 // src/enums/index.ts
 var InvoiceType = /* @__PURE__ */ ((InvoiceType2) => {
@@ -787,6 +837,12 @@ function formatDateTime(dateString) {
   CrmRiskLevel,
   CustomerInteractionChannel,
   CustomerTier,
+  EasyfyCouponType,
+  EasyfyOrderStatus,
+  EasyfyPaymentMethod,
+  EasyfyPaymentStatus,
+  EasyfyStockMode,
+  EasyfyStockMovementType,
   EcommercePlatform,
   EmployeeAdjustmentType,
   EmployeeSchema,

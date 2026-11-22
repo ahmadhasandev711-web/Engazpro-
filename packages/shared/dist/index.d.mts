@@ -12,6 +12,43 @@ declare enum BarcodeFormat {
     EAN13 = "EAN13"
 }
 
+declare enum EasyfyStockMode {
+    TRACKED = "TRACKED",
+    UNLIMITED = "UNLIMITED",
+    MADE_TO_ORDER = "MADE_TO_ORDER"
+}
+declare enum EasyfyOrderStatus {
+    PENDING = "PENDING",
+    CONFIRMED = "CONFIRMED",
+    PREPARING = "PREPARING",
+    SHIPPED = "SHIPPED",
+    DELIVERED = "DELIVERED",
+    CANCELLED = "CANCELLED"
+}
+declare enum EasyfyPaymentMethod {
+    CASH_ON_DELIVERY = "CASH_ON_DELIVERY",
+    INSTAPAY = "INSTAPAY",
+    VODAFONE_CASH = "VODAFONE_CASH"
+}
+declare enum EasyfyPaymentStatus {
+    NOT_REQUIRED = "NOT_REQUIRED",
+    PENDING_REVIEW = "PENDING_REVIEW",
+    VERIFIED = "VERIFIED",
+    REJECTED = "REJECTED"
+}
+declare enum EasyfyCouponType {
+    PERCENTAGE = "PERCENTAGE",
+    FIXED = "FIXED",
+    FREE_SHIPPING = "FREE_SHIPPING"
+}
+declare enum EasyfyStockMovementType {
+    OPENING = "OPENING",
+    RESTOCK = "RESTOCK",
+    ORDER_DEDUCTION = "ORDER_DEDUCTION",
+    ORDER_CANCEL_RESTORE = "ORDER_CANCEL_RESTORE",
+    ADJUSTMENT = "ADJUSTMENT"
+}
+
 declare enum InvoiceType {
     SALE = "SALE",
     PURCHASE = "PURCHASE",
@@ -244,6 +281,366 @@ declare enum StoreCreditTransactionType {
     EARNED = "EARNED",
     REDEEMED = "REDEEMED",
     ADJUSTMENT = "ADJUSTMENT"
+}
+
+interface EasyfyCategory {
+    id: number;
+    name: string;
+    slug: string;
+    description?: string | null;
+    image_path?: string | null;
+    sort_order: number;
+    is_active: boolean;
+    products_count?: number;
+}
+interface EasyfyPriceTier {
+    id?: number;
+    min_qty: number;
+    unit_price: number;
+}
+interface EasyfyProductImage {
+    id: number;
+    image_path: string;
+    variant_id?: number | null;
+    is_primary: boolean;
+    sort_order: number;
+}
+interface EasyfyStockMovement {
+    id: number;
+    type: EasyfyStockMovementType | string;
+    type_label?: string | null;
+    quantity_delta: number;
+    balance_after: number;
+    unit_cost?: number | null;
+    notes?: string | null;
+    created_at?: string | null;
+}
+interface EasyfyProductVariant {
+    id: number;
+    product_id: number;
+    sku?: string | null;
+    label: string;
+    attributes: Record<string, string>;
+    cost_price?: number;
+    selling_price: number;
+    compare_at_price?: number | null;
+    stock_quantity: number;
+    low_stock_threshold: number;
+    min_order_qty: number;
+    is_active: boolean;
+    product?: {
+        id: number;
+        name: string;
+        stock_mode: EasyfyStockMode | string;
+        is_active: boolean;
+    };
+    price_tiers?: EasyfyPriceTier[];
+    stock_movements?: EasyfyStockMovement[];
+}
+interface EasyfyProduct {
+    id: number;
+    category_id?: number | null;
+    category?: EasyfyCategory | null;
+    name: string;
+    slug: string;
+    short_description?: string | null;
+    description?: string | null;
+    stock_mode: EasyfyStockMode | string;
+    stock_mode_label?: string | null;
+    lead_time_days?: number | null;
+    min_order_qty: number;
+    allow_custom_note: boolean;
+    custom_note_label?: string | null;
+    allow_artwork_upload: boolean;
+    is_active: boolean;
+    is_featured: boolean;
+    images?: EasyfyProductImage[];
+    variants?: EasyfyProductVariant[];
+}
+interface EasyfyInventoryOverview {
+    low_stock_count: number;
+    variants: EasyfyProductVariant[];
+}
+interface EasyfyCoupon {
+    id: number;
+    code: string;
+    discount_type: EasyfyCouponType | string;
+    discount_type_label?: string | null;
+    discount_value: number;
+    min_order_amount: number;
+    max_discount_amount?: number | null;
+    max_uses?: number | null;
+    max_uses_per_account?: number | null;
+    used_count: number;
+    starts_at?: string | null;
+    expires_at?: string | null;
+    is_active: boolean;
+}
+interface EasyfyShippingZone {
+    id: number;
+    governorate_name: string;
+    shipping_fee: number;
+    free_shipping_threshold?: number | null;
+    estimated_days?: string | null;
+    is_active: boolean;
+    sort_order: number;
+}
+interface EasyfyStoreSettings {
+    store_enabled: boolean;
+    cod_enabled: boolean;
+    instapay_enabled: boolean;
+    vodafone_cash_enabled: boolean;
+    instapay_handle: string;
+    instapay_name: string;
+    vodafone_cash_number: string;
+    default_shipping_fee: number;
+    free_shipping_threshold: number | null;
+    support_whatsapp: string;
+    admin_notification_email: string;
+    invoice_footer: string;
+}
+interface EasyfyOrderItem {
+    id: number;
+    product_id?: number | null;
+    variant_id?: number | null;
+    product_name: string;
+    variant_label: string;
+    sku?: string | null;
+    stock_mode: EasyfyStockMode | string;
+    quantity: number;
+    unit_price: number;
+    line_total: number;
+    unit_cost?: number;
+    line_cost?: number;
+    line_profit?: number;
+    custom_note?: string | null;
+    has_artwork: boolean;
+}
+interface EasyfyOrderStatusHistory {
+    id: number;
+    from_status?: EasyfyOrderStatus | string | null;
+    to_status: EasyfyOrderStatus | string;
+    to_status_label?: string | null;
+    actor_name?: string | null;
+    note?: string | null;
+    created_at?: string | null;
+}
+interface EasyfyOrder {
+    id: number;
+    order_number: string;
+    status: EasyfyOrderStatus | string;
+    status_label?: string | null;
+    payment_method: EasyfyPaymentMethod | string;
+    payment_method_label?: string | null;
+    payment_verification_status: EasyfyPaymentStatus | string;
+    payment_verification_label?: string | null;
+    transfer_reference?: string | null;
+    has_payment_proof: boolean;
+    payment_rejection_reason?: string | null;
+    verified_at?: string | null;
+    verifier_name?: string | null;
+    created_at?: string | null;
+    account_id: number;
+    store_code?: string | null;
+    store_name?: string | null;
+    owner_name?: string | null;
+    owner_phone?: string | null;
+    ordered_by_user_id?: number | null;
+    ordered_by_name?: string | null;
+    ordered_by_phone?: string | null;
+    ordered_by_role?: string | null;
+    recipient_name: string;
+    recipient_phone: string;
+    governorate: string;
+    shipping_address: string;
+    customer_notes?: string | null;
+    courier_name?: string | null;
+    tracking_number?: string | null;
+    admin_notes?: string | null;
+    subtotal: number;
+    discount_amount: number;
+    coupon_code?: string | null;
+    shipping_fee: number;
+    total_amount: number;
+    total_cost?: number;
+    gross_profit?: number;
+    items?: EasyfyOrderItem[];
+    status_histories?: EasyfyOrderStatusHistory[];
+    shipping_zone?: EasyfyShippingZone | null;
+}
+interface EasyfyDemandRow {
+    variant_id: number | null;
+    product_name: string;
+    variant_label: string;
+    stock_mode: EasyfyStockMode | string;
+    total_qty: number | string;
+    orders_count: number | string;
+    total_revenue: number | string;
+    total_profit: number | string;
+}
+interface EasyfyDemandReport {
+    top_overall: EasyfyDemandRow[];
+    unlimited_and_custom_demand: EasyfyDemandRow[];
+}
+interface EasyfyDailySeriesPoint {
+    day: string;
+    orders_count: number;
+    revenue: number;
+    profit: number;
+}
+interface EasyfyStoreOverviewMetrics {
+    orders_count: number;
+    gross_revenue: number;
+    total_cost: number;
+    gross_profit: number;
+    shipping_collected: number;
+    avg_order_value: number;
+    pending_orders_count: number;
+    pending_payment_proofs_count: number;
+    low_stock_variants_count: number;
+    daily_30d_series: EasyfyDailySeriesPoint[];
+    demand_report: EasyfyDemandReport;
+}
+interface AdminExpiringTrialItem {
+    id: number;
+    user_id: number;
+    start_date: string;
+    end_date: string;
+    plan: string;
+    user?: {
+        id: number;
+        name: string;
+        phone: string;
+        email?: string | null;
+        business_name?: string | null;
+        store_code?: string | null;
+    } | null;
+}
+interface AdminCommandCenterOverview {
+    platform: AdminStatsData;
+    alerts: {
+        expiring_trials_72h: AdminExpiringTrialItem[];
+        pending_password_resets_count: number;
+        new_inquiries_count: number;
+    };
+    easyfy_store: EasyfyStoreOverviewMetrics;
+}
+interface SaveEasyfyCategoryPayload {
+    id?: number;
+    name: string;
+    slug?: string | null;
+    description?: string | null;
+    sort_order?: number;
+    is_active?: boolean;
+}
+interface SaveEasyfyProductVariantInput {
+    id?: number;
+    sku?: string | null;
+    label: string;
+    attributes?: Record<string, string>;
+    cost_price?: number | null;
+    selling_price: number;
+    compare_at_price?: number | null;
+    stock_quantity?: number;
+    low_stock_threshold?: number;
+    min_order_qty?: number;
+    is_active?: boolean;
+    price_tiers?: Array<{
+        min_qty: number;
+        unit_price: number;
+    }>;
+}
+interface SaveEasyfyProductPayload {
+    id?: number;
+    category_id?: number | null;
+    name: string;
+    slug?: string | null;
+    short_description?: string | null;
+    description?: string | null;
+    stock_mode: EasyfyStockMode | string;
+    lead_time_days?: number | null;
+    min_order_qty?: number;
+    allow_custom_note?: boolean;
+    custom_note_label?: string | null;
+    allow_artwork_upload?: boolean;
+    is_active?: boolean;
+    is_featured?: boolean;
+    sort_order?: number;
+    variants: SaveEasyfyProductVariantInput[];
+}
+interface SaveEasyfyCouponPayload {
+    id?: number;
+    code: string;
+    discount_type: EasyfyCouponType | string;
+    discount_value: number;
+    min_order_amount?: number | null;
+    max_discount_amount?: number | null;
+    max_uses?: number | null;
+    max_uses_per_account?: number | null;
+    starts_at?: string | null;
+    expires_at?: string | null;
+    is_active?: boolean;
+}
+interface SaveEasyfyShippingZonePayload {
+    id?: number;
+    governorate_name: string;
+    shipping_fee: number;
+    free_shipping_threshold?: number | null;
+    estimated_days?: string | null;
+    is_active?: boolean;
+    sort_order?: number;
+}
+interface EasyfyStorefrontPayload {
+    settings: EasyfyStoreSettings;
+    categories: EasyfyCategory[];
+    featured_products: EasyfyProduct[];
+    shipping_zones: EasyfyShippingZone[];
+}
+interface EasyfyCartItem {
+    id: number;
+    variant_id: number;
+    product_id: number;
+    product_name: string;
+    product_slug: string;
+    variant_label: string;
+    sku?: string | null;
+    stock_mode: EasyfyStockMode | string;
+    quantity: number;
+    min_order_qty: number;
+    unit_price: number;
+    line_total: number;
+    custom_note?: string | null;
+    has_artwork: boolean;
+    allow_custom_note: boolean;
+    allow_artwork_upload: boolean;
+    image_path?: string | null;
+    price_tiers?: EasyfyPriceTier[];
+}
+interface EasyfyCart {
+    id: number;
+    coupon_code?: string | null;
+    items_count: number;
+    subtotal: number;
+    items: EasyfyCartItem[];
+}
+interface EasyfyCheckoutPreview {
+    subtotal: number;
+    shipping_fee: number;
+    discount_amount: number;
+    coupon_code?: string | null;
+    total_amount: number;
+    free_shipping_threshold: number | null;
+}
+interface EasyfyStoreAddress {
+    id: number;
+    label: string;
+    recipient_name: string;
+    recipient_phone: string;
+    shipping_zone_id?: number | null;
+    governorate: string;
+    address_line: string;
+    notes?: string | null;
+    is_default: boolean;
 }
 
 interface BaseEntity {
@@ -2033,4 +2430,4 @@ declare class Money {
     toString(): string;
 }
 
-export { type AdminAuditLogItem, type AdminStatsData, type ApiResponse, BarcodeFormat, BarcodeLabelSize, type BarcodePrintItemInput, BarcodePrintItemSchema, type BarcodePrintRequestInput, BarcodePrintRequestSchema, type BaseEntity, type Branch, type BranchInput, BranchSchema, type BranchStock, BranchType, type CalculationItem, type CashFlowReportData, type CashFlowTransaction, type CashFlowTransactionsResponse, type Category, CategorySchema, CommissionType, CrmRiskLevel, CustomerInteractionChannel, CustomerTier, type DashboardSummary, EcommercePlatform, EmployeeAdjustmentType, type EmployeeInput, EmployeeSchema, ExchangeItemDirection, type ExchangeItemRow, type ExchangeRecord, ExchangeSettlementType, ExchangeSource, ExchangeStatus, type Expense, type ExpenseInput, ExpenseSchema, type ExpiringBatchAlertItem, ExpiryStatus, type FinancialClosingReportData, type Invoice, type InvoiceCalculations, type InvoiceInput, type InvoiceItem, type InvoiceItemInput, InvoiceItemSchema, InvoiceReturnStatus, InvoiceSchema, InvoiceType, type LedgerEntry, LedgerSource, type LicenseKey, type LoginInput, LoginSchema, type LowStockAlertItem, Money, type OnlineOrder, OnlineOrderCallStatus, type OnlineOrderItem, OrderCancelReason, type PaginatedResponse, type Party, type PartyCrmMetrics, type PartyInput, type PartyInteraction, PartySchema, PartyType, type Payment, type PaymentInput, PaymentMethod, PaymentSchema, type Product, type ProductBatch, type ProductInput, ProductSchema, ProductType, type ProductVariant, type ProductVariantInput, ProductVariantSchema, type ProfitReportData, type Promotion, PromotionDiscountType, type PromotionEvaluation, PromotionSyncSource, PromotionType, type PurchaseReportData, type ReceivablesPayablesAgingBuckets, type ReceivablesPayablesBucketParty, type ReceivablesPayablesReportData, type RegisterInput, RegisterSchema, ReturnItemCondition, type SalesReportData, ShiftStatus, ShopifyAuthMode, type SplitPaymentItem, StockAdjustmentMode, type StockAlertsResponse, type StockAlertsSummary, type StockMovement, type StockMovementRecord, StockMovementSource, StockMovementType, type StockReportData, type StockReportItem, type StockTransfer, type StockTransferInput, type StockTransferItem, type StockTransferItemInput, StockTransferItemSchema, StockTransferSchema, StockTransferStatus, type StoreCreditTransactionRecord, StoreCreditTransactionType, type StoreIdentity, type Subscription, SubscriptionPlan, SubscriptionStatus, type Treasury, type TreasuryBreakdown, TreasuryTransactionSource, TreasuryTransactionType, TreasuryType, type Unit, type User, UserRole, UserStatus, type WcOrder, type WcOrderItem, WcOrderStatus, WcPaymentStatus, calculateInvoiceTotals, calculateNetProfit, calculatePartyBalanceImpact, formatCurrency, formatDate, formatDateTime, formatNumber, getPaymentMethodLabel };
+export { type AdminAuditLogItem, type AdminCommandCenterOverview, type AdminExpiringTrialItem, type AdminStatsData, type ApiResponse, BarcodeFormat, BarcodeLabelSize, type BarcodePrintItemInput, BarcodePrintItemSchema, type BarcodePrintRequestInput, BarcodePrintRequestSchema, type BaseEntity, type Branch, type BranchInput, BranchSchema, type BranchStock, BranchType, type CalculationItem, type CashFlowReportData, type CashFlowTransaction, type CashFlowTransactionsResponse, type Category, CategorySchema, CommissionType, CrmRiskLevel, CustomerInteractionChannel, CustomerTier, type DashboardSummary, type EasyfyCart, type EasyfyCartItem, type EasyfyCategory, type EasyfyCheckoutPreview, type EasyfyCoupon, EasyfyCouponType, type EasyfyDailySeriesPoint, type EasyfyDemandReport, type EasyfyDemandRow, type EasyfyInventoryOverview, type EasyfyOrder, type EasyfyOrderItem, EasyfyOrderStatus, type EasyfyOrderStatusHistory, EasyfyPaymentMethod, EasyfyPaymentStatus, type EasyfyPriceTier, type EasyfyProduct, type EasyfyProductImage, type EasyfyProductVariant, type EasyfyShippingZone, EasyfyStockMode, type EasyfyStockMovement, EasyfyStockMovementType, type EasyfyStoreAddress, type EasyfyStoreOverviewMetrics, type EasyfyStoreSettings, type EasyfyStorefrontPayload, EcommercePlatform, EmployeeAdjustmentType, type EmployeeInput, EmployeeSchema, ExchangeItemDirection, type ExchangeItemRow, type ExchangeRecord, ExchangeSettlementType, ExchangeSource, ExchangeStatus, type Expense, type ExpenseInput, ExpenseSchema, type ExpiringBatchAlertItem, ExpiryStatus, type FinancialClosingReportData, type Invoice, type InvoiceCalculations, type InvoiceInput, type InvoiceItem, type InvoiceItemInput, InvoiceItemSchema, InvoiceReturnStatus, InvoiceSchema, InvoiceType, type LedgerEntry, LedgerSource, type LicenseKey, type LoginInput, LoginSchema, type LowStockAlertItem, Money, type OnlineOrder, OnlineOrderCallStatus, type OnlineOrderItem, OrderCancelReason, type PaginatedResponse, type Party, type PartyCrmMetrics, type PartyInput, type PartyInteraction, PartySchema, PartyType, type Payment, type PaymentInput, PaymentMethod, PaymentSchema, type Product, type ProductBatch, type ProductInput, ProductSchema, ProductType, type ProductVariant, type ProductVariantInput, ProductVariantSchema, type ProfitReportData, type Promotion, PromotionDiscountType, type PromotionEvaluation, PromotionSyncSource, PromotionType, type PurchaseReportData, type ReceivablesPayablesAgingBuckets, type ReceivablesPayablesBucketParty, type ReceivablesPayablesReportData, type RegisterInput, RegisterSchema, ReturnItemCondition, type SalesReportData, type SaveEasyfyCategoryPayload, type SaveEasyfyCouponPayload, type SaveEasyfyProductPayload, type SaveEasyfyProductVariantInput, type SaveEasyfyShippingZonePayload, ShiftStatus, ShopifyAuthMode, type SplitPaymentItem, StockAdjustmentMode, type StockAlertsResponse, type StockAlertsSummary, type StockMovement, type StockMovementRecord, StockMovementSource, StockMovementType, type StockReportData, type StockReportItem, type StockTransfer, type StockTransferInput, type StockTransferItem, type StockTransferItemInput, StockTransferItemSchema, StockTransferSchema, StockTransferStatus, type StoreCreditTransactionRecord, StoreCreditTransactionType, type StoreIdentity, type Subscription, SubscriptionPlan, SubscriptionStatus, type Treasury, type TreasuryBreakdown, TreasuryTransactionSource, TreasuryTransactionType, TreasuryType, type Unit, type User, UserRole, UserStatus, type WcOrder, type WcOrderItem, WcOrderStatus, WcPaymentStatus, calculateInvoiceTotals, calculateNetProfit, calculatePartyBalanceImpact, formatCurrency, formatDate, formatDateTime, formatNumber, getPaymentMethodLabel };

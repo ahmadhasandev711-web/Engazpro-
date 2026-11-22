@@ -36,6 +36,13 @@ const ACTION_OPTIONS = [
   { value: 'STORE_ECOMMERCE_CONFIGURED', label: 'إعداد ربط أونلاين' },
   { value: 'STORE_ECOMMERCE_REMOVED', label: 'إزالة ربط أونلاين' },
   { value: 'QUEUE_JOB_RETRIED', label: 'إعادة مهمة طابور' },
+  { value: 'EASYFY_PRODUCT_SAVED', label: 'حفظ منتج Easyfy' },
+  { value: 'EASYFY_ORDER_STATUS_UPDATED', label: 'تحديث طلب Easyfy' },
+  { value: 'EASYFY_PAYMENT_VERIFIED', label: 'تأكيد تحويل Easyfy' },
+  { value: 'EASYFY_PAYMENT_REJECTED', label: 'رفض تحويل Easyfy' },
+  { value: 'EASYFY_STOCK_ADJUSTED', label: 'تعديل مخزون Easyfy' },
+  { value: 'EASYFY_COUPON_SAVED', label: 'حفظ كوبون Easyfy' },
+  { value: 'EASYFY_SETTINGS_UPDATED', label: 'تحديث إعدادات Easyfy' },
 ];
 
 const ACTION_META: Record<string, { label: string; tone: BadgeTone }> = {
@@ -57,6 +64,13 @@ const ACTION_META: Record<string, { label: string; tone: BadgeTone }> = {
   STORE_ECOMMERCE_REMOVED: { label: 'إزالة أونلاين', tone: 'warn' },
   QUEUE_JOB_RETRIED: { label: 'إعادة طابور', tone: 'info' },
   QUEUE_JOBS_FLUSHED: { label: 'تنظيف طابور', tone: 'warn' },
+  EASYFY_PRODUCT_SAVED: { label: 'حفظ منتج Easyfy', tone: 'info' },
+  EASYFY_ORDER_STATUS_UPDATED: { label: 'حالة طلب Easyfy', tone: 'brand' },
+  EASYFY_PAYMENT_VERIFIED: { label: 'تأكيد تحويل Easyfy', tone: 'ok' },
+  EASYFY_PAYMENT_REJECTED: { label: 'رفض تحويل Easyfy', tone: 'bad' },
+  EASYFY_STOCK_ADJUSTED: { label: 'تعديل مخزون Easyfy', tone: 'warn' },
+  EASYFY_COUPON_SAVED: { label: 'حفظ كوبون Easyfy', tone: 'info' },
+  EASYFY_SETTINGS_UPDATED: { label: 'إعدادات Easyfy', tone: 'neutral' },
 };
 
 export const AdminAuditLogTab: React.FC<AdminAuditLogTabProps> = ({

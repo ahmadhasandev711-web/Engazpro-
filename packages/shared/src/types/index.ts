@@ -1037,3 +1037,5 @@ export interface StoreCreditTransactionRecord {
   notes?: string | null;
   created_at?: string | null;
 }
+
+export * from './easyfy';

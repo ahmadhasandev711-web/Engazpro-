@@ -43,6 +43,12 @@ const WooCommerceSettingsPage = lazy(() => import('./presentation/pages/WooComme
 const ShopifySettingsPage = lazy(() => import('./presentation/pages/ShopifySettingsPage').then((m) => ({ default: m.ShopifySettingsPage })));
 const StoreOrdersPage = lazy(() => import('./presentation/pages/StoreOrdersPage').then((m) => ({ default: m.StoreOrdersPage })));
 const CouriersPage = lazy(() => import('./presentation/pages/CouriersPage').then((m) => ({ default: m.CouriersPage })));
+const ShopHomePage = lazy(() => import('./presentation/pages/shop/ShopHomePage').then((m) => ({ default: m.ShopHomePage })));
+const ShopProductDetailPage = lazy(() => import('./presentation/pages/shop/ShopProductDetailPage').then((m) => ({ default: m.ShopProductDetailPage })));
+const ShopCartPage = lazy(() => import('./presentation/pages/shop/ShopCartPage').then((m) => ({ default: m.ShopCartPage })));
+const ShopCheckoutPage = lazy(() => import('./presentation/pages/shop/ShopCheckoutPage').then((m) => ({ default: m.ShopCheckoutPage })));
+const ShopOrdersPage = lazy(() => import('./presentation/pages/shop/ShopOrdersPage').then((m) => ({ default: m.ShopOrdersPage })));
+const ShopOrderDetailPage = lazy(() => import('./presentation/pages/shop/ShopOrderDetailPage').then((m) => ({ default: m.ShopOrderDetailPage })));
 
 if (typeof window !== 'undefined') {
   const prefetchCorePages = () => {
@@ -116,6 +122,14 @@ export const App: React.FC = () => {
                   <Route path="/couriers" element={<CouriersPage />} />
                   <Route path="/expenses" element={<ExpensesPage />} />
                   <Route path="/ledger/:partyId" element={<LedgerPage />} />
+
+                  {/* Easyfy B2B Supplies Store (Open to all store roles) */}
+                  <Route path="/shop" element={<ShopHomePage />} />
+                  <Route path="/shop/products/:slugOrId" element={<ShopProductDetailPage />} />
+                  <Route path="/shop/cart" element={<ShopCartPage />} />
+                  <Route path="/shop/checkout" element={<ShopCheckoutPage />} />
+                  <Route path="/shop/orders" element={<ShopOrdersPage />} />
+                  <Route path="/shop/orders/:id" element={<ShopOrderDetailPage />} />
                   
                   {/* Unified Store Orders (Only when e-commerce addon is enabled) */}
                   <Route element={<EcommerceRoute />}>
@@ -171,6 +185,9 @@ export const App: React.FC = () => {
                 {/* Standalone Master Super Admin Portal */}
                 <Route element={<AdminRoute />}>
                   <Route path="/admin-dashboard" element={<AdminDashboardPage />} />
+                  <Route path="/admin-dashboard/:section" element={<AdminDashboardPage />} />
+                  <Route path="/admin" element={<Navigate to="/admin-dashboard" replace />} />
+                  <Route path="/admin/:section" element={<AdminDashboardPage />} />
                   <Route path="/admin-dashbord" element={<Navigate to="/admin-dashboard" replace />} />
                 </Route>
               </Route>
