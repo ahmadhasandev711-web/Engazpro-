@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Enums\EcommercePlatform;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\ConfigureStoreEasyOrdersRequest;
 use App\Http\Requests\Admin\ConfigureStoreShopifyRequest;
 use App\Http\Requests\Admin\ConfigureStoreWooCommerceRequest;
 use App\Http\Requests\Admin\ResetMerchantPasswordRequest;
@@ -60,6 +61,17 @@ class AdminStoreControlController extends Controller
         return response()->json([
             'success' => true,
             'message' => "تم حفظ وتفعيل ربط Shopify لمتجر ({$user->name}) بنجاح.",
+            'data' => $data,
+        ]);
+    }
+
+    public function configureEasyOrders(ConfigureStoreEasyOrdersRequest $request, User $user): JsonResponse
+    {
+        $data = $this->controlService->configureEasyOrders($user, $request->validated());
+
+        return response()->json([
+            'success' => true,
+            'message' => "تم حفظ وتفعيل ربط EasyOrders لمتجر ({$user->name}) بنجاح.",
             'data' => $data,
         ]);
     }

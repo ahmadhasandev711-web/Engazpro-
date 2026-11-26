@@ -103,7 +103,12 @@ declare enum SubscriptionPlan {
 }
 declare enum EcommercePlatform {
     WOOCOMMERCE = "woocommerce",
-    SHOPIFY = "shopify"
+    SHOPIFY = "shopify",
+    EASYORDERS = "easyorders"
+}
+declare enum EasyOrdersAuthMode {
+    AUTHORIZED_APP = "AUTHORIZED_APP",
+    API_KEY = "API_KEY"
 }
 declare enum ShopifyAuthMode {
     ACCESS_TOKEN = "ACCESS_TOKEN",
@@ -1599,6 +1604,27 @@ interface StoreCreditTransactionRecord {
     notes?: string | null;
     created_at?: string | null;
 }
+interface EasyOrdersWebhookUrls {
+    orders_webhook: string;
+    order_status_webhook: string;
+}
+interface EasyOrdersSettings {
+    id?: number;
+    store_id?: string | null;
+    store_name?: string | null;
+    auth_mode?: string;
+    has_api_key?: boolean;
+    has_webhook_secret?: boolean;
+    webhook_secret?: string | null;
+    default_branch_id?: number | null;
+    default_branch?: Branch | null;
+    auto_sync_stock?: boolean;
+    is_active?: boolean;
+    webhook_registered_at?: string | null;
+    last_synced_at?: string | null;
+    last_error?: string | null;
+    webhooks?: EasyOrdersWebhookUrls;
+}
 
 declare const LoginSchema: z.ZodObject<{
     store_code: z.ZodString;
@@ -2430,4 +2456,4 @@ declare class Money {
     toString(): string;
 }
 
-export { type AdminAuditLogItem, type AdminCommandCenterOverview, type AdminExpiringTrialItem, type AdminStatsData, type ApiResponse, BarcodeFormat, BarcodeLabelSize, type BarcodePrintItemInput, BarcodePrintItemSchema, type BarcodePrintRequestInput, BarcodePrintRequestSchema, type BaseEntity, type Branch, type BranchInput, BranchSchema, type BranchStock, BranchType, type CalculationItem, type CashFlowReportData, type CashFlowTransaction, type CashFlowTransactionsResponse, type Category, CategorySchema, CommissionType, CrmRiskLevel, CustomerInteractionChannel, CustomerTier, type DashboardSummary, type EasyfyCart, type EasyfyCartItem, type EasyfyCategory, type EasyfyCheckoutPreview, type EasyfyCoupon, EasyfyCouponType, type EasyfyDailySeriesPoint, type EasyfyDemandReport, type EasyfyDemandRow, type EasyfyInventoryOverview, type EasyfyOrder, type EasyfyOrderItem, EasyfyOrderStatus, type EasyfyOrderStatusHistory, EasyfyPaymentMethod, EasyfyPaymentStatus, type EasyfyPriceTier, type EasyfyProduct, type EasyfyProductImage, type EasyfyProductVariant, type EasyfyShippingZone, EasyfyStockMode, type EasyfyStockMovement, EasyfyStockMovementType, type EasyfyStoreAddress, type EasyfyStoreOverviewMetrics, type EasyfyStoreSettings, type EasyfyStorefrontPayload, EcommercePlatform, EmployeeAdjustmentType, type EmployeeInput, EmployeeSchema, ExchangeItemDirection, type ExchangeItemRow, type ExchangeRecord, ExchangeSettlementType, ExchangeSource, ExchangeStatus, type Expense, type ExpenseInput, ExpenseSchema, type ExpiringBatchAlertItem, ExpiryStatus, type FinancialClosingReportData, type Invoice, type InvoiceCalculations, type InvoiceInput, type InvoiceItem, type InvoiceItemInput, InvoiceItemSchema, InvoiceReturnStatus, InvoiceSchema, InvoiceType, type LedgerEntry, LedgerSource, type LicenseKey, type LoginInput, LoginSchema, type LowStockAlertItem, Money, type OnlineOrder, OnlineOrderCallStatus, type OnlineOrderItem, OrderCancelReason, type PaginatedResponse, type Party, type PartyCrmMetrics, type PartyInput, type PartyInteraction, PartySchema, PartyType, type Payment, type PaymentInput, PaymentMethod, PaymentSchema, type Product, type ProductBatch, type ProductInput, ProductSchema, ProductType, type ProductVariant, type ProductVariantInput, ProductVariantSchema, type ProfitReportData, type Promotion, PromotionDiscountType, type PromotionEvaluation, PromotionSyncSource, PromotionType, type PurchaseReportData, type ReceivablesPayablesAgingBuckets, type ReceivablesPayablesBucketParty, type ReceivablesPayablesReportData, type RegisterInput, RegisterSchema, ReturnItemCondition, type SalesReportData, type SaveEasyfyCategoryPayload, type SaveEasyfyCouponPayload, type SaveEasyfyProductPayload, type SaveEasyfyProductVariantInput, type SaveEasyfyShippingZonePayload, ShiftStatus, ShopifyAuthMode, type SplitPaymentItem, StockAdjustmentMode, type StockAlertsResponse, type StockAlertsSummary, type StockMovement, type StockMovementRecord, StockMovementSource, StockMovementType, type StockReportData, type StockReportItem, type StockTransfer, type StockTransferInput, type StockTransferItem, type StockTransferItemInput, StockTransferItemSchema, StockTransferSchema, StockTransferStatus, type StoreCreditTransactionRecord, StoreCreditTransactionType, type StoreIdentity, type Subscription, SubscriptionPlan, SubscriptionStatus, type Treasury, type TreasuryBreakdown, TreasuryTransactionSource, TreasuryTransactionType, TreasuryType, type Unit, type User, UserRole, UserStatus, type WcOrder, type WcOrderItem, WcOrderStatus, WcPaymentStatus, calculateInvoiceTotals, calculateNetProfit, calculatePartyBalanceImpact, formatCurrency, formatDate, formatDateTime, formatNumber, getPaymentMethodLabel };
+export { type AdminAuditLogItem, type AdminCommandCenterOverview, type AdminExpiringTrialItem, type AdminStatsData, type ApiResponse, BarcodeFormat, BarcodeLabelSize, type BarcodePrintItemInput, BarcodePrintItemSchema, type BarcodePrintRequestInput, BarcodePrintRequestSchema, type BaseEntity, type Branch, type BranchInput, BranchSchema, type BranchStock, BranchType, type CalculationItem, type CashFlowReportData, type CashFlowTransaction, type CashFlowTransactionsResponse, type Category, CategorySchema, CommissionType, CrmRiskLevel, CustomerInteractionChannel, CustomerTier, type DashboardSummary, EasyOrdersAuthMode, type EasyOrdersSettings, type EasyOrdersWebhookUrls, type EasyfyCart, type EasyfyCartItem, type EasyfyCategory, type EasyfyCheckoutPreview, type EasyfyCoupon, EasyfyCouponType, type EasyfyDailySeriesPoint, type EasyfyDemandReport, type EasyfyDemandRow, type EasyfyInventoryOverview, type EasyfyOrder, type EasyfyOrderItem, EasyfyOrderStatus, type EasyfyOrderStatusHistory, EasyfyPaymentMethod, EasyfyPaymentStatus, type EasyfyPriceTier, type EasyfyProduct, type EasyfyProductImage, type EasyfyProductVariant, type EasyfyShippingZone, EasyfyStockMode, type EasyfyStockMovement, EasyfyStockMovementType, type EasyfyStoreAddress, type EasyfyStoreOverviewMetrics, type EasyfyStoreSettings, type EasyfyStorefrontPayload, EcommercePlatform, EmployeeAdjustmentType, type EmployeeInput, EmployeeSchema, ExchangeItemDirection, type ExchangeItemRow, type ExchangeRecord, ExchangeSettlementType, ExchangeSource, ExchangeStatus, type Expense, type ExpenseInput, ExpenseSchema, type ExpiringBatchAlertItem, ExpiryStatus, type FinancialClosingReportData, type Invoice, type InvoiceCalculations, type InvoiceInput, type InvoiceItem, type InvoiceItemInput, InvoiceItemSchema, InvoiceReturnStatus, InvoiceSchema, InvoiceType, type LedgerEntry, LedgerSource, type LicenseKey, type LoginInput, LoginSchema, type LowStockAlertItem, Money, type OnlineOrder, OnlineOrderCallStatus, type OnlineOrderItem, OrderCancelReason, type PaginatedResponse, type Party, type PartyCrmMetrics, type PartyInput, type PartyInteraction, PartySchema, PartyType, type Payment, type PaymentInput, PaymentMethod, PaymentSchema, type Product, type ProductBatch, type ProductInput, ProductSchema, ProductType, type ProductVariant, type ProductVariantInput, ProductVariantSchema, type ProfitReportData, type Promotion, PromotionDiscountType, type PromotionEvaluation, PromotionSyncSource, PromotionType, type PurchaseReportData, type ReceivablesPayablesAgingBuckets, type ReceivablesPayablesBucketParty, type ReceivablesPayablesReportData, type RegisterInput, RegisterSchema, ReturnItemCondition, type SalesReportData, type SaveEasyfyCategoryPayload, type SaveEasyfyCouponPayload, type SaveEasyfyProductPayload, type SaveEasyfyProductVariantInput, type SaveEasyfyShippingZonePayload, ShiftStatus, ShopifyAuthMode, type SplitPaymentItem, StockAdjustmentMode, type StockAlertsResponse, type StockAlertsSummary, type StockMovement, type StockMovementRecord, StockMovementSource, StockMovementType, type StockReportData, type StockReportItem, type StockTransfer, type StockTransferInput, type StockTransferItem, type StockTransferItemInput, StockTransferItemSchema, StockTransferSchema, StockTransferStatus, type StoreCreditTransactionRecord, StoreCreditTransactionType, type StoreIdentity, type Subscription, SubscriptionPlan, SubscriptionStatus, type Treasury, type TreasuryBreakdown, TreasuryTransactionSource, TreasuryTransactionType, TreasuryType, type Unit, type User, UserRole, UserStatus, type WcOrder, type WcOrderItem, WcOrderStatus, WcPaymentStatus, calculateInvoiceTotals, calculateNetProfit, calculatePartyBalanceImpact, formatCurrency, formatDate, formatDateTime, formatNumber, getPaymentMethodLabel };

@@ -8,7 +8,7 @@ interface IOSInstallGuideModalProps {
 }
 
 /**
- * Pure presentational guide modal explaining how to install EBMS on iOS Safari.
+ * Pure presentational guide modal explaining how to install Easyfy on iOS Safari.
  */
 export const IOSInstallGuideModal: React.FC<IOSInstallGuideModalProps> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
@@ -31,7 +31,7 @@ export const IOSInstallGuideModal: React.FC<IOSInstallGuideModalProps> = ({ isOp
               <Smartphone className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="text-sm font-black text-ink">تثبيت EBMS على iPhone / iPad</h4>
+              <h4 className="text-sm font-black text-ink">تثبيت Easyfy على iPhone / iPad</h4>
               <p className="text-2xs text-muted">إضافة التطبيق للشاشة الرئيسية</p>
             </div>
           </div>

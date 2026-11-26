@@ -61,6 +61,12 @@ export enum SubscriptionPlan {
 export enum EcommercePlatform {
   WOOCOMMERCE = 'woocommerce',
   SHOPIFY = 'shopify',
+  EASYORDERS = 'easyorders',
+}
+
+export enum EasyOrdersAuthMode {
+  AUTHORIZED_APP = 'AUTHORIZED_APP',
+  API_KEY = 'API_KEY',
 }
 
 export enum ShopifyAuthMode {

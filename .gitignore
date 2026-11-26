@@ -1,5 +1,5 @@
 # ==============================================================================
-# EngazPRO - Production Git Ignore Configuration
+# Easyfy Cloud Commerce OS - Production Git Ignore Configuration
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
@@ -8,8 +8,6 @@
 .env
 .env.*
 !.env.example
-!.env.e2e.example
-!.env.*.example
 *.key
 *.cert
 *.pem
@@ -22,11 +20,9 @@ auth.json
 *.sqlite
 *.sqlite3
 *.db
-engazpro_clean_database.sql
-engazpro_database.sql
 
 # ------------------------------------------------------------------------------
-# 3. Deployment Archives, Static Landing Bundles & Backups
+# 3. Archives & Temporary Bundles
 # ------------------------------------------------------------------------------
 *.zip
 *.tar
@@ -34,30 +30,31 @@ engazpro_database.sql
 *.tar.gz
 *.rar
 *.7z
-backend_engazpro.zip
-backend_update_patch.zip
-frontend_engazpro.zip
-landing_ebms.zip
-app_ebms.zip
-frontend_engazpro/
-landing/
+
+# ------------------------------------------------------------------------------
+# 4. Markdown Files Restriction (Single Root README.md Only)
+# ------------------------------------------------------------------------------
+*.md
+**/*.md
+!README.md
+
+# ------------------------------------------------------------------------------
+# 5. Docker & Container Infrastructure (Private Ops Only)
+# ------------------------------------------------------------------------------
+docker/
+docker-compose*.yml
+Dockerfile*
+
+# ------------------------------------------------------------------------------
+# 6. Unrelated Projects & Staging Workspaces
+# ------------------------------------------------------------------------------
 app_ebms/
 landing_ebms/
+site_qema_tech/
 EBMS Landing Page.html
 
 # ------------------------------------------------------------------------------
-# 4. Internal Documentation & Agent Rules (Private Project Files — Never Push .md)
-# ------------------------------------------------------------------------------
-AGENTS.md
-GEMINI.md
-ARCHITECTURE_RULES.md
-MasterPrompt_Updated.md
-CLAUDE.md
-*.md
-**/*.md
-
-# ------------------------------------------------------------------------------
-# 5. Dependencies (Node & PHP Composer)
+# 7. Dependencies (Node & PHP Composer)
 # ------------------------------------------------------------------------------
 node_modules/
 backend/vendor/
@@ -66,7 +63,7 @@ packages/**/node_modules/
 web/node_modules/
 
 # ------------------------------------------------------------------------------
-# 6. Build Outputs & Generated Distributables
+# 8. Build Outputs & Generated Distributables
 # ------------------------------------------------------------------------------
 web/dist/
 web/build/
@@ -78,7 +75,7 @@ public/storage
 *.aab
 
 # ------------------------------------------------------------------------------
-# 7. Framework Storage, Caches & Temporary Files
+# 9. Framework Storage, Caches & Temporary Files
 # ------------------------------------------------------------------------------
 backend/storage/app/*
 !backend/storage/app/.gitignore
@@ -95,7 +92,7 @@ backend/.phpunit.cache
 backend/.phpunit.result.cache
 
 # ------------------------------------------------------------------------------
-# 8. Temporary Workspaces & Local Experiment Scripts
+# 10. Local Scratch Scripts & Workspaces
 # ------------------------------------------------------------------------------
 .expo/
 scratch/
@@ -104,7 +101,7 @@ tmp/
 temp/
 
 # ------------------------------------------------------------------------------
-# 9. Operating System & IDE Files
+# 11. Operating System & IDE Files
 # ------------------------------------------------------------------------------
 .DS_Store
 Thumbs.db

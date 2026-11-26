@@ -89,9 +89,19 @@ export const useProductsPage = () => {
 
   const handlePushStock = async (product: Product) => {
     setSyncingProductId(product.id);
-    const isShopify = activeEcommercePlatform === EcommercePlatform.SHOPIFY || (activeEcommercePlatform !== EcommercePlatform.WOOCOMMERCE && Boolean((product as any).shopify_product_id));
-    const endpoint = isShopify ? `/shopify/products/${product.id}/push-stock` : `/woocommerce/products/${product.id}/push-stock`;
-    const label = isShopify ? 'Shopify' : 'ووكومرس';
+    const isEasyOrders =
+      activeEcommercePlatform === EcommercePlatform.EASYORDERS ||
+      (activeEcommercePlatform === null && Boolean((product as any).easyorders_product_id));
+    const isShopify =
+      !isEasyOrders &&
+      (activeEcommercePlatform === EcommercePlatform.SHOPIFY ||
+        (activeEcommercePlatform !== EcommercePlatform.WOOCOMMERCE && Boolean((product as any).shopify_product_id)));
+    const endpoint = isEasyOrders
+      ? `/easyorders/products/${product.id}/push-stock`
+      : isShopify
+        ? `/shopify/products/${product.id}/push-stock`
+        : `/woocommerce/products/${product.id}/push-stock`;
+    const label = isEasyOrders ? 'EasyOrders' : isShopify ? 'Shopify' : 'ووكومرس';
     try {
       const res = await apiClient.post(endpoint);
       setSuccessMessage(res.data?.message || `تم تحديث رصيد الصنف في ${label} فورياً 🟢`);

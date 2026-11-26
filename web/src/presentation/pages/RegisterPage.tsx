@@ -18,11 +18,11 @@ const REGISTER_FEATURES = [
   'مزامنة فورية وتلقائية مع متجر ووكومرس الإلكتروني',
 ] as const;
 
-/** Store trial registration screen built on EBMS AuthShell. */
+/** Store trial registration screen built on Easyfy AuthShell. */
 export const RegisterPage: React.FC = () => {
   usePageMeta({
-    title: 'ابدأ تجربة مجانية 14 يوم — EBMS | Easy Work',
-    description: 'أنشئ حساب متجرك في نظام EBMS (Easy Business Management System) خلال 60 ثانية واحصل على تجربة مجانية 14 يوم بدون بطاقة بنكية.',
+    title: 'ابدأ تجربة مجانية 14 يوم — Easyfy',
+    description: 'أنشئ حساب متجرك في نظام Easyfy خلال 60 ثانية واحصل على تجربة مجانية 14 يوم بدون بطاقة بنكية لإدارة الكاشير والمخازن والمتاجر الإلكترونية.',
   });
   const navigate = useNavigate();
   const { register: registerUser, isLoading, error } = useAuthStore();
@@ -47,7 +47,7 @@ export const RegisterPage: React.FC = () => {
       badgeText="تجربة مجانية كاملة لمدة 14 يوم بكافة المميزات"
       headline="ابدأ نقلة نوعية"
       accentHeadline="في إدارة نشاطك التجاري"
-      description="انضم الآن إلى التجار وأصحاب الفروع والمناديب الذين يديرون عملياتهم اليومية بدقة وسرعة قياسية عبر EBMS."
+      description="انضم الآن إلى التجار وأصحاب الفروع والمناديب الذين يديرون عملياتهم اليومية بدقة وسرعة قياسية عبر Easyfy."
       features={REGISTER_FEATURES}
       showcaseFooter={
         <div className="p-4 rounded-2xl bg-ok-soft/70 border border-ok/30 text-xs text-ink flex items-start gap-3">
@@ -58,7 +58,7 @@ export const RegisterPage: React.FC = () => {
         </div>
       }
       securityNote="حماية وتشفير متكامل لقواعد البيانات"
-      supportHref="https://wa.me/201125030642?text=مرحباً،%20أريد%20الاستفسار%20عن%20فتح%20حساب%20جديد%20في%20EBMS"
+      supportHref="https://wa.me/201125030642?text=مرحباً،%20أريد%20الاستفسار%20عن%20فتح%20حساب%20جديد%20في%20Easyfy"
       supportLabel="تحدث مع المبيعات"
       formTitle="إنشاء حساب تجريبي جديد"
       formHeaderExtra={
@@ -81,10 +81,10 @@ export const RegisterPage: React.FC = () => {
           </p>
           <div>
             <a
-              href="https://ebms.online/"
+              href="https://easyfy.cloud/"
               className="min-h-[44px] inline-flex items-center justify-center px-3 text-xs font-medium text-muted hover:text-ink transition-colors rounded-xl"
             >
-              العودة للموقع الرئيسي (ebms.online)
+              العودة للموقع الرئيسي (easyfy.cloud)
             </a>
           </div>
         </div>
@@ -96,10 +96,10 @@ export const RegisterPage: React.FC = () => {
           type="text"
           autoComplete="off"
           label="معرّف المتجر الفريد (لدخولك ودخول موظفيك)"
-          placeholder="ebms-shop"
+          placeholder="easyfy-shop"
           dir="ltr"
           leftIcon={<AtSign className="w-4 h-4" />}
-          helperText="أحرف إنجليزية وأرقام بدون مسافات (مثال: ebms-shop أو ebms-fashion) — يتيح لك فتح أكثر من متجر بنفس رقمك."
+          helperText="أحرف إنجليزية وأرقام بدون مسافات (مثال: easyfy-shop أو easyfy-fashion) — يتيح لك فتح أكثر من متجر بنفس رقمك."
           error={errors.store_code?.message}
           onInput={(e) => {
             e.currentTarget.value = normalizeStoreCodeInput(e.currentTarget.value);

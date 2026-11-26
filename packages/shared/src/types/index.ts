@@ -1038,4 +1038,27 @@ export interface StoreCreditTransactionRecord {
   created_at?: string | null;
 }
 
+export interface EasyOrdersWebhookUrls {
+  orders_webhook: string;
+  order_status_webhook: string;
+}
+
+export interface EasyOrdersSettings {
+  id?: number;
+  store_id?: string | null;
+  store_name?: string | null;
+  auth_mode?: string;
+  has_api_key?: boolean;
+  has_webhook_secret?: boolean;
+  webhook_secret?: string | null;
+  default_branch_id?: number | null;
+  default_branch?: Branch | null;
+  auto_sync_stock?: boolean;
+  is_active?: boolean;
+  webhook_registered_at?: string | null;
+  last_synced_at?: string | null;
+  last_error?: string | null;
+  webhooks?: EasyOrdersWebhookUrls;
+}
+
 export * from './easyfy';

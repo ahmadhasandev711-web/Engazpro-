@@ -61,6 +61,7 @@ export const getOrderDisplayRef = (order: any): string => {
 export const getOrderPlatformLabel = (order: any): string => {
   if (order?.platform === EcommercePlatform.SHOPIFY) return 'شوبيفاي';
   if (order?.platform === EcommercePlatform.WOOCOMMERCE) return 'ووكومرس';
+  if (order?.platform === EcommercePlatform.EASYORDERS) return 'إيزي أوردر';
   return 'المتجر';
 };
 

@@ -6,6 +6,7 @@ use App\Contracts\StorePlatformOrderAdapterInterface;
 use App\Enums\EcommercePlatform;
 use App\Exceptions\PosDomainException;
 use App\Services\EcommerceAccessService;
+use App\Services\OnlineOrders\Adapters\EasyOrdersOrderAdapter;
 use App\Services\OnlineOrders\Adapters\ShopifyOrderAdapter;
 use App\Services\OnlineOrders\Adapters\WooCommerceOrderAdapter;
 
@@ -14,6 +15,7 @@ class StoreOrderAdapterRegistry
     public function __construct(
         private readonly WooCommerceOrderAdapter $woocommerceAdapter,
         private readonly ShopifyOrderAdapter $shopifyAdapter,
+        private readonly EasyOrdersOrderAdapter $easyOrdersAdapter,
         private readonly EcommerceAccessService $accessService,
     ) {}
 
@@ -22,6 +24,7 @@ class StoreOrderAdapterRegistry
         return match ($platform) {
             EcommercePlatform::WOOCOMMERCE => $this->woocommerceAdapter,
             EcommercePlatform::SHOPIFY => $this->shopifyAdapter,
+            EcommercePlatform::EASYORDERS => $this->easyOrdersAdapter,
         };
     }
 

@@ -13,6 +13,7 @@ use App\Http\Requests\LogOnlineOrderCallRequest;
 use App\Http\Requests\ReturnOnlineOrderRequest;
 use App\Http\Requests\TransferOnlineOrderBranchRequest;
 use App\Http\Resources\OnlineOrderResource;
+use App\Jobs\PullEasyOrdersOrdersJob;
 use App\Jobs\PullShopifyOrdersJob;
 use App\Jobs\PullWooCommerceOrdersJob;
 use App\Models\OnlineOrder;
@@ -200,6 +201,7 @@ class OnlineOrderController extends Controller
         match ($platform) {
             EcommercePlatform::WOOCOMMERCE => PullWooCommerceOrdersJob::dispatch($accountId, $userId),
             EcommercePlatform::SHOPIFY => PullShopifyOrdersJob::dispatch($accountId, $userId),
+            EcommercePlatform::EASYORDERS => PullEasyOrdersOrdersJob::dispatch($accountId, $userId),
         };
     }
 }

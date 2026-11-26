@@ -453,6 +453,18 @@ export interface StoreManageDetails {
     is_active: boolean;
     last_synced_at?: string | null;
   } | null;
+  easyorders?: {
+    id: number;
+    store_id?: string | null;
+    store_name?: string | null;
+    auth_mode?: string;
+    has_api_key: boolean;
+    has_webhook_secret: boolean;
+    default_branch_id?: number | null;
+    auto_sync_stock: boolean;
+    is_active: boolean;
+    last_synced_at?: string | null;
+  } | null;
 }
 
 export const useStoreManageDetails = (userId: number | null) => {
@@ -554,6 +566,36 @@ export const useConfigureStoreShopify = () => {
   });
 };
 
+export const useConfigureStoreEasyOrders = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      userId,
+      payload,
+    }: {
+      userId: number;
+      payload: {
+        store_id?: string | null;
+        store_name?: string | null;
+        api_key?: string;
+        webhook_secret?: string;
+        default_branch_id?: number | null;
+        auto_sync_stock: boolean;
+        is_active: boolean;
+      };
+    }) => {
+      const res = await apiClient.put(`/admin/users/${userId}/ecommerce/easyorders`, payload);
+      return res.data;
+    },
+    onSuccess: (_d, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-store-manage', vars.userId] });
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-audit-logs'] });
+    },
+  });
+};
+
 export const useRemoveStoreEcommerce = () => {
   const queryClient = useQueryClient();
 
@@ -564,7 +606,7 @@ export const useRemoveStoreEcommerce = () => {
       disableAddon = false,
     }: {
       userId: number;
-      platform: 'woocommerce' | 'shopify';
+      platform: 'woocommerce' | 'shopify' | 'easyorders';
       disableAddon?: boolean;
     }) => {
       const res = await apiClient.delete(

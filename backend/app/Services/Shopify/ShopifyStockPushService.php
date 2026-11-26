@@ -54,7 +54,7 @@ class ShopifyStockPushService
             return ['pushed_entries' => 0, 'locations_count' => $mappings->count()];
         }
 
-        $refUri = "gid://engazpro/Product/{$product->id}";
+        $refUri = "gid://easyfy/Product/{$product->id}";
         $pushed = 0;
         foreach (array_chunk($entries, 250) as $chunk) {
             $pushed += $this->pushChunkWithRecovery($integration, $chunk, $refUri);

@@ -156,7 +156,7 @@ export const SystemHealthTab: React.FC<SystemHealthTabProps> = ({ stats, onSelec
           <div className="p-3.5 bg-ok-soft border border-ok/20 rounded-xl text-xs text-ink leading-relaxed">
             <p className="font-black text-ok mb-1">البريد والأمان والتفعيلات</p>
             <p className="text-muted">
-              إرسال رموز OTP عبر <strong className="text-ink font-mono">info@ebms.online</strong> · فودافون كاش وإنستاباي: <strong className="text-ink font-mono">01125030642</strong>.
+              إرسال رموز OTP عبر <strong className="text-ink font-mono">info@easyfy.cloud</strong> · فودافون كاش وإنستاباي: <strong className="text-ink font-mono">01125030642</strong>.
             </p>
           </div>
         </Card>

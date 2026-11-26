@@ -71,7 +71,7 @@ class AdminStatsService
     public function getUsersPaginated(?string $status = null, ?string $search = null, int $perPage = 30): LengthAwarePaginator
     {
         $query = User::whereNull('owner_id')
-            ->with(['subscription', 'settings', 'wooCommerceIntegration:id,user_id,is_active', 'shopifyIntegration:id,user_id,is_active'])
+            ->with(['subscription', 'settings', 'wooCommerceIntegration:id,user_id,is_active', 'shopifyIntegration:id,user_id,is_active', 'easyOrdersIntegration:id,user_id,is_active'])
             ->withCount(['employees', 'branches'])
             ->orderByDesc('id');
 
@@ -227,7 +227,7 @@ class AdminStatsService
                 metadata: ['ecommerce_enabled' => $newEnabled],
             );
 
-            return $this->appendMerchantIntegrationState($user->fresh(['subscription', 'wooCommerceIntegration:id,user_id,is_active', 'shopifyIntegration:id,user_id,is_active']));
+            return $this->appendMerchantIntegrationState($user->fresh(['subscription', 'wooCommerceIntegration:id,user_id,is_active', 'shopifyIntegration:id,user_id,is_active', 'easyOrdersIntegration:id,user_id,is_active']));
         });
     }
 
@@ -238,6 +238,8 @@ class AdminStatsService
             $activePlatform = EcommercePlatform::WOOCOMMERCE->value;
         } elseif ($merchant->shopifyIntegration?->is_active) {
             $activePlatform = EcommercePlatform::SHOPIFY->value;
+        } elseif ($merchant->easyOrdersIntegration?->is_active) {
+            $activePlatform = EcommercePlatform::EASYORDERS->value;
         }
         $merchant->setAttribute('active_ecommerce_platform', $activePlatform);
 

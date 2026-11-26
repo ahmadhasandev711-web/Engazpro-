@@ -257,7 +257,7 @@ export const PromotionsPage: React.FC = () => {
         actions={
           canManage ? (
             <div className="flex flex-wrap items-center gap-2">
-              {user?.active_ecommerce_platform && (
+              {user?.active_ecommerce_platform && user.active_ecommerce_platform !== EcommercePlatform.EASYORDERS && (
                 <Button
                   type="button"
                   variant="secondary"
@@ -283,6 +283,12 @@ export const PromotionsPage: React.FC = () => {
         <StatCard label="كوبونات الخصم" value={String(couponsCount)} icon={<Percent className="w-4 h-4 text-brand" />} />
         <StatCard label="مرات الاستخدام" value={String(totalUses)} icon={<Sparkles className="w-4 h-4 text-warn" />} />
       </div>
+
+      {user?.active_ecommerce_platform === EcommercePlatform.EASYORDERS && (
+        <div className="p-3.5 rounded-2xl border bg-info-soft border-info/30 text-info text-xs font-bold">
+          ملاحظة: كوبونات متجر EasyOrders تُدار مباشرة من لوحة EasyOrders (لعدم وجود API عام للكوبونات)، ويتم استيراد قيمة الخصم تلقائياً مع كل أوردر.
+        </div>
+      )}
 
       <Card className="p-4 space-y-4">
         <div className="flex flex-wrap items-center gap-2">

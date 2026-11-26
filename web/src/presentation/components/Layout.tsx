@@ -233,6 +233,7 @@ export const Layout: React.FC = () => {
     ...(canManageSettings ? [{ to: '/settings', label: 'الإعدادات والاشتراك', icon: Settings }] : []),
     ...(canManageEcommerceSettings ? [{ to: '/woocommerce', label: 'ربط WooCommerce', icon: Globe }] : []),
     ...(canManageEcommerceSettings ? [{ to: '/shopify', label: 'ربط Shopify', icon: ShoppingBag }] : []),
+    ...(canManageEcommerceSettings ? [{ to: '/easyorders', label: 'ربط EasyOrders', icon: ShoppingBag }] : []),
     ...(isOwner || isManager ? [{ to: '/excel', label: 'استيراد وتصدير Excel', icon: FileSpreadsheet }] : []),
     ...(user?.is_admin
       ? [{ to: '/admin-dashboard', label: '👑 لوحة تحكم الإدارة', icon: ShieldCheck }]

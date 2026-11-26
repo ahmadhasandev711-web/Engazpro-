@@ -1,4 +1,4 @@
-const SAVED_STORE_CODE_KEY = 'ebms_saved_store_code';
+const SAVED_STORE_CODE_KEY = 'easyfy_saved_store_code';
 
 export const normalizeStoreCodeInput = (value: string): string =>
   value.toLowerCase().replace(/[^a-z0-9-]/g, '');

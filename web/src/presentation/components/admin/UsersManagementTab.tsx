@@ -236,7 +236,7 @@ export const UsersManagementTab: React.FC<UsersManagementTabProps> = ({
                           <div>
                             <Badge tone={usr.ecommerce_enabled ? 'brand' : 'neutral'}>
                               {usr.ecommerce_enabled
-                                ? `أونلاين: ${usr.active_ecommerce_platform === 'shopify' ? 'Shopify' : usr.active_ecommerce_platform === 'woocommerce' ? 'WooCommerce' : 'متاح للربط'}`
+                                ? `أونلاين: ${usr.active_ecommerce_platform === 'shopify' ? 'Shopify' : usr.active_ecommerce_platform === 'woocommerce' ? 'WooCommerce' : usr.active_ecommerce_platform === 'easyorders' ? 'EasyOrders' : 'متاح للربط'}`
                                 : 'POS فقط'}
                             </Badge>
                           </div>

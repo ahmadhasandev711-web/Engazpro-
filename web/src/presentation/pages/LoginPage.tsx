@@ -19,11 +19,11 @@ const LOGIN_FEATURES = [
   'يعمل كتطبيق PWA خفيف وسريع على أي كمبيوتر أو موبايل',
 ] as const;
 
-/** Store owner / staff login screen built on EBMS AuthShell. */
+/** Store owner / staff login screen built on Easyfy AuthShell. */
 export const LoginPage: React.FC = () => {
   usePageMeta({
-    title: 'تسجيل الدخول — EBMS | Easy Work',
-    description: 'سجّل الدخول إلى نظام EBMS (Easy Business Management System) لإدارة نقاط البيع والمخازن والخزائن وعهد المناديب.',
+    title: 'تسجيل الدخول — Easyfy',
+    description: 'سجّل الدخول إلى نظام Easyfy لإدارة نقاط البيع والمخازن والخزائن وعهد المناديب ومتاجر التجارة الإلكترونية.',
   });
   const navigate = useNavigate();
   const { login, isLoading, error } = useAuthStore();
@@ -121,7 +121,7 @@ export const LoginPage: React.FC = () => {
       showcaseFooter={
         <div className="p-4 rounded-2xl bg-surface-2/70 border border-line text-xs space-y-2">
           <p className="italic text-ink leading-relaxed">
-            «EBMS حل مشكلة تداخل تحويلات إنستاباي مع فلوس الدرج. دلوقتي تقفيل الوردية اليومية بياخد دقيقة واحدة بدون أي لخبطة.»
+            «Easyfy حل مشكلة تداخل تحويلات إنستاباي مع فلوس الدرج. دلوقتي تقفيل الوردية اليومية بياخد دقيقة واحدة بدون أي لخبطة.»
           </p>
           <div className="flex items-center justify-between text-xs text-muted font-bold pt-2 border-t border-line">
             <span>أحمد فؤاد — مالك مجموعة محلات تجزئة</span>
@@ -130,7 +130,7 @@ export const LoginPage: React.FC = () => {
         </div>
       }
       securityNote="سيرفرات سحابية آمنة ومشفرة 100%"
-      supportHref="https://wa.me/201125030642?text=مرحباً،%20أحتاج%20مساعدة%20في%20تسجيل%20الدخول%20لنظام%20EBMS"
+      supportHref="https://wa.me/201125030642?text=مرحباً،%20أحتاج%20مساعدة%20في%20تسجيل%20الدخول%20لنظام%20Easyfy"
       supportLabel="الدعم الفني المباشر"
       formTitle="تسجيل الدخول للنظام"
       formSubtitle="أدخل رقم الهاتف المسجل وكلمة المرور للوصول إلى لوحة التحكم."
@@ -152,10 +152,10 @@ export const LoginPage: React.FC = () => {
 
           <div className="text-center">
             <a
-              href="https://ebms.online/"
+              href="https://easyfy.cloud/"
               className="min-h-[44px] inline-flex items-center justify-center px-3 text-xs font-medium text-muted hover:text-ink transition-colors rounded-xl"
             >
-              العودة إلى الموقع الرئيسي (ebms.online)
+              العودة إلى الموقع الرئيسي (easyfy.cloud)
             </a>
           </div>
         </div>
@@ -167,10 +167,10 @@ export const LoginPage: React.FC = () => {
           type="text"
           autoComplete="off"
           label="معرّف المتجر"
-          placeholder="ebms"
+          placeholder="easyfy-shop"
           dir="ltr"
           leftIcon={<AtSign className="w-4 h-4" />}
-          helperText="يُحفظ تلقائياً على هذا الجهاز بعد أول دخول (مثل: ebms-shop)"
+          helperText="يُحفظ تلقائياً على هذا الجهاز بعد أول دخول (مثل: easyfy-shop)"
           error={errors.store_code?.message}
           onInput={(e) => {
             e.currentTarget.value = normalizeStoreCodeInput(e.currentTarget.value);
@@ -245,7 +245,7 @@ export const LoginPage: React.FC = () => {
                   autoComplete="off"
                   label="معرّف المتجر"
                   dir="ltr"
-                  placeholder="ebms"
+                  placeholder="easyfy-shop"
                   value={recStoreCode}
                   onChange={(e) => setRecStoreCode(normalizeStoreCodeInput(e.target.value))}
                   className="text-right font-mono"
@@ -312,7 +312,7 @@ export const LoginPage: React.FC = () => {
 
             <div className="pt-2 border-t border-line text-center">
               <a
-                href="https://wa.me/201125030642?text=مرحباً،%20نسيت%20كلمة%20المرور%20لحسابي%20في%20نظام%20EBMS"
+                href="https://wa.me/201125030642?text=مرحباً،%20نسيت%20كلمة%20المرور%20لحسابي%20في%20نظام%20Easyfy"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-xs text-muted hover:text-brand font-bold"

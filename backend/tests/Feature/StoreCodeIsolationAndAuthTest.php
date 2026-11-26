@@ -55,7 +55,7 @@ class StoreCodeIsolationAndAuthTest extends TestCase
     public function test_reserved_and_duplicate_store_codes_are_rejected_on_registration(): void
     {
         $this->postJson('/api/auth/register', [
-            'store_code' => 'ebms',
+            'store_code' => 'easyfy',
             'name' => 'محاولة سرقة كود الأدمن',
             'phone' => '01011112222',
             'email' => 'fake@example.com',
@@ -165,7 +165,7 @@ class StoreCodeIsolationAndAuthTest extends TestCase
         ])->assertOk()->assertJsonPath('data.user.owner_id', $ownerB->id);
     }
 
-    public function test_ebms_code_allows_only_super_admin_login_and_password_recovery_is_store_scoped(): void
+    public function test_easyfy_code_allows_only_super_admin_login_and_password_recovery_is_store_scoped(): void
     {
         Mail::fake();
 
@@ -173,7 +173,7 @@ class StoreCodeIsolationAndAuthTest extends TestCase
             'is_admin' => true,
             'role' => UserRole::ADMIN,
             'phone' => '01088887777',
-            'email' => 'admin@ebms.online',
+            'email' => 'admin@easyfy.cloud',
             'password' => Hash::make('adminpass123'),
         ]);
 
@@ -194,13 +194,13 @@ class StoreCodeIsolationAndAuthTest extends TestCase
         ])->assertStatus(201);
 
         $this->postJson('/api/auth/login', [
-            'store_code' => 'ebms',
+            'store_code' => 'easyfy',
             'phone' => '01077776666',
             'password' => 'alphaPass',
         ])->assertStatus(422);
 
         $this->postJson('/api/auth/login', [
-            'store_code' => 'ebms',
+            'store_code' => 'easyfy',
             'phone' => '01088887777',
             'password' => 'adminpass123',
         ])->assertOk()->assertJsonPath('data.user.id', $admin->id)->assertJsonPath('data.user.is_admin', true);

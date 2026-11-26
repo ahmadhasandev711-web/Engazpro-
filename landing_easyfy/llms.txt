@@ -1,0 +1,21 @@
+# Easyfy (easyfy.cloud)
+
+Easyfy is a cloud operations, unified commerce, Smart Exchange, and POS SaaS platform tailored for Egyptian and Arab e-commerce brands (Shopify, WooCommerce / WordPress, and EasyOrders) and multi-branch retail stores (fashion, footwear, cosmetics, accessories).
+
+## Key Platform Domains
+- Marketing Landing Page: https://easyfy.cloud
+- Cloud App (Dashboard, Store Orders, POS, Smart Exchanges, Supplies Store): https://app.easyfy.cloud
+- Backend API: https://api.easyfy.cloud/api
+- Support & Sales Contact: WhatsApp +20 112 503 0642 | Email: info@easyfy.cloud
+
+## Core Capabilities
+1. Real-Time Shopify, WooCommerce & EasyOrders Two-Way Sync: Syncs inventory across store branches, pulls live orders automatically via webhooks, supports one-click Authorized App Link & API-Key connection for EasyOrders, reserves variant stock upon confirmation, and pushes updates seamlessly.
+2. Smart Exchange & Store Credit Engine (الاستبدال الذكي): Handles post-delivery and POS size/item exchanges, calculates return/replacement difference + exchange shipping fee, isolates damaged stock from sellable inventory, and settles balances via COD, InstaPay/cash, or customer Store Credit wallet.
+3. Easyfy Supplies B2B Store (/shop): Built-in wholesale storefront inside the merchant dashboard for ordering corrugated boxes, poly mailers, thermal 100x150 shipping labels, barcode rolls, and custom-branded packaging with volume tier pricing.
+4. Multi-Branch Variant Inventory: Independent barcodes and per-branch balances for sizes and colors, inter-branch stock transfers, and Excel import/export with validation preview.
+5. Treasuries, Shift Closing (X/Z) & Courier Custody (COD): Separates Cash Drawer, InstaPay, Vodafone Cash, and courier/mandob custody accounts with exact shift variance auditing.
+6. Role-Based Cost & Profit Privacy: Net profit and purchase cost metrics are strictly isolated to authorized Owners/Managers and hidden from cashiers/staff.
+
+## Trial & Plans
+- 14-day free trial at https://app.easyfy.cloud/register with no credit card required.
+- Basic Plan & Pro Plan (monthly or discounted annual billing in EGP).

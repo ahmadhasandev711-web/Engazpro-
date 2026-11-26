@@ -41,6 +41,7 @@ const PosExchangePage = lazy(() => import('./presentation/pages/PosExchangePage'
 const AdminDashboardPage = lazy(() => import('./presentation/pages/AdminDashboardPage').then((m) => ({ default: m.AdminDashboardPage })));
 const WooCommerceSettingsPage = lazy(() => import('./presentation/pages/WooCommerceSettingsPage').then((m) => ({ default: m.WooCommerceSettingsPage })));
 const ShopifySettingsPage = lazy(() => import('./presentation/pages/ShopifySettingsPage').then((m) => ({ default: m.ShopifySettingsPage })));
+const EasyOrdersSettingsPage = lazy(() => import('./presentation/pages/EasyOrdersSettingsPage').then((m) => ({ default: m.EasyOrdersSettingsPage })));
 const StoreOrdersPage = lazy(() => import('./presentation/pages/StoreOrdersPage').then((m) => ({ default: m.StoreOrdersPage })));
 const CouriersPage = lazy(() => import('./presentation/pages/CouriersPage').then((m) => ({ default: m.CouriersPage })));
 const ShopHomePage = lazy(() => import('./presentation/pages/shop/ShopHomePage').then((m) => ({ default: m.ShopHomePage })));
@@ -96,7 +97,7 @@ export const App: React.FC = () => {
             <ToastProvider>
           <Suspense fallback={<PageLoadingFallback />}>
             <Routes>
-              {/* Auth & Entry Routes (Landing Page hosted separately at https://ebms.online) */}
+              {/* Auth & Entry Routes (Landing Page hosted separately at https://easyfy.cloud) */}
               <Route path="/" element={<RootRouteHandler />} />
               <Route path="/landing" element={<RootRouteHandler />} />
               <Route path="/login" element={<LoginPage />} />
@@ -167,6 +168,7 @@ export const App: React.FC = () => {
                     <Route element={<EcommerceRoute />}>
                       <Route path="/woocommerce" element={<WooCommerceSettingsPage />} />
                       <Route path="/shopify" element={<ShopifySettingsPage />} />
+                      <Route path="/easyorders" element={<EasyOrdersSettingsPage />} />
                     </Route>
                     <Route path="/settings" element={<SettingsPage />} />
                   </Route>

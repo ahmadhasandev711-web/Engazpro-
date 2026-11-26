@@ -58,32 +58,23 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->app->bind(
-            WooCommerceApiClientInterface::class,
-            WooCommerceApiClient::class
-        );
-        $this->app->bind(
-            ShopifyGraphqlClientInterface::class,
-            \App\Services\Shopify\ShopifyGraphqlClient::class
-        );
-        $this->app->bind(
-            HostResolver::class,
-            DnsHostResolver::class
-        );
-        $this->app->bind(
-            \App\Contracts\AnoofyOutboundClientInterface::class,
-            \App\Services\Anoofy\HttpAnoofyOutboundClient::class
-        );
-        $this->app->bind(
-            AnoofySignatureVerifierInterface::class,
-            HmacSha256SignatureVerifier::class
-        );
+        $this->registerInterfaceBindings();
         $this->app->singleton(AnoofyHandlerRegistry::class, function () {
             $registry = new AnoofyHandlerRegistry();
             $registry->register(AnoofyEventType::CONNECTION_VERIFY, ConnectionVerifyHandler::class);
             $registry->register(AnoofyEventType::ORDER_CONFIRMED, OrderConfirmedHandler::class);
             return $registry;
         });
+    }
+
+    private function registerInterfaceBindings(): void
+    {
+        $this->app->bind(WooCommerceApiClientInterface::class, WooCommerceApiClient::class);
+        $this->app->bind(ShopifyGraphqlClientInterface::class, \App\Services\Shopify\ShopifyGraphqlClient::class);
+        $this->app->bind(\App\Contracts\EasyOrdersApiClientInterface::class, \App\Services\EasyOrders\EasyOrdersApiClient::class);
+        $this->app->bind(HostResolver::class, DnsHostResolver::class);
+        $this->app->bind(\App\Contracts\AnoofyOutboundClientInterface::class, \App\Services\Anoofy\HttpAnoofyOutboundClient::class);
+        $this->app->bind(AnoofySignatureVerifierInterface::class, HmacSha256SignatureVerifier::class);
     }
 
     public function boot(): void

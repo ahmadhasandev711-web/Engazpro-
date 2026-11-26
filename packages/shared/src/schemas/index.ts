@@ -32,7 +32,7 @@ export const RegisterSchema = z.object({
     .min(2, 'معرّف المتجر لا يقل عن حرفين')
     .max(30, 'معرّف المتجر لا يتجاوز 30 حرفاً')
     .regex(STORE_CODE_REGEX, 'أحرف إنجليزية صغيرة وأرقام وشرطة (-) فقط بدون مسافات')
-    .refine((v) => v !== 'ebms', 'معرّف المتجر محجوز للنظام'),
+    .refine((v) => v !== 'easyfy', 'معرّف المتجر محجوز للنظام'),
   name: z.string().min(2, 'الاسم مطلوب'),
   phone: z.string().min(8, 'رقم الهاتف غير صالح'),
   password: z.string().min(6, 'كلمة المرور لا تقل عن 6 خانات'),

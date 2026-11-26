@@ -54,7 +54,7 @@ class WooCommerceAuthService
         $finalReturnUrl = $returnUrl ?: (rtrim(request()->header('origin', url('/')), '/') . '/woocommerce/settings?auth=success');
 
         $query = http_build_query([
-            'app_name' => 'EBMS | نظام إدارة الأعمال', 'scope' => 'read_write',
+            'app_name' => 'Easyfy | نظام إدارة الأعمال', 'scope' => 'read_write',
             'user_id' => $accountId, 'return_url' => $finalReturnUrl, 'callback_url' => $callbackUrl,
         ]);
 

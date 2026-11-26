@@ -38,6 +38,9 @@ class Product extends Model
         'shopify_variant_id',
         'shopify_inventory_item_id',
         'shopify_tracked',
+        'easyorders_product_id',
+        'easyorders_sku',
+        'easyorders_taager_code',
         'image_url',
     ];
 

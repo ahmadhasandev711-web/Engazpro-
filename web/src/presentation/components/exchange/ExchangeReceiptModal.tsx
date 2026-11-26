@@ -14,7 +14,7 @@ export const ExchangeReceiptModal: React.FC<ExchangeReceiptModalProps> = ({ exch
   if (!exchange) return null;
 
   const storeIdentity = user?.store_identity;
-  const storeName = storeIdentity?.business_name || (user as any)?.store_name || user?.name || 'متجر EBMS';
+  const storeName = storeIdentity?.business_name || (user as any)?.store_name || user?.name || 'متجر Easyfy';
   const storePhone = storeIdentity?.store_phone || user?.phone;
   const storeAddress = storeIdentity?.store_address;
   const currencySymbol = storeIdentity?.currency || 'ج.م';
@@ -150,7 +150,7 @@ export const ExchangeReceiptModal: React.FC<ExchangeReceiptModalProps> = ({ exch
 
             <div className="pt-2 border-t border-dashed border-paper-line text-center text-2xs text-paper-muted space-y-0.5">
               <p className="font-bold text-paper-ink">شكراً لتعاملكم معنا!</p>
-              <p className="font-mono text-2xs">نظام EBMS لإدارة نقاط البيع والمخازن</p>
+              <p className="font-mono text-2xs">نظام Easyfy لإدارة نقاط البيع والمخازن</p>
             </div>
           </div>
         </div>

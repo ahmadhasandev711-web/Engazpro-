@@ -45,4 +45,11 @@ return [
         ),
     ],
 
+    'easyorders' => [
+        'api_base_url' => env('EASYORDERS_API_BASE_URL', 'https://api.easy-orders.net/api/v1/external-apps'),
+        'app_install_url' => env('EASYORDERS_APP_INSTALL_URL', 'https://app.easy-orders.net/#/install-app'),
+        'app_icon_url' => env('EASYORDERS_APP_ICON_URL', 'https://easyfy.cloud/assets/img/logo-192.png'),
+        'frontend_redirect_url' => env('EASYORDERS_FRONTEND_REDIRECT_URL'),
+    ],
+
 ];

@@ -25,7 +25,7 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
   if (!isOpen || !invoice) return null;
 
   const storeIdentity = user?.store_identity;
-  const storeName = storeIdentity?.business_name || (user as any)?.store_name || user?.name || 'متجر EBMS';
+  const storeName = storeIdentity?.business_name || (user as any)?.store_name || user?.name || 'متجر Easyfy';
   const storePhone = storeIdentity?.store_phone || user?.phone;
   const storeAddress = storeIdentity?.store_address;
   const currencySymbol = storeIdentity?.currency || 'ج.م';
@@ -218,7 +218,7 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
             {/* Footer QR simulation & Thank you */}
             <div className="pt-3 text-center space-y-1 text-2xs text-paper-muted">
               <p className="font-sans font-bold text-paper-ink">شكراً لزيارتكم ونسعد بخدمتكم دائماً!</p>
-              <p className="font-mono text-2xs">نظام EBMS لإدارة نقاط البيع والمخازن</p>
+              <p className="font-mono text-2xs">نظام Easyfy لإدارة نقاط البيع والمخازن</p>
             </div>
           </div>
         </div>

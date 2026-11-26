@@ -23,7 +23,7 @@ class GenerateActivationCodesCommand extends Command
      *
      * @var string
      */
-    protected $description = 'توليد أكواد تفعيل اشتراكات فريدة ومؤمنة لنظام EBMS';
+    protected $description = 'توليد أكواد تفعيل اشتراكات فريدة ومؤمنة لنظام Easyfy';
 
     /**
      * Execute the console command.

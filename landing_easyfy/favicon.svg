@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <defs>
+    <linearGradient id="easyfyBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8B5CF6" />
+      <stop offset="50%" stop-color="#5B3CC4" />
+      <stop offset="100%" stop-color="#3B2196" />
+    </linearGradient>
+    <linearGradient id="easyfyGloss" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.28" />
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0" />
+    </linearGradient>
+    <linearGradient id="sparkFill" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="100%" stop-color="#DDD6FE" />
+    </linearGradient>
+  </defs>
+
+  <rect width="192" height="192" rx="46" fill="url(#easyfyBg)" />
+  <path d="M 46 4 H 146 A 42 42 0 0 1 188 46 V 82 C 138 98, 54 98, 4 72 V 46 A 42 42 0 0 1 46 4 Z" fill="url(#easyfyGloss)" />
+  <rect x="3" y="3" width="186" height="186" rx="43" fill="none" stroke="#FFFFFF" stroke-opacity="0.24" stroke-width="2" />
+
+  <!-- Crisp Shopping Cart Silhouette -->
+  <g fill="none" stroke="#FFFFFF" stroke-width="11" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 38 56 H 58 L 74 120 H 134 L 150 70 H 64" fill="#FFFFFF" fill-opacity="0.16" />
+    <path d="M 38 56 H 58 L 74 120 H 134 L 150 70 H 64" />
+  </g>
+  <circle cx="80" cy="144" r="10" fill="#FFFFFF" />
+  <circle cx="128" cy="144" r="10" fill="#FFFFFF" />
+
+  <!-- Option A Spark Accent -->
+  <path d="M 148 22 C 149.5 34, 152 36.5, 164 38 C 152 39.5, 149.5 42, 148 54 C 146.5 42, 144 39.5, 132 38 C 144 36.5, 146.5 34, 148 22 Z" fill="url(#sparkFill)" />
+</svg>

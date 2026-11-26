@@ -5,6 +5,7 @@ import {
   useUpdateMerchantProfile,
   useConfigureStoreWooCommerce,
   useConfigureStoreShopify,
+  useConfigureStoreEasyOrders,
   useRemoveStoreEcommerce,
   useTestStoreEcommerce,
 } from '../../../hooks/useAdmin';
@@ -32,10 +33,11 @@ export const StoreManageModal: React.FC<StoreManageModalProps> = ({
   const updateProfile = useUpdateMerchantProfile();
   const saveWoo = useConfigureStoreWooCommerce();
   const saveShopify = useConfigureStoreShopify();
+  const saveEasyOrders = useConfigureStoreEasyOrders();
   const removeEcommerce = useRemoveStoreEcommerce();
   const testEcommerce = useTestStoreEcommerce();
 
-  const [section, setSection] = useState<'profile' | 'woo' | 'shopify'>('profile');
+  const [section, setSection] = useState<'profile' | 'woo' | 'shopify' | 'easyorders'>('profile');
 
   const [profileForm, setProfileForm] = useState({
     store_code: '',
@@ -68,6 +70,16 @@ export const StoreManageModal: React.FC<StoreManageModalProps> = ({
     auto_sync_stock: true,
     auto_sync_prices: true,
     auto_sync_promotions: true,
+    is_active: true,
+  });
+
+  const [easyOrdersForm, setEasyOrdersForm] = useState({
+    store_name: '',
+    store_id: '',
+    api_key: '',
+    webhook_secret: '',
+    default_branch_id: '',
+    auto_sync_stock: true,
     is_active: true,
   });
 
@@ -132,6 +144,28 @@ export const StoreManageModal: React.FC<StoreManageModalProps> = ({
         auto_sync_stock: true,
         auto_sync_prices: true,
         auto_sync_promotions: true,
+        is_active: true,
+      });
+    }
+
+    if (data.easyorders) {
+      setEasyOrdersForm({
+        store_name: data.easyorders.store_name || '',
+        store_id: data.easyorders.store_id || '',
+        api_key: '',
+        webhook_secret: '',
+        default_branch_id: data.easyorders.default_branch_id ? String(data.easyorders.default_branch_id) : '',
+        auto_sync_stock: data.easyorders.auto_sync_stock,
+        is_active: data.easyorders.is_active,
+      });
+    } else {
+      setEasyOrdersForm({
+        store_name: '',
+        store_id: '',
+        api_key: '',
+        webhook_secret: '',
+        default_branch_id: '',
+        auto_sync_stock: true,
         is_active: true,
       });
     }
@@ -211,9 +245,31 @@ export const StoreManageModal: React.FC<StoreManageModalProps> = ({
     }
   };
 
-  const handleRemovePlatform = async (platform: 'woocommerce' | 'shopify') => {
+  const handleSaveEasyOrders = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await saveEasyOrders.mutateAsync({
+        userId,
+        payload: {
+          store_name: easyOrdersForm.store_name || undefined,
+          store_id: easyOrdersForm.store_id || undefined,
+          api_key: easyOrdersForm.api_key || undefined,
+          webhook_secret: easyOrdersForm.webhook_secret || undefined,
+          default_branch_id: easyOrdersForm.default_branch_id ? Number(easyOrdersForm.default_branch_id) : null,
+          auto_sync_stock: easyOrdersForm.auto_sync_stock,
+          is_active: easyOrdersForm.is_active,
+        },
+      });
+      toast.success(res.message || 'تم حفظ ربط EasyOrders بنجاح.');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'تعذر حفظ ربط EasyOrders');
+    }
+  };
+
+  const handleRemovePlatform = async (platform: 'woocommerce' | 'shopify' | 'easyorders') => {
+    const label = platform === 'shopify' ? 'Shopify' : platform === 'easyorders' ? 'EasyOrders' : 'WooCommerce';
     const ok = await confirm({
-      title: `إزالة ربط ${platform === 'shopify' ? 'Shopify' : 'WooCommerce'}`,
+      title: `إزالة ربط ${label}`,
       message: 'هل تريد إزالة بيانات الربط الحالية من هذا المتجر؟',
       confirmText: 'تأكيد الإزالة',
       type: 'danger',
@@ -268,6 +324,10 @@ export const StoreManageModal: React.FC<StoreManageModalProps> = ({
             <Button size="sm" variant={section === 'shopify' ? 'primary' : 'secondary'} onClick={() => setSection('shopify')} leftIcon={<Globe className="w-3.5 h-3.5" />}>
               Shopify
               {data?.shopify?.is_active && <Badge tone="ok" className="mr-1">نشط</Badge>}
+            </Button>
+            <Button size="sm" variant={section === 'easyorders' ? 'primary' : 'secondary'} onClick={() => setSection('easyorders')} leftIcon={<Globe className="w-3.5 h-3.5" />}>
+              EasyOrders
+              {data?.easyorders?.is_active && <Badge tone="ok" className="mr-1">نشط</Badge>}
             </Button>
           </div>
 
@@ -361,7 +421,7 @@ export const StoreManageModal: React.FC<StoreManageModalProps> = ({
                 </Button>
               </div>
             </form>
-          ) : (
+          ) : section === 'shopify' ? (
             <form onSubmit={handleSaveShopify} autoComplete="off" className="space-y-4">
               <Input label="دومين متجر Shopify *" name="merchant_shopify_domain" dir="ltr" autoComplete="off" placeholder="brand-name.myshopify.com" value={shopifyForm.shop_domain} onChange={(e) => setShopifyForm({ ...shopifyForm, shop_domain: e.target.value })} required />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -395,6 +455,41 @@ export const StoreManageModal: React.FC<StoreManageModalProps> = ({
                 </div>
                 <Button type="submit" variant="primary" isLoading={saveShopify.isPending} leftIcon={<Save className="w-4 h-4" />}>
                   حفظ وتفعيل Shopify
+                </Button>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={handleSaveEasyOrders} autoComplete="off" className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Input label="اسم المتجر (اختياري)" name="merchant_eo_name" autoComplete="off" value={easyOrdersForm.store_name} onChange={(e) => setEasyOrdersForm({ ...easyOrdersForm, store_name: e.target.value })} />
+                <Input label="Store ID (اختياري)" name="merchant_eo_store_id" dir="ltr" autoComplete="off" value={easyOrdersForm.store_id} onChange={(e) => setEasyOrdersForm({ ...easyOrdersForm, store_id: e.target.value })} />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Input label="Public Api-Key" name="merchant_eo_api_key" dir="ltr" type="password" autoComplete="new-password" placeholder={data?.easyorders?.has_api_key ? 'اتركه فارغاً للإبقاء على الحالي' : 'الصق Api-Key هنا'} value={easyOrdersForm.api_key} onChange={(e) => setEasyOrdersForm({ ...easyOrdersForm, api_key: e.target.value })} />
+                <Input label="Webhook Secret (اختياري)" name="merchant_eo_webhook_secret" dir="ltr" autoComplete="off" value={easyOrdersForm.webhook_secret} onChange={(e) => setEasyOrdersForm({ ...easyOrdersForm, webhook_secret: e.target.value })} />
+              </div>
+              <Select label="فرع سحب/مزامنة الأونلاين" value={easyOrdersForm.default_branch_id} onChange={(e) => setEasyOrdersForm({ ...easyOrdersForm, default_branch_id: e.target.value })} options={branchOptions} />
+
+              <div className="grid grid-cols-2 gap-3 text-xs font-bold pt-1">
+                <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={easyOrdersForm.is_active} onChange={(e) => setEasyOrdersForm({ ...easyOrdersForm, is_active: e.target.checked })} /> تفعيل الربط</label>
+                <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={easyOrdersForm.auto_sync_stock} onChange={(e) => setEasyOrdersForm({ ...easyOrdersForm, auto_sync_stock: e.target.checked })} /> مزامنة المخزون</label>
+              </div>
+
+              <div className="flex items-center justify-between gap-2 pt-2 flex-wrap">
+                <div className="flex items-center gap-2">
+                  {data?.easyorders && (
+                    <>
+                      <Button type="button" size="sm" variant="secondary" onClick={handleTest} isLoading={testEcommerce.isPending} leftIcon={<Wifi className="w-3.5 h-3.5 text-ok" />}>
+                        اختبار الربط
+                      </Button>
+                      <Button type="button" size="sm" variant="danger" onClick={() => handleRemovePlatform('easyorders')} isLoading={removeEcommerce.isPending} leftIcon={<Trash2 className="w-3.5 h-3.5" />}>
+                        إزالة الربط
+                      </Button>
+                    </>
+                  )}
+                </div>
+                <Button type="submit" variant="primary" isLoading={saveEasyOrders.isPending} leftIcon={<Save className="w-4 h-4" />}>
+                  حفظ وتفعيل EasyOrders
                 </Button>
               </div>
             </form>

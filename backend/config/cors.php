@@ -14,11 +14,9 @@ return [
     'allowed_origins' => array_values(array_unique(array_filter(array_merge(
         [
             env('FRONTEND_URL', 'http://localhost:5173'),
-            'https://ebms.online',
-            'https://www.ebms.online',
-            'https://app.ebms.online',
-            'https://engazpro.com',
-            'https://www.engazpro.com',
+            'https://easyfy.cloud',
+            'https://www.easyfy.cloud',
+            'https://app.easyfy.cloud',
             'https://localhost',
             'capacitor://localhost',
             'http://localhost',

@@ -22,7 +22,7 @@ class OwnerPasswordOtpMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'رمز استعادة كلمة المرور — نظام EBMS',
+            subject: 'رمز استعادة كلمة المرور — نظام Easyfy',
         );
     }
 

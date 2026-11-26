@@ -70,9 +70,11 @@ class AuthController extends Controller
             'subscription',
             'wooCommerceIntegration:id,user_id,is_active',
             'shopifyIntegration:id,user_id,is_active',
+            'easyOrdersIntegration:id,user_id,is_active',
             'owner.subscription',
             'owner.wooCommerceIntegration:id,user_id,is_active',
             'owner.shopifyIntegration:id,user_id,is_active',
+            'owner.easyOrdersIntegration:id,user_id,is_active',
         ]);
 
         return response()->json([

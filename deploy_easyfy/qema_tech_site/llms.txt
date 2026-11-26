@@ -1,0 +1,24 @@
+# Qema Tech — قمة تك (qema-tech.com)
+
+Qema Tech (قمة تك) is an Egyptian software studio and digital commerce engineering company building Shopify and WordPress/WooCommerce stores alongside proprietary Cloud Commerce, Enterprise ERP, Salon, Restaurant & Fitness SaaS platforms across Egypt and Saudi Arabia.
+
+## Key URLs
+- Arabic Main Site: https://qema-tech.com/
+- English Site: https://qema-tech.com/en/
+- Shopify Store Development: https://qema-tech.com/shopify-stores/ (EN: /en/shopify-stores/)
+- WordPress & WooCommerce Agency: https://qema-tech.com/wordpress-development/ (EN: /en/wordpress-development/)
+- Enterprise ERP & Cloud Systems: https://qema-tech.com/erp-systems/ (EN: /en/erp-systems/)
+- Email: info@qema-tech.com
+- WhatsApp: +20 112 503 0642
+
+## Proprietary Cloud Products (SaaS & Enterprise)
+1. **Easyfy** (https://easyfy.cloud/): Cloud Commerce, POS, Multi-Branch Inventory, Smart Exchanges, Courier COD Custody, Wholesale Packaging Store — Two-way sync with Shopify, WooCommerce & EasyOrders. Transparent monthly/annual tiers.
+2. **Ebmspro** (https://ebms.online/ — Easy Business Management System): Complete Egyptian & MENA Enterprise ERP and Offline-Ready POS suite covering Multi-Branch Inventory (variants/batch/serials), Double-Entry Accounting, 14% VAT compliance, Purchasing & Suppliers, Customers & Credit Limits, and interactive online Demo.
+3. **Engaz PRO** (https://engazpro.com/): Standalone Salon, Beauty Center, Spa & Barbershop booking + management platform with 24/7 customer booking site on custom domain, appointment calendar, POS cashier, staff commissions, inventory & branch profit accounting. Live client deployment: **Samaka Salon** (https://samaka-salon.com/).
+4. **Masa QR** (https://masa-qr.site/): Live restaurant reservations, QR menu and online ordering platform demo.
+5. **Sanadat** (https://sanadat.site/): Simple workflow & business management workspace built for freelancers.
+6. **Anoofit** (https://anoofit.site/): Gym coach & client subscription management platform.
+
+## E-Commerce Portfolio
+- **Shopify Builds**: Vita Lab (vita-lab.online), Everyday Egypt (everydayegy.com), Fabric Tales (fabrictaleseg.com), Madad Scarves (madadscarves.com), Tia Mode (tiamode.com), Burgundy EG (burgundyeg.com).
+- **WordPress / WooCommerce Builds**: Wazert El Sa3ada (wazertelsa3ada.com), Tadwin Arts (tadwinarts.com), Aflaa Alrayes (aflaaalrayes.com), Pacific Attic (pacificattic.com), Meenda News (news.meenda.com), TYG Technologies (tygtechnologies.com).

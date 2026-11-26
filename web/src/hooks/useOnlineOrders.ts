@@ -35,7 +35,9 @@ export function useOnlineOrders(config?: OrdersChannelConfig) {
       ? 'Shopify'
       : activeEcommercePlatform === EcommercePlatform.WOOCOMMERCE
         ? 'WooCommerce'
-        : 'المتجر';
+        : activeEcommercePlatform === EcommercePlatform.EASYORDERS
+          ? 'EasyOrders'
+          : 'المتجر';
   const channelTitle = isMandob
     ? 'طلباتي'
     : (config?.channelTitle ?? `طلبات ${platformTitle} والتوصيل الميداني`);

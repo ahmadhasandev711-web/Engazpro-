@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\EcommercePlatform;
 use App\Exceptions\PosDomainException;
+use App\Models\EasyOrdersIntegration;
 use App\Models\ShopifyIntegration;
 use App\Models\User;
 use App\Models\WooCommerceIntegration;
@@ -36,6 +37,9 @@ class EcommerceAccessService
             }
             if (ShopifyIntegration::withoutGlobalScopes()->where('user_id', $accountId)->where('is_active', true)->exists()) {
                 return EcommercePlatform::SHOPIFY->value;
+            }
+            if (EasyOrdersIntegration::withoutGlobalScopes()->where('user_id', $accountId)->where('is_active', true)->exists()) {
+                return EcommercePlatform::EASYORDERS->value;
             }
 
             return '';

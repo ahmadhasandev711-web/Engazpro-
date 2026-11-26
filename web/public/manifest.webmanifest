@@ -1,7 +1,7 @@
 {
-  "name": "EBMS — Easy Business Management System",
-  "short_name": "EBMS",
-  "description": "نظام EBMS من Easy Work لإدارة نقاط البيع، الكاشير، الفروع، المخازن، وربط المتاجر الإلكترونية",
+  "name": "Easyfy — إدارة التجارة الإلكترونية والمخازن",
+  "short_name": "Easyfy",
+  "description": "نظام Easyfy السحابي لإدارة نقاط البيع والكاشير والفروع والمخازن وربط متاجر Shopify و WooCommerce و EasyOrders",
   "start_url": "/dashboard",
   "scope": "/",
   "display": "standalone",

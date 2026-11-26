@@ -1,0 +1,38 @@
+# Qema Tech — qema-tech.com (Apache / LiteSpeed)
+AddDefaultCharset UTF-8
+Options -Indexes
+DirectoryIndex index.html
+
+<IfModule mod_rewrite.c>
+RewriteEngine On
+# Force HTTPS & remove www
+RewriteCond %{HTTPS} off [OR]
+RewriteCond %{HTTP_HOST} ^www\. [NC]
+RewriteRule ^ https://qema-tech.com%{REQUEST_URI} [L,R=301]
+# Redirect legacy /ar/ to root / (Arabic is default)
+RewriteRule ^ar/?$ / [L,R=301]
+# Redirect /index.html -> /
+RewriteCond %{THE_REQUEST} \s/index\.html[\s?] [NC]
+RewriteRule ^index\.html$ / [L,R=301]
+</IfModule>
+
+<IfModule mod_headers.c>
+Header always set Strict-Transport-Security "max-age=31536000"
+Header always set X-Content-Type-Options "nosniff"
+Header always set X-Frame-Options "SAMEORIGIN"
+Header always set Referrer-Policy "strict-origin-when-cross-origin"
+Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+<FilesMatch "\.(webp|png|jpg|svg|css|js|woff2)$">
+Header set Cache-Control "public, max-age=31536000, immutable"
+</FilesMatch>
+<FilesMatch "\.(html|xml|txt|webmanifest)$">
+Header set Cache-Control "public, max-age=600"
+</FilesMatch>
+</IfModule>
+
+<IfModule mod_deflate.c>
+AddOutputFilterByType DEFLATE text/html text/css application/javascript image/svg+xml application/xml text/plain application/manifest+json
+</IfModule>
+
+AddType image/webp .webp
+AddType application/manifest+json .webmanifest

@@ -44,10 +44,12 @@ class UserResource extends JsonResource
             return ['ecommerce_enabled' => false, 'active_ecommerce_platform' => null];
         }
 
-        if ($owner && $owner->relationLoaded('wooCommerceIntegration') && $owner->relationLoaded('shopifyIntegration')) {
+        if ($owner && $owner->relationLoaded('wooCommerceIntegration') && $owner->relationLoaded('shopifyIntegration') && $owner->relationLoaded('easyOrdersIntegration')) {
             $platform = $owner->wooCommerceIntegration?->is_active
                 ? \App\Enums\EcommercePlatform::WOOCOMMERCE->value
-                : ($owner->shopifyIntegration?->is_active ? \App\Enums\EcommercePlatform::SHOPIFY->value : null);
+                : ($owner->shopifyIntegration?->is_active
+                    ? \App\Enums\EcommercePlatform::SHOPIFY->value
+                    : ($owner->easyOrdersIntegration?->is_active ? \App\Enums\EcommercePlatform::EASYORDERS->value : null));
 
             return ['ecommerce_enabled' => true, 'active_ecommerce_platform' => $platform];
         }

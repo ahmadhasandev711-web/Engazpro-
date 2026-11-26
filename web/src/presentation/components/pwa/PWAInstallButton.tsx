@@ -42,7 +42,7 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
           type="button"
           onClick={handleClick}
           disabled={loading}
-          title="تثبيت تطبيق EBMS على جهازك"
+          title="تثبيت تطبيق Easyfy على جهازك"
           className={`inline-flex items-center gap-1.5 min-h-[44px] bg-panel hover:bg-surface-2 text-muted hover:text-ink border border-line px-3 py-2 rounded-full text-xs font-bold transition-all shadow-xs cursor-pointer ${className}`}
         >
           <Download className="w-3.5 h-3.5" />
@@ -57,7 +57,7 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
         >
           <div className="flex items-center gap-2">
             <Smartphone className="w-4 h-4 text-muted" />
-            <span>تثبيت EBMS على جهازك</span>
+            <span>تثبيت Easyfy على جهازك</span>
           </div>
           <Download className="w-4 h-4 text-muted" />
         </button>

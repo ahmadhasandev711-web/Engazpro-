@@ -2,17 +2,21 @@
 
 namespace App\Services;
 
+use App\Contracts\EasyOrdersApiClientInterface;
 use App\Contracts\ShopifyGraphqlClientInterface;
 use App\Contracts\WooCommerceApiClientInterface;
 use App\Enums\AdminAuditAction;
+use App\Enums\EasyOrdersAuthMode;
 use App\Enums\EcommercePlatform;
 use App\Enums\UserStatus;
 use App\Exceptions\PosDomainException;
 use App\Models\Branch;
+use App\Models\EasyOrdersIntegration;
 use App\Models\Setting;
 use App\Models\ShopifyIntegration;
 use App\Models\User;
 use App\Models\WooCommerceIntegration;
+use App\Services\EasyOrders\EasyOrdersStockSyncGate;
 use App\Services\Shopify\ShopifyStockSyncGate;
 use App\Services\WooCommerce\WooStockSyncGate;
 use App\Support\ShopifyGid;
@@ -28,13 +32,14 @@ class AdminStoreControlService
         protected AdminAuditService $auditService,
         protected WooCommerceApiClientInterface $wcClient,
         protected ShopifyGraphqlClientInterface $shopifyClient,
+        protected EasyOrdersApiClientInterface $easyOrdersClient,
         protected PasswordRecoveryService $recoveryService
     ) {}
 
     public function getStoreDetails(User $merchant): array
     {
         $this->assertMerchantAccount($merchant);
-        $merchant->load(['settings', 'subscription', 'branches:id,user_id,name,code,is_main,is_active', 'wooCommerceIntegration', 'shopifyIntegration']);
+        $merchant->load(['settings', 'subscription', 'branches:id,user_id,name,code,is_main,is_active', 'wooCommerceIntegration', 'shopifyIntegration', 'easyOrdersIntegration']);
 
         return [
             'owner' => [
@@ -51,6 +56,7 @@ class AdminStoreControlService
             'branches' => $merchant->branches,
             EcommercePlatform::WOOCOMMERCE->value => $this->formatWooSummary($merchant->wooCommerceIntegration),
             EcommercePlatform::SHOPIFY->value => $this->formatShopifySummary($merchant->shopifyIntegration),
+            EcommercePlatform::EASYORDERS->value => $this->formatEasyOrdersSummary($merchant->easyOrdersIntegration),
         ];
     }
 
@@ -108,7 +114,7 @@ class AdminStoreControlService
         return DB::transaction(function () use ($merchant, $existing, $data) {
             $isActive = array_key_exists('is_active', $data) ? (bool) $data['is_active'] : true;
             if ($isActive) {
-                ShopifyIntegration::withoutGlobalScopes()->where('user_id', $merchant->id)->where('is_active', true)->update(['is_active' => false]);
+                $this->deactivateOtherPlatforms($merchant->id, EcommercePlatform::WOOCOMMERCE);
             }
             $integration = WooCommerceIntegration::updateOrCreate(
                 ['user_id' => $merchant->id],
@@ -132,7 +138,7 @@ class AdminStoreControlService
         return DB::transaction(function () use ($merchant, $existing, $data, $domain) {
             $isActive = array_key_exists('is_active', $data) ? (bool) $data['is_active'] : true;
             if ($isActive) {
-                WooCommerceIntegration::withoutGlobalScopes()->where('user_id', $merchant->id)->where('is_active', true)->update(['is_active' => false]);
+                $this->deactivateOtherPlatforms($merchant->id, EcommercePlatform::SHOPIFY);
             }
             $integration = ShopifyIntegration::updateOrCreate(
                 ['user_id' => $merchant->id],
@@ -144,16 +150,39 @@ class AdminStoreControlService
         });
     }
 
+    public function configureEasyOrders(User $merchant, array $data): array
+    {
+        $this->assertMerchantAccount($merchant);
+        $existing = EasyOrdersIntegration::withoutGlobalScopes()->where('user_id', $merchant->id)->first();
+        if (!$existing && empty($data['api_key'])) {
+            throw new PosDomainException('مفتاح Api-Key مطلوب عند ربط EasyOrders لأول مرة.', 'EASYORDERS_KEY_REQUIRED', 422);
+        }
+
+        return DB::transaction(function () use ($merchant, $existing, $data) {
+            $isActive = array_key_exists('is_active', $data) ? (bool) $data['is_active'] : true;
+            if ($isActive) {
+                $this->deactivateOtherPlatforms($merchant->id, EcommercePlatform::EASYORDERS);
+            }
+            $integration = EasyOrdersIntegration::updateOrCreate(
+                ['user_id' => $merchant->id],
+                $this->extractEasyOrdersPayload($merchant->id, $existing, $data, $isActive)
+            );
+            $this->enableEcommerceAndFlushGates($merchant, AdminAuditAction::STORE_ECOMMERCE_CONFIGURED, "إعداد ربط EasyOrders للمتجر ({$merchant->name})", ['platform' => EcommercePlatform::EASYORDERS->value]);
+
+            return $this->formatEasyOrdersSummary($integration->fresh()) ?? [];
+        });
+    }
+
     public function removeEcommerceIntegration(User $merchant, EcommercePlatform $platform, bool $disableAddon = false): void
     {
         $this->assertMerchantAccount($merchant);
 
         DB::transaction(function () use ($merchant, $platform, $disableAddon) {
-            if ($platform === EcommercePlatform::WOOCOMMERCE) {
-                WooCommerceIntegration::withoutGlobalScopes()->where('user_id', $merchant->id)->delete();
-            } else {
-                ShopifyIntegration::withoutGlobalScopes()->where('user_id', $merchant->id)->delete();
-            }
+            match ($platform) {
+                EcommercePlatform::WOOCOMMERCE => WooCommerceIntegration::withoutGlobalScopes()->where('user_id', $merchant->id)->delete(),
+                EcommercePlatform::SHOPIFY => ShopifyIntegration::withoutGlobalScopes()->where('user_id', $merchant->id)->delete(),
+                EcommercePlatform::EASYORDERS => EasyOrdersIntegration::withoutGlobalScopes()->where('user_id', $merchant->id)->delete(),
+            };
             if ($disableAddon) {
                 $merchant->forceFill(['ecommerce_enabled' => false])->save();
             }
@@ -175,6 +204,11 @@ class AdminStoreControlService
             $shop = $this->shopifyClient->testConnection($sh);
             return ['platform' => EcommercePlatform::SHOPIFY->value, 'connected' => $shop !== null, 'message' => $shop ? "متصل بمتجر Shopify: {$shop['name']}" : 'تعذر الاتصال بمتجر Shopify'];
         }
+        $eo = EasyOrdersIntegration::withoutGlobalScopes()->where('user_id', $merchant->id)->where('is_active', true)->first();
+        if ($eo) {
+            $ok = $this->easyOrdersClient->testConnection($eo);
+            return ['platform' => EcommercePlatform::EASYORDERS->value, 'connected' => $ok, 'message' => $ok ? 'الاتصال بمتجر EasyOrders سليم 100%' : 'تعذر الاتصال بمتجر EasyOrders'];
+        }
 
         throw new PosDomainException('لا يوجد متجر إلكتروني مفعّل لهذا الحساب لاختباره.', 'NO_ACTIVE_ECOMMERCE', 422);
     }
@@ -187,7 +221,7 @@ class AdminStoreControlService
         }
 
         $token = $merchant->createToken('admin_impersonation', ['admin_impersonation'], now()->addHours(2))->plainTextToken;
-        $merchant->load(['branch:id,name,code,type', 'subscription', 'wooCommerceIntegration:id,user_id,is_active', 'shopifyIntegration:id,user_id,is_active']);
+        $merchant->load(['branch:id,name,code,type', 'subscription', 'wooCommerceIntegration:id,user_id,is_active', 'shopifyIntegration:id,user_id,is_active', 'easyOrdersIntegration:id,user_id,is_active']);
         $this->auditService->record(AdminAuditAction::STORE_IMPERSONATED, "دخول دعم فني إلى متجر ({$merchant->name}) بواسطة ({$admin->name})", $merchant);
 
         return ['user' => $merchant, 'token' => $token, 'impersonated_by' => $admin->name];
@@ -291,6 +325,20 @@ class AdminStoreControlService
         EcommerceAccessService::clearPlatformCache($merchantId);
         WooStockSyncGate::forget($merchantId);
         ShopifyStockSyncGate::forget($merchantId);
+        EasyOrdersStockSyncGate::forget($merchantId);
+    }
+
+    private function deactivateOtherPlatforms(int $merchantId, EcommercePlatform $keep): void
+    {
+        if ($keep !== EcommercePlatform::WOOCOMMERCE) {
+            WooCommerceIntegration::withoutGlobalScopes()->where('user_id', $merchantId)->where('is_active', true)->update(['is_active' => false]);
+        }
+        if ($keep !== EcommercePlatform::SHOPIFY) {
+            ShopifyIntegration::withoutGlobalScopes()->where('user_id', $merchantId)->where('is_active', true)->update(['is_active' => false]);
+        }
+        if ($keep !== EcommercePlatform::EASYORDERS) {
+            EasyOrdersIntegration::withoutGlobalScopes()->where('user_id', $merchantId)->where('is_active', true)->update(['is_active' => false]);
+        }
     }
 
     private function extractWooPayload(int $merchantId, ?WooCommerceIntegration $existing, array $data, bool $isActive): array
@@ -375,6 +423,43 @@ class AdminStoreControlService
             'auto_sync_promotions' => (bool) $sh->auto_sync_promotions,
             'is_active' => (bool) $sh->is_active,
             'last_synced_at' => $sh->last_synced_at?->toIso8601String(),
+        ];
+    }
+
+    private function extractEasyOrdersPayload(int $merchantId, ?EasyOrdersIntegration $existing, array $data, bool $isActive): array
+    {
+        $rawBranch = $data['default_branch_id'] ?? $data['online_branch_id'] ?? $existing?->default_branch_id;
+        $branchId = $this->resolveMerchantBranchId($merchantId, $rawBranch);
+
+        return array_filter([
+            'store_id' => $data['store_id'] ?? $existing?->store_id,
+            'store_name' => $data['store_name'] ?? $existing?->store_name,
+            'auth_mode' => $data['auth_mode'] ?? ($existing?->auth_mode?->value ?? EasyOrdersAuthMode::API_KEY->value),
+            'api_key' => !empty($data['api_key']) ? $data['api_key'] : $existing?->api_key,
+            'webhook_secret' => !empty($data['webhook_secret']) ? $data['webhook_secret'] : $existing?->webhook_secret,
+            'default_branch_id' => $branchId,
+            'auto_sync_stock' => (bool) ($data['auto_sync_stock'] ?? $existing?->auto_sync_stock ?? true),
+            'is_active' => $isActive,
+        ], fn ($v) => $v !== null);
+    }
+
+    private function formatEasyOrdersSummary(?EasyOrdersIntegration $eo): ?array
+    {
+        if (!$eo) {
+            return null;
+        }
+
+        return [
+            'id' => $eo->id,
+            'store_id' => $eo->store_id,
+            'store_name' => $eo->store_name,
+            'auth_mode' => $eo->auth_mode?->value ?? EasyOrdersAuthMode::API_KEY->value,
+            'has_api_key' => !empty($eo->api_key),
+            'has_webhook_secret' => !empty($eo->webhook_secret),
+            'default_branch_id' => $eo->default_branch_id,
+            'auto_sync_stock' => (bool) $eo->auto_sync_stock,
+            'is_active' => (bool) $eo->is_active,
+            'last_synced_at' => $eo->last_synced_at?->toIso8601String(),
         ];
     }
 

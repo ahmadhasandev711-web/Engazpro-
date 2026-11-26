@@ -1,27 +1,26 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <linearGradient id="purpleBgMask" x1="0%" y1="0%" x2="100%" y2="100%">
+    <linearGradient id="easyfyBgMask" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#8B5CF6" />
       <stop offset="50%" stop-color="#5B3CC4" />
       <stop offset="100%" stop-color="#3B2196" />
     </linearGradient>
-    <linearGradient id="glossMask" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.22" />
-      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0" />
+    <linearGradient id="sparkFillMask" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="100%" stop-color="#DDD6FE" />
     </linearGradient>
   </defs>
 
-  <!-- Full-bleed safe background for Android Adaptive / Maskable Icons -->
-  <rect width="512" height="512" fill="url(#purpleBgMask)" />
-  <path d="M 0 0 H 512 V 230 C 370 280, 140 280, 0 205 Z" fill="url(#glossMask)" />
+  <rect width="512" height="512" fill="url(#easyfyBgMask)" />
 
-  <!-- Cart neatly centered inside the 80% safe zone -->
-  <g transform="translate(256, 256) scale(0.76) translate(-256, -256)">
-    <g fill="none" stroke="#FFFFFF" stroke-width="30" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M 108 144 H 160 L 202 314 H 362 L 404 182 H 176" fill="#FFFFFF" fill-opacity="0.16" />
-      <path d="M 108 144 H 160 L 202 314 H 362 L 404 182 H 176" />
+  <!-- Centered safe-zone Easyfy shopping cart mark -->
+  <g transform="translate(64 64) scale(2)">
+    <g fill="none" stroke="#FFFFFF" stroke-width="11" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M 38 56 H 58 L 74 120 H 134 L 150 70 H 64" fill="#FFFFFF" fill-opacity="0.16" />
+      <path d="M 38 56 H 58 L 74 120 H 134 L 150 70 H 64" />
     </g>
-    <circle cx="218" cy="378" r="28" fill="#FFFFFF" />
-    <circle cx="346" cy="378" r="28" fill="#FFFFFF" />
+    <circle cx="80" cy="144" r="10" fill="#FFFFFF" />
+    <circle cx="128" cy="144" r="10" fill="#FFFFFF" />
+    <path d="M 148 22 C 149.5 34, 152 36.5, 164 38 C 152 39.5, 149.5 42, 148 54 C 146.5 42, 144 39.5, 132 38 C 144 36.5, 146.5 34, 148 22 Z" fill="url(#sparkFillMask)" />
   </g>
 </svg>

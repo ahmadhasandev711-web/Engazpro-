@@ -30,6 +30,8 @@ class ProductVariant extends Model
         'shopify_variant_id',
         'shopify_inventory_item_id',
         'shopify_tracked',
+        'easyorders_variant_id',
+        'easyorders_taager_code',
         'image_url',
     ];
 

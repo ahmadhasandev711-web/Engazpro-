@@ -1,5 +1,5 @@
-// Service Worker for EBMS PWA
-const CACHE_NAME = 'ebms-pwa-v6';
+// Service Worker for Easyfy PWA
+const CACHE_NAME = 'easyfy-pwa-v1';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

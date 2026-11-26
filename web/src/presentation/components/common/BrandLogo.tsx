@@ -27,12 +27,12 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
       {showIcon && (
         <img
           src="/icons/icon-192.svg"
-          alt="EBMS"
+          alt="Easyfy"
           className={cn('shrink-0 shadow-xs object-contain', s.icon)}
         />
       )}
       <span className={cn('font-black tracking-tight text-ink font-sans flex items-center', s.text)} dir="ltr">
-        EBMS<span className="text-brand">.</span>
+        Easyfy<span className="text-brand">.</span>
       </span>
       {showArabic && (
         <span className={cn('font-bold text-muted border-r border-line pr-2 mr-0.5', s.ar)}>

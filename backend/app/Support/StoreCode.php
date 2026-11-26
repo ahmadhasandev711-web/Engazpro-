@@ -4,12 +4,12 @@ namespace App\Support;
 
 class StoreCode
 {
-    public const ADMIN_CODE = 'ebms';
+    public const ADMIN_CODE = 'easyfy';
     public const PATTERN = '/^[a-z0-9](?:[a-z0-9-]{0,28}[a-z0-9])?$/';
 
     /** @var list<string> */
     private const RESERVED = [
-        'ebms',
+        'easyfy',
         'admin',
         'administrator',
         'api',

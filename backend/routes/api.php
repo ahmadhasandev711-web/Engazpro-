@@ -43,6 +43,10 @@ Route::post('webhooks/shopify/{userId}', [\App\Http\Controllers\Api\ShopifyWebho
 Route::post('woocommerce/auth-callback', [\App\Http\Controllers\Api\WooCommerceAuthController::class, 'authCallback'])->middleware('throttle:webhook');
 // Shopify OAuth Callback (Public endpoint redirected from Shopify)
 Route::get('shopify/auth-callback', [\App\Http\Controllers\Api\ShopifyAuthController::class, 'callback'])->middleware('throttle:webhook');
+// EasyOrders Incoming Webhooks & One-Click Install Callback
+Route::post('webhooks/easyorders/{userId}/orders', [\App\Http\Controllers\Api\EasyOrdersWebhookController::class, 'handleOrder'])->middleware('throttle:webhook');
+Route::post('webhooks/easyorders/{userId}/order-status', [\App\Http\Controllers\Api\EasyOrdersWebhookController::class, 'handleOrderStatus'])->middleware('throttle:webhook');
+Route::match(['get', 'post'], 'webhooks/easyorders/install-callback/{token}', [\App\Http\Controllers\Api\EasyOrdersWebhookController::class, 'handleInstallCallback'])->middleware('throttle:webhook');
 // Anoofy Inbound Events (Public endpoint with HMAC-SHA256 signature verification)
 Route::post('webhooks/anoofy/events', \App\Http\Controllers\Api\AnoofyInboundController::class)
     ->middleware('throttle:anoofy_inbound')
@@ -259,6 +263,17 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
                 Route::post('push-all-prices', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'pushAllPrices']);
                 Route::post('sync-promotions', [\App\Http\Controllers\Api\ShopifySettingsController::class, 'syncPromotions']);
             });
+
+            // EasyOrders Integration (ربط ومزامنة متجر إيزي أوردر)
+            Route::prefix('easyorders')->group(function () {
+                Route::get('settings', [\App\Http\Controllers\Api\EasyOrdersSettingsController::class, 'getSettings']);
+                Route::post('settings', [\App\Http\Controllers\Api\EasyOrdersSettingsController::class, 'saveSettings']);
+                Route::get('install-link', [\App\Http\Controllers\Api\EasyOrdersSettingsController::class, 'installLink']);
+                Route::post('test-connection', [\App\Http\Controllers\Api\EasyOrdersSettingsController::class, 'testConnection']);
+                Route::post('import-products', [\App\Http\Controllers\Api\EasyOrdersSettingsController::class, 'importProducts']);
+                Route::post('products/{product}/push-stock', [\App\Http\Controllers\Api\EasyOrdersSettingsController::class, 'pushProductStock']);
+                Route::post('push-all-stocks', [\App\Http\Controllers\Api\EasyOrdersSettingsController::class, 'pushAllStocks']);
+            });
         });
 
         // Store Settings & Identity (هوية المنشأة والعملة)
@@ -323,6 +338,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
         Route::put('/users/{user}/profile', [\App\Http\Controllers\Api\AdminStoreControlController::class, 'updateProfile']);
         Route::put('/users/{user}/ecommerce/woocommerce', [\App\Http\Controllers\Api\AdminStoreControlController::class, 'configureWooCommerce']);
         Route::put('/users/{user}/ecommerce/shopify', [\App\Http\Controllers\Api\AdminStoreControlController::class, 'configureShopify']);
+        Route::put('/users/{user}/ecommerce/easyorders', [\App\Http\Controllers\Api\AdminStoreControlController::class, 'configureEasyOrders']);
         Route::post('/users/{user}/ecommerce/test', [\App\Http\Controllers\Api\AdminStoreControlController::class, 'testConnection']);
         Route::delete('/users/{user}/ecommerce/{platform}', [\App\Http\Controllers\Api\AdminStoreControlController::class, 'removeIntegration']);
         Route::post('/users/{user}/impersonate', [\App\Http\Controllers\Api\AdminStoreControlController::class, 'impersonate']);

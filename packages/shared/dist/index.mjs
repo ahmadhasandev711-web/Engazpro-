@@ -121,8 +121,14 @@ var SubscriptionPlan = /* @__PURE__ */ ((SubscriptionPlan2) => {
 var EcommercePlatform = /* @__PURE__ */ ((EcommercePlatform2) => {
   EcommercePlatform2["WOOCOMMERCE"] = "woocommerce";
   EcommercePlatform2["SHOPIFY"] = "shopify";
+  EcommercePlatform2["EASYORDERS"] = "easyorders";
   return EcommercePlatform2;
 })(EcommercePlatform || {});
+var EasyOrdersAuthMode = /* @__PURE__ */ ((EasyOrdersAuthMode2) => {
+  EasyOrdersAuthMode2["AUTHORIZED_APP"] = "AUTHORIZED_APP";
+  EasyOrdersAuthMode2["API_KEY"] = "API_KEY";
+  return EasyOrdersAuthMode2;
+})(EasyOrdersAuthMode || {});
 var ShopifyAuthMode = /* @__PURE__ */ ((ShopifyAuthMode2) => {
   ShopifyAuthMode2["ACCESS_TOKEN"] = "ACCESS_TOKEN";
   ShopifyAuthMode2["CLIENT_CREDENTIALS"] = "CLIENT_CREDENTIALS";
@@ -340,7 +346,7 @@ var LoginSchema = z.object({
   password: z.string().min(6, "\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u064A\u062C\u0628 \u0623\u0646 \u062A\u0643\u0648\u0646 6 \u0623\u062D\u0631\u0641 \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644")
 });
 var RegisterSchema = z.object({
-  store_code: z.string().trim().toLowerCase().min(2, "\u0645\u0639\u0631\u0651\u0641 \u0627\u0644\u0645\u062A\u062C\u0631 \u0644\u0627 \u064A\u0642\u0644 \u0639\u0646 \u062D\u0631\u0641\u064A\u0646").max(30, "\u0645\u0639\u0631\u0651\u0641 \u0627\u0644\u0645\u062A\u062C\u0631 \u0644\u0627 \u064A\u062A\u062C\u0627\u0648\u0632 30 \u062D\u0631\u0641\u0627\u064B").regex(STORE_CODE_REGEX, "\u0623\u062D\u0631\u0641 \u0625\u0646\u062C\u0644\u064A\u0632\u064A\u0629 \u0635\u063A\u064A\u0631\u0629 \u0648\u0623\u0631\u0642\u0627\u0645 \u0648\u0634\u0631\u0637\u0629 (-) \u0641\u0642\u0637 \u0628\u062F\u0648\u0646 \u0645\u0633\u0627\u0641\u0627\u062A").refine((v) => v !== "ebms", "\u0645\u0639\u0631\u0651\u0641 \u0627\u0644\u0645\u062A\u062C\u0631 \u0645\u062D\u062C\u0648\u0632 \u0644\u0644\u0646\u0638\u0627\u0645"),
+  store_code: z.string().trim().toLowerCase().min(2, "\u0645\u0639\u0631\u0651\u0641 \u0627\u0644\u0645\u062A\u062C\u0631 \u0644\u0627 \u064A\u0642\u0644 \u0639\u0646 \u062D\u0631\u0641\u064A\u0646").max(30, "\u0645\u0639\u0631\u0651\u0641 \u0627\u0644\u0645\u062A\u062C\u0631 \u0644\u0627 \u064A\u062A\u062C\u0627\u0648\u0632 30 \u062D\u0631\u0641\u0627\u064B").regex(STORE_CODE_REGEX, "\u0623\u062D\u0631\u0641 \u0625\u0646\u062C\u0644\u064A\u0632\u064A\u0629 \u0635\u063A\u064A\u0631\u0629 \u0648\u0623\u0631\u0642\u0627\u0645 \u0648\u0634\u0631\u0637\u0629 (-) \u0641\u0642\u0637 \u0628\u062F\u0648\u0646 \u0645\u0633\u0627\u0641\u0627\u062A").refine((v) => v !== "easyfy", "\u0645\u0639\u0631\u0651\u0641 \u0627\u0644\u0645\u062A\u062C\u0631 \u0645\u062D\u062C\u0648\u0632 \u0644\u0644\u0646\u0638\u0627\u0645"),
   name: z.string().min(2, "\u0627\u0644\u0627\u0633\u0645 \u0645\u0637\u0644\u0648\u0628"),
   phone: z.string().min(8, "\u0631\u0642\u0645 \u0627\u0644\u0647\u0627\u062A\u0641 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D"),
   password: z.string().min(6, "\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0644\u0627 \u062A\u0642\u0644 \u0639\u0646 6 \u062E\u0627\u0646\u0627\u062A"),
@@ -738,6 +744,7 @@ export {
   CrmRiskLevel,
   CustomerInteractionChannel,
   CustomerTier,
+  EasyOrdersAuthMode,
   EasyfyCouponType,
   EasyfyOrderStatus,
   EasyfyPaymentMethod,

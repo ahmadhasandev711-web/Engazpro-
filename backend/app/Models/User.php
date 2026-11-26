@@ -299,6 +299,11 @@ class User extends Authenticatable
         return $this->hasOne(ShopifyIntegration::class);
     }
 
+    public function easyOrdersIntegration(): HasOne
+    {
+        return $this->hasOne(EasyOrdersIntegration::class);
+    }
+
     protected static function booted(): void
     {
         static::saving(function (User $user) {
@@ -311,6 +316,7 @@ class User extends Authenticatable
                 \App\Services\SubscriptionGate::clear($accountId);
                 \App\Services\WooCommerce\WooStockSyncGate::forget($accountId);
                 \App\Services\Shopify\ShopifyStockSyncGate::forget($accountId);
+                \App\Services\EasyOrders\EasyOrdersStockSyncGate::forget($accountId);
             }
         });
     }
